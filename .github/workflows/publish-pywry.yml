@@ -1,0 +1,418 @@
+name: Publish pywry to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip running tests (use with caution)'
+        required: false
+        default: false
+        type: boolean
+
+defaults:
+  run:
+    working-directory: pywry
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # =============================================================================
+  # Step 1: Run tests first and fail fast
+  # =============================================================================
+  test:
+    name: Test - ${{ matrix.os }} - Python ${{ matrix.python-version }}
+    if: github.event_name == 'workflow_dispatch' && !inputs.skip_tests
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            python-version: '3.10'
+          - os: ubuntu-24.04
+            python-version: '3.14'
+          - os: windows-2025
+            python-version: '3.12'
+          - os: macos-15
+            python-version: '3.12'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Set up Rust (Linux only)
+        if: runner.os == 'Linux'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
+          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev && break || { sleep 30; sudo apt-get update; }; done
+
+      - name: Install dependencies
+        run: uv sync --all-extras --frozen
+
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
+        env:
+          PYWRY_HEADLESS: "1"
+          NO_AT_BRIDGE: "1"
+        run: |
+          dbus-run-session -- xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" uv run pytest -c pytest.ini tests/ -v --tb=short -x
+
+      - name: Run tests (Windows/macOS)
+        if: runner.os != 'Linux'
+        env:
+          PYWRY_HEADLESS: "1"
+          PYWRY_DEPLOY__STATE_BACKEND: "memory"
+        run: |
+          uv run pytest -c pytest.ini tests/ -v --tb=short -x --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+
+  # =============================================================================
+  # Step 2: Build platform-specific wheels with cibuildwheel
+  # =============================================================================
+  build-wheels:
+    name: Build wheels - ${{ matrix.os }} - ${{ matrix.arch }}
+    needs: [test]
+    if: github.event_name == 'workflow_dispatch' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-24.04
+            arch: x86_64
+            cibw_archs: x86_64
+            build_sdist: true
+          # Linux aarch64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            cibw_archs: aarch64
+            build_sdist: false
+          # macOS Intel
+          - os: macos-13
+            arch: x86_64
+            cibw_archs: x86_64
+            build_sdist: false
+          # macOS Apple Silicon
+          - os: macos-15
+            arch: arm64
+            cibw_archs: arm64
+            build_sdist: false
+          # Windows x64
+          - os: windows-2025
+            arch: AMD64
+            cibw_archs: AMD64
+            build_sdist: false
+          # Windows ARM64
+          - os: windows-11-arm
+            arch: ARM64
+            cibw_archs: ARM64
+            build_sdist: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev
+
+      - name: Extract version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Building pywry version: $VERSION"
+
+      - name: Build sdist
+        if: matrix.build_sdist
+        run: uv build --sdist
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22
+        with:
+          package-dir: pywry
+          output-dir: pywry/dist
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+
+      - name: List dist contents
+        shell: bash
+        run: ls -la dist/
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'pywry/dist/*'
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          path: pywry/dist/*.whl
+          retention-days: 30
+
+      - name: Upload sdist
+        if: matrix.build_sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: pywry/dist/*.tar.gz
+          retention-days: 30
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+  # =============================================================================
+  # Step 3: Merge all artifacts into single dist
+  # =============================================================================
+  merge-artifacts:
+    name: Merge artifacts
+    needs: [build-wheels]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download all wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist/
+
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist/
+
+      - name: List all artifacts
+        run: |
+          echo "📦 All distribution artifacts:"
+          ls -la dist/
+
+      - name: Upload merged dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 30
+
+  # =============================================================================
+  # Step 4: Publish to TestPyPI (workflow_dispatch only)
+  # =============================================================================
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: [merge-artifacts]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/pywry
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Display dist contents
+        run: ls -la dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          print-hash: true
+          skip-existing: true
+
+  # =============================================================================
+  # Step 5: Test package from TestPyPI on all platforms
+  # =============================================================================
+  test-testpypi:
+    name: Test from TestPyPI - ${{ matrix.os }}
+    needs: [build-wheels, publish-testpypi]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
+          - os: macos-13
+          - os: macos-15
+          - os: windows-2025
+          - os: windows-11-arm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Rust (Linux only)
+        if: runner.os == 'Linux'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
+          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev && break || { sleep 30; sudo apt-get update; }; done
+
+      - name: Wait for TestPyPI propagation
+        run: sleep 60
+
+      - name: Install from TestPyPI
+        shell: bash
+        run: |
+          uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pywry==${{ needs.build-wheels.outputs.version }}
+
+      - name: Verify installation
+        shell: bash
+        run: |
+          uv run python -c "import pywry; print(f'✅ pywry {pywry.__version__} installed successfully')"
+          uv run python -c "from pywry import PyWry; print('✅ PyWry class imported')"
+          uv run python -c "from pywry.toolbar import Button, Toolbar; print('✅ Toolbar components imported')"
+
+  # =============================================================================
+  # Step 6: Create draft release with all artifacts (workflow_dispatch only)
+  # =============================================================================
+  create-release:
+    name: Create Draft Release
+    needs: [build-wheels, test-testpypi]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: List artifacts
+        run: ls -la dist/
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pywry-${{ needs.build-wheels.outputs.version }}
+          name: pywry ${{ needs.build-wheels.outputs.version }}
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            dist/*
+          body: |
+            ## pywry ${{ needs.build-wheels.outputs.version }}
+
+            ### Installation
+
+            ```bash
+            pip install pywry==${{ needs.build-wheels.outputs.version }}
+            ```
+
+            ### Supported Platforms
+
+            | Platform | Architecture | Wheel |
+            |----------|--------------|-------|
+            | Linux | x86_64 | ✅ |
+            | Linux | aarch64 | ✅ |
+            | macOS | x86_64 (Intel) | ✅ |
+            | macOS | arm64 (Apple Silicon) | ✅ |
+            | Windows | AMD64 | ✅ |
+            | Windows | ARM64 | ✅ |
+
+            ### Python Versions
+
+            - Python 3.10, 3.11, 3.12, 3.13, 3.14
+
+            ### Artifacts
+
+            All artifacts include SLSA build provenance attestations.
+
+            ---
+            *This is a draft release. Review and publish to trigger PyPI upload.*
+
+  # =============================================================================
+  # Step 7: Publish to PyPI (on release publish) - Trusted Publisher
+  # =============================================================================
+  publish-pypi:
+    name: Publish to PyPI
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pywry
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dist
+          gh release download ${{ github.event.release.tag_name }} --dir dist --repo ${{ github.repository }}
+        working-directory: .
+
+      - name: Filter only distribution files
+        run: |
+          mkdir -p clean_dist
+          mv dist/*.whl dist/*.tar.gz clean_dist/ 2>/dev/null || true
+          rm -rf dist
+          mv clean_dist dist
+          echo "📦 Publishing to PyPI:"
+          ls -la dist/
+        working-directory: .
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          print-hash: true

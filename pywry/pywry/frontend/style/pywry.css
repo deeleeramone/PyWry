@@ -1,0 +1,3001 @@
+.cell-output-ipywidget-background {
+    background-color: transparent !important;
+}
+.jp-OutputArea-output {
+    background-color: transparent !important;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* === CUSTOM SCROLLBAR STYLES (Native window only) === */
+/* Hide native scrollbar on scroll container - we'll use custom JS scrollbar */
+html.pywry-native .pywry-scroll-container {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+html.pywry-native .pywry-scroll-container::-webkit-scrollbar {
+    display: none;
+}
+/* Only reserve space for scrollbar when content overflows (but not for Plotly) */
+html.pywry-native .pywry-scroll-container.has-scrollbar-v:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)),
+.pywry-custom-scrollbar .pywry-scroll-container.has-scrollbar-v:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)) {
+    padding-right: 18px; /* 4px margin + 10px track + 4px inner margin */
+}
+html.pywry-native .pywry-scroll-container.has-scrollbar-h:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)),
+.pywry-custom-scrollbar .pywry-scroll-container.has-scrollbar-h:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)) {
+    padding-bottom: 18px; /* 4px margin + 10px track + 4px inner margin */
+}
+html.pywry-native .pywry-scroll-container::-webkit-scrollbar,
+.pywry-custom-scrollbar .pywry-scroll-container::-webkit-scrollbar {
+    display: none !important; /* Chrome/Safari/WebKit - must be !important to override base styles */
+}
+
+/* Custom scrollbar track - vertical */
+html.pywry-native .pywry-scrollbar-track-v,
+.pywry-custom-scrollbar .pywry-scrollbar-track-v {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    bottom: 4px;
+    width: 10px;
+    background: var(--pywry-bg-secondary, #212124);
+    border: 1px solid var(--pywry-border-color, #333);
+    border-radius: 5px;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* Custom scrollbar track - horizontal */
+html.pywry-native .pywry-scrollbar-track-h,
+.pywry-custom-scrollbar .pywry-scrollbar-track-h {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    height: 10px;
+    background: var(--pywry-bg-secondary, #212124);
+    border: 1px solid var(--pywry-border-color, #333);
+    border-radius: 5px;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* Avoid overlap in corner when both scrollbars present */
+html.pywry-native .pywry-scroll-wrapper.has-both-scrollbars .pywry-scrollbar-track-v,
+.pywry-custom-scrollbar .pywry-scroll-wrapper.has-both-scrollbars .pywry-scrollbar-track-v {
+    bottom: 22px; /* 4px margin + 10px track + 4px gap + 4px */
+}
+html.pywry-native .pywry-scroll-wrapper.has-both-scrollbars .pywry-scrollbar-track-h,
+.pywry-custom-scrollbar .pywry-scroll-wrapper.has-both-scrollbars .pywry-scrollbar-track-h {
+    right: 22px; /* 4px margin + 10px track + 4px gap + 4px */
+}
+
+/* Show scrollbar track on hover or when scrolling */
+html.pywry-native .pywry-scroll-wrapper:hover .pywry-scrollbar-track-v,
+html.pywry-native .pywry-scroll-wrapper:hover .pywry-scrollbar-track-h,
+html.pywry-native .pywry-scroll-wrapper.is-scrolling .pywry-scrollbar-track-v,
+html.pywry-native .pywry-scroll-wrapper.is-scrolling .pywry-scrollbar-track-h,
+.pywry-custom-scrollbar .pywry-scroll-wrapper:hover .pywry-scrollbar-track-v,
+.pywry-custom-scrollbar .pywry-scroll-wrapper:hover .pywry-scrollbar-track-h,
+.pywry-custom-scrollbar .pywry-scroll-wrapper.is-scrolling .pywry-scrollbar-track-v,
+.pywry-custom-scrollbar .pywry-scroll-wrapper.is-scrolling .pywry-scrollbar-track-h,
+/* AG Grid scrollbars - show on hover of grid */
+html.pywry-native .ag-root-wrapper:hover .pywry-scrollbar-track-v,
+html.pywry-native .ag-root-wrapper:hover .pywry-scrollbar-track-h,
+html.pywry-native .ag-root-wrapper.is-scrolling .pywry-scrollbar-track-v,
+html.pywry-native .ag-root-wrapper.is-scrolling .pywry-scrollbar-track-h,
+.pywry-custom-scrollbar .ag-root-wrapper:hover .pywry-scrollbar-track-v,
+.pywry-custom-scrollbar .ag-root-wrapper:hover .pywry-scrollbar-track-h,
+.pywry-custom-scrollbar .ag-root-wrapper.is-scrolling .pywry-scrollbar-track-v,
+.pywry-custom-scrollbar .ag-root-wrapper.is-scrolling .pywry-scrollbar-track-h {
+    opacity: 1;
+}
+
+/* Custom scrollbar thumb - vertical */
+html.pywry-native .pywry-scrollbar-thumb-v,
+.pywry-custom-scrollbar .pywry-scrollbar-thumb-v {
+    position: absolute;
+    left: 1px;  /* Center: (8px internal - 6px thumb) / 2 = 1px */
+    width: 6px;
+    min-height: 30px;
+    background: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5));
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+/* Custom scrollbar thumb - horizontal */
+html.pywry-native .pywry-scrollbar-thumb-h,
+.pywry-custom-scrollbar .pywry-scrollbar-thumb-h {
+    position: absolute;
+    top: 1px;  /* Center: (8px internal - 6px thumb) / 2 = 1px */
+    height: 6px;
+    min-width: 30px;
+    background: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5));
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+html.pywry-native .pywry-scrollbar-thumb-v:hover,
+html.pywry-native .pywry-scrollbar-thumb-h:hover,
+.pywry-custom-scrollbar .pywry-scrollbar-thumb-v:hover,
+.pywry-custom-scrollbar .pywry-scrollbar-thumb-h:hover {
+    background: var(--pywry-scrollbar-thumb-hover, rgba(175, 175, 175, 0.7));
+}
+
+html.pywry-native .pywry-scrollbar-thumb-v.is-dragging,
+html.pywry-native .pywry-scrollbar-thumb-h.is-dragging,
+.pywry-custom-scrollbar .pywry-scrollbar-thumb-v.is-dragging,
+.pywry-custom-scrollbar .pywry-scrollbar-thumb-h.is-dragging {
+    background: var(--pywry-scrollbar-thumb-hover, rgba(175, 175, 175, 0.7));
+}
+
+/* Scroll wrapper for custom scrollbar positioning */
+html.pywry-native .pywry-scroll-wrapper,
+.pywry-custom-scrollbar .pywry-scroll-wrapper {
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* Scroll container takes full space minus scrollbar area */
+html.pywry-native .pywry-scroll-wrapper .pywry-scroll-container,
+.pywry-custom-scrollbar .pywry-scroll-wrapper .pywry-scroll-container {
+    flex: 1 1 0%;
+    min-width: 0;
+}
+
+/* When scroll container has Plotly, ensure proper flex layout */
+html.pywry-native .pywry-scroll-container:has(.pywry-plotly),
+html.pywry-native .pywry-scroll-container:has(.js-plotly-plot),
+.pywry-custom-scrollbar .pywry-scroll-container:has(.pywry-plotly),
+.pywry-custom-scrollbar .pywry-scroll-container:has(.js-plotly-plot) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important;
+}
+
+/* === NATIVE SCROLLBAR STYLES (AnyWidget / IFrame without custom scrollbar) === */
+/* Styled native scrollbars for widget contexts that don't use custom JS scrollbars */
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-scroll-container,
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-body-scroll {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5)) transparent;
+}
+
+/* WebKit native scrollbar styling */
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-scroll-container::-webkit-scrollbar,
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-body-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-scroll-container::-webkit-scrollbar-track,
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-body-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-scroll-container::-webkit-scrollbar-thumb,
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-body-scroll::-webkit-scrollbar-thumb {
+    background: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5));
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-scroll-container::-webkit-scrollbar-thumb:hover,
+.pywry-widget:not(.pywry-custom-scrollbar) .pywry-body-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--pywry-scrollbar-thumb-hover, rgba(175, 175, 175, 0.7));
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.pywry-widget,
+.pywry-widget *,
+.pywry-widget *::before,
+.pywry-widget *::after,
+.pywry-container,
+.pywry-container *,
+.pywry-container *::before,
+.pywry-container *::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    /* ---- Typography (theme-independent) ---- */
+    --pywry-font-family: Inter, 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --pywry-font-size: 14px;
+    --pywry-font-weight-normal: 400;
+    --pywry-font-weight-medium: 500;
+
+    /* ---- Spacing & Layout (theme-independent) ---- */
+    --pywry-radius: 4px;
+    --pywry-radius-lg: 6px;
+    --pywry-spacing-xs: 2px;
+    --pywry-spacing-sm: 4px;
+    --pywry-spacing-md: 6px;
+    --pywry-spacing-lg: 8px;
+
+    /* ---- Widget Sizing (theme-independent) ---- */
+    --pywry-widget-width: 100%;
+    --pywry-widget-min-height: 200px;
+    --pywry-widget-height: 500px;
+    --pywry-grid-min-height: 200px;
+
+    /* ---- Transitions (theme-independent) ---- */
+    --pywry-transition-fast: 0.1s ease;
+    --pywry-transition-normal: 0.2s ease;
+
+    /* ---- Accent Colors (shared across themes) ---- */
+    --pywry-accent: #0078d4;
+    --pywry-accent-hover: #106ebe;
+    --pywry-text-accent: rgb(51, 187, 255);
+
+    /* ---- Neutral Button (always blue, shared) ---- */
+    --pywry-btn-neutral-bg: rgb(0, 136, 204);
+    --pywry-btn-neutral-text: #ffffff;
+    --pywry-btn-neutral-hover: rgb(0, 115, 173);
+}
+
+:root,
+html.dark,
+.pywry-theme-dark {
+    /* ---- Core Colors ---- */
+    --pywry-bg-primary: #212124;
+    --pywry-bg-secondary: rgba(21, 21, 24, 1);
+    --pywry-bg-tertiary: rgba(31, 30, 35, 1);
+    --pywry-bg-quartary: rgba(36, 36, 42, 1);
+    --pywry-bg-hover: rgba(255, 255, 255, 0.08);
+    --pywry-bg-overlay: rgba(30, 30, 30, 0.8);
+    --pywry-text-primary: #ebebed;
+    --pywry-text-secondary: #a0a0a0;
+    --pywry-text-muted: #707070;
+    --pywry-border-color: #333;
+
+    /* ---- Focus ---- */
+    --pywry-border-focus: #555;
+
+    /* ---- Tab Group ---- */
+    --pywry-tab-bg: #2a2a2e;
+    --pywry-tab-active-bg: #3d3d42;
+    --pywry-tab-hover-bg: #353538;
+
+    /* ---- Buttons ---- */
+    --pywry-btn-primary-bg: #e2e2e2;
+    --pywry-btn-primary-text: #151518;
+    --pywry-btn-primary-hover: #cccccc;
+    --pywry-btn-secondary-bg: #3d3d42;
+    --pywry-btn-secondary-text: #ebebed;
+    --pywry-btn-secondary-hover: #4a4a50;
+    --pywry-btn-secondary-border: rgba(90, 90, 100, 0.5);
+
+    /* ---- Input Fixes ---- */
+    --pywry-calendar-icon-filter: invert(1);
+}
+
+/* html.dark also sets background/color on the element itself for iframe */
+html.dark {
+    background-color: var(--pywry-bg-primary);
+    color: var(--pywry-text-primary);
+}
+
+html.light,
+.pywry-theme-light {
+    /* ---- Core Colors ---- */
+    --pywry-bg-primary: #f5f5f5;
+    --pywry-bg-secondary: #ffffff;
+    --pywry-bg-hover: rgba(0, 0, 0, 0.06);
+    --pywry-bg-overlay: rgba(255, 255, 255, 0.8);
+    --pywry-text-primary: #000000;
+    --pywry-text-secondary: #666666;
+    --pywry-text-muted: #999999;
+    --pywry-border-color: #ccc;
+
+    /* ---- Focus ---- */
+    --pywry-border-focus: #999;
+
+    /* ---- Tab Group ---- */
+    --pywry-tab-bg: #e8e8ec;
+    --pywry-tab-active-bg: #ffffff;
+    --pywry-tab-hover-bg: #f0f0f4;
+
+    /* ---- Buttons ---- */
+    --pywry-btn-primary-bg: #2c2c32;
+    --pywry-btn-primary-text: #ffffff;
+    --pywry-btn-primary-hover: #1a1a1e;
+    --pywry-btn-secondary-bg: #d0d0d8;
+    --pywry-btn-secondary-text: #2c2c32;
+    --pywry-btn-secondary-hover: #c0c0c8;
+    --pywry-btn-secondary-border: rgba(180, 180, 190, 1);
+
+    /* ---- Input Fixes ---- */
+    --pywry-calendar-icon-filter: none;
+}
+
+/* html.light also sets background/color on the element itself for iframe */
+html.light {
+    background-color: var(--pywry-bg-primary);
+    color: var(--pywry-text-primary);
+}
+
+/* System theme: dark by default */
+.pywry-theme-system {
+    /* ---- Core Colors (dark) ---- */
+    --pywry-bg-primary: #212124;
+    --pywry-bg-secondary: #1e1e1e;
+    --pywry-bg-hover: rgba(255, 255, 255, 0.08);
+    --pywry-bg-overlay: rgba(30, 30, 30, 0.8);
+    --pywry-text-primary: #ebebed;
+    --pywry-text-secondary: #a0a0a0;
+    --pywry-text-muted: #707070;
+    --pywry-border-color: #333;
+
+    /* ---- Focus (dark) ---- */
+    --pywry-border-focus: #555;
+
+    /* ---- Tab Group (dark) ---- */
+    --pywry-tab-bg: #2a2a2e;
+    --pywry-tab-active-bg: #3d3d42;
+    --pywry-tab-hover-bg: #353538;
+
+    /* ---- Buttons (dark) ---- */
+    --pywry-btn-primary-bg: #e2e2e2;
+    --pywry-btn-primary-text: #151518;
+    --pywry-btn-primary-hover: #cccccc;
+    --pywry-btn-secondary-bg: #3d3d42;
+    --pywry-btn-secondary-text: #ebebed;
+    --pywry-btn-secondary-hover: #4a4a50;
+    --pywry-btn-secondary-border: rgba(90, 90, 100, 0.5);
+
+    /* ---- Input Fixes (dark) ---- */
+    --pywry-calendar-icon-filter: invert(1);
+}
+
+/* System theme: light when OS prefers light */
+@media (prefers-color-scheme: light) {
+    .pywry-theme-system {
+        /* ---- Core Colors (light) ---- */
+        --pywry-bg-primary: #f5f5f5;
+        --pywry-bg-secondary: #ffffff;
+        --pywry-bg-hover: rgba(0, 0, 0, 0.06);
+        --pywry-bg-overlay: rgba(255, 255, 255, 0.8);
+        --pywry-text-primary: #000000;
+        --pywry-text-secondary: #666666;
+        --pywry-text-muted: #999999;
+        --pywry-border-color: #ccc;
+
+        /* ---- Focus (light) ---- */
+        --pywry-border-focus: #999;
+
+        /* ---- Tab Group (light) ---- */
+        --pywry-tab-bg: #e8e8ec;
+        --pywry-tab-active-bg: #ffffff;
+        --pywry-tab-hover-bg: #f0f0f4;
+
+        /* ---- Buttons (light) ---- */
+        --pywry-btn-primary-bg: #2c2c32;
+        --pywry-btn-primary-text: #ffffff;
+        --pywry-btn-primary-hover: #1a1a1e;
+        --pywry-btn-secondary-bg: #d0d0d8;
+        --pywry-btn-secondary-text: #2c2c32;
+        --pywry-btn-secondary-hover: #c0c0c8;
+        --pywry-btn-secondary-border: rgba(180, 180, 190, 1);
+
+        /* ---- Input Fixes (light) ---- */
+        --pywry-calendar-icon-filter: none;
+    }
+}
+
+/* Explicit background for themed elements - ensures CSS variable is applied */
+/* This applies to any element with theme class, including AnyWidget's el container */
+.pywry-theme-light,
+.pywry-theme-dark,
+.pywry-theme-system {
+    background-color: var(--pywry-bg-primary);
+    color: var(--pywry-text-primary);
+}
+
+html.pywry-native {
+    margin: 0;
+    padding: 0;
+    /* WebKit requires explicit height on html element */
+    height: 100%;
+    height: 100vh;
+    height: -webkit-fill-available;
+    overflow: hidden !important;
+    background-color: var(--pywry-bg-primary);
+    color: var(--pywry-text-primary);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    /* WebKit flexbox fix: ensure proper flex behavior */
+    -webkit-text-size-adjust: 100%;
+}
+
+html.pywry-native body {
+    margin: 0;
+    padding: 0;
+    /* Multi-value fallback for cross-browser height */
+    height: 100%;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow: hidden !important;
+    background-color: var(--pywry-bg-primary);
+    color: var(--pywry-text-primary);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    /* WebKit flex container fix */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure emoji rendering in native windows */
+html.pywry-native * {
+    font-family: inherit;
+}
+
+/* Explicit emoji font stack for elements that may contain emojis */
+html.pywry-native h1,
+html.pywry-native h2,
+html.pywry-native h3,
+html.pywry-native h4,
+html.pywry-native h5,
+html.pywry-native h6,
+html.pywry-native p,
+html.pywry-native span,
+html.pywry-native button,
+html.pywry-native .pywry-btn,
+html.pywry-native .pywry-input-label {
+    font-family: var(--pywry-font-family);
+}
+
+/* Ensure #app container doesn't allow native scrolling */
+html.pywry-native #app {
+    width: 100%;
+    height: 100%;
+    overflow: hidden !important;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.pywry-widget {
+    width: var(--pywry-widget-width);
+    min-height: var(--pywry-widget-min-height);
+    height: var(--pywry-widget-height);
+    overflow: hidden;
+    border-radius: var(--pywry-radius);
+    padding: 0;
+    box-sizing: border-box;
+    position: relative;
+    background-color: var(--pywry-bg-primary);
+    color: var(--pywry-text-primary);
+    font-family: var(--pywry-font-family);
+    border: none;
+    display: flex;
+    display: -webkit-flex;
+    flex-direction: column;
+    -webkit-flex-direction: column;
+}
+
+.pywry-container {
+    width: 100%;
+    /* WebKit-compatible height - flex: 1 with min-height: 0 for proper shrinking */
+    flex: 1 1 0%;
+    min-height: 0;
+    /* Fallback for non-flex contexts */
+    height: 100%;
+    overflow: hidden !important;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: var(--pywry-bg-primary);
+    color: var(--pywry-text-primary);
+    /* Flexbox ensures children fill the container */
+    display: flex;
+    flex-direction: column;
+}
+
+/* When body is not a flex container, use absolute positioning as fallback */
+html.pywry-native body:not([style*="flex"]) .pywry-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    flex: none;
+}
+
+/* Add padding when container directly contains grid or plotly (no toolbar wrapper) */
+.pywry-container:has(> .pywry-grid),
+.pywry-container:has(> [class*="ag-theme-"]),
+.pywry-container:has(> .pywry-plotly) {
+    padding: 16px;
+}
+
+.pywry-toolbar {
+    display: flex;
+    display: -webkit-flex;
+    flex-wrap: wrap;
+    -webkit-flex-wrap: wrap;
+    gap: var(--pywry-spacing-sm);
+    padding: var(--pywry-spacing-md);
+    background-color: var(--pywry-bg-primary);
+    border: none;
+    align-items: center;
+    -webkit-align-items: center;
+    overflow: visible;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    -webkit-flex-shrink: 0;
+}
+
+/* Explicit toolbar backgrounds for themed contexts */
+.pywry-theme-light .pywry-toolbar,
+.pywry-theme-light.pywry-toolbar {
+    background-color: var(--pywry-bg-primary);
+}
+
+.pywry-theme-dark .pywry-toolbar,
+.pywry-theme-dark.pywry-toolbar {
+    background-color: var(--pywry-bg-primary);
+}
+
+.pywry-toolbar-header {
+    border: none;
+    border-bottom: 1px solid var(--pywry-border-color);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pywry-toolbar-footer {
+    border: none;
+    border-top: 1px solid var(--pywry-border-color);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pywry-toolbar-top {
+    border: none;
+}
+
+.pywry-toolbar-bottom {
+    border: none;
+}
+
+.pywry-toolbar-footer {
+    border: none;
+    border-top: 1px solid var(--pywry-border-color);
+}
+
+.pywry-toolbar-header {
+    border: none;
+    border-bottom: 1px solid var(--pywry-border-color);
+}
+
+.pywry-toolbar-left,
+.pywry-toolbar-right {
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: stretch;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.pywry-toolbar-left {
+    border: none;
+    border-right: 1px solid var(--pywry-border-color);
+    padding: 0;
+}
+
+.pywry-toolbar-right {
+    border: none;
+    border-left: 1px solid var(--pywry-border-color);
+    padding: 0;
+}
+
+.pywry-toolbar-inside {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    background: transparent;
+    border-radius: var(--pywry-radius-lg);
+    border: none;
+}
+
+.pywry-toolbar-content {
+    display: flex;
+    display: -webkit-flex;
+    flex-wrap: wrap;
+    -webkit-flex-wrap: wrap;
+    gap: var(--pywry-spacing-md);
+    align-items: center;
+    -webkit-align-items: center;
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    min-width: 0;
+}
+
+.pywry-toolbar-left .pywry-toolbar-content,
+.pywry-toolbar-right .pywry-toolbar-content {
+    flex-direction: column;
+    -webkit-flex-direction: column;
+    align-items: flex-start;
+    -webkit-align-items: flex-start;
+    justify-content: flex-start;
+    -webkit-justify-content: flex-start;
+    gap: var(--pywry-spacing-sm);
+    padding: var(--pywry-spacing-sm);
+    overflow: hidden;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+/* Left/right toolbar items - allow shrink with ellipsis */
+.pywry-toolbar-left .pywry-toolbar-content > *,
+.pywry-toolbar-right .pywry-toolbar-content > * {
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.pywry-toolbar-left .pywry-toolbar-content .pywry-btn,
+.pywry-toolbar-right .pywry-toolbar-content .pywry-btn {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+/* Input groups in left/right toolbars - stack label on top */
+.pywry-toolbar-left .pywry-input-group,
+.pywry-toolbar-right .pywry-input-group {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.pywry-toolbar[data-collapsible="true"] {
+    position: relative;
+}
+
+.pywry-toolbar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    margin-right: var(--pywry-spacing-sm);
+    background: var(--pywry-bg-primary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius);
+    cursor: pointer;
+    color: var(--pywry-text-secondary);
+    transition: all var(--pywry-transition-fast);
+    flex-shrink: 0;
+    opacity: 0;
+}
+
+.pywry-toolbar:hover .pywry-toolbar-toggle,
+.pywry-toolbar.pywry-collapsed .pywry-toolbar-toggle,
+.pywry-toolbar-toggle:hover,
+.pywry-toolbar-toggle:focus {
+    opacity: 1;
+}
+
+.pywry-toolbar-toggle:hover {
+    background: var(--pywry-bg-secondary);
+    color: var(--pywry-text-primary);
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-toggle-icon {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid currentColor;
+    transition: transform var(--pywry-transition-fast);
+}
+
+/* Collapsed state for horizontal toolbars (header/footer/top/bottom) - keep toggle visible */
+.pywry-toolbar-header.pywry-collapsed,
+.pywry-toolbar-footer.pywry-collapsed,
+.pywry-toolbar-top.pywry-collapsed,
+.pywry-toolbar-bottom.pywry-collapsed {
+    height: 24px !important;
+    min-height: 24px !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: visible;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pywry-toolbar-header.pywry-collapsed .pywry-toolbar-content,
+.pywry-toolbar-footer.pywry-collapsed .pywry-toolbar-content,
+.pywry-toolbar-top.pywry-collapsed .pywry-toolbar-content,
+.pywry-toolbar-bottom.pywry-collapsed .pywry-toolbar-content {
+    display: none;
+}
+
+/* Header/Top toolbar toggle icon: points UP when expanded (collapse upward), DOWN when collapsed (expand downward) */
+.pywry-toolbar-header .pywry-toggle-icon,
+.pywry-toolbar-top .pywry-toggle-icon {
+    transform: rotate(180deg) !important;
+}
+
+.pywry-toolbar-header.pywry-collapsed .pywry-toggle-icon,
+.pywry-toolbar-top.pywry-collapsed .pywry-toggle-icon {
+    transform: rotate(0deg) !important;
+}
+
+/* Footer/Bottom toolbar toggle icon: points DOWN when expanded (collapse downward), UP when collapsed (expand upward) */
+.pywry-toolbar-footer .pywry-toggle-icon,
+.pywry-toolbar-bottom .pywry-toggle-icon {
+    transform: rotate(0deg) !important;
+}
+
+.pywry-toolbar-footer.pywry-collapsed .pywry-toggle-icon,
+.pywry-toolbar-bottom.pywry-collapsed .pywry-toggle-icon {
+    transform: rotate(180deg) !important;
+}
+
+/* Collapsed state for left/right toolbars - collapse WIDTH but keep toggle visible */
+.pywry-toolbar-left.pywry-collapsed,
+.pywry-toolbar-right.pywry-collapsed {
+    width: 24px !important;
+    min-width: 24px !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* Hide content when collapsed, but toggle button stays visible */
+.pywry-toolbar-left.pywry-collapsed .pywry-toolbar-content,
+.pywry-toolbar-right.pywry-collapsed .pywry-toolbar-content {
+    display: none;
+}
+
+/* Left/right toolbar toggle button - positioned on edge, centered vertically */
+.pywry-toolbar-left[data-collapsible="true"],
+.pywry-toolbar-right[data-collapsible="true"] {
+    position: relative;
+    overflow: visible;
+}
+
+.pywry-toolbar-left .pywry-toolbar-toggle,
+.pywry-toolbar-right .pywry-toolbar-toggle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+    z-index: 10;
+    background: var(--pywry-bg-primary);
+}
+
+.pywry-toolbar-left .pywry-toolbar-toggle {
+    right: 0;
+}
+
+.pywry-toolbar-left.pywry-collapsed .pywry-toolbar-toggle {
+    position: relative;
+    top: auto;
+    right: auto;
+    transform: none;
+    margin: auto;
+}
+
+.pywry-toolbar-right .pywry-toolbar-toggle {
+    left: 0;
+}
+
+.pywry-toolbar-right.pywry-collapsed .pywry-toolbar-toggle {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    margin: auto;
+}
+
+/* Horizontal toolbar toggle button - positioned on edge, centered horizontally */
+.pywry-toolbar-header[data-collapsible="true"],
+.pywry-toolbar-footer[data-collapsible="true"],
+.pywry-toolbar-top[data-collapsible="true"],
+.pywry-toolbar-bottom[data-collapsible="true"] {
+    position: relative;
+    overflow: visible;
+}
+
+.pywry-toolbar-header .pywry-toolbar-toggle,
+.pywry-toolbar-top .pywry-toolbar-toggle {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -12px;
+    margin: 0;
+    z-index: 10;
+    background: var(--pywry-bg-primary);
+}
+
+.pywry-toolbar-header.pywry-collapsed .pywry-toolbar-toggle,
+.pywry-toolbar-top.pywry-collapsed .pywry-toolbar-toggle {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    transform: none;
+}
+
+.pywry-toolbar-footer .pywry-toolbar-toggle,
+.pywry-toolbar-bottom .pywry-toolbar-toggle {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: -12px;
+    margin: 0;
+    z-index: 10;
+    background: var(--pywry-bg-primary);
+}
+
+.pywry-toolbar-footer.pywry-collapsed .pywry-toolbar-toggle,
+.pywry-toolbar-bottom.pywry-collapsed .pywry-toolbar-toggle {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+}
+
+/* Left sidebar: arrow points LEFT when expanded (collapse into sidebar), points RIGHT when collapsed (expand outward) */
+.pywry-toolbar-left .pywry-toggle-icon {
+    transform: rotate(90deg) !important;
+}
+
+.pywry-toolbar-left.pywry-collapsed .pywry-toggle-icon {
+    transform: rotate(-90deg) !important;
+}
+
+/* Right sidebar: arrow points LEFT when expanded (collapse into sidebar), points RIGHT when collapsed (expand outward) */
+.pywry-toolbar-right .pywry-toggle-icon {
+    transform: rotate(-90deg) !important;
+}
+
+.pywry-toolbar-right.pywry-collapsed .pywry-toggle-icon {
+    transform: rotate(90deg) !important;
+}
+
+.pywry-toolbar[data-resizable="true"] {
+    position: relative;
+}
+
+.pywry-resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 10;
+}
+
+/* Top toolbar - resize handle at bottom */
+.pywry-toolbar-top .pywry-resize-handle {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    cursor: ns-resize;
+}
+
+/* Bottom toolbar - resize handle at top */
+.pywry-toolbar-bottom .pywry-resize-handle {
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    cursor: ns-resize;
+}
+
+/* Left toolbar - resize handle at right */
+.pywry-toolbar-left .pywry-resize-handle {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 2px;
+    cursor: ew-resize;
+}
+
+/* Right toolbar - resize handle at left */
+.pywry-toolbar-right .pywry-resize-handle {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 2px;
+    cursor: ew-resize;
+}
+
+/* Inside toolbar - resize handle at bottom-right corner */
+.pywry-toolbar-inside .pywry-resize-handle {
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    cursor: nwse-resize;
+}
+
+/* Visual indicator - always show subtle, more visible on hover/active */
+.pywry-resize-handle {
+    background: var(--pywry-border-color);
+    opacity: 0.5;
+    transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.pywry-resize-handle:hover,
+.pywry-resize-handle:active {
+    background: var(--pywry-accent);
+    opacity: 1;
+}
+
+.pywry-div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--pywry-spacing-sm);
+    align-items: center;
+    padding: var(--pywry-spacing-xs);
+    min-width: 0;
+}
+
+/* Nested divs inherit flex direction from parent toolbar */
+.pywry-toolbar-left .pywry-div,
+.pywry-toolbar-right .pywry-div {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Allow custom styling to override defaults */
+.pywry-div[style] {
+    padding: initial;
+}
+
+/* ============================================================================
+   MARQUEE COMPONENT - Scrolling text/content ticker
+   ============================================================================ */
+
+.pywry-marquee {
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap;
+    mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 5%,
+        black 95%,
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 5%,
+        black 95%,
+        transparent 100%
+    );
+}
+
+/* Vertical marquee mask */
+.pywry-marquee.pywry-marquee-vertical {
+    flex-direction: column;
+    white-space: normal;
+    min-height: 100px;
+    max-height: 100%;
+    mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+}
+
+/* Track container - natural width, just holds content */
+.pywry-marquee-track {
+    display: inline-flex;
+    align-items: center;
+    animation: pywry-marquee-scroll-left var(--pywry-marquee-speed, 15s) linear infinite;
+    will-change: transform;
+}
+
+/* Vertical track layout */
+.pywry-marquee-vertical .pywry-marquee-track {
+    flex-direction: column;
+    display: inline-flex;
+}
+
+.pywry-marquee-content {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pywry-spacing-sm);
+    flex-shrink: 0;
+    padding-right: 100vw;  /* Push duplicate completely off-screen */
+}
+
+/* Separator styling */
+.pywry-marquee-separator {
+    opacity: 0.5;
+    padding: 0 var(--pywry-spacing-sm);
+}
+
+/* Ticker item styling */
+.pywry-ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pywry-spacing-xs);
+    padding: 0 var(--pywry-spacing-sm);
+    white-space: nowrap;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.pywry-ticker-item.stock-up,
+.pywry-ticker-item.ticker-up {
+    color: var(--pywry-success, #22c55e);
+}
+
+.pywry-ticker-item.stock-down,
+.pywry-ticker-item.ticker-down {
+    color: var(--pywry-danger, #ef4444);
+}
+
+.pywry-ticker-item.ticker-neutral {
+    color: var(--pywry-text-secondary, #888);
+}
+
+/* ---- Direction Animations ---- */
+
+/* Left scroll (default) - content moves right to left */
+.pywry-marquee-left .pywry-marquee-track {
+    animation-name: pywry-marquee-scroll-left;
+}
+
+/* Right scroll - content moves left to right */
+.pywry-marquee-right .pywry-marquee-track {
+    animation-name: pywry-marquee-scroll-right;
+}
+
+/* Up scroll - content moves bottom to top */
+.pywry-marquee-up .pywry-marquee-track {
+    animation-name: pywry-marquee-scroll-up;
+}
+
+/* Down scroll - content moves top to bottom */
+.pywry-marquee-down .pywry-marquee-track {
+    animation-name: pywry-marquee-scroll-down;
+}
+
+/* ---- Behavior Variants ---- */
+
+/* Alternate: bounce back and forth */
+.pywry-marquee-alternate .pywry-marquee-track {
+    animation-direction: alternate;
+    animation-timing-function: ease-in-out;
+}
+
+/* Slide: play once and stop */
+.pywry-marquee-slide .pywry-marquee-track {
+    animation-iteration-count: 1;
+    animation-fill-mode: forwards;
+}
+
+/* Static: no animation, content stays in place */
+.pywry-marquee-static .pywry-marquee-track {
+    animation: none;
+}
+
+.pywry-marquee-static .pywry-marquee-content {
+    padding-right: 0;
+}
+
+/* Static mode: no edge fade masks */
+.pywry-marquee.pywry-marquee-static {
+    mask-image: none;
+    -webkit-mask-image: none;
+}
+
+/* ---- Pause on Hover ---- */
+.pywry-marquee-pause:hover .pywry-marquee-track {
+    animation-play-state: paused;
+}
+
+/* ---- Clickable State ---- */
+.pywry-marquee-clickable {
+    cursor: pointer;
+}
+
+.pywry-marquee-clickable:hover {
+    opacity: 0.85;
+}
+
+.pywry-marquee-clickable:active {
+    opacity: 0.75;
+}
+
+/* ---- Disabled State ---- */
+.pywry-marquee.pywry-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.pywry-marquee.pywry-disabled .pywry-marquee-track {
+    animation-play-state: paused;
+}
+
+/* ---- Toolbar Integration ---- */
+
+/* Marquee in vertical toolbars defaults to vertical scroll */
+.pywry-toolbar-left .pywry-marquee,
+.pywry-toolbar-right .pywry-marquee {
+    flex-direction: column;
+    min-height: 100px;
+}
+
+/* ---- Keyframe Animations ---- */
+
+@keyframes pywry-marquee-scroll-left {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes pywry-marquee-scroll-right {
+    0% {
+        transform: translateX(-50%);
+    }
+    100% {
+        transform: translateX(0);
+    }
+}
+
+@keyframes pywry-marquee-scroll-up {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(-50%);
+    }
+}
+
+@keyframes pywry-marquee-scroll-down {
+    0% {
+        transform: translateY(-50%);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+/* Reduced motion: respect user preference */
+@media (prefers-reduced-motion: reduce) {
+    .pywry-marquee-track {
+        animation: none;
+    }
+    /* Show only first content span when motion reduced */
+    .pywry-marquee-content[aria-hidden="true"] {
+        display: none;
+    }
+    .pywry-marquee-separator {
+        display: none;
+    }
+}
+
+/* ============================================================================
+   END MARQUEE COMPONENT
+   ============================================================================ */
+
+.pywry-btn {
+    padding: var(--pywry-spacing-xs) var(--pywry-spacing-sm);
+    cursor: pointer;
+    background-color: var(--pywry-btn-primary-bg);
+    color: var(--pywry-btn-primary-text);
+    border: none;
+    border-radius: var(--pywry-radius);
+    font-weight: var(--pywry-font-weight-medium);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    transition: background-color var(--pywry-transition-fast), box-shadow var(--pywry-transition-fast);
+}
+
+.pywry-btn:hover {
+    background-color: var(--pywry-btn-primary-hover);
+}
+
+.pywry-btn:focus,
+.pywry-btn:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+.pywry-btn:active {
+    opacity: 0.9;
+}
+
+.pywry-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Button Variants */
+.pywry-btn.pywry-btn-secondary {
+    background-color: var(--pywry-btn-secondary-bg);
+    color: var(--pywry-btn-secondary-text);
+    border: none;
+}
+
+.pywry-btn.pywry-btn-secondary:hover {
+    background-color: var(--pywry-btn-secondary-hover);
+}
+
+.pywry-btn.pywry-btn-neutral {
+    background-color: var(--pywry-btn-neutral-bg);
+    color: var(--pywry-btn-neutral-text);
+    border: none;
+}
+
+.pywry-btn.pywry-btn-neutral:hover {
+    background-color: var(--pywry-btn-neutral-hover);
+}
+
+.pywry-btn.pywry-btn-ghost {
+    background-color: transparent;
+    color: var(--pywry-text-primary);
+    border: none;
+}
+
+.pywry-btn.pywry-btn-ghost:hover {
+    color: var(--pywry-text-secondary);
+}
+
+.pywry-btn.pywry-btn-outline {
+    background-color: transparent;
+    color: var(--pywry-text-primary);
+    border: 1px solid var(--pywry-border-color);
+    transition: border-color var(--pywry-transition-fast), background-color var(--pywry-transition-fast);
+}
+
+.pywry-btn.pywry-btn-outline:hover {
+    border-color: var(--pywry-border-focus);
+    background-color: transparent;
+}
+
+.pywry-btn.pywry-btn-danger {
+    background-color: #c63f43;
+    color: #fff;
+}
+
+.pywry-btn.pywry-btn-danger:hover {
+    background-color: #a63539;
+}
+
+.pywry-btn.pywry-btn-warning {
+    background-color: #d58438;
+    color: #fff;
+}
+
+.pywry-btn.pywry-btn-warning:hover {
+    background-color: #b5702f;
+}
+
+/* Icon variant - ghost style, square aspect ratio, dimmed by default */
+.pywry-btn.pywry-btn-icon {
+    background-color: transparent;
+    color: var(--pywry-text-muted);
+    padding: var(--pywry-spacing-xs);
+    min-width: auto;
+    aspect-ratio: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color var(--pywry-transition-fast);
+}
+
+.pywry-btn.pywry-btn-icon:hover,
+.pywry-btn.pywry-btn-icon:focus {
+    color: var(--pywry-text-primary);
+}
+
+/* ---- Button Size Variants ---- */
+.pywry-btn.pywry-btn-xs {
+    padding: 2px 6px;
+    font-size: 11px;
+    border-radius: 3px;
+}
+
+.pywry-btn.pywry-btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+.pywry-btn.pywry-btn-lg {
+    padding: 10px 20px;
+    font-size: 15px;
+    border-radius: 6px;
+}
+
+.pywry-btn.pywry-btn-xl {
+    padding: 14px 28px;
+    font-size: 16px;
+    border-radius: 8px;
+}
+
+.pywry-input-group {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pywry-spacing-sm);
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.pywry-input-group:not(.pywry-input-inline) {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.pywry-input-label {
+    font-weight: var(--pywry-font-weight-medium);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    color: var(--pywry-text-secondary);
+    white-space: nowrap;
+}
+
+.pywry-select {
+    padding: var(--pywry-spacing-sm) var(--pywry-spacing-lg);
+    padding-right: calc(var(--pywry-spacing-lg) + 24px);
+    cursor: pointer;
+    background-color: var(--pywry-bg-secondary);
+    color: var(--pywry-text-primary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    transition: border-color var(--pywry-transition-fast);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px 12px;
+    background-clip: padding-box;
+    min-width: 150px;
+    box-sizing: border-box;
+}
+
+.pywry-select:hover {
+    border-color: var(--pywry-text-secondary);
+}
+
+.pywry-select:focus {
+    outline: none;
+    border-color: var(--pywry-text-secondary);
+}
+
+.pywry-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pywry-select option {
+    background-color: var(--pywry-bg-secondary);
+    color: var(--pywry-text-primary);
+}
+
+/* Light theme: adjust dropdown arrow color and option styling */
+.pywry-theme-light .pywry-select,
+html.light .pywry-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.pywry-theme-light .pywry-select option,
+html.light .pywry-select option {
+    background-color: var(--pywry-bg-secondary);
+    color: var(--pywry-text-primary);
+}
+
+.pywry-dropdown {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    min-width: 120px;
+}
+
+.pywry-dropdown-selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: var(--pywry-spacing-sm) var(--pywry-spacing-lg);
+    cursor: pointer;
+    background-color: var(--pywry-bg-secondary);
+    color: var(--pywry-text-primary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    transition: border-color var(--pywry-transition-fast);
+    user-select: none;
+    white-space: nowrap;
+}
+
+.pywry-dropdown-selected:hover,
+.pywry-dropdown.pywry-open .pywry-dropdown-selected {
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-dropdown-text {
+    white-space: nowrap;
+}
+
+.pywry-dropdown-arrow {
+    width: 0;
+    height: 0;
+    flex-shrink: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid var(--pywry-text-secondary);
+    transition: transform var(--pywry-transition-fast);
+}
+
+.pywry-dropdown.pywry-open .pywry-dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.pywry-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: max-content;
+    margin-top: 2px;
+    background-color: var(--pywry-bg-primary);
+    border: 1px solid var(--pywry-border-focus);
+    border-radius: var(--pywry-radius-lg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.pywry-dropdown.pywry-open .pywry-dropdown-menu {
+    display: block;
+    position: fixed;
+}
+
+.pywry-dropdown-option {
+    padding: var(--pywry-spacing-sm) var(--pywry-spacing-lg);
+    padding-left: 28px;
+    cursor: pointer;
+    color: var(--pywry-text-primary);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    transition: background-color var(--pywry-transition-fast);
+    white-space: nowrap;
+    position: relative;
+}
+
+.pywry-dropdown-option:hover {
+    background-color: var(--pywry-bg-hover);
+}
+
+.pywry-dropdown-option.pywry-selected::before {
+    content: "✓";
+    position: absolute;
+    left: 10px;
+}
+
+.pywry-dropdown.pywry-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Dropdown opens upward (for bottom/footer toolbars) */
+.pywry-dropdown.pywry-dropdown-up .pywry-dropdown-menu {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 2px;
+}
+
+/* MultiSelect uses .pywry-dropdown + .pywry-multiselect class combo */
+.pywry-dropdown.pywry-multiselect .pywry-dropdown-menu {
+    padding: 0;
+}
+
+.pywry-multiselect-header {
+    display: flex;
+    align-items: center;
+    gap: var(--pywry-spacing-xs);
+    padding: var(--pywry-spacing-sm);
+    border-bottom: 1px solid var(--pywry-border-color);
+}
+
+.pywry-multiselect-search {
+    flex: 1;
+    padding: var(--pywry-spacing-xs) var(--pywry-spacing-sm);
+    background-color: var(--pywry-bg-secondary);
+    color: var(--pywry-text-primary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-sm);
+    font-family: var(--pywry-font-family);
+    font-size: calc(var(--pywry-font-size) - 1px);
+    min-width: 0;
+    transition: border-color var(--pywry-transition-fast);
+}
+
+.pywry-multiselect-search:hover {
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-multiselect-search:focus {
+    outline: none;
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-multiselect-search::placeholder {
+    color: var(--pywry-text-secondary);
+}
+
+/* ---- Search Input with Icon ---- */
+.pywry-search-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.pywry-search-icon {
+    position: absolute;
+    left: var(--pywry-spacing-sm);
+    pointer-events: none;
+    color: var(--pywry-text-muted);
+    flex-shrink: 0;
+}
+
+.pywry-search-input {
+    width: 100%;
+    padding-left: calc(var(--pywry-spacing-sm) + 14px + var(--pywry-spacing-xs)) !important;
+    padding-right: var(--pywry-spacing-lg);
+    min-width: 120px;
+}
+
+/* Inline variant for dropdown headers */
+.pywry-search-inline {
+    flex: 1;
+}
+
+.pywry-search-inline .pywry-search-input {
+    padding: var(--pywry-spacing-xs) var(--pywry-spacing-sm);
+    padding-left: calc(var(--pywry-spacing-sm) + 14px + var(--pywry-spacing-xs)) !important;
+    background-color: var(--pywry-bg-secondary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-sm);
+    font-size: calc(var(--pywry-font-size) - 1px);
+    transition: border-color var(--pywry-transition-fast);
+}
+
+.pywry-search-inline .pywry-search-input:hover {
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-search-inline .pywry-search-input:focus {
+    outline: none;
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-search-inline .pywry-search-input::placeholder {
+    color: var(--pywry-text-secondary);
+}
+
+/* ---- Select Header (for searchable Select) ---- */
+.pywry-select-header {
+    display: flex;
+    align-items: center;
+    padding: var(--pywry-spacing-sm);
+    border-bottom: 1px solid var(--pywry-border-color);
+}
+
+.pywry-select-options {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.pywry-multiselect-actions {
+    display: flex;
+    gap: 2px;
+}
+
+.pywry-multiselect-action {
+    padding: var(--pywry-spacing-xs) var(--pywry-spacing-sm);
+    background: transparent;
+    color: var(--pywry-text-secondary);
+    border: none;
+    border-radius: var(--pywry-radius-sm);
+    font-family: var(--pywry-font-family);
+    font-size: calc(var(--pywry-font-size) - 1px);
+    cursor: pointer;
+    transition: color var(--pywry-transition-fast), background-color var(--pywry-transition-fast);
+}
+
+.pywry-multiselect-action:hover {
+    color: var(--pywry-text-primary);
+    background-color: var(--pywry-bg-hover);
+}
+
+.pywry-multiselect-action:active {
+    color: var(--pywry-accent);
+}
+
+.pywry-multiselect-options {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: var(--pywry-spacing-xs) 0;
+}
+
+.pywry-multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: var(--pywry-spacing-sm);
+    padding: var(--pywry-spacing-sm) var(--pywry-spacing-md);
+    cursor: pointer;
+    color: var(--pywry-text-primary);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    transition: background-color var(--pywry-transition-fast);
+    white-space: nowrap;
+}
+
+.pywry-multiselect-option:hover {
+    background-color: var(--pywry-bg-hover);
+}
+
+.pywry-multiselect-checkbox {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--pywry-accent);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.pywry-multiselect-label {
+    flex: 1;
+}
+
+.pywry-input {
+    padding: var(--pywry-spacing-sm) var(--pywry-spacing-md);
+    background-color: var(--pywry-bg-secondary);
+    color: var(--pywry-text-primary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    transition: border-color var(--pywry-transition-fast), box-shadow var(--pywry-transition-fast);
+}
+
+.pywry-input:hover {
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-input:focus {
+    outline: none;
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pywry-input::placeholder {
+    color: var(--pywry-text-secondary);
+    opacity: 0.6;
+}
+
+.pywry-input-text {
+    min-width: 120px;
+    padding-left: var(--pywry-spacing-lg);
+    padding-right: var(--pywry-spacing-lg);
+}
+
+/* SecretInput - password/token input with visibility toggle and copy */
+.pywry-secret-wrapper {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+}
+
+.pywry-input-secret {
+    min-width: 140px;
+    padding-left: var(--pywry-spacing-lg);
+    padding-right: 78px; /* Space for action buttons (edit + copy + toggle) */
+    cursor: default; /* Indicate non-editable state */
+}
+
+/* Readonly state - subtle visual indication */
+.pywry-input-secret[readonly] {
+    background: var(--pywry-bg-secondary);
+    cursor: default;
+}
+
+/* When revealed (type=text), show as read-only text */
+.pywry-input-secret[type="text"] {
+    cursor: text;
+    user-select: all;
+}
+
+/* Container for action buttons (edit, copy, toggle) */
+.pywry-secret-actions {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+
+/* Show actions on wrapper hover or input focus */
+.pywry-secret-wrapper:hover .pywry-secret-actions,
+.pywry-secret-wrapper:focus-within .pywry-secret-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Icon-style action buttons - dim to bright on hover */
+.pywry-secret-btn {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--pywry-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--pywry-radius-sm);
+    transition: color 0.15s ease;
+}
+
+.pywry-secret-btn:hover {
+    color: var(--pywry-text-primary);
+}
+
+.pywry-secret-btn:focus {
+    outline: none;
+    color: var(--pywry-text-primary);
+}
+
+.pywry-secret-btn svg {
+    display: block;
+}
+
+/* Copy button success state */
+.pywry-secret-copy.copied {
+    color: var(--pywry-success, #28a745);
+}
+
+/* Confirm button - green checkmark */
+.pywry-secret-confirm {
+    color: var(--pywry-success, #28a745);
+}
+
+.pywry-secret-confirm:hover {
+    color: var(--pywry-success, #28a745);
+    background: rgba(40, 167, 69, 0.15);
+}
+
+/* Cancel button - red X */
+.pywry-secret-cancel {
+    color: var(--pywry-danger, #dc3545);
+}
+
+.pywry-secret-cancel:hover {
+    color: var(--pywry-danger, #dc3545);
+    background: rgba(220, 53, 69, 0.15);
+}
+
+/* Edit mode actions - always visible, top-right corner */
+.pywry-secret-edit-actions {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    top: 4px;
+    transform: none;
+}
+
+/* SecretInput textarea - edit mode (inherits from .pywry-input, adds textarea-specific styles) */
+.pywry-secret-textarea {
+    resize: both;
+    overflow: auto;
+    white-space: pre;
+    overflow-wrap: normal;
+    word-wrap: normal;
+    min-width: 140px;
+    padding-right: 60px; /* Space for confirm/cancel buttons */
+}
+
+/* TextArea - multi-line resizable input */
+.pywry-textarea {
+    min-width: 200px;
+    /* Account for scrollbar width (10px) when constraining max width */
+    max-width: calc(100% - 10px);
+    min-height: 60px;
+    padding: var(--pywry-spacing-md);
+    line-height: 1.4;
+    font-family: inherit;
+    resize: both;
+    overflow: auto;
+    vertical-align: top;
+    box-sizing: border-box;
+}
+
+.pywry-textarea-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pywry-spacing-xs);
+    align-items: flex-start;
+    /* Constrain the group to available width */
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.pywry-textarea-group .pywry-input-label {
+    margin-bottom: 0;
+}
+
+.pywry-input-number {
+    width: 80px;
+    padding-left: var(--pywry-spacing-lg);
+    padding-right: var(--pywry-spacing-sm);
+    -moz-appearance: textfield;
+}
+
+/* Number input spinner buttons - Webkit (Chrome, Safari, Edge) */
+.pywry-input-number::-webkit-outer-spin-button,
+.pywry-input-number::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+    opacity: 1;
+    background: transparent;
+    width: 16px;
+    height: 100%;
+    cursor: pointer;
+    position: relative;
+}
+
+/* Custom spinner using CSS - show on hover/focus */
+.pywry-input-number {
+    position: relative;
+}
+
+/* Container for custom spinner buttons */
+.pywry-number-wrapper {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+}
+
+.pywry-number-wrapper .pywry-input-number {
+    padding-right: 24px;
+}
+
+.pywry-number-spinner {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: calc(100% - 4px);
+    width: 18px;
+    opacity: 0.6;
+    transition: opacity var(--pywry-transition-fast);
+}
+
+.pywry-number-wrapper:hover .pywry-number-spinner,
+.pywry-number-wrapper:focus-within .pywry-number-spinner {
+    opacity: 1;
+}
+
+.pywry-number-spinner button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--pywry-text-secondary);
+    cursor: pointer;
+    padding: 0;
+    font-size: 8px;
+    line-height: 1;
+    transition: color var(--pywry-transition-fast);
+}
+
+.pywry-number-spinner button:hover {
+    color: var(--pywry-text-primary);
+}
+
+.pywry-number-spinner button:active {
+    color: var(--pywry-accent);
+}
+
+/* Date input wrapper for custom calendar button */
+.pywry-date-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.pywry-input-date {
+    min-width: 120px;
+    padding-right: 24px;
+}
+
+/* Date input - match TextInput/NumberInput exactly */
+.pywry-input-date {
+    min-width: 130px;
+    cursor: pointer;
+    color-scheme: dark;
+    position: relative;
+}
+
+/* Empty date placeholder styling */
+.pywry-input-date.pywry-date-empty::-webkit-datetime-edit {
+    color: var(--pywry-text-secondary);
+    opacity: 0.6;
+}
+
+/* Hide the native calendar icon visually but keep it clickable on the right */
+.pywry-input-date::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    width: 28px;
+    height: 100%;
+    cursor: pointer;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+/* Custom calendar icon using background SVG - theme-aware via currentColor encoding */
+.pywry-input-date {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 14px;
+    padding-right: 28px;
+}
+
+/* Light mode - darker icon */
+html.light .pywry-input-date {
+    color-scheme: light;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+}
+
+.pywry-input-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 120px;
+    height: 6px;
+    background: var(--pywry-border-color);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+}
+
+.pywry-input-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--pywry-accent);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--pywry-bg-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease;
+}
+
+.pywry-input-range::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.pywry-input-range:focus {
+    outline: none;
+}
+
+.pywry-input-range:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.3);
+}
+
+.pywry-input-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--pywry-accent);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--pywry-bg-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease;
+}
+
+.pywry-input-range::-moz-range-thumb:hover {
+    transform: scale(1.1);
+}
+
+.pywry-input-range:focus::-moz-range-thumb {
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.3);
+}
+
+.pywry-range-value {
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    font-weight: var(--pywry-font-weight-medium);
+    color: var(--pywry-text-primary);
+    min-width: 28px;
+    text-align: center;
+}
+
+.pywry-toggle {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    width: 32px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.pywry-toggle-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.pywry-toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--pywry-border-color);
+    border-radius: 16px;
+    transition: background-color var(--pywry-transition-fast);
+}
+
+.pywry-toggle-slider::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    background-color: var(--pywry-text-secondary);
+    border-radius: 50%;
+    transition: transform var(--pywry-transition-fast), background-color var(--pywry-transition-fast);
+}
+
+.pywry-toggle-input:checked + .pywry-toggle-slider {
+    background-color: var(--pywry-accent);
+}
+
+.pywry-toggle-input:checked + .pywry-toggle-slider::before {
+    transform: translateX(16px);
+    background-color: white;
+}
+
+.pywry-toggle:hover .pywry-toggle-slider {
+    background-color: var(--pywry-bg-hover);
+}
+
+.pywry-toggle-input:checked + .pywry-toggle-slider:hover {
+    background-color: var(--pywry-accent-hover);
+}
+
+.pywry-toggle-input:focus + .pywry-toggle-slider {
+    box-shadow: 0 0 0 2px var(--pywry-border-focus);
+}
+
+.pywry-toggle.pywry-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.pywry-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    color: var(--pywry-text-primary);
+}
+
+.pywry-checkbox-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.pywry-checkbox-box {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    background-color: var(--pywry-bg-secondary);
+    border: 1.5px solid var(--pywry-border-color);
+    border-radius: 4px;
+    transition: all var(--pywry-transition-fast);
+    flex-shrink: 0;
+}
+
+.pywry-checkbox-box::after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.pywry-checkbox-input:checked + .pywry-checkbox-box {
+    background-color: var(--pywry-accent);
+    border-color: var(--pywry-accent);
+}
+
+.pywry-checkbox-input:checked + .pywry-checkbox-box::after {
+    display: block;
+}
+
+.pywry-checkbox:hover .pywry-checkbox-box {
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-checkbox-input:focus + .pywry-checkbox-box {
+    box-shadow: 0 0 0 2px var(--pywry-border-focus);
+}
+
+.pywry-checkbox.pywry-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.pywry-checkbox-label {
+    user-select: none;
+}
+
+.pywry-radio-group {
+    display: inline-flex;
+    gap: 12px;
+}
+
+.pywry-radio-horizontal {
+    flex-direction: row;
+    align-items: center;
+}
+
+.pywry-radio-vertical {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.pywry-radio-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    color: var(--pywry-text-primary);
+}
+
+.pywry-radio-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.pywry-radio-button {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    background-color: var(--pywry-bg-secondary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: 50%;
+    transition: all var(--pywry-transition-fast);
+    flex-shrink: 0;
+}
+
+.pywry-radio-button::after {
+    content: "";
+    position: absolute;
+    display: none;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background-color: white;
+    border-radius: 50%;
+}
+
+.pywry-radio-option input[type="radio"]:checked + .pywry-radio-button {
+    background-color: var(--pywry-accent);
+    border-color: var(--pywry-accent);
+}
+
+.pywry-radio-option input[type="radio"]:checked + .pywry-radio-button::after {
+    display: block;
+}
+
+.pywry-radio-option:hover .pywry-radio-button {
+    border-color: var(--pywry-border-focus);
+}
+
+.pywry-radio-option input[type="radio"]:focus + .pywry-radio-button {
+    box-shadow: 0 0 0 2px var(--pywry-border-focus);
+}
+
+.pywry-radio-group.pywry-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.pywry-radio-label {
+    user-select: none;
+}
+
+.pywry-tab-group {
+    display: inline-flex;
+    align-items: stretch;
+    background: var(--pywry-tab-bg);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius);
+    padding: 2px;
+    gap: 2px;
+}
+
+.pywry-tab {
+    position: relative;
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--pywry-radius) - 2px);
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    color: var(--pywry-text-secondary);
+    cursor: pointer;
+    transition: all var(--pywry-transition-fast);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.pywry-tab:hover {
+    color: var(--pywry-text-primary);
+    background: var(--pywry-tab-hover-bg);
+}
+
+.pywry-tab-active {
+    color: var(--pywry-text-primary);
+    background: var(--pywry-tab-active-bg);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.pywry-tab-active:hover {
+    background: var(--pywry-tab-active-bg);
+}
+
+.pywry-tab:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--pywry-border-focus);
+}
+
+.pywry-tab:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+.pywry-tab:focus-visible {
+    box-shadow: 0 0 0 2px var(--pywry-border-focus);
+}
+
+/* Size variants */
+.pywry-tab-sm .pywry-tab {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.pywry-tab-lg .pywry-tab {
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.pywry-tab-group.pywry-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Dual-range group container - overlays two sliders on same track */
+.pywry-range-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.pywry-range-track {
+    position: relative;
+    width: 120px;
+    height: 6px;
+}
+
+.pywry-range-track input[type="range"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    margin: 0;
+    padding: 0;
+}
+
+.pywry-range-track input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    background: transparent;
+    border-radius: 3px;
+}
+
+.pywry-range-track input[type="range"]::-moz-range-track {
+    height: 6px;
+    background: transparent;
+    border-radius: 3px;
+}
+
+.pywry-range-track input[type="range"]::-webkit-slider-thumb {
+    pointer-events: auto;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--pywry-accent);
+    cursor: pointer;
+    margin-top: -5px;
+    border: 2px solid var(--pywry-bg-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease;
+}
+
+.pywry-range-track input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--pywry-accent);
+    cursor: pointer;
+    border: 2px solid var(--pywry-bg-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease;
+}
+
+.pywry-range-track input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.pywry-range-track input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.1);
+}
+
+.pywry-range-track input[type="range"]:focus {
+    outline: none;
+}
+
+.pywry-range-track input[type="range"]:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.3);
+}
+
+.pywry-range-track input[type="range"]:focus::-moz-range-thumb {
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.3);
+}
+
+.pywry-range-track-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: var(--pywry-border-color);
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.pywry-range-track-fill {
+    position: absolute;
+    top: 0;
+    height: 6px;
+    background: var(--pywry-accent);
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.pywry-range-separator {
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    color: var(--pywry-text-secondary);
+    padding: 0 2px;
+}
+
+/* Header/Footer wrapper - outermost, stacks vertically */
+.pywry-wrapper-header {
+    display: flex;
+    display: -webkit-flex;
+    flex-direction: column;
+    -webkit-flex-direction: column;
+    align-items: stretch;
+    -webkit-align-items: stretch;
+    /* WebKit-compatible flex grow with explicit basis */
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    min-height: 0;
+    min-width: 0;
+    /* Must use clip to contain child scroll while allowing dropdowns to escape via fixed positioning */
+    overflow: clip;
+}
+
+/* Header and footer toolbars handle their own edge-to-edge styling */
+
+/* Body scroll wrapper - scrollable area between header and footer */
+.pywry-body-scroll {
+    display: flex;
+    display: -webkit-flex;
+    flex-direction: column;
+    -webkit-flex-direction: column;
+    align-items: stretch;
+    -webkit-align-items: stretch;
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    min-height: 0;
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: auto;
+    /* No padding - body-scroll is a layout wrapper, not content container */
+    padding: 0;
+}
+
+/* Top/Bottom wrapper inside body-scroll - fill height but allow overflow for scrolling */
+.pywry-body-scroll > .pywry-wrapper-top {
+    flex: 1 1 auto !important;
+    -webkit-flex: 1 1 auto !important;
+    min-height: 100%;
+}
+
+/* Left/Right wrapper - stacks horizontally, LEFT/RIGHT extend full height */
+.pywry-wrapper-left,
+.pywry-wrapper-right {
+    display: flex !important;
+    display: -webkit-flex !important;
+    flex-direction: row !important;
+    -webkit-flex-direction: row !important;
+    align-items: stretch !important;
+    -webkit-align-items: stretch !important;
+    flex: 1 1 0% !important;
+    -webkit-flex: 1 1 0% !important;
+    min-height: 0;
+    min-width: 0;
+    /* Must use clip to contain child scroll while allowing dropdowns to escape via fixed positioning */
+    overflow: clip;
+}
+
+/* Left/Right toolbars scroll independently */
+.pywry-wrapper-left > .pywry-toolbar-left,
+.pywry-wrapper-left > .pywry-toolbar-right {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: auto;
+}
+
+/* Top/Bottom wrapper - innermost vertical, TOP/BOTTOM are inside LEFT/RIGHT */
+.pywry-wrapper-top,
+.pywry-wrapper-bottom {
+    display: flex !important;
+    display: -webkit-flex !important;
+    flex-direction: column !important;
+    -webkit-flex-direction: column !important;
+    align-items: stretch !important;
+    -webkit-align-items: stretch !important;
+    justify-content: flex-start;
+    -webkit-justify-content: flex-start;
+    flex: 1 1 auto !important;
+    -webkit-flex: 1 1 auto !important;
+    min-height: 0;
+    min-width: 0;
+    /* Allow overflow to propagate to parent scroll container */
+    overflow: visible;
+}
+
+.pywry-wrapper-inside {
+    position: relative;
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    display: -webkit-flex;
+    flex-direction: column;
+    -webkit-flex-direction: column;
+    align-items: stretch;
+    -webkit-align-items: stretch;
+}
+
+.pywry-content {
+    /* WebKit-compatible flex grow */
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    min-height: 0;
+    min-width: 0;
+    box-sizing: border-box;
+    text-align: left;
+    display: flex;
+    display: -webkit-flex;
+    flex-direction: column;
+    -webkit-flex-direction: column;
+}
+
+/* Inner scroll container - handles all scrolling with styled scrollbars */
+.pywry-scroll-container {
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: auto;
+    box-sizing: border-box;
+    min-height: 0;
+    min-width: 0;
+}
+
+/* No padding when content is empty - prevents premature scrollbar */
+.pywry-content:empty {
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Don't force height on content children - let them size naturally */
+.pywry-scroll-container > div:first-child {
+    width: 100%;
+    text-align: left;
+}
+
+/* When content contains AG Grid or Plotly, hide scroll container and let grid/chart handle scrolling */
+.pywry-content:has(.pywry-grid) .pywry-scroll-container,
+.pywry-content:has([class*="ag-theme-"]) .pywry-scroll-container,
+.pywry-content:has(.pywry-plotly) .pywry-scroll-container {
+    overflow: hidden;
+    padding: 16px;
+}
+
+.pywry-grid {
+    /* WebKit-compatible flex grow */
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    min-height: var(--pywry-grid-min-height);
+    width: 100%;
+    /* AG Grid themes handle their own border/radius - don't add extra */
+    overflow: hidden;
+}
+
+.pywry-plotly {
+    overflow: hidden;
+    /* WebKit-compatible flex grow */
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    width: 100%;
+    min-height: 0;
+    border: 1px solid var(--pywry-border-color, #333);
+    border-radius: var(--pywry-radius, 4px);
+}
+
+.pywry-plotly .js-plotly-plot {
+    width: 100%;
+    height: 100%;
+}
+
+/* Ensure modebar doesn't cause scrollbars */
+.pywry-plotly .modebar-container {
+    overflow: visible;
+}
+
+.pywry-plotly .modebar {
+    overflow: visible;
+}
+
+/* Constrain modebar button SVG icons to proper size */
+.pywry-plotly .modebar-btn svg {
+    width: 1em;
+    height: 1em;
+    max-width: 1em;
+    max-height: 1em;
+}
+
+.pywry-plotly .modebar-btn {
+    overflow: hidden;
+}
+
+/* Override AG Grid's focus colors to use subtle grey instead of bright blue */
+.ag-cell-focus,
+.ag-cell:focus,
+.ag-header-cell:focus,
+.ag-header-cell-label:focus,
+.ag-header-cell:focus-within,
+.ag-cell-focus:not(.ag-cell-range-selected):focus-within {
+    border-color: var(--pywry-border-focus, #555) !important;
+    outline: none !important;
+}
+
+/* AG Grid scrollbar styling - NATIVE WINDOW ONLY */
+/* Use AG Grid's browser-color-scheme parameter for appropriate scrollbar colors on macOS */
+/* Dark themes get dark scrollbars */
+html.pywry-native .ag-theme-quartz-dark,
+html.pywry-native .ag-theme-alpine-dark,
+html.pywry-native .ag-theme-balham-dark,
+html.pywry-native .ag-theme-material-dark {
+    --ag-browser-color-scheme: dark !important;
+    color-scheme: dark !important;
+}
+
+/* Light themes get light scrollbars */
+html.pywry-native .ag-theme-quartz:not(.ag-theme-quartz-dark),
+html.pywry-native .ag-theme-alpine:not(.ag-theme-alpine-dark),
+html.pywry-native .ag-theme-balham:not(.ag-theme-balham-dark),
+html.pywry-native .ag-theme-material:not(.ag-theme-material-dark) {
+    --ag-browser-color-scheme: light !important;
+    color-scheme: light !important;
+}
+
+/* Override AG Grid theme variables for subtle styling */
+.ag-root-wrapper,
+.ag-theme-quartz,
+.ag-theme-quartz-dark,
+.ag-theme-alpine,
+.ag-theme-alpine-dark,
+.ag-theme-balham,
+.ag-theme-balham-dark,
+.ag-theme-material,
+.ag-theme-material-dark {
+    /* Remove AG Grid's wrapper border-radius - we handle borders at container level */
+    --ag-wrapper-border-radius: 0 !important;
+    /* Scrollbar colors - AG Grid v32+ uses these CSS variables */
+    --ag-scrollbar-size: 10px !important;
+    --ag-scrollbar-color: rgba(155, 155, 155, 0.5) !important;
+    --ag-scrollbar-corner-color: var(--pywry-bg-secondary, #212124) !important;
+    --ag-scrollbar-track-color: var(--pywry-bg-secondary, #212124) !important;
+    /* Focus colors */
+    --ag-input-focus-border-color: var(--pywry-border-focus, #555) !important;
+    --ag-range-selection-border-color: var(--pywry-border-focus, #555) !important;
+    /* Row selection */
+    --ag-selected-row-background-color: rgba(255, 255, 255, 0.08) !important;
+    --ag-row-hover-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Light theme - darker tints */
+.pywry-theme-light .ag-root-wrapper,
+html.light .ag-root-wrapper {
+    --ag-selected-row-background-color: rgba(0, 0, 0, 0.06) !important;
+    --ag-row-hover-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Remove focus ring from checkboxes - keep original AG Grid styling otherwise */
+.ag-checkbox-input-wrapper:focus,
+.ag-checkbox-input-wrapper:focus-within,
+.ag-checkbox-input-wrapper:focus-visible,
+.ag-checkbox-input-wrapper.ag-focused {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.ag-text-field-input:focus,
+.ag-number-field-input:focus,
+.ag-picker-field-wrapper:focus-within,
+.ag-select .ag-picker-field-wrapper:focus-within {
+    border-color: var(--pywry-border-focus, #555) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+.ag-filter .ag-input-wrapper::before,
+.ag-simple-filter-body-wrapper .ag-input-wrapper::before,
+.ag-filter-body-wrapper .ag-input-wrapper::before {
+    display: none !important;
+}
+.ag-filter .ag-text-field-input,
+.ag-filter .ag-number-field-input,
+.ag-simple-filter-body-wrapper .ag-text-field-input,
+.ag-simple-filter-body-wrapper .ag-number-field-input {
+    padding-left: var(--ag-spacing, 8px) !important;
+}
+
+/* AG Grid filter buttons - match PyWry button styling */
+.ag-filter-apply-panel button,
+.ag-standard-button {
+    background-color: var(--pywry-bg-secondary, #2a2a2a) !important;
+    color: var(--pywry-text-primary, #e0e0e0) !important;
+    border: 1px solid var(--pywry-border-color, #444) !important;
+    border-radius: var(--pywry-radius, 4px) !important;
+    padding: var(--pywry-spacing-sm, 6px) var(--pywry-spacing-md, 12px) !important;
+    font-family: var(--pywry-font-family, inherit) !important;
+    font-size: var(--pywry-font-size, 13px) !important;
+    cursor: pointer !important;
+    transition: border-color 0.15s ease, background-color 0.15s ease !important;
+}
+
+.ag-filter-apply-panel button:hover,
+.ag-standard-button:hover {
+    border-color: var(--pywry-border-focus, #555) !important;
+    background-color: var(--pywry-bg-hover, #333) !important;
+}
+
+.ag-filter-apply-panel button:focus,
+.ag-standard-button:focus {
+    outline: none !important;
+    border-color: var(--pywry-border-focus, #555) !important;
+}
+
+/* AG Grid header icons - dimmed by default, full on direct hover */
+.ag-header-icon,
+.ag-header-cell-menu-button,
+.ag-header-cell-filter-button,
+.ag-sort-indicator-icon,
+.ag-header-cell-menu-button *,
+.ag-header-cell-filter-button *,
+.ag-header-icon * {
+    opacity: 0.5 !important;
+    transition: opacity 0.15s ease !important;
+    background-color: transparent !important;
+    color: var(--pywry-text-primary, #e0e0e0) !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+/* Only change on direct icon hover, not parent header hover */
+.ag-header-icon:hover,
+.ag-header-icon:hover *,
+.ag-header-cell-menu-button:hover,
+.ag-header-cell-menu-button:hover *,
+.ag-header-cell-filter-button:hover,
+.ag-header-cell-filter-button:hover * {
+    opacity: 1 !important;
+    background-color: transparent !important;
+    color: var(--pywry-text-primary, #e0e0e0) !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border: none !important;
+}
+
+/* Active filter indicator should be visible */
+.ag-header-cell-filter-button[aria-pressed="true"],
+.ag-header-cell-filter-button[aria-pressed="true"] *,
+.ag-header-cell-filtered .ag-header-cell-filter-button,
+.ag-header-cell-filtered .ag-header-cell-filter-button * {
+    opacity: 1 !important;
+    color: var(--pywry-text-primary, #e0e0e0) !important;
+}
+
+/* Light theme colors */
+.pywry-theme-light .ag-header-icon,
+.pywry-theme-light .ag-header-cell-menu-button,
+.pywry-theme-light .ag-header-cell-filter-button,
+.pywry-theme-light .ag-header-icon *,
+.pywry-theme-light .ag-header-cell-menu-button *,
+.pywry-theme-light .ag-header-cell-filter-button *,
+html.light .ag-header-icon,
+html.light .ag-header-cell-menu-button,
+html.light .ag-header-cell-filter-button,
+html.light .ag-header-icon *,
+html.light .ag-header-cell-menu-button *,
+html.light .ag-header-cell-filter-button * {
+    color: var(--pywry-text-primary, #1a1a1a) !important;
+}
+
+.pywry-theme-light .ag-header-icon:hover,
+.pywry-theme-light .ag-header-icon:hover *,
+.pywry-theme-light .ag-header-cell-menu-button:hover,
+.pywry-theme-light .ag-header-cell-menu-button:hover *,
+.pywry-theme-light .ag-header-cell-filter-button:hover,
+.pywry-theme-light .ag-header-cell-filter-button:hover *,
+html.light .ag-header-icon:hover,
+html.light .ag-header-icon:hover *,
+html.light .ag-header-cell-menu-button:hover,
+html.light .ag-header-cell-menu-button:hover *,
+html.light .ag-header-cell-filter-button:hover,
+html.light .ag-header-cell-filter-button:hover * {
+    color: var(--pywry-text-primary, #1a1a1a) !important;
+}
+
+/* Light theme adjustments */
+.pywry-theme-light .ag-filter-apply-panel button,
+.pywry-theme-light .ag-standard-button,
+html.light .ag-filter-apply-panel button,
+html.light .ag-standard-button {
+    background-color: var(--pywry-bg-secondary, #f0f0f0) !important;
+    color: var(--pywry-text-primary, #1a1a1a) !important;
+    border-color: var(--pywry-border-color, #ccc) !important;
+}
+
+.pywry-theme-light .ag-filter-apply-panel button:hover,
+.pywry-theme-light .ag-standard-button:hover,
+html.light .ag-filter-apply-panel button:hover,
+html.light .ag-standard-button:hover {
+    border-color: var(--pywry-border-focus, #999) !important;
+    background-color: var(--pywry-bg-hover, #e0e0e0) !important;
+}
+
+/* ==========================================================================
+   Tooltip System - JS-managed tooltip element
+   The actual tooltip is created and positioned by JavaScript (TOOLTIP_MANAGER_JS)
+   ========================================================================== */
+
+/* The tooltip element injected by JS - supports both ID and class selectors */
+#pywry-tooltip,
+.pywry-tooltip {
+    position: absolute;
+    padding: 6px 10px;
+    background: #3d3d42;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: nowrap;
+    border-radius: 4px;
+    border: 1px solid #555;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 999999;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease 0.5s, visibility 0s ease 0.5s;
+}
+
+#pywry-tooltip.visible,
+.pywry-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.15s ease 0.5s, visibility 0s ease 0s;
+}
+
+/* Tooltip arrow */
+#pywry-tooltip::before,
+.pywry-tooltip::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+}
+
+/* Arrow pointing down (tooltip above target) */
+#pywry-tooltip.arrow-bottom::before,
+.pywry-tooltip.arrow-bottom::before {
+    bottom: -12px;
+    border-top-color: #3d3d42;
+}
+
+/* Arrow pointing up (tooltip below target) */
+#pywry-tooltip.arrow-top::before,
+.pywry-tooltip.arrow-top::before {
+    top: -12px;
+    border-bottom-color: #3d3d42;
+}
+
+/* Light theme tooltip */
+html.light #pywry-tooltip,
+.pywry-theme-light #pywry-tooltip,
+html.light .pywry-tooltip,
+.pywry-theme-light .pywry-tooltip {
+    background: #5a5a5f;
+    border-color: #4a4a4f;
+}
+
+html.light #pywry-tooltip.arrow-bottom::before,
+.pywry-theme-light #pywry-tooltip.arrow-bottom::before,
+html.light .pywry-tooltip.arrow-bottom::before,
+.pywry-theme-light .pywry-tooltip.arrow-bottom::before {
+    border-top-color: #5a5a5f;
+}
+
+html.light #pywry-tooltip.arrow-top::before,
+.pywry-theme-light #pywry-tooltip.arrow-top::before,
+html.light .pywry-tooltip.arrow-top::before,
+.pywry-theme-light .pywry-tooltip.arrow-top::before {
+    border-bottom-color: #5a5a5f;
+}
+
+/*
+ * Scrollbar styling uses the * selector for universal application.
+ * Theme colors are handled dynamically via JavaScript (THEME_MANAGER_JS)
+ * which injects a <style> element to update scrollbar colors on theme change.
+ *
+ * AG Grid scroll containers automatically get styled by the universal selector.
+ */
+
+.pywry-bg-primary { background-color: var(--pywry-bg-primary); }
+.pywry-bg-secondary { background-color: var(--pywry-bg-secondary); }
+.pywry-bg-tertiary { background-color: var(--pywry-bg-tertiary); }
+.pywry-bg-quartary { background-color: var(--pywry-bg-quartary); }
+.pywry-bg-accent { background-color: var(--pywry-bg-accent); }
+.pywry-bg-toast { background-color: var(--pywry-bg-toast); }
+.pywry-bg-tag { background-color: var(--pywry-tag-bg); }
+
+.pywry-text-primary { color: var(--pywry-text-primary); }
+.pywry-text-secondary { color: var(--pywry-text-secondary); }
+.pywry-text-tertiary { color: var(--pywry-text-tertiary); }
+.pywry-text-muted { color: var(--pywry-text-muted); }
+.pywry-text-accent { color: var(--pywry-text-accent); }
+
+.pywry-border-theme { border-color: var(--pywry-border-color); }
+.pywry-border-outline { border-color: var(--pywry-border-outline); }
+.pywry-border-modal { border-color: var(--pywry-border-modal); }
+
+.pywry-ghost-icon { color: var(--pywry-ghost-icon); }
+.pywry-ghost-icon:hover { color: var(--pywry-ghost-icon-hover); }
+.pywry-info-icon { color: var(--pywry-info-icon); }

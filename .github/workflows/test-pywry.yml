@@ -1,0 +1,180 @@
+name: Test pywry
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - 'pywry/**'
+      - '.github/workflows/test-pywry.yml'
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - 'pywry/**'
+      - '.github/workflows/test-pywry.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: pywry
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --frozen
+
+      - name: Run Ruff linter
+        run: |
+          ruff check pywry/ tests/
+
+      - name: Run Ruff formatter check
+        run: |
+          ruff format --check pywry/ tests/
+
+      - name: Run Mypy type checker
+        run: |
+          mypy pywry/
+
+      - name: Run Pylint
+        run: |
+          pylint pywry/ --exit-zero --output-format=colorized
+
+  test:
+    name: Test - ${{ matrix.os }} - Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x64 platforms: test min (3.10) and max (3.14)
+          - os: ubuntu-24.04
+            python-version: '3.10'
+          - os: ubuntu-24.04
+            python-version: '3.14'
+          - os: windows-2025
+            python-version: '3.10'
+          - os: windows-2025
+            python-version: '3.14'
+          - os: macos-15-intel
+            python-version: '3.10'
+          - os: macos-15-intel
+            python-version: '3.14'
+          # ARM platforms: test min available and max (3.14)
+          - os: ubuntu-24.04-arm
+            python-version: '3.11'
+          - os: ubuntu-24.04-arm
+            python-version: '3.14'
+          - os: windows-11-arm
+            python-version: '3.12'
+          - os: windows-11-arm
+            python-version: '3.14'
+          - os: macos-15
+            python-version: '3.10'
+          - os: macos-15
+            python-version: '3.14'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Set up Rust (Linux only)
+        if: runner.os == 'Linux'
+        uses: dtolnay/rust-toolchain@stable
+
+      # Linux: Install Xvfb and other dependencies for GUI tests
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
+          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev && break || { sleep 30; sudo apt-get update; }; done
+
+      - name: Install dependencies
+        run: uv sync --all-extras --frozen
+
+      # Linux: Docker is pre-installed, testcontainers will work
+      - name: Verify Docker (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          docker version
+
+      # Windows: Cannot run Linux containers (Docker runs Windows containers only)
+      # Redis only has Linux images, so we use memory backend on Windows
+
+      # macOS Intel: Install Docker using docker/setup-docker-action
+      - name: Setup Docker (macOS Intel)
+        id: docker-macos
+        if: runner.os == 'macOS' && runner.arch == 'X64'
+        uses: docker/setup-docker-action@v4
+
+      - name: Verify Docker (macOS Intel)
+        if: runner.os == 'macOS' && runner.arch == 'X64'
+        run: |
+          echo "DOCKER_HOST=$DOCKER_HOST"
+          docker version
+
+      # macOS ARM: No Docker support (no nested virtualization), use memory backend
+
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
+        env:
+          PYWRY_HEADLESS: "1"
+          NO_AT_BRIDGE: "1"
+        run: |
+          dbus-run-session -- xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" uv run pytest -c pytest.ini tests/ -v --tb=short
+
+      - name: Run tests (Windows x64)
+        if: runner.os == 'Windows' && runner.arch == 'X64'
+        env:
+          PYWRY_HEADLESS: "1"
+          PYWRY_DEPLOY__STATE_BACKEND: "memory"
+        run: |
+          uv run pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+
+      - name: Run tests (Windows ARM)
+        if: runner.os == 'Windows' && runner.arch == 'ARM64'
+        env:
+          PYWRY_HEADLESS: "1"
+          PYWRY_DEPLOY__STATE_BACKEND: "memory"
+        run: |
+          uv run pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+
+      - name: Run tests (macOS Intel)
+        if: runner.os == 'macOS' && runner.arch == 'X64'
+        env:
+          PYWRY_HEADLESS: "1"
+          DOCKER_HOST: ${{ steps.docker-macos.outputs.sock }}
+        run: |
+          echo "DOCKER_HOST=$DOCKER_HOST"
+          uv run pytest -c pytest.ini tests/ -v --tb=short
+
+      - name: Run tests (macOS ARM)
+        if: runner.os == 'macOS' && runner.arch == 'ARM64'
+        env:
+          PYWRY_HEADLESS: "1"
+          PYWRY_DEPLOY__STATE_BACKEND: "memory"
+        run: |
+          uv run pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+
