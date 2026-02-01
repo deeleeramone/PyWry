@@ -1,0 +1,91 @@
+name: Generate SBOM
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+  
+  # Trigger on changes to pyproject.toml
+  push:
+    paths:
+      - 'pywry/pyproject.toml'
+    branches:
+      - main
+      - master
+      - develop
+  
+  # Allow being called from other workflows (e.g., publish workflow)
+  workflow_call:
+    outputs:
+      sbom-path:
+        description: 'Path to the generated SBOM XML file'
+        value: ${{ jobs.generate-sbom.outputs.sbom-path }}
+
+permissions:
+  contents: write
+  
+defaults:
+  run:
+    working-directory: pywry
+
+jobs:
+  generate-sbom:
+    name: Generate SBOM XML
+    runs-on: ubuntu-latest
+    outputs:
+      sbom-path: ${{ steps.generate.outputs.sbom-path }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Install CycloneDX BOM generator
+        run: pip install cyclonedx-bom
+          
+      - name: Generate SBOM XML
+        id: generate
+        run: |
+          cyclonedx-py poetry -o ../sbom.xml --format xml
+          echo "sbom-path=sbom.xml" >> $GITHUB_OUTPUT
+          
+      - name: Generate SBOM JSON (additional format)
+        run: cyclonedx-py poetry -o ../sbom.json --format json
+          
+      - name: Display SBOM summary
+        run: |
+          echo "## SBOM Generated Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Format:** CycloneDX XML & JSON" >> $GITHUB_STEP_SUMMARY
+          echo "**Generated:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if command -v xmllint &> /dev/null; then
+            COMPONENT_COUNT=$(xmllint --xpath "count(//bom:component)" ../sbom.xml --nsmap bom=http://cyclonedx.org/schema/bom 2>/dev/null || echo "N/A")
+            echo "**Components:** $COMPONENT_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            sbom.xml
+            sbom.json
+          retention-days: 90
+          
+      - name: Commit SBOM to repository
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          cd ..
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add sbom.xml sbom.json || true
+          if git diff --staged --quiet; then
+            echo "No changes to SBOM files"
+          else
+            git commit -m "chore: update SBOM [skip ci]"
+            git push
+          fi

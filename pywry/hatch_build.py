@@ -5,6 +5,8 @@ target platform, making pywry fully self-contained without requiring users
 to download pytauri-wheel separately.
 """
 
+# pylint: disable=too-many-locals
+
 from __future__ import annotations
 
 import os
