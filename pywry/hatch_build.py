@@ -26,9 +26,10 @@ def get_platform_tag() -> str:
     machine = platform.machine().lower()
 
     if system == "darwin":
+        # Use tags that match what pytauri-wheel publishes on PyPI
         if machine == "arm64":
-            return "macosx_15_0_arm64"
-        return "macosx_15_0_x86_64"
+            return "macosx_14_0_arm64"
+        return "macosx_13_0_x86_64"
     if system == "linux":
         if machine == "aarch64":
             return "manylinux_2_35_aarch64"
@@ -53,8 +54,15 @@ class CustomBuildHook(BuildHookInterface):
 
     def initialize(self, version: str, build_data: dict[str, Any]) -> None:
         """Download and bundle pytauri-wheel for the target platform."""
+        # Skip for non-wheel builds (sdist, editable)
         if self.target_name != "wheel":
-            # Only bundle for wheel builds, not sdist
+            return
+
+        # Skip for editable installs
+        if version == "editable":
+            self.app.display_info(
+                "Skipping pytauri-wheel bundling for editable install"
+            )
             return
 
         # Check if bundling is enabled (can be disabled for development)

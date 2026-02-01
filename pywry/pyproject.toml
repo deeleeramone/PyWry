@@ -24,6 +24,7 @@ keywords = ["rendering", "frontend", "webview", "tauri", "gui", "plotly", "aggri
 
 dependencies = [
     "pytauri>=0.8.0",
+    "pytauri-wheel>=0.8.0",
     "anyio>=4.0.0",
     "pandas>=1.5.3",
     "pydantic>=2.0.0",
