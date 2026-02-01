@@ -145,7 +145,9 @@ def decode_secret(encoded: str) -> str:
     return base64.b64decode(encoded.encode("ascii")).decode("utf-8")
 
 
-def set_secret_handler(event: str, handler: Callable[[dict[str, Any]], str | None]) -> None:
+def set_secret_handler(
+    event: str, handler: Callable[[dict[str, Any]], str | None]
+) -> None:
     """Set a custom handler for secret reveal/copy events.
 
     Use this to add custom validation, authentication, or logging before
@@ -188,7 +190,9 @@ def get_secret_handler(event: str) -> Callable[[dict[str, Any]], str | None] | N
     return _SECRET_HANDLERS.get(event)
 
 
-ToolbarPosition = Literal["header", "footer", "top", "bottom", "left", "right", "inside"]
+ToolbarPosition = Literal[
+    "header", "footer", "top", "bottom", "left", "right", "inside"
+]
 ItemType = Literal[
     "button",
     "select",
@@ -305,7 +309,9 @@ class ToolbarItem(BaseModel):
         if not self.component_id:
             # Get the type from the subclass (e.g., "button", "select", "div")
             component_type = getattr(self, "type", "item")
-            object.__setattr__(self, "component_id", _generate_component_id(component_type))
+            object.__setattr__(
+                self, "component_id", _generate_component_id(component_type)
+            )
         return self
 
     @field_validator("event")
@@ -353,29 +359,24 @@ class ToolbarItem(BaseModel):
 class Button(ToolbarItem):
     """A clickable button that emits an event with optional data payload.
 
-    Parameters
+    Attributes
     ----------
-        variant: Button style variant:
-            - "primary" (theme-aware: light bg in dark mode, accent in light mode)
-            - "secondary" (subtle background, theme-aware)
-            - "neutral" (blue)
-            - "ghost" (transparent)
-            - "outline" (bordered)
-            - "danger" (red)
-            - "warning" (orange)
-            - "icon" (ghost style, square aspect ratio for icon-only buttons)
-        size: Button size variant:
-            - None (default size)
-            - "xs" (extra small)
-            - "sm" (small)
-            - "lg" (large)
-            - "xl" (extra large)
+    variant : str
+        Button style variant. Options: "primary" (theme-aware),
+        "secondary" (subtle), "neutral" (blue), "ghost" (transparent),
+        "outline" (bordered), "danger" (red), "warning" (orange),
+        "icon" (ghost style, square aspect ratio).
+    size : str or None
+        Button size variant. Options: None (default), "xs", "sm", "lg", "xl".
+    data : dict
+        Additional data payload to include with the event.
 
-    Example:
-        Button(label="Export", event="export:csv", data={"format": "csv"})
-        Button(label="Cancel", event="app:cancel", variant="secondary")
-        Button(label="⚙", event="app:settings", variant="icon")
-        Button(label="Submit", event="form:submit", variant="neutral", size="lg")
+    Examples
+    --------
+    >>> Button(label="Export", event="export:csv", data={"format": "csv"})
+    >>> Button(label="Cancel", event="app:cancel", variant="secondary")
+    >>> Button(label="⚙", event="app:settings", variant="icon")
+    >>> Button(label="Submit", event="form:submit", variant="neutral", size="lg")
     """
 
     type: Literal["button"] = "button"
@@ -394,7 +395,9 @@ class Button(ToolbarItem):
 
     def build_html(self) -> str:
         """Build button HTML."""
-        variant_class = f" pywry-btn-{self.variant}" if self.variant != "primary" else ""
+        variant_class = (
+            f" pywry-btn-{self.variant}" if self.variant != "primary" else ""
+        )
         size_class = f" pywry-btn-{self.size}" if self.size else ""
         disabled_class = " pywry-disabled" if self.disabled else ""
         disabled_attr = " disabled" if self.disabled else ""
@@ -487,9 +490,7 @@ class Select(ToolbarItem):
         search_header = ""
         if self.searchable:
             search_input = SearchInput(placeholder="Search...")
-            search_header = (
-                f'<div class="pywry-select-header">{search_input.build_inline_html()}</div>'
-            )
+            search_header = f'<div class="pywry-select-header">{search_input.build_inline_html()}</div>'
 
         # Custom dropdown structure
         dropdown_html = (
@@ -512,7 +513,11 @@ class Select(ToolbarItem):
                 f'<span class="pywry-input-label">{html.escape(self.label)}</span>'
                 f"{dropdown_html}</div>"
             )
-        return f'<div style="{self.style}">{dropdown_html}</div>' if self.style else dropdown_html
+        return (
+            f'<div style="{self.style}">{dropdown_html}</div>'
+            if self.style
+            else dropdown_html
+        )
 
 
 class MultiSelect(ToolbarItem):
@@ -568,7 +573,9 @@ class MultiSelect(ToolbarItem):
         title_attr = self._build_title_attr()
 
         # Build display text for selected items
-        selected_labels = [opt.label for opt in self.options if str(opt.value) in selected_set]
+        selected_labels = [
+            opt.label for opt in self.options if str(opt.value) in selected_set
+        ]
 
         if len(selected_labels) == 0:
             display_text = "Select..."
@@ -579,7 +586,9 @@ class MultiSelect(ToolbarItem):
 
         # Separate options: selected first, then unselected
         selected_opts = [opt for opt in self.options if str(opt.value) in selected_set]
-        unselected_opts = [opt for opt in self.options if str(opt.value) not in selected_set]
+        unselected_opts = [
+            opt for opt in self.options if str(opt.value) not in selected_set
+        ]
         sorted_options = selected_opts + unselected_opts
 
         # Build options HTML with checkboxes
@@ -630,7 +639,11 @@ class MultiSelect(ToolbarItem):
                 f'<span class="pywry-input-label">{html.escape(self.label)}</span>'
                 f"{dropdown_html}</div>"
             )
-        return f'<div style="{self.style}">{dropdown_html}</div>' if self.style else dropdown_html
+        return (
+            f'<div style="{self.style}">{dropdown_html}</div>'
+            if self.style
+            else dropdown_html
+        )
 
 
 class TextInput(ToolbarItem):
@@ -1070,7 +1083,9 @@ class SecretInput(ToolbarItem):
 
         # Convert to plain string for handler
         plain_value = (
-            new_value.get_secret_value() if isinstance(new_value, SecretStr) else new_value
+            new_value.get_secret_value()
+            if isinstance(new_value, SecretStr)
+            else new_value
         )
 
         # If custom handler, call it with the value (set mode) and metadata
@@ -1083,7 +1098,9 @@ class SecretInput(ToolbarItem):
             )
         else:
             # Update internal value and registry
-            secret_value = new_value if isinstance(new_value, SecretStr) else SecretStr(new_value)
+            secret_value = (
+                new_value if isinstance(new_value, SecretStr) else SecretStr(new_value)
+            )
             object.__setattr__(self, "value", secret_value)
             register_secret(self.component_id, secret_value)
 
@@ -1273,9 +1290,11 @@ class SearchInput(ToolbarItem):
         default="off",
         description="Enable browser auto-correction (Safari/iOS)",
     )
-    autocapitalize: Literal["off", "none", "on", "sentences", "words", "characters"] = Field(
-        default="off",
-        description="Control capitalization on mobile keyboards",
+    autocapitalize: Literal["off", "none", "on", "sentences", "words", "characters"] = (
+        Field(
+            default="off",
+            description="Control capitalization on mobile keyboards",
+        )
     )
 
     def build_html(self) -> str:
@@ -1392,7 +1411,9 @@ class NumberInput(ToolbarItem):
         )
 
         # Wrap input and spinner together
-        wrapper_html = f'<span class="pywry-number-wrapper">{input_html}{spinner_html}</span>'
+        wrapper_html = (
+            f'<span class="pywry-number-wrapper">{input_html}{spinner_html}</span>'
+        )
 
         if self.label:
             return (
@@ -1463,7 +1484,9 @@ class SliderInput(ToolbarItem):
     def validate_range(self) -> SliderInput:
         """Validate min <= max and value is within range."""
         if self.min > self.max:
-            raise ValueError(f"min ({self.min}) cannot be greater than max ({self.max})")
+            raise ValueError(
+                f"min ({self.min}) cannot be greater than max ({self.max})"
+            )
         if self.value < self.min or self.value > self.max:
             raise ValueError(
                 f"value ({self.value}) must be between min ({self.min}) and max ({self.max})"
@@ -1538,9 +1561,13 @@ class RangeInput(ToolbarItem):
     def validate_range(self) -> RangeInput:
         """Validate min <= max and start <= end within range."""
         if self.min > self.max:
-            raise ValueError(f"min ({self.min}) cannot be greater than max ({self.max})")
+            raise ValueError(
+                f"min ({self.min}) cannot be greater than max ({self.max})"
+            )
         if self.start > self.end:
-            raise ValueError(f"start ({self.start}) cannot be greater than end ({self.end})")
+            raise ValueError(
+                f"start ({self.start}) cannot be greater than end ({self.end})"
+            )
         if self.start < self.min or self.start > self.max:
             raise ValueError(
                 f"start ({self.start}) must be between min ({self.min}) and max ({self.max})"
@@ -1693,7 +1720,8 @@ class Checkbox(ToolbarItem):
         checked_attr = " checked" if self.value else ""
         onchange = (
             f"if (window.pywry && window.pywry.emit) {{ "
-            f"window.pywry.emit('{self.event}', {{value: this.checked, componentId: '{self.component_id}'}}, this); "
+            f"window.pywry.emit('{self.event}', "
+            f"{{value: this.checked, componentId: '{self.component_id}'}}, this); "
             f"}} else {{ console.warn('PyWry not ready'); }}"
         )
 
@@ -1715,18 +1743,27 @@ class RadioGroup(ToolbarItem):
 
     Emits: {value: <selected_value>}
 
-    Parameters
+    Attributes
     ----------
-        direction: Layout direction - "horizontal" or "vertical"
+    options : list of Option
+        List of Option objects for the radio group.
+    selected : str
+        Currently selected value.
+    direction : str
+        Layout direction - "horizontal" or "vertical".
 
-    Example:
-        RadioGroup(
-            label="View:",
-            event="view:change",
-            options=[Option(label="List", value="list"), Option(label="Grid", value="grid")],
-            selected="list",
-            direction="horizontal",
-        )
+    Examples
+    --------
+    >>> RadioGroup(
+    ...     label="View:",
+    ...     event="view:change",
+    ...     options=[
+    ...         Option(label="List", value="list"),
+    ...         Option(label="Grid", value="grid"),
+    ...     ],
+    ...     selected="list",
+    ...     direction="horizontal",
+    ... )
     """
 
     type: Literal["radio"] = "radio"
@@ -1793,7 +1830,11 @@ class RadioGroup(ToolbarItem):
                 f'<span class="pywry-input-group pywry-input-inline" style="{self.style}">'
                 f'<span class="pywry-input-label">{html.escape(self.label)}</span>{radio_html}</span>'
             )
-        return f'<span style="{self.style}">{radio_html}</span>' if self.style else radio_html
+        return (
+            f'<span style="{self.style}">{radio_html}</span>'
+            if self.style
+            else radio_html
+        )
 
 
 class TabGroup(ToolbarItem):
@@ -1805,23 +1846,27 @@ class TabGroup(ToolbarItem):
 
     Emits: {componentId, value: <selected_value>}
 
-    Parameters
+    Attributes
     ----------
-        options: List of Option objects (label + value).
-        selected: Currently selected value.
-        size: Tab size - "sm", "md" (default), or "lg".
+    options : list of Option
+        List of Option objects (label + value).
+    selected : str
+        Currently selected value.
+    size : str
+        Tab size - "sm", "md" (default), or "lg".
 
-    Example:
-        TabGroup(
-            label="View:",
-            event="view:change",
-            options=[
-                Option(label="Table", value="table"),
-                Option(label="Chart", value="chart"),
-                Option(label="Map", value="map"),
-            ],
-            selected="table",
-        )
+    Examples
+    --------
+    >>> TabGroup(
+    ...     label="View:",
+    ...     event="view:change",
+    ...     options=[
+    ...         Option(label="Table", value="table"),
+    ...         Option(label="Chart", value="chart"),
+    ...         Option(label="Map", value="map"),
+    ...     ],
+    ...     selected="table",
+    ... )
     """
 
     type: Literal["tab"] = "tab"
@@ -1867,7 +1912,9 @@ class TabGroup(ToolbarItem):
         for opt in self.options:
             val = html.escape(str(opt.value))
             lbl = html.escape(str(opt.label))
-            active_class = " pywry-tab-active" if str(opt.value) == self.selected else ""
+            active_class = (
+                " pywry-tab-active" if str(opt.value) == self.selected else ""
+            )
             tabs_html_parts.append(
                 f'<button type="button" class="pywry-tab{active_class}" '
                 f'data-value="{val}" onclick="{onclick}"{disabled_attr}>{lbl}</button>'
@@ -1887,7 +1934,9 @@ class TabGroup(ToolbarItem):
                 f'<span class="pywry-input-label">{html.escape(self.label)}</span>{tab_group_html}</span>'
             )
         return (
-            f'<span style="{self.style}">{tab_group_html}</span>' if self.style else tab_group_html
+            f'<span style="{self.style}">{tab_group_html}</span>'
+            if self.style
+            else tab_group_html
         )
 
 
@@ -1899,22 +1948,27 @@ class Div(ToolbarItem):
 
     Emits: No automatic events (unless content has interactive elements)
 
-    Parameters
+    Attributes
     ----------
-        content: HTML content to render inside the div.
-        script: JS file path or inline string to inject (executed after toolbar script).
-        class_name: Custom CSS class for the div container.
-        children: Nested toolbar items (Button, Select, other Divs, etc.).
+    content : str
+        HTML content to render inside the div.
+    script : str or Path or None
+        JS file path or inline string to inject (executed after toolbar script).
+    class_name : str
+        Custom CSS class for the div container.
+    children : list or None
+        Nested toolbar items (Button, Select, other Divs, etc.).
 
-    Example:
-        Div(
-            content="<h3>Controls</h3>",
-            class_name="my-controls",
-            children=[
-                Button(label="Action", event="app:action"),
-                Div(content="<span>Nested</span>", class_name="nested-div"),
-            ],
-        )
+    Examples
+    --------
+    >>> Div(
+    ...     content="<h3>Controls</h3>",
+    ...     class_name="my-controls",
+    ...     children=[
+    ...         Button(label="Action", event="app:action"),
+    ...         Div(content="<span>Nested</span>", class_name="nested-div"),
+    ...     ],
+    ... )
     """
 
     type: Literal["div"] = "div"
@@ -2004,7 +2058,9 @@ class Div(ToolbarItem):
                 )
             ):
                 # Might be a file path - try to read it
-                script_path = Path(self.script) if isinstance(self.script, str) else self.script
+                script_path = (
+                    Path(self.script) if isinstance(self.script, str) else self.script
+                )
                 if script_path.exists():
                     scripts.append(script_path.read_text(encoding="utf-8"))
                 else:
@@ -2032,39 +2088,40 @@ class TickerItem(BaseModel):
 
     NOT a full ToolbarItem - this is a content helper for use inside Marquee.
 
-    Parameters
+    Attributes
     ----------
-        ticker : str
-            Unique identifier for this item (e.g., "AAPL", "BTC", "cpu-usage").
-            Used as `data-ticker` attribute for targeting updates.
-        text : str
-            Initial text content to display.
-        html : str
-            Initial HTML content (alternative to text for rich content).
-        class_name : str
-            Additional CSS classes for styling.
-        style : str
-            Inline CSS styles.
+    ticker : str
+        Unique identifier for this item (e.g., "AAPL", "BTC", "cpu-usage").
+        Used as `data-ticker` attribute for targeting updates.
+    text : str
+        Initial text content to display.
+    html : str
+        Initial HTML content (alternative to text for rich content).
+    class_name : str
+        Additional CSS classes for styling.
+    style : str
+        Inline CSS styles.
 
-    Example:
-        # Create ticker items for a stock marquee
-        items = [
-            TickerItem(ticker="AAPL", text="AAPL $185.50", class_name="stock-up"),
-            TickerItem(ticker="GOOGL", text="GOOGL $142.20"),
-            TickerItem(ticker="MSFT", text="MSFT $415.80", class_name="stock-down"),
-        ]
-        marquee = Marquee(
-            text=" • ".join(item.build_html() for item in items),
-            speed=20,
-        )
+    Examples
+    --------
+    Create ticker items for a stock marquee:
 
-        # Later, update individual prices:
-        event, data = items[0].update_payload(
-            text="AAPL $186.25",
-            class_add="stock-up",
-            class_remove="stock-down"
-        )
-        widget.emit(event, data)
+    >>> items = [
+    ...     TickerItem(ticker="AAPL", text="AAPL $185.50", class_name="stock-up"),
+    ...     TickerItem(ticker="GOOGL", text="GOOGL $142.20"),
+    ...     TickerItem(ticker="MSFT", text="MSFT $415.80", class_name="stock-down"),
+    ... ]
+    >>> marquee = Marquee(
+    ...     text=" • ".join(item.build_html() for item in items),
+    ...     speed=20,
+    ... )
+
+    Update individual prices:
+
+    >>> event, data = items[0].update_payload(
+    ...     text="AAPL $186.25", class_add="stock-up", class_remove="stock-down"
+    ... )
+    >>> widget.emit(event, data)
     """
 
     ticker: str = Field(
@@ -2312,10 +2369,14 @@ class Marquee(ToolbarItem):
             if hasattr(child, "build_html"):
                 # Pass context to Div children
                 if isinstance(child, Div):
-                    children_html += child.build_html(parent_id=parent_id or self.component_id)
+                    children_html += child.build_html(
+                        parent_id=parent_id or self.component_id
+                    )
                 elif isinstance(child, Marquee):
                     # Nested marquees get parent context
-                    children_html += child.build_html(parent_id=parent_id or self.component_id)
+                    children_html += child.build_html(
+                        parent_id=parent_id or self.component_id
+                    )
                 else:
                     children_html += child.build_html()
         return children_html
@@ -2350,7 +2411,9 @@ class Marquee(ToolbarItem):
         ]
         # Axis class
         is_vertical = self.direction in ("up", "down")
-        classes.append("pywry-marquee-vertical" if is_vertical else "pywry-marquee-horizontal")
+        classes.append(
+            "pywry-marquee-vertical" if is_vertical else "pywry-marquee-horizontal"
+        )
         # Modifier classes
         if self.pause_on_hover:
             classes.append("pywry-marquee-pause")
@@ -2676,9 +2739,7 @@ class Toolbar(BaseModel):
         # Build resize handle if resizable
         resize_handle_html = ""
         if self.resizable:
-            resize_handle_html = (
-                f'<div class="pywry-resize-handle" data-toolbar-id="{self.component_id}"></div>'
-            )
+            resize_handle_html = f'<div class="pywry-resize-handle" data-toolbar-id="{self.component_id}"></div>'
 
         # For 'inside' position, style goes on outer div (for absolute positioning: top, right, etc.)
         # For other positions, style goes on content wrapper (for flex alignment)
@@ -2690,9 +2751,7 @@ class Toolbar(BaseModel):
             else:
                 content_style = f' style="{self.style}"'
 
-        content_html = (
-            f'<div class="pywry-toolbar-content"{content_style}>{"".join(item_htmls)}</div>'
-        )
+        content_html = f'<div class="pywry-toolbar-content"{content_style}>{"".join(item_htmls)}</div>'
 
         return f"<div {' '.join(attrs)}{outer_style}>{toggle_html}{content_html}{resize_handle_html}</div>"
 
@@ -2728,7 +2787,9 @@ class Toolbar(BaseModel):
                     )
                 )
             ):
-                script_path = Path(self.script) if isinstance(self.script, str) else self.script
+                script_path = (
+                    Path(self.script) if isinstance(self.script, str) else self.script
+                )
                 if script_path.exists():
                     scripts.append(script_path.read_text(encoding="utf-8"))
                 else:
@@ -3227,9 +3288,7 @@ def wrap_content_with_toolbars(
     # The body-scroll wrapper enables scrolling for top/bottom/content only
 
     # Wrap content in pywry-content with inner scroll container
-    wrapped = (
-        f"<div class='pywry-content'><div class='pywry-scroll-container'>{content}</div></div>"
-    )
+    wrapped = f"<div class='pywry-content'><div class='pywry-scroll-container'>{content}</div></div>"
 
     # Inside toolbars (overlay) - positioned relative to wrapper, stay fixed during scroll
     if inside_str:
@@ -3243,15 +3302,21 @@ def wrap_content_with_toolbars(
     # Applied BEFORE left/right so sidebars extend full height and scroll independently
     # Uses custom scrollbar system via pywry-scroll-container class
     if header_str or footer_str:
-        wrapped = f"<div class='pywry-body-scroll pywry-scroll-container'>{wrapped}</div>"
+        wrapped = (
+            f"<div class='pywry-body-scroll pywry-scroll-container'>{wrapped}</div>"
+        )
 
     # Left/Right (extend full height, OUTSIDE body-scroll)
     if left_str or right_str:
-        wrapped = f"<div class='pywry-wrapper-left'>{left_str}{wrapped}{right_str}</div>"
+        wrapped = (
+            f"<div class='pywry-wrapper-left'>{left_str}{wrapped}{right_str}</div>"
+        )
 
     # Header/Footer (outermost, full width)
     if header_str or footer_str:
-        wrapped = f"<div class='pywry-wrapper-header'>{header_str}{wrapped}{footer_str}</div>"
+        wrapped = (
+            f"<div class='pywry-wrapper-header'>{header_str}{wrapped}{footer_str}</div>"
+        )
 
     # Add toast container (defined earlier, always included)
     wrapped = wrapped + toast_container
