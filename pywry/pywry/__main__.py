@@ -4,7 +4,7 @@ This module runs as a subprocess, handling the pytauri event loop on the main th
 and receiving commands via stdin JSON IPC.
 """
 
-# pylint: disable=C0413,C0415,C0103
+# pylint: disable=C0301,C0413,C0415,C0103,W0718
 # flake8: noqa: N806
 
 import sys
@@ -139,7 +139,16 @@ from anyio.from_thread import start_blocking_portal  # noqa: E402
 from pytauri import Commands, Manager, RunEvent, WebviewUrl, WindowEvent  # noqa: E402
 from pytauri.webview import WebviewWindowBuilder  # noqa: E402
 from pytauri_plugins import dialog as dialog_plugin, fs as fs_plugin  # noqa: E402
-from pytauri_wheel.lib import builder_factory, context_factory  # noqa: E402
+
+
+# Try vendored pytauri_wheel first, fall back to installed package
+try:
+    from pywry._vendor.pytauri_wheel.lib import (  # type: ignore
+        builder_factory,
+        context_factory,
+    )
+except ImportError:
+    from pytauri_wheel.lib import builder_factory, context_factory
 
 
 # Debug mode controlled by environment variable
