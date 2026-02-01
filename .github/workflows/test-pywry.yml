@@ -105,44 +105,25 @@ jobs:
           for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
           for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev && break || { sleep 30; sudo apt-get update; }; done
 
-      - name: Cache OpenSSL (Windows ARM)
+      - name: Cache vcpkg packages (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
-        id: cache-openssl
         uses: actions/cache@v4
         with:
-          path: C:\Program Files\OpenSSL-Win64-ARM
-          key: openssl-windows-arm64-3.5.0
+          path: C:/vcpkg/installed
+          key: vcpkg-arm64-windows-openssl-${{ hashFiles('.github/workflows/test-pywry.yml') }}
+          restore-keys: |
+            vcpkg-arm64-windows-openssl-
 
-      - name: Install OpenSSL (Windows ARM)
-        if: runner.os == 'Windows' && runner.arch == 'ARM64' && steps.cache-openssl.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          # Download OpenSSL Light for Windows ARM64 from SLProweb
-          $opensslUrl = "https://slproweb.com/download/Win64OpenSSL_Light-3_5_0-ARM.exe"
-          $installerPath = "$env:TEMP\openssl-arm64.exe"
-          
-          Write-Host "Downloading OpenSSL for Windows ARM64 from SLProweb..."
-          Invoke-WebRequest -Uri $opensslUrl -OutFile $installerPath -UseBasicParsing
-          
-          Write-Host "Installing OpenSSL silently..."
-          Start-Process -FilePath $installerPath -ArgumentList "/VERYSILENT", "/SP-", "/SUPPRESSMSGBOXES", "/DIR=C:\Program Files\OpenSSL-Win64-ARM" -Wait -NoNewWindow
-          
-          Write-Host "OpenSSL installed"
-          Get-ChildItem -Path "C:\Program Files\OpenSSL-Win64-ARM" -Recurse -Depth 2 | Select-Object FullName
-
-      - name: Set OpenSSL environment (Windows ARM)
+      - name: Install OpenSSL via vcpkg (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
         shell: pwsh
         run: |
-          $opensslDir = "C:\Program Files\OpenSSL-Win64-ARM"
-          
+          $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
+          & "$env:VCPKG_ROOT\vcpkg" install openssl:arm64-windows
+          $opensslDir = "$env:VCPKG_ROOT\installed\arm64-windows"
           echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=$opensslDir\lib" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=$opensslDir\include" >> $env:GITHUB_ENV
-          Write-Host "OPENSSL_DIR=$opensslDir"
-          Write-Host "OPENSSL_LIB_DIR=$opensslDir\lib"
-          Write-Host "OPENSSL_INCLUDE_DIR=$opensslDir\include"
 
       - name: Install dependencies
         run: |
