@@ -4,11 +4,6 @@
 
 import time
 
-from collections.abc import Callable
-from functools import wraps
-from typing import Any, TypeVar
-
-from pywry import runtime
 from pywry.app import PyWry
 from pywry.callbacks import get_registry
 from pywry.models import HtmlContent, ThemeMode, WindowMode
@@ -23,38 +18,8 @@ from tests.conftest import (
 )
 
 
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Callable[[F], F]:
-    """Retry decorator for tests that may fail due to transient subprocess issues.
-
-    On Windows, WebView2 sometimes fails to start due to resource contention
-    ("Failed to unregister class Chrome_WidgetWin_0"). This decorator retries
-    the test after a delay to allow resources to be released.
-    """
-
-    def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_error: Exception | None = None
-            for attempt in range(max_attempts):
-                try:
-                    return func(*args, **kwargs)
-                except TimeoutError as e:
-                    last_error = e
-                    if attempt < max_attempts - 1:
-                        # Clean up and wait before retry
-                        runtime.stop()
-                        time.sleep(delay)
-            raise last_error  # type: ignore[misc]
-
-        return wrapper  # type: ignore[return-value]
-
-    return decorator
-
-
 # Note: cleanup_runtime fixture is now in conftest.py and auto-used
+# Class-scoped fixtures (dark_app, light_app) prevent subprocess race conditions
 
 
 # pylint: disable=unsubscriptable-object
@@ -68,6 +33,21 @@ def verify_theme_and_rendering(label: str, expect_dark: bool) -> dict:
         var htmlEl = document.documentElement;
         var isDarkWindow = htmlEl.classList.contains('pywry-theme-dark');
         var isLightWindow = htmlEl.classList.contains('pywry-theme-light');
+
+        // Get computed background color of body - this reveals the actual rendered color
+        var bodyStyle = window.getComputedStyle(document.body);
+        var bodyBgColor = bodyStyle.backgroundColor;
+
+        // Parse RGB values from computed color (format: "rgb(r, g, b)" or "rgba(r, g, b, a)")
+        var rgbMatch = bodyBgColor.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+        var bgRed = rgbMatch ? parseInt(rgbMatch[1], 10) : null;
+        var bgGreen = rgbMatch ? parseInt(rgbMatch[2], 10) : null;
+        var bgBlue = rgbMatch ? parseInt(rgbMatch[3], 10) : null;
+
+        // Determine if background is dark (luminance < 128) or light (>= 128)
+        // Using simple average - proper would be weighted luminance
+        var bgLuminance = (bgRed + bgGreen + bgBlue) / 3;
+        var bgIsDark = bgLuminance < 128;
 
         // Check AG Grid
         var gridDiv = document.querySelector('[class*="ag-theme-"]');
@@ -102,6 +82,14 @@ def verify_theme_and_rendering(label: str, expect_dark: bool) -> dict:
             windowIsLight: isLightWindow,
             htmlClass: htmlEl.className,
 
+            // Background color verification
+            bodyBgColor: bodyBgColor,
+            bgRed: bgRed,
+            bgGreen: bgGreen,
+            bgBlue: bgBlue,
+            bgLuminance: bgLuminance,
+            bgIsDark: bgIsDark,
+
             // AG Grid (if present)
             hasGrid: !!gridDiv,
             gridThemeClass: gridTheme,
@@ -130,13 +118,29 @@ def verify_theme_and_rendering(label: str, expect_dark: bool) -> dict:
     # Type narrowing - pylint doesn't recognize the guard above
     assert isinstance(result, dict)
 
+    # Validate background color matches theme
+    bg_is_dark = result.get("bgIsDark")
+    body_bg = result.get("bodyBgColor")
+    if expect_dark:
+        assert bg_is_dark is True, (
+            f"Body background MUST be dark for dark theme! "
+            f"Got: {body_bg} (luminance={result.get('bgLuminance')})"
+        )
+    else:
+        assert bg_is_dark is False, (
+            f"Body background MUST be light for light theme! "
+            f"Got: {body_bg} (luminance={result.get('bgLuminance')})"
+        )
+
     # Validate theme coordination
     if expect_dark:
-        assert result["windowIsDark"], f"Window should be DARK! Got: {result['htmlClass']}"
+        assert result[
+            "windowIsDark"
+        ], f"Window should be DARK! Got: {result['htmlClass']}"
         if result["hasGrid"]:
-            assert result["gridIsDark"], (
-                f"Grid MUST be dark when window is dark! Got: {result['gridThemeClass']}"
-            )
+            assert result[
+                "gridIsDark"
+            ], f"Grid MUST be dark when window is dark! Got: {result['gridThemeClass']}"
         if result["hasPlotly"]:
             # Verify applied colors match plotly_dark template FROM THE SOURCE
             actual_paper = result.get("plotlyPaperBg")
@@ -144,18 +148,20 @@ def verify_theme_and_rendering(label: str, expect_dark: bool) -> dict:
             expected_paper = result.get("expectedDarkPaperBg")
             expected_plot = result.get("expectedDarkPlotBg")
             assert expected_paper is not None, "plotly_dark template not loaded!"
-            assert actual_paper == expected_paper, (
-                f"paper_bgcolor MUST match plotly_dark template! Expected: '{expected_paper}', Got: '{actual_paper}'"
-            )
-            assert actual_plot == expected_plot, (
-                f"plot_bgcolor MUST match plotly_dark template! Expected: '{expected_plot}', Got: '{actual_plot}'"
-            )
+            assert (
+                actual_paper == expected_paper
+            ), f"paper_bgcolor MUST match plotly_dark template! Expected: '{expected_paper}', Got: '{actual_paper}'"
+            assert (
+                actual_plot == expected_plot
+            ), f"plot_bgcolor MUST match plotly_dark template! Expected: '{expected_plot}', Got: '{actual_plot}'"
     else:
-        assert result["windowIsLight"], f"Window should be LIGHT! Got: {result['htmlClass']}"
+        assert result[
+            "windowIsLight"
+        ], f"Window should be LIGHT! Got: {result['htmlClass']}"
         if result["hasGrid"]:
-            assert not result["gridIsDark"], (
-                f"Grid MUST be light when window is light! Got: {result['gridThemeClass']}"
-            )
+            assert not result[
+                "gridIsDark"
+            ], f"Grid MUST be light when window is light! Got: {result['gridThemeClass']}"
         if result["hasPlotly"]:
             # Verify applied colors match plotly_white template FROM THE SOURCE
             actual_paper = result.get("plotlyPaperBg")
@@ -163,55 +169,59 @@ def verify_theme_and_rendering(label: str, expect_dark: bool) -> dict:
             expected_paper = result.get("expectedLightPaperBg")
             expected_plot = result.get("expectedLightPlotBg")
             assert expected_paper is not None, "plotly_white template not loaded!"
-            assert actual_paper == expected_paper, (
-                f"paper_bgcolor MUST match plotly_white template! Expected: '{expected_paper}', Got: '{actual_paper}'"
-            )
-            assert actual_plot == expected_plot, (
-                f"plot_bgcolor MUST match plotly_white template! Expected: '{expected_plot}', Got: '{actual_plot}'"
-            )
+            assert (
+                actual_paper == expected_paper
+            ), f"paper_bgcolor MUST match plotly_white template! Expected: '{expected_paper}', Got: '{actual_paper}'"
+            assert (
+                actual_plot == expected_plot
+            ), f"plot_bgcolor MUST match plotly_white template! Expected: '{expected_plot}', Got: '{actual_plot}'"
 
     return result
 
 
 class TestDarkThemeCoordination:
-    """DARK window MUST have DARK sub-elements."""
+    """DARK window MUST have DARK sub-elements.
 
-    @retry_on_subprocess_failure(max_attempts=3, delay=1.0)
-    def test_dark_dataframe(self):
+    Uses class-scoped dark_app fixture to share a single PyWry instance
+    and prevent subprocess race conditions.
+    """
+
+    def test_dark_dataframe(self, dark_app):
         """DARK show_dataframe renders with DARK AG Grid theme."""
-        app = PyWry(theme=ThemeMode.DARK)
         data = [{"x": 1, "y": 10}, {"x": 2, "y": 15}]
-        label = show_dataframe_and_wait_ready(app, data, title="Dark+Grid")
+        label = show_dataframe_and_wait_ready(dark_app, data, title="Dark+Grid")
         time.sleep(1.5)
 
         result = verify_theme_and_rendering(label, expect_dark=True)
         assert "error" not in result, f"Verification failed: {result.get('error')}"
         assert result["hasGrid"], "AG Grid not found!"
         assert result["gridRowCount"] > 0, "No rows rendered!"
-        app.close()
 
-    def test_dark_plotly(self):
+    def test_dark_plotly(self, dark_app):
         """DARK show_plotly renders with DARK template."""
-        app = PyWry(theme=ThemeMode.DARK)
         figure = {"data": [{"x": [1, 2, 3], "y": [10, 15, 13], "type": "scatter"}]}
-        label = show_plotly_and_wait_ready(app, figure, title="Dark+Plotly", timeout=20.0)
+        label = show_plotly_and_wait_ready(
+            dark_app, figure, title="Dark+Plotly", timeout=20.0
+        )
         # Plotly renders asynchronously after DOM is ready (longer wait for WebKitGTK)
         time.sleep(1.5)
 
         result = verify_theme_and_rendering(label, expect_dark=True)
         assert result["hasPlotly"], "Plotly div not found!"
         assert result["plotlySvgCount"] > 0, "No SVG - chart not drawn!"
-        app.close()
 
 
 class TestLightThemeCoordination:
-    """LIGHT window MUST have LIGHT sub-elements."""
+    """LIGHT window MUST have LIGHT sub-elements.
 
-    def test_light_dataframe(self):
+    Uses class-scoped light_app fixture to share a single PyWry instance
+    and prevent subprocess race conditions.
+    """
+
+    def test_light_dataframe(self, light_app):
         """LIGHT show_dataframe renders with LIGHT AG Grid theme."""
-        app = PyWry(theme=ThemeMode.LIGHT)
         data = [{"x": 1, "y": 10}, {"x": 2, "y": 15}]
-        label = show_dataframe_and_wait_ready(app, data, title="Light+Grid")
+        label = show_dataframe_and_wait_ready(light_app, data, title="Light+Grid")
         # AG Grid renders asynchronously after DOM is ready
         time.sleep(0.5)
 
@@ -219,19 +229,16 @@ class TestLightThemeCoordination:
         assert "error" not in result, f"Verification failed: {result.get('error')}"
         assert result["hasGrid"], "AG Grid not found!"
         assert result["gridRowCount"] > 0, "No rows rendered!"
-        app.close()
 
-    def test_light_plotly(self):
+    def test_light_plotly(self, light_app):
         """LIGHT show_plotly renders with LIGHT template."""
-        app = PyWry(theme=ThemeMode.LIGHT)
         figure = {"data": [{"x": [1, 2, 3], "y": [10, 15, 13], "type": "bar"}]}
-        label = show_plotly_and_wait_ready(app, figure, title="Light+Plotly")
+        label = show_plotly_and_wait_ready(light_app, figure, title="Light+Plotly")
         time.sleep(0.5)
 
         result = verify_theme_and_rendering(label, expect_dark=False)
         assert result["hasPlotly"], "Plotly div not found!"
         assert result["plotlySvgCount"] > 0, "No SVG - chart not drawn!"
-        app.close()
 
 
 class TestContentRendering:
@@ -283,9 +290,9 @@ class TestContentRendering:
             });
         """,
         )
-        assert result and isinstance(result, dict) and result["hasSecond"], (
-            f"Second content not rendered! Got: {result}"
-        )
+        assert (
+            result and isinstance(result, dict) and result["hasSecond"]
+        ), f"Second content not rendered! Got: {result}"
         app.close()
 
     def test_new_window_mode_creates_multiple(self):
@@ -295,8 +302,12 @@ class TestContentRendering:
         label2 = show_and_wait_ready(app, "<div id='win2'>W2</div>")
         assert label1 != label2, "NEW_WINDOW should create unique labels!"
 
-        r1 = wait_for_result(label1, "pywry.result({ has: !!document.getElementById('win1') });")
-        r2 = wait_for_result(label2, "pywry.result({ has: !!document.getElementById('win2') });")
+        r1 = wait_for_result(
+            label1, "pywry.result({ has: !!document.getElementById('win1') });"
+        )
+        r2 = wait_for_result(
+            label2, "pywry.result({ has: !!document.getElementById('win2') });"
+        )
         assert r1 and isinstance(r1, dict) and r1["has"], "Window 1 content missing!"
         assert r2 and isinstance(r2, dict) and r2["has"], "Window 2 content missing!"
         app.close()
@@ -311,7 +322,9 @@ class TestToolbarAndStyles:
         toolbars = [
             {
                 "position": "top",
-                "items": [{"type": "button", "label": "MyButton", "event": "toolbar:click"}],
+                "items": [
+                    {"type": "button", "label": "MyButton", "event": "toolbar:click"}
+                ],
             }
         ]
 
@@ -383,7 +396,9 @@ class TestToolbarIntegration:
         # Event tracking
         events = {"clicked": False}
 
-        def on_click(data: dict, event_type: str, widget_id: str) -> None:  # pylint: disable=unused-argument
+        def on_click(
+            data: dict, event_type: str, widget_id: str
+        ) -> None:  # pylint: disable=unused-argument
             events["clicked"] = True
             events["data"] = data
 
@@ -419,7 +434,9 @@ class TestToolbarIntegration:
 
         events = {"clicked": False}
 
-        def on_click(data: dict, event_type: str, widget_id: str) -> None:  # pylint: disable=unused-argument
+        def on_click(
+            data: dict, event_type: str, widget_id: str
+        ) -> None:  # pylint: disable=unused-argument
             events["clicked"] = True
 
         toolbars = [
@@ -461,7 +478,9 @@ class TestToolbarIntegration:
 
         events = {"clicked": False}
 
-        def on_click(data: dict, event_type: str, widget_id: str) -> None:  # pylint: disable=unused-argument
+        def on_click(
+            data: dict, event_type: str, widget_id: str
+        ) -> None:  # pylint: disable=unused-argument
             events["clicked"] = True
 
         toolbars = [
@@ -549,7 +568,9 @@ class TestToolbarComponentEvents:
             time.sleep(0.1)
 
         assert events["received"], "Select change event not received"
-        assert events["data"]["value"] == "b", f"Expected value 'b', got {events['data']}"
+        assert (
+            events["data"]["value"] == "b"
+        ), f"Expected value 'b', got {events['data']}"
         app.close()
 
     def test_multiselect_triggers_event_with_values_array(self):
@@ -580,7 +601,9 @@ class TestToolbarComponentEvents:
             }
         ]
 
-        label = show_and_wait_ready(app, "<div>MultiSelect Test</div>", toolbars=toolbars)
+        label = show_and_wait_ready(
+            app, "<div>MultiSelect Test</div>", toolbars=toolbars
+        )
         get_registry().register(label, "test:multiselect", on_multiselect)
 
         # First open the multiselect dropdown, then click on the 'green' option
@@ -884,7 +907,9 @@ class TestMultiToolbarStateTracking:
             },
         ]
 
-        label = show_and_wait_ready(app, "<div>Multi-toolbar Test</div>", toolbars=toolbars)
+        label = show_and_wait_ready(
+            app, "<div>Multi-toolbar Test</div>", toolbars=toolbars
+        )
         get_registry().register(label, "top:click", on_top)
         get_registry().register(label, "bottom:select", on_bottom)
         get_registry().register(label, "left:range", on_left)
@@ -911,12 +936,18 @@ class TestMultiToolbarStateTracking:
 
         start = time.time()
         while (time.time() - start) < 4.0:
-            if events["top_btn"] and events["bottom_select"] and events["left_range"] is not None:
+            if (
+                events["top_btn"]
+                and events["bottom_select"]
+                and events["left_range"] is not None
+            ):
                 break
             time.sleep(0.1)
 
         assert events["top_btn"], "Top button event not received"
-        assert events["bottom_select"] == "y", f"Bottom select: {events['bottom_select']}"
+        assert (
+            events["bottom_select"] == "y"
+        ), f"Bottom select: {events['bottom_select']}"
         assert events["left_range"] == 75, f"Left range: {events['left_range']}"
         app.close()
 
@@ -957,7 +988,9 @@ class TestMultiToolbarStateTracking:
             }
         ]
 
-        label = show_and_wait_ready(app, "<div>Multi-item Toolbar</div>", toolbars=toolbars)
+        label = show_and_wait_ready(
+            app, "<div>Multi-item Toolbar</div>", toolbars=toolbars
+        )
         get_registry().register(label, "action:one", on_btn1)
         get_registry().register(label, "action:two", on_btn2)
         get_registry().register(label, "filter:mode", on_select)
@@ -992,7 +1025,9 @@ class TestMultiToolbarStateTracking:
 
         start = time.time()
         while (time.time() - start) < 4.0:
-            if all([events["btn1"], events["btn2"], events["select"], events["number"]]):
+            if all(
+                [events["btn1"], events["btn2"], events["select"], events["number"]]
+            ):
                 break
             time.sleep(0.1)
 
@@ -1031,7 +1066,9 @@ class TestMultiToolbarStateTracking:
             ],
         )
 
-        label = show_and_wait_ready(app, "<div>Pydantic Toolbar</div>", toolbars=[toolbar])
+        label = show_and_wait_ready(
+            app, "<div>Pydantic Toolbar</div>", toolbars=[toolbar]
+        )
         get_registry().register(label, "data:export", on_export)
         get_registry().register(label, "view:change", on_view)
 
@@ -1059,7 +1096,9 @@ class TestMultiToolbarStateTracking:
         # Event data contains the custom data from the button's data attribute
         export_data = events["export"]
         assert export_data is not None, "Export event not received"
-        assert isinstance(export_data, dict), f"Export data should be dict: {export_data}"
+        assert isinstance(
+            export_data, dict
+        ), f"Export data should be dict: {export_data}"
         assert export_data["format"] == "csv", f"Export data: {export_data}"
         # Note: Button emits only its custom data, not componentId (unlike inputs)
         assert events["view"] == "chart", f"View: {events['view']}"
@@ -1086,7 +1125,9 @@ class TestMultiToolbarStateTracking:
             ],
         )
 
-        label = show_and_wait_ready(app, "<div>ID Test</div>", toolbars=[toolbar1, toolbar2])
+        label = show_and_wait_ready(
+            app, "<div>ID Test</div>", toolbars=[toolbar1, toolbar2]
+        )
 
         # Verify unique IDs exist in DOM - just check that both toolbars render
         result = wait_for_result(

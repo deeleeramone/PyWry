@@ -24,10 +24,10 @@ WEBSOCKET_TIMEOUT: float = 5.0
 HTTP_TIMEOUT: float = 5.0
 
 # Brief delay for cleanup between tests
-CLEANUP_DELAY: float = 0.3
+CLEANUP_DELAY: float = 0.5
 
-# Delay for subprocess termination
-SUBPROCESS_TERMINATION_DELAY: float = 0.5
+# Delay for subprocess termination (Windows WebView2 needs longer to fully cleanup)
+SUBPROCESS_TERMINATION_DELAY: float = 1.5
 
 
 # =============================================================================

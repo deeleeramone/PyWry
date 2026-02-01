@@ -14,14 +14,12 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from tests.constants import (
-    CLEANUP_DELAY,
     DEFAULT_TIMEOUT,
     JS_RESULT_RETRIES,
     REDIS_ALPINE_IMAGE,
     REDIS_IMAGE,
     REDIS_TEST_TTL,
     SHORT_TIMEOUT,
-    SUBPROCESS_TERMINATION_DELAY,
 )
 
 
@@ -40,36 +38,120 @@ if str(pywry_path) not in sys.path:
 # =============================================================================
 
 
-@pytest.fixture(autouse=True)
-def cleanup_runtime():
-    """Ensure runtime is completely fresh for each test.
-
-    This is the SINGLE cleanup fixture used across ALL test files.
-    It handles:
-    - Stopping the runtime process
-    - Clearing callback registry
-    - Clearing window lifecycle state
-    - Proper timing to avoid race conditions
-    """
+def _stop_runtime_sync() -> None:
+    """Stop runtime and wait for subprocess to fully terminate."""
     from pywry import runtime
+
+    if not runtime.is_running():
+        return
+
+    runtime.stop()
+
+    # Poll until runtime is actually stopped
+    deadline = time.monotonic() + 5.0
+    while runtime.is_running() and time.monotonic() < deadline:
+        time.sleep(0.05)
+
+
+def _clear_registries() -> None:
+    """Clear all callback and lifecycle registries."""
     from pywry.callbacks import get_registry
     from pywry.window_manager import get_lifecycle
 
-    # Pre-test cleanup
-    runtime.stop()
-    time.sleep(SUBPROCESS_TERMINATION_DELAY)  # Allow subprocess to fully terminate
-
-    registry = get_registry()
-    registry.clear()
+    get_registry().clear()
     get_lifecycle().clear()
 
-    yield
 
-    # Post-test cleanup
-    runtime.stop()
-    time.sleep(CLEANUP_DELAY)  # Brief delay before next test
-    registry.clear()
-    get_lifecycle().clear()
+@pytest.fixture(autouse=True)
+def cleanup_runtime(request):
+    """Ensure runtime state is clean for each test.
+
+    This fixture has DIFFERENT behavior based on test class:
+    - For tests using class-scoped app fixtures: only clears registries (no subprocess restart)
+    - For standalone tests: full subprocess cleanup
+
+    The subprocess lifecycle is managed by class-scoped fixtures (dark_app, light_app)
+    to prevent race conditions from repeated start/stop cycles.
+    """
+    # Check if this test uses a class-scoped app fixture
+    # If so, we MUST NOT stop the runtime - just clear registries
+    uses_class_app = (
+        hasattr(request, "cls")
+        and request.cls is not None
+        and hasattr(request.cls, "_pywry_class_scoped")
+    )
+
+    if uses_class_app:
+        # Only clear registries, don't touch the subprocess
+        _clear_registries()
+        yield
+        _clear_registries()
+    else:
+        # Standalone test: full cleanup
+        _stop_runtime_sync()
+        _clear_registries()
+        yield
+        _stop_runtime_sync()
+        _clear_registries()
+
+
+# =============================================================================
+# Class-Scoped App Fixtures - PREVENTS RACE CONDITIONS
+# =============================================================================
+
+
+@pytest.fixture(scope="class")
+def dark_app(request):
+    """Class-scoped PyWry app with DARK theme.
+
+    This fixture:
+    1. Creates ONE PyWry instance for the entire test class
+    2. Starts the subprocess ONCE at class setup
+    3. Stops the subprocess ONCE at class teardown
+    4. Prevents race conditions from repeated subprocess restarts
+    """
+    from pywry.app import PyWry
+    from pywry.models import ThemeMode
+
+    # Stop any existing runtime first
+    _stop_runtime_sync()
+    _clear_registries()
+
+    # Mark the class as using class-scoped app (pylint: disable=protected-access)
+    if request.cls is not None:
+        request.cls._pywry_class_scoped = True
+
+    app = PyWry(theme=ThemeMode.DARK)
+    yield app
+
+    # Cleanup: close all windows and stop runtime
+    app.close()
+    _stop_runtime_sync()
+    _clear_registries()
+
+
+@pytest.fixture(scope="class")
+def light_app(request):
+    """Class-scoped PyWry app with LIGHT theme.
+
+    Same as dark_app but with LIGHT theme.
+    """
+    from pywry.app import PyWry
+    from pywry.models import ThemeMode
+
+    _stop_runtime_sync()
+    _clear_registries()
+
+    # Mark the class as using class-scoped app (pylint: disable=protected-access)
+    if request.cls is not None:
+        request.cls._pywry_class_scoped = True
+
+    app = PyWry(theme=ThemeMode.LIGHT)
+    yield app
+
+    app.close()
+    _stop_runtime_sync()
+    _clear_registries()
 
 
 # =============================================================================

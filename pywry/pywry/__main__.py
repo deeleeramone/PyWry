@@ -335,6 +335,13 @@ class JsonIPC:
             return
 
         try:
+            # Set native window background color to match theme
+            # This prevents flash of wrong color and ensures window chrome matches
+            if theme == "light":
+                window.set_background_color((255, 255, 255, 255))  # White
+            else:
+                window.set_background_color((30, 30, 30, 255))  # Dark gray (#1e1e1e)
+
             # Wait for page to load
             time.sleep(0.5)
 
@@ -351,9 +358,10 @@ class JsonIPC:
                 var themeClass = 'pywry-theme-' + theme;
 
                 // Set theme class on <html> element
+                // Remove ALL theme-related classes (both pywry-theme-* and plain dark/light)
                 var htmlEl = document.documentElement;
-                htmlEl.classList.remove('pywry-theme-dark', 'pywry-theme-light');
-                htmlEl.classList.add('pywry-native', themeClass);
+                htmlEl.classList.remove('pywry-theme-dark', 'pywry-theme-light', 'dark', 'light');
+                htmlEl.classList.add('pywry-native', themeClass, theme);
 
                 var app = document.getElementById('app');
                 if (!app) return;
@@ -795,7 +803,9 @@ def _handle_ready_event(ipc: JsonIPC, app_handle: Any) -> None:
     ipc.send_ready()
 
 
-def _handle_close_requested(ipc: JsonIPC, app_handle: Any, label: str, window_event: Any) -> None:
+def _handle_close_requested(
+    ipc: JsonIPC, app_handle: Any, label: str, window_event: Any
+) -> None:
     """Handle window close requested event."""
     # User clicked X - behavior depends on window mode:
     # - SINGLE_WINDOW: Always hide (reuse the window)
@@ -821,12 +831,16 @@ def _handle_close_requested(ipc: JsonIPC, app_handle: Any, label: str, window_ev
             window.destroy()
         if label in ipc.windows:
             del ipc.windows[label]
-        ipc.send({"type": "event", "event_type": "window:closed", "label": label, "data": {}})
+        ipc.send(
+            {"type": "event", "event_type": "window:closed", "label": label, "data": {}}
+        )
     else:
         log(f"CloseRequested for '{label}' - hiding")
         if window:
             window.hide()
-        ipc.send({"type": "event", "event_type": "window:hidden", "label": label, "data": {}})
+        ipc.send(
+            {"type": "event", "event_type": "window:hidden", "label": label, "data": {}}
+        )
 
 
 def main() -> int:  # pylint: disable=too-many-statements
@@ -869,7 +883,10 @@ def main() -> int:  # pylint: disable=too-many-statements
                     label = run_event.label
                     if isinstance(window_event, WindowEvent.CloseRequested):
                         _handle_close_requested(ipc, app_handle, label, window_event)
-                    elif isinstance(window_event, WindowEvent.Destroyed) and label in ipc.windows:
+                    elif (
+                        isinstance(window_event, WindowEvent.Destroyed)
+                        and label in ipc.windows
+                    ):
                         del ipc.windows[label]
                         log(f"Window '{label}' destroyed, removed from cache")
 
