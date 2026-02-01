@@ -145,9 +145,7 @@ def decode_secret(encoded: str) -> str:
     return base64.b64decode(encoded.encode("ascii")).decode("utf-8")
 
 
-def set_secret_handler(
-    event: str, handler: Callable[[dict[str, Any]], str | None]
-) -> None:
+def set_secret_handler(event: str, handler: Callable[[dict[str, Any]], str | None]) -> None:
     """Set a custom handler for secret reveal/copy events.
 
     Use this to add custom validation, authentication, or logging before
@@ -190,9 +188,7 @@ def get_secret_handler(event: str) -> Callable[[dict[str, Any]], str | None] | N
     return _SECRET_HANDLERS.get(event)
 
 
-ToolbarPosition = Literal[
-    "header", "footer", "top", "bottom", "left", "right", "inside"
-]
+ToolbarPosition = Literal["header", "footer", "top", "bottom", "left", "right", "inside"]
 ItemType = Literal[
     "button",
     "select",
@@ -309,9 +305,7 @@ class ToolbarItem(BaseModel):
         if not self.component_id:
             # Get the type from the subclass (e.g., "button", "select", "div")
             component_type = getattr(self, "type", "item")
-            object.__setattr__(
-                self, "component_id", _generate_component_id(component_type)
-            )
+            object.__setattr__(self, "component_id", _generate_component_id(component_type))
         return self
 
     @field_validator("event")
@@ -395,9 +389,7 @@ class Button(ToolbarItem):
 
     def build_html(self) -> str:
         """Build button HTML."""
-        variant_class = (
-            f" pywry-btn-{self.variant}" if self.variant != "primary" else ""
-        )
+        variant_class = f" pywry-btn-{self.variant}" if self.variant != "primary" else ""
         size_class = f" pywry-btn-{self.size}" if self.size else ""
         disabled_class = " pywry-disabled" if self.disabled else ""
         disabled_attr = " disabled" if self.disabled else ""
@@ -490,7 +482,9 @@ class Select(ToolbarItem):
         search_header = ""
         if self.searchable:
             search_input = SearchInput(placeholder="Search...")
-            search_header = f'<div class="pywry-select-header">{search_input.build_inline_html()}</div>'
+            search_header = (
+                f'<div class="pywry-select-header">{search_input.build_inline_html()}</div>'
+            )
 
         # Custom dropdown structure
         dropdown_html = (
@@ -513,11 +507,7 @@ class Select(ToolbarItem):
                 f'<span class="pywry-input-label">{html.escape(self.label)}</span>'
                 f"{dropdown_html}</div>"
             )
-        return (
-            f'<div style="{self.style}">{dropdown_html}</div>'
-            if self.style
-            else dropdown_html
-        )
+        return f'<div style="{self.style}">{dropdown_html}</div>' if self.style else dropdown_html
 
 
 class MultiSelect(ToolbarItem):
@@ -573,9 +563,7 @@ class MultiSelect(ToolbarItem):
         title_attr = self._build_title_attr()
 
         # Build display text for selected items
-        selected_labels = [
-            opt.label for opt in self.options if str(opt.value) in selected_set
-        ]
+        selected_labels = [opt.label for opt in self.options if str(opt.value) in selected_set]
 
         if len(selected_labels) == 0:
             display_text = "Select..."
@@ -586,9 +574,7 @@ class MultiSelect(ToolbarItem):
 
         # Separate options: selected first, then unselected
         selected_opts = [opt for opt in self.options if str(opt.value) in selected_set]
-        unselected_opts = [
-            opt for opt in self.options if str(opt.value) not in selected_set
-        ]
+        unselected_opts = [opt for opt in self.options if str(opt.value) not in selected_set]
         sorted_options = selected_opts + unselected_opts
 
         # Build options HTML with checkboxes
@@ -639,11 +625,7 @@ class MultiSelect(ToolbarItem):
                 f'<span class="pywry-input-label">{html.escape(self.label)}</span>'
                 f"{dropdown_html}</div>"
             )
-        return (
-            f'<div style="{self.style}">{dropdown_html}</div>'
-            if self.style
-            else dropdown_html
-        )
+        return f'<div style="{self.style}">{dropdown_html}</div>' if self.style else dropdown_html
 
 
 class TextInput(ToolbarItem):
@@ -1083,9 +1065,7 @@ class SecretInput(ToolbarItem):
 
         # Convert to plain string for handler
         plain_value = (
-            new_value.get_secret_value()
-            if isinstance(new_value, SecretStr)
-            else new_value
+            new_value.get_secret_value() if isinstance(new_value, SecretStr) else new_value
         )
 
         # If custom handler, call it with the value (set mode) and metadata
@@ -1098,9 +1078,7 @@ class SecretInput(ToolbarItem):
             )
         else:
             # Update internal value and registry
-            secret_value = (
-                new_value if isinstance(new_value, SecretStr) else SecretStr(new_value)
-            )
+            secret_value = new_value if isinstance(new_value, SecretStr) else SecretStr(new_value)
             object.__setattr__(self, "value", secret_value)
             register_secret(self.component_id, secret_value)
 
@@ -1290,11 +1268,9 @@ class SearchInput(ToolbarItem):
         default="off",
         description="Enable browser auto-correction (Safari/iOS)",
     )
-    autocapitalize: Literal["off", "none", "on", "sentences", "words", "characters"] = (
-        Field(
-            default="off",
-            description="Control capitalization on mobile keyboards",
-        )
+    autocapitalize: Literal["off", "none", "on", "sentences", "words", "characters"] = Field(
+        default="off",
+        description="Control capitalization on mobile keyboards",
     )
 
     def build_html(self) -> str:
@@ -1411,9 +1387,7 @@ class NumberInput(ToolbarItem):
         )
 
         # Wrap input and spinner together
-        wrapper_html = (
-            f'<span class="pywry-number-wrapper">{input_html}{spinner_html}</span>'
-        )
+        wrapper_html = f'<span class="pywry-number-wrapper">{input_html}{spinner_html}</span>'
 
         if self.label:
             return (
@@ -1484,9 +1458,7 @@ class SliderInput(ToolbarItem):
     def validate_range(self) -> SliderInput:
         """Validate min <= max and value is within range."""
         if self.min > self.max:
-            raise ValueError(
-                f"min ({self.min}) cannot be greater than max ({self.max})"
-            )
+            raise ValueError(f"min ({self.min}) cannot be greater than max ({self.max})")
         if self.value < self.min or self.value > self.max:
             raise ValueError(
                 f"value ({self.value}) must be between min ({self.min}) and max ({self.max})"
@@ -1561,13 +1533,9 @@ class RangeInput(ToolbarItem):
     def validate_range(self) -> RangeInput:
         """Validate min <= max and start <= end within range."""
         if self.min > self.max:
-            raise ValueError(
-                f"min ({self.min}) cannot be greater than max ({self.max})"
-            )
+            raise ValueError(f"min ({self.min}) cannot be greater than max ({self.max})")
         if self.start > self.end:
-            raise ValueError(
-                f"start ({self.start}) cannot be greater than end ({self.end})"
-            )
+            raise ValueError(f"start ({self.start}) cannot be greater than end ({self.end})")
         if self.start < self.min or self.start > self.max:
             raise ValueError(
                 f"start ({self.start}) must be between min ({self.min}) and max ({self.max})"
@@ -1830,11 +1798,7 @@ class RadioGroup(ToolbarItem):
                 f'<span class="pywry-input-group pywry-input-inline" style="{self.style}">'
                 f'<span class="pywry-input-label">{html.escape(self.label)}</span>{radio_html}</span>'
             )
-        return (
-            f'<span style="{self.style}">{radio_html}</span>'
-            if self.style
-            else radio_html
-        )
+        return f'<span style="{self.style}">{radio_html}</span>' if self.style else radio_html
 
 
 class TabGroup(ToolbarItem):
@@ -1912,9 +1876,7 @@ class TabGroup(ToolbarItem):
         for opt in self.options:
             val = html.escape(str(opt.value))
             lbl = html.escape(str(opt.label))
-            active_class = (
-                " pywry-tab-active" if str(opt.value) == self.selected else ""
-            )
+            active_class = " pywry-tab-active" if str(opt.value) == self.selected else ""
             tabs_html_parts.append(
                 f'<button type="button" class="pywry-tab{active_class}" '
                 f'data-value="{val}" onclick="{onclick}"{disabled_attr}>{lbl}</button>'
@@ -1934,9 +1896,7 @@ class TabGroup(ToolbarItem):
                 f'<span class="pywry-input-label">{html.escape(self.label)}</span>{tab_group_html}</span>'
             )
         return (
-            f'<span style="{self.style}">{tab_group_html}</span>'
-            if self.style
-            else tab_group_html
+            f'<span style="{self.style}">{tab_group_html}</span>' if self.style else tab_group_html
         )
 
 
@@ -2058,9 +2018,7 @@ class Div(ToolbarItem):
                 )
             ):
                 # Might be a file path - try to read it
-                script_path = (
-                    Path(self.script) if isinstance(self.script, str) else self.script
-                )
+                script_path = Path(self.script) if isinstance(self.script, str) else self.script
                 if script_path.exists():
                     scripts.append(script_path.read_text(encoding="utf-8"))
                 else:
@@ -2369,14 +2327,10 @@ class Marquee(ToolbarItem):
             if hasattr(child, "build_html"):
                 # Pass context to Div children
                 if isinstance(child, Div):
-                    children_html += child.build_html(
-                        parent_id=parent_id or self.component_id
-                    )
+                    children_html += child.build_html(parent_id=parent_id or self.component_id)
                 elif isinstance(child, Marquee):
                     # Nested marquees get parent context
-                    children_html += child.build_html(
-                        parent_id=parent_id or self.component_id
-                    )
+                    children_html += child.build_html(parent_id=parent_id or self.component_id)
                 else:
                     children_html += child.build_html()
         return children_html
@@ -2411,9 +2365,7 @@ class Marquee(ToolbarItem):
         ]
         # Axis class
         is_vertical = self.direction in ("up", "down")
-        classes.append(
-            "pywry-marquee-vertical" if is_vertical else "pywry-marquee-horizontal"
-        )
+        classes.append("pywry-marquee-vertical" if is_vertical else "pywry-marquee-horizontal")
         # Modifier classes
         if self.pause_on_hover:
             classes.append("pywry-marquee-pause")
@@ -2739,7 +2691,9 @@ class Toolbar(BaseModel):
         # Build resize handle if resizable
         resize_handle_html = ""
         if self.resizable:
-            resize_handle_html = f'<div class="pywry-resize-handle" data-toolbar-id="{self.component_id}"></div>'
+            resize_handle_html = (
+                f'<div class="pywry-resize-handle" data-toolbar-id="{self.component_id}"></div>'
+            )
 
         # For 'inside' position, style goes on outer div (for absolute positioning: top, right, etc.)
         # For other positions, style goes on content wrapper (for flex alignment)
@@ -2751,7 +2705,9 @@ class Toolbar(BaseModel):
             else:
                 content_style = f' style="{self.style}"'
 
-        content_html = f'<div class="pywry-toolbar-content"{content_style}>{"".join(item_htmls)}</div>'
+        content_html = (
+            f'<div class="pywry-toolbar-content"{content_style}>{"".join(item_htmls)}</div>'
+        )
 
         return f"<div {' '.join(attrs)}{outer_style}>{toggle_html}{content_html}{resize_handle_html}</div>"
 
@@ -2787,9 +2743,7 @@ class Toolbar(BaseModel):
                     )
                 )
             ):
-                script_path = (
-                    Path(self.script) if isinstance(self.script, str) else self.script
-                )
+                script_path = Path(self.script) if isinstance(self.script, str) else self.script
                 if script_path.exists():
                     scripts.append(script_path.read_text(encoding="utf-8"))
                 else:
@@ -3288,7 +3242,9 @@ def wrap_content_with_toolbars(
     # The body-scroll wrapper enables scrolling for top/bottom/content only
 
     # Wrap content in pywry-content with inner scroll container
-    wrapped = f"<div class='pywry-content'><div class='pywry-scroll-container'>{content}</div></div>"
+    wrapped = (
+        f"<div class='pywry-content'><div class='pywry-scroll-container'>{content}</div></div>"
+    )
 
     # Inside toolbars (overlay) - positioned relative to wrapper, stay fixed during scroll
     if inside_str:
@@ -3302,21 +3258,15 @@ def wrap_content_with_toolbars(
     # Applied BEFORE left/right so sidebars extend full height and scroll independently
     # Uses custom scrollbar system via pywry-scroll-container class
     if header_str or footer_str:
-        wrapped = (
-            f"<div class='pywry-body-scroll pywry-scroll-container'>{wrapped}</div>"
-        )
+        wrapped = f"<div class='pywry-body-scroll pywry-scroll-container'>{wrapped}</div>"
 
     # Left/Right (extend full height, OUTSIDE body-scroll)
     if left_str or right_str:
-        wrapped = (
-            f"<div class='pywry-wrapper-left'>{left_str}{wrapped}{right_str}</div>"
-        )
+        wrapped = f"<div class='pywry-wrapper-left'>{left_str}{wrapped}{right_str}</div>"
 
     # Header/Footer (outermost, full width)
     if header_str or footer_str:
-        wrapped = (
-            f"<div class='pywry-wrapper-header'>{header_str}{wrapped}{footer_str}</div>"
-        )
+        wrapped = f"<div class='pywry-wrapper-header'>{header_str}{wrapped}{footer_str}</div>"
 
     # Add toast container (defined earlier, always included)
     wrapped = wrapped + toast_container
