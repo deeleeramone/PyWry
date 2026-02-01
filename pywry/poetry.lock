@@ -3237,4 +3237,4 @@ notebook = ["anywidget"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "c671eac4352d6e4f6c6be28d9691311e09942cd2e10af303add9c8c0dbb45eb2"
+content-hash = "3cce223269c4a4effe8a2617c5021b3e1b6e5d37829fcda90698247b9a692543"
