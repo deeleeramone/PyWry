@@ -110,58 +110,39 @@ jobs:
         id: cache-openssl
         uses: actions/cache@v4
         with:
-          path: C:\OpenSSL
-          key: openssl-windows-arm64-3.3.2
+          path: C:\Program Files\OpenSSL-Win64-ARM
+          key: openssl-windows-arm64-3.5.0
 
       - name: Install OpenSSL (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64' && steps.cache-openssl.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          # Download pre-built OpenSSL for Windows ARM64
-          $opensslUrl = "https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.3.2-arm64.zip"
-          $zipPath = "$env:TEMP\openssl.zip"
-          $extractPath = "C:\OpenSSL"
+          # Download OpenSSL Light for Windows ARM64 from SLProweb
+          $opensslUrl = "https://slproweb.com/download/Win64OpenSSL_Light-3_5_0-ARM.exe"
+          $installerPath = "$env:TEMP\openssl-arm64.exe"
           
-          Write-Host "Downloading OpenSSL for Windows ARM64..."
-          Invoke-WebRequest -Uri $opensslUrl -OutFile $zipPath -UseBasicParsing
+          Write-Host "Downloading OpenSSL for Windows ARM64 from SLProweb..."
+          Invoke-WebRequest -Uri $opensslUrl -OutFile $installerPath -UseBasicParsing
           
-          Write-Host "Extracting OpenSSL..."
-          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+          Write-Host "Installing OpenSSL silently..."
+          Start-Process -FilePath $installerPath -ArgumentList "/VERYSILENT", "/SP-", "/SUPPRESSMSGBOXES", "/DIR=C:\Program Files\OpenSSL-Win64-ARM" -Wait -NoNewWindow
           
-          # Find the actual OpenSSL directory (it may be nested)
-          $opensslDir = Get-ChildItem -Path $extractPath -Directory | Select-Object -First 1
-          if ($opensslDir) {
-            # Move contents up if nested
-            Get-ChildItem -Path $opensslDir.FullName | Move-Item -Destination $extractPath -Force
-            Remove-Item -Path $opensslDir.FullName -Force -Recurse -ErrorAction SilentlyContinue
-          }
-          
-          Write-Host "OpenSSL installed to $extractPath"
-          Get-ChildItem -Path $extractPath -Recurse -Depth 2 | Select-Object FullName
+          Write-Host "OpenSSL installed"
+          Get-ChildItem -Path "C:\Program Files\OpenSSL-Win64-ARM" -Recurse -Depth 2 | Select-Object FullName
 
       - name: Set OpenSSL environment (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
         shell: pwsh
         run: |
-          $opensslDir = "C:\OpenSSL"
-          # Find lib and include directories
-          $libDir = Get-ChildItem -Path $opensslDir -Recurse -Directory -Filter "lib" | Select-Object -First 1
-          $includeDir = Get-ChildItem -Path $opensslDir -Recurse -Directory -Filter "include" | Select-Object -First 1
+          $opensslDir = "C:\Program Files\OpenSSL-Win64-ARM"
           
-          if ($libDir -and $includeDir) {
-            $parentDir = Split-Path -Parent $libDir.FullName
-            echo "OPENSSL_DIR=$parentDir" >> $env:GITHUB_ENV
-            echo "OPENSSL_LIB_DIR=$($libDir.FullName)" >> $env:GITHUB_ENV
-            echo "OPENSSL_INCLUDE_DIR=$($includeDir.FullName)" >> $env:GITHUB_ENV
-            Write-Host "OPENSSL_DIR=$parentDir"
-            Write-Host "OPENSSL_LIB_DIR=$($libDir.FullName)"
-            Write-Host "OPENSSL_INCLUDE_DIR=$($includeDir.FullName)"
-          } else {
-            # Fallback to standard layout
-            echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
-            Write-Host "OPENSSL_DIR=$opensslDir (fallback)"
-          }
+          echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$opensslDir\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$opensslDir\include" >> $env:GITHUB_ENV
+          Write-Host "OPENSSL_DIR=$opensslDir"
+          Write-Host "OPENSSL_LIB_DIR=$opensslDir\lib"
+          Write-Host "OPENSSL_INCLUDE_DIR=$opensslDir\include"
 
       - name: Install dependencies
         run: |
