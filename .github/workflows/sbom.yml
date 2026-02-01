@@ -43,8 +43,8 @@ jobs:
         with:
           python-version: '3.12'
           
-      - name: Install Poetry
-        run: pip install poetry
+      - name: Install project dependencies
+        run: pip install ".[all,dev]"
           
       - name: Install CycloneDX BOM generator
         run: pip install cyclonedx-bom
@@ -52,11 +52,11 @@ jobs:
       - name: Generate SBOM XML
         id: generate
         run: |
-          cyclonedx-py poetry --output-format XML --output-file ../sbom.xml
+          cyclonedx-py environment --pyproject pyproject.toml --output-format XML --output-file ../sbom.xml
           echo "sbom-path=sbom.xml" >> $GITHUB_OUTPUT
           
       - name: Generate SBOM JSON (additional format)
-        run: cyclonedx-py poetry --output-format JSON --output-file ../sbom.json
+        run: cyclonedx-py environment --pyproject pyproject.toml --output-format JSON --output-file ../sbom.json
           
       - name: Display SBOM summary
         run: |
