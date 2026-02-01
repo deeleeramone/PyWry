@@ -46,10 +46,10 @@ def get_python_tag() -> str:
     return f"cp{sys.version_info.major}{sys.version_info.minor}"
 
 
-class PytauriWheelBundleHook(BuildHookInterface):
+class CustomBuildHook(BuildHookInterface):
     """Build hook to bundle pytauri-wheel into pywry."""
 
-    PLUGIN_NAME = "pytauri-bundle"
+    PLUGIN_NAME = "custom"
 
     def initialize(self, version: str, build_data: dict[str, Any]) -> None:
         """Download and bundle pytauri-wheel for the target platform."""
