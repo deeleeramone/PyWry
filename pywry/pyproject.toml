@@ -72,7 +72,7 @@ Repository = "https://github.com/deeleeramone/PyWry"
 Documentation = "https://github.com/deeleeramone/PyWry/pywry#readme"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.21.0", "pip"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
