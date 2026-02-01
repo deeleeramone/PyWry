@@ -62,16 +62,12 @@ class CustomBuildHook(BuildHookInterface):
 
         # Skip for editable installs
         if version == "editable":
-            self.app.display_info(
-                "Skipping pytauri-wheel bundling for editable install"
-            )
+            self.app.display_info("Skipping pytauri-wheel bundling for editable install")
             return
 
         # Check if bundling is enabled (can be disabled for development)
         if os.environ.get("PYWRY_SKIP_BUNDLE", "").lower() in ("1", "true", "yes"):
-            self.app.display_info(
-                "Skipping pytauri-wheel bundling (PYWRY_SKIP_BUNDLE=1)"
-            )
+            self.app.display_info("Skipping pytauri-wheel bundling (PYWRY_SKIP_BUNDLE=1)")
             return
 
         pytauri_version = os.environ.get("PYTAURI_WHEEL_VERSION", "0.8.0")
@@ -144,6 +140,4 @@ __all__ = ["builder_factory", "context_factory"]
         # Add vendor directory to wheel
         build_data["force_include"][str(vendor_dir)] = "pywry/_vendor/pytauri_wheel"
 
-        self.app.display_success(
-            "Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel"
-        )
+        self.app.display_success("Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel")
