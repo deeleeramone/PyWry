@@ -1318,7 +1318,21 @@ if HAS_ANYWIDGET:
             height: str = "500px",
             **kwargs,
         ):
-            """Initialize the widget."""
+            """Initialize the widget.
+
+            Parameters
+            ----------
+            content : str, optional
+                HTML content to render, by default "".
+            theme : str, optional
+                Color theme ('light' or 'dark'), by default "dark".
+            width : str, optional
+                CSS width string, by default "100%".
+            height : str, optional
+                CSS height string, by default "500px".
+            **kwargs
+                Additional arguments passed to anywidget.AnyWidget.
+            """
             # Set traits BEFORE calling super().__init__() to ensure they're available when render() is called
             kwargs["content"] = content
             kwargs["theme"] = theme
@@ -1511,7 +1525,25 @@ if HAS_ANYWIDGET:
             chart_id: str = "",
             **kwargs,
         ):
-            """Initialize the widget with Plotly bundled."""
+            """Initialize the widget with Plotly bundled.
+
+            Parameters
+            ----------
+            content : str, optional
+                HTML content to render, by default "".
+            theme : str, optional
+                Color theme ('light' or 'dark'), by default "dark".
+            width : str, optional
+                CSS width string, by default "100%".
+            height : str, optional
+                CSS height string, by default "500px".
+            figure_json : str, optional
+                Plotly figure as JSON string, by default "".
+            chart_id : str, optional
+                Unique ID for scoped events. Defaults to widget label if empty.
+            **kwargs
+                 Additional arguments passed to PyWryWidget.
+            """
             super().__init__(content=content, theme=theme, width=width, height=height, **kwargs)
             self.figure_json = figure_json
             self.chart_id = chart_id or self._label
@@ -1559,8 +1591,24 @@ if HAS_ANYWIDGET:
 
             Parameters
             ----------
+            content : str, optional
+                HTML content to render, by default "".
+            theme : str, optional
+                Color theme ('light' or 'dark'), by default "dark".
+            aggrid_theme : str, optional
+                AG Grid theme (e.g. 'alpine', 'balham'), by default "alpine".
+            width : str, optional
+                CSS width string, by default "100%".
+            height : str, optional
+                CSS height string, by default "500px".
+            grid_config : str, optional
+                Grid options as JSON string, by default "".
+            grid_id : str, optional
+                Unique ID for scoped events. Defaults to widget label if empty.
             export_dir : str, optional
-                Directory for CSV exports from context menu. If None, uses current directory.
+                Deprecated. Has no effect as exports now trigger a native save dialog.
+            **kwargs
+                 Additional arguments passed to PyWryWidget.
             """
             super().__init__(content=content, theme=theme, width=width, height=height, **kwargs)
             self._export_dir = export_dir
@@ -1589,41 +1637,23 @@ if HAS_ANYWIDGET:
 
         def _register_csv_export_handler(self) -> None:
             """Register automatic CSV export handler for context menu exports."""
-            from datetime import datetime
-            from pathlib import Path
 
             def handle_export(data: dict[str, Any], _event_type: str, _label: str) -> None:
                 csv_content = data.get("csvContent", "")
                 suggested_name = data.get("fileName", "export.csv")
-                export_type = data.get("exportType", "unknown")
 
                 # Normalize line endings - AG Grid uses \r\n, convert to \n
                 csv_content = csv_content.replace("\r\n", "\n").replace("\r", "\n")
 
-                # Use configured export dir or current directory
-                save_dir = Path(self._export_dir) if self._export_dir else Path.cwd()
-
-                # Generate unique filename with timestamp
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                base_name = suggested_name.rsplit(".", 1)[0]
-                filename = f"{base_name}_{timestamp}.csv"
-                filepath = save_dir / filename
-
-                try:
-                    save_dir.mkdir(parents=True, exist_ok=True)
-                    filepath.write_text(csv_content, encoding="utf-8")
-                    # Show notification in the grid
-                    self.emit(
-                        "pywry:show-notification",
-                        {"message": f"Saved: {filepath}", "duration": 3000},
-                    )
-                    print(f"[PyWry] CSV exported ({export_type}): {filepath}")
-                except Exception as e:
-                    self.emit(
-                        "pywry:show-notification",
-                        {"message": f"Export failed: {e}", "duration": 4000},
-                    )
-                    print(f"[PyWry] Failed to save CSV: {e}")
+                # Emit pywry:download to trigger client-side save / native dialog
+                self.emit(
+                    "pywry:download",
+                    {
+                        "content": csv_content,
+                        "filename": suggested_name,
+                        "mimeType": "text/csv;charset=utf-8",
+                    },
+                )
 
             self.on("grid:export-csv", handle_export)
 

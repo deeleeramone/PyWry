@@ -3926,6 +3926,8 @@ def show_dataframe(  # pylint: disable=too-many-arguments
         - items: list of item configs (Button, Select, etc.)
     port : int, optional
         Server port (only used if InlineWidget fallback is needed).
+    widget_id : str, optional
+        Unique ID for the widget. If None, a random UUID is generated.
     column_defs : list, optional
         Custom column definitions. Can be dicts or ColDef objects.
     row_selection : RowSelection | dict | bool
