@@ -92,3 +92,10 @@ jobs:
             git commit -m "chore: update SBOM [skip ci]"
             git push
           fi
+
+      - name: Submit SBOM to Dependency Graph
+        uses: anchore/sbom-action@v0
+        with:
+          path: pywry
+          format: cyclonedx-json
+          artifact-name: sbom

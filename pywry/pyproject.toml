@@ -9,7 +9,7 @@ requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -18,13 +18,15 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: 
     "Topic :: Desktop Environment :: Window Managers",
+    "Topic :: Desktop Environment :: Gnome",
+    "Topic :: Internet :: WWW/HTTP"
 ]
 keywords = ["rendering", "frontend", "webview", "tauri", "gui", "plotly", "aggrid", "desktop", "notebook", "ipywidget"]
 
 dependencies = [
     "pytauri>=0.8.0",
-    "pytauri-wheel>=0.8.0",
     "anyio>=4.0.0",
     "pandas>=1.5.3",
     "pydantic>=2.0.0",
@@ -43,6 +45,7 @@ pywry = "pywry.cli:main"
 
 [project.optional-dependencies]
 dev = [
+    "pytauri-wheel>=0.8.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-timeout>=2.0.0",
