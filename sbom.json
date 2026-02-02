@@ -4844,7 +4844,7 @@
         {
           "license": {
             "acknowledgement": "declared",
-            "id": "AGPL-3.0-only"
+            "name": "License :: OSI Approved :: Apache Software License"
           }
         }
       ],
@@ -4852,7 +4852,7 @@
       "type": "application",
       "version": "2.0.0"
     },
-    "timestamp": "2026-02-01T22:08:21.630148+00:00",
+    "timestamp": "2026-02-02T03:49:41.543486+00:00",
     "tools": {
       "components": [
         {
@@ -4956,7 +4956,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:b610d832-f830-4ee6-a9d0-7a6016f18e71",
+  "serialNumber": "urn:uuid:49098ec3-fac9-493a-acb4-bdd9d9716db5",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
