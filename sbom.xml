@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:bc30be07-2607-4566-b458-1b5fccfc34ab" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:f141e87c-37bf-457c-b2ad-74cfa6ea2ffe" version="1">
   <metadata>
-    <timestamp>2026-02-01T22:08:20.911291+00:00</timestamp>
+    <timestamp>2026-02-02T03:49:40.719315+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
@@ -86,7 +86,7 @@
       <description>A blazingly fast 100% Python library for cross-platform webview window handling and content rendering, with offline support for AgGrid and Plotly.</description>
       <licenses>
         <license acknowledgement="declared">
-          <id>AGPL-3.0-only</id>
+          <name>License :: OSI Approved :: Apache Software License</name>
         </license>
       </licenses>
       <externalReferences>
