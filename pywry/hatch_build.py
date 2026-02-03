@@ -71,9 +71,10 @@ def get_wheel_platform_tag() -> str:
             return "macosx_14_0_arm64"
         return "macosx_13_0_x86_64"
     if system == "linux":
+        # Use manylinux_2_35 to match pytauri-wheel's published wheels
         if machine == "aarch64":
-            return "manylinux_2_28_aarch64"
-        return "manylinux_2_28_x86_64"
+            return "manylinux_2_35_aarch64"
+        return "manylinux_2_35_x86_64"
     if system == "windows":
         if machine in ("arm64", "aarch64"):
             return "win_arm64"
@@ -127,79 +128,29 @@ class CustomBuildHook(BuildHookInterface):
         vendor_dir = Path(self.root) / "pywry" / "_vendor" / "pytauri_wheel"
         vendor_dir.mkdir(parents=True, exist_ok=True)
 
-        # Download the correct platform's pytauri-wheel
-        # We cannot use the installed one because it may be for a different architecture
-        # (e.g., building x86_64 wheel on arm64 runner)
-        import importlib.metadata
-        import subprocess
-        import tempfile
-        import zipfile
+        # Copy the installed pytauri_wheel package to vendor directory
+        # The build system already installs pytauri-wheel with the correct architecture
+        import importlib.util
+        import shutil
 
-        try:
-            pytauri_version = importlib.metadata.version("pytauri-wheel")
-        except importlib.metadata.PackageNotFoundError:
-            pytauri_version = "0.8.0"
-
-        # Map our wheel platform tag to pytauri-wheel's platform tag
-        # pytauri-wheel publishes manylinux_2_35 wheels, but we tag our wheel as manylinux_2_28
-        # for broader compatibility (2_35 binaries work on 2_28+ systems)
-        download_platform = wheel_platform_tag
-        if "manylinux_2_28" in wheel_platform_tag:
-            download_platform = wheel_platform_tag.replace(
-                "manylinux_2_28", "manylinux_2_35"
+        spec = importlib.util.find_spec("pytauri_wheel")
+        if spec is None or spec.origin is None:
+            raise RuntimeError(
+                "pytauri_wheel is not installed. Install it with: pip install pytauri-wheel"
             )
 
-        self.app.display_info(
-            f"Downloading pytauri-wheel {pytauri_version} for {download_platform}"
-        )
+        pytauri_wheel_dir = Path(spec.origin).parent
+        self.app.display_info(f"Found pytauri_wheel at: {pytauri_wheel_dir}")
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmppath = Path(tmpdir)
-
-            # Download the wheel for the TARGET platform
-            cmd = [
-                sys.executable,
-                "-m",
-                "pip",
-                "download",
-                "--no-deps",
-                "--only-binary=:all:",
-                f"--dest={tmppath}",
-                f"--platform={download_platform}",
-                f"--python-version={sys.version_info.major}.{sys.version_info.minor}",
-                f"--abi={python_tag}",
-                f"pytauri-wheel=={pytauri_version}",
-            ]
-            self.app.display_info(f"Running: {' '.join(cmd)}")
-
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                self.app.display_error(f"pip download failed: {result.stderr}")
-                raise RuntimeError(f"Failed to download pytauri-wheel: {result.stderr}")
-
-            # Find the downloaded wheel
-            wheels = list(tmppath.glob("pytauri_wheel*.whl"))
-            if not wheels:
-                raise RuntimeError(f"No pytauri-wheel found in {tmppath}")
-
-            wheel_path = wheels[0]
-            self.app.display_info(f"Downloaded: {wheel_path.name}")
-
-            # Extract the wheel (it's a zip file)
-            with zipfile.ZipFile(wheel_path, "r") as whl:
-                for member in whl.namelist():
-                    if member.startswith("pytauri_wheel/") and not member.endswith("/"):
-                        rel_path = member[len("pytauri_wheel/") :]
-                        if rel_path:
-                            dest = vendor_dir / rel_path
-                            dest.parent.mkdir(parents=True, exist_ok=True)
-                            with whl.open(member) as src, dest.open("wb") as dst:
-                                dst.write(src.read())
+        # Copy the entire pytauri_wheel package to vendor directory
+        for item in pytauri_wheel_dir.iterdir():
+            dest = vendor_dir / item.name
+            if item.is_dir():
+                if dest.exists():
+                    shutil.rmtree(dest)
+                shutil.copytree(item, dest)
+            else:
+                shutil.copy2(item, dest)
 
         # Create __init__.py that re-exports from vendor location
         init_content = '''"""Vendored pytauri_wheel package."""
