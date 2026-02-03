@@ -27,7 +27,7 @@ def get_wheel_platform_tag() -> str:
     """Get the platform tag for the output wheel.
 
     This is the tag that will be used in the wheel filename.
-    We use manylinux_2_28 for Linux for broad compatibility.
+    We use manylinux_2_35 for Linux to match pytauri-wheel.
     """
     system = platform.system().lower()
     machine = platform.machine().lower()
@@ -38,8 +38,8 @@ def get_wheel_platform_tag() -> str:
         return "macosx_13_0_x86_64"
     if system == "linux":
         if machine == "aarch64":
-            return "manylinux_2_28_aarch64"
-        return "manylinux_2_28_x86_64"
+            return "manylinux_2_35_aarch64"
+        return "manylinux_2_35_x86_64"
     if system == "windows":
         if machine == "arm64":
             return "win_arm64"
