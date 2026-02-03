@@ -4852,7 +4852,7 @@
       "type": "application",
       "version": "2.0.0"
     },
-    "timestamp": "2026-02-03T03:52:03.093342+00:00",
+    "timestamp": "2026-02-03T05:32:07.324578+00:00",
     "tools": {
       "components": [
         {
@@ -4956,7 +4956,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:5c2aea8f-6a11-4224-8f0b-908e51232d53",
+  "serialNumber": "urn:uuid:8a4bc4dd-8918-40eb-8dfc-8907599ad82e",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
