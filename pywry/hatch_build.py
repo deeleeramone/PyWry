@@ -72,8 +72,8 @@ def get_wheel_platform_tag() -> str:
         return "macosx_13_0_x86_64"
     if system == "linux":
         if machine == "aarch64":
-            return "manylinux_2_35_aarch64"
-        return "manylinux_2_35_x86_64"
+            return "manylinux_2_28_aarch64"
+        return "manylinux_2_28_x86_64"
     if system == "windows":
         if machine in ("arm64", "aarch64"):
             return "win_arm64"
@@ -141,8 +141,13 @@ class CustomBuildHook(BuildHookInterface):
             pytauri_version = "0.8.0"
 
         # Map our wheel platform tag to pytauri-wheel's platform tag
-        # pytauri-wheel uses manylinux_2_35, we use manylinux_2_35 too
+        # pytauri-wheel publishes manylinux_2_35 wheels, but we tag our wheel as manylinux_2_28
+        # for broader compatibility (2_35 binaries work on 2_28+ systems)
         download_platform = wheel_platform_tag
+        if "manylinux_2_28" in wheel_platform_tag:
+            download_platform = wheel_platform_tag.replace(
+                "manylinux_2_28", "manylinux_2_35"
+            )
 
         self.app.display_info(
             f"Downloading pytauri-wheel {pytauri_version} for {download_platform}"

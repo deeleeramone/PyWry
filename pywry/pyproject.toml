@@ -114,13 +114,16 @@ test-command = "python -c \"import pywry; print(f'pywry {pywry.__version__} load
 dependency-versions = "latest"
 
 [tool.cibuildwheel.linux]
-before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && apt-get update && apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev || true"
+before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && dnf install -y webkit2gtk4.1-devel gtk3-devel || yum install -y webkit2gtk4.1-devel gtk3-devel || true"
 environment = { PATH = "$HOME/.cargo/bin:$PATH" }
-manylinux-x86_64-image = "quay.io/pypa/manylinux_2_35_x86_64"
-manylinux-aarch64-image = "quay.io/pypa/manylinux_2_35_aarch64"
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+repair-wheel-command = ""
 
 [tool.cibuildwheel.macos]
-# No cross-compilation - each runner builds for its native architecture
+# Disable delocate repair - we bundle pre-built pytauri-wheel binaries
+repair-wheel-command = ""
 
 [tool.cibuildwheel.windows]
-# No cross-compilation - each runner builds for its native architecture
+# No repair needed on Windows
+repair-wheel-command = ""
