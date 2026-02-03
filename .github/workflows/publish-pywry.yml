@@ -28,7 +28,7 @@ jobs:
   # =============================================================================
   test:
     name: Test - ${{ matrix.os }} - Python ${{ matrix.python-version }}
-    if: github.event_name == 'workflow_dispatch' && !inputs.skip_tests
+    if: ${{ !inputs.skip_tests }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -94,7 +94,7 @@ jobs:
   build-linux-x86_64:
     name: Build wheels - Linux x86_64
     needs: [test]
-    if: github.event_name == 'workflow_dispatch' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -160,7 +160,7 @@ jobs:
   build-linux-aarch64:
     name: Build wheels - Linux aarch64
     needs: [test]
-    if: github.event_name == 'workflow_dispatch' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
@@ -203,7 +203,7 @@ jobs:
   build-macos-x86_64:
     name: Build wheels - macOS x86_64
     needs: [test]
-    if: github.event_name == 'workflow_dispatch' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: macos-15
     permissions:
       contents: read
@@ -246,7 +246,7 @@ jobs:
   build-macos-arm64:
     name: Build wheels - macOS arm64
     needs: [test]
-    if: github.event_name == 'workflow_dispatch' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: macos-latest
     permissions:
       contents: read
@@ -289,7 +289,7 @@ jobs:
   build-windows-amd64:
     name: Build wheels - Windows AMD64
     needs: [test]
-    if: github.event_name == 'workflow_dispatch' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: windows-2025
     permissions:
       contents: read
@@ -332,7 +332,7 @@ jobs:
   build-windows-arm64:
     name: Build wheels - Windows ARM64
     needs: [test]
-    if: github.event_name == 'workflow_dispatch' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: windows-11-arm
     permissions:
       contents: read
