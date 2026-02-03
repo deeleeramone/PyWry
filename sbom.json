@@ -1233,7 +1233,7 @@
       "version": "2.3.0"
     },
     {
-      "bom-ref": "ipython==9.9.0",
+      "bom-ref": "ipython==9.10.0",
       "description": "IPython: Productive Interactive Computing",
       "externalReferences": [
         {
@@ -1271,9 +1271,9 @@
         }
       ],
       "name": "ipython",
-      "purl": "pkg:pypi/ipython@9.9.0",
+      "purl": "pkg:pypi/ipython@9.10.0",
       "type": "library",
-      "version": "9.9.0"
+      "version": "9.10.0"
     },
     {
       "bom-ref": "ipython_pygments_lexers==1.1.1",
@@ -1828,7 +1828,7 @@
       "version": "1.1.0"
     },
     {
-      "bom-ref": "narwhals==2.15.0",
+      "bom-ref": "narwhals==2.16.0",
       "description": "Extremely lightweight compatibility layer between dataframe libraries",
       "externalReferences": [
         {
@@ -1861,9 +1861,9 @@
         }
       ],
       "name": "narwhals",
-      "purl": "pkg:pypi/narwhals@2.15.0",
+      "purl": "pkg:pypi/narwhals@2.16.0",
       "type": "library",
-      "version": "2.15.0"
+      "version": "2.16.0"
     },
     {
       "bom-ref": "numpy==2.4.2",
@@ -4165,7 +4165,7 @@
     {
       "dependsOn": [
         "asttokens==3.0.1",
-        "ipython==9.9.0",
+        "ipython==9.10.0",
         "pytest==9.0.2"
       ],
       "ref": "executing==2.2.1"
@@ -4229,7 +4229,7 @@
     },
     {
       "dependsOn": [
-        "ipython==9.9.0",
+        "ipython==9.10.0",
         "mypy==1.19.1",
         "packaging==25.0",
         "pytest==9.0.2",
@@ -4258,7 +4258,7 @@
         "traitlets==5.14.3",
         "typing_extensions==4.15.0"
       ],
-      "ref": "ipython==9.9.0"
+      "ref": "ipython==9.10.0"
     },
     {
       "dependsOn": [
@@ -4269,7 +4269,7 @@
     {
       "dependsOn": [
         "comm==0.2.3",
-        "ipython==9.9.0",
+        "ipython==9.10.0",
         "jsonschema==4.26.0",
         "jupyterlab_widgets==3.0.16",
         "pytest==9.0.2",
@@ -4400,7 +4400,7 @@
         "packaging==25.0",
         "pandas==3.0.0"
       ],
-      "ref": "narwhals==2.15.0"
+      "ref": "narwhals==2.16.0"
     },
     {
       "ref": "numpy==2.4.2"
@@ -4476,7 +4476,7 @@
     {
       "dependsOn": [
         "anywidget==0.9.21",
-        "narwhals==2.15.0",
+        "narwhals==2.16.0",
         "numpy==2.4.2",
         "packaging==25.0",
         "pandas==3.0.0",
@@ -4852,7 +4852,7 @@
       "type": "application",
       "version": "2.0.0"
     },
-    "timestamp": "2026-02-02T03:49:41.543486+00:00",
+    "timestamp": "2026-02-03T01:11:42.688706+00:00",
     "tools": {
       "components": [
         {
@@ -4956,7 +4956,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:49098ec3-fac9-493a-acb4-bdd9d9716db5",
+  "serialNumber": "urn:uuid:bcd746b3-8206-44e3-a78c-22b4c69d26cd",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
