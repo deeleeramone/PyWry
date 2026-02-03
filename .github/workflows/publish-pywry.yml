@@ -204,7 +204,7 @@ jobs:
     name: Build wheels - macOS x86_64
     needs: [test]
     if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
-    runs-on: macos-15
+    runs-on: macos-15-intel
     permissions:
       contents: read
       id-token: write
