@@ -127,15 +127,15 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Building pywry version: $VERSION"
 
+      - name: Clean vendor directory
+        shell: bash
+        run: rm -rf pywry/_vendor/pytauri_wheel dist/
+
       - name: Build sdist
         if: matrix.python-version == '3.12'
         run: |
           pip install build
           python -m build --sdist
-
-      - name: Clean vendor directory
-        shell: bash
-        run: rm -rf pywry/_vendor/pytauri_wheel dist/
 
       - name: Build wheel
         run: |
