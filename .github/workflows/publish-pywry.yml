@@ -123,7 +123,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          VERSION=$(grep -oP '^version\s*=\s*"\K[^"]+' pyproject.toml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Building pywry version: $VERSION"
 
