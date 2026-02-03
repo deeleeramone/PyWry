@@ -3,6 +3,9 @@
 This hook downloads and embeds the pytauri-wheel native extension for the
 target platform, making pywry fully self-contained without requiring users
 to download pytauri-wheel separately.
+
+It also sets the wheel tags to make this a platform-specific wheel,
+which is required since we bundle native binaries.
 """
 
 # pylint: disable=too-many-locals
@@ -11,10 +14,8 @@ from __future__ import annotations
 
 import os
 import platform
-import subprocess
+import shutil
 import sys
-import tempfile
-import zipfile
 
 from pathlib import Path
 from typing import Any
@@ -22,20 +23,23 @@ from typing import Any
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 
-def get_platform_tag() -> str:
-    """Get the platform tag for the current build target."""
+def get_wheel_platform_tag() -> str:
+    """Get the platform tag for the output wheel.
+
+    This is the tag that will be used in the wheel filename.
+    We use manylinux_2_28 for Linux for broad compatibility.
+    """
     system = platform.system().lower()
     machine = platform.machine().lower()
 
     if system == "darwin":
-        # Use tags that match what pytauri-wheel publishes on PyPI
         if machine == "arm64":
             return "macosx_14_0_arm64"
         return "macosx_13_0_x86_64"
     if system == "linux":
         if machine == "aarch64":
-            return "manylinux_2_35_aarch64"
-        return "manylinux_2_35_x86_64"
+            return "manylinux_2_28_aarch64"
+        return "manylinux_2_28_x86_64"
     if system == "windows":
         if machine == "arm64":
             return "win_arm64"
@@ -62,72 +66,54 @@ class CustomBuildHook(BuildHookInterface):
 
         # Skip for editable installs
         if version == "editable":
-            self.app.display_info("Skipping pytauri-wheel bundling for editable install")
+            self.app.display_info(
+                "Skipping pytauri-wheel bundling for editable install"
+            )
             return
+
+        python_tag = get_python_tag()
+        wheel_platform_tag = get_wheel_platform_tag()
+        # Set wheel tags to make this a platform-specific wheel
+        # This is critical - without this, hatch generates a pure Python wheel
+        build_data["tag"] = f"{python_tag}-{python_tag}-{wheel_platform_tag}"
+        build_data["pure_python"] = False
 
         # Check if bundling is enabled (can be disabled for development)
         if os.environ.get("PYWRY_SKIP_BUNDLE", "").lower() in ("1", "true", "yes"):
-            self.app.display_info("Skipping pytauri-wheel bundling (PYWRY_SKIP_BUNDLE=1)")
+            self.app.display_info(
+                "Skipping pytauri-wheel bundling (PYWRY_SKIP_BUNDLE=1)"
+            )
             return
 
-        pytauri_version = os.environ.get("PYTAURI_WHEEL_VERSION", "0.8.0")
-        python_tag = get_python_tag()
-        platform_tag = get_platform_tag()
-
         self.app.display_info(
-            f"Bundling pytauri-wheel {pytauri_version} for {python_tag}-{platform_tag}"
+            f"Bundling pytauri-wheel for {python_tag}-{wheel_platform_tag}"
         )
 
         # Create vendor directory in the package
         vendor_dir = Path(self.root) / "pywry" / "_vendor" / "pytauri_wheel"
         vendor_dir.mkdir(parents=True, exist_ok=True)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmppath = Path(tmpdir)
+        # Find the installed pytauri_wheel package location
+        import importlib.util
 
-            try:
-                subprocess.run(  # noqa: S603
-                    [
-                        sys.executable,
-                        "-m",
-                        "pip",
-                        "download",
-                        "--no-deps",
-                        "--only-binary=:all:",
-                        f"--dest={tmppath}",
-                        f"--platform={platform_tag}",
-                        f"--python-version={sys.version_info.major}.{sys.version_info.minor}",
-                        f"--abi={python_tag}",
-                        f"pytauri-wheel=={pytauri_version}",
-                    ],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-            except subprocess.CalledProcessError as e:
-                self.app.display_error(f"Failed to download pytauri-wheel: {e.stderr}")
-                raise
+        spec = importlib.util.find_spec("pytauri_wheel")
+        if spec is None or spec.origin is None:
+            raise RuntimeError(
+                "pytauri_wheel is not installed. Install it with: pip install pytauri-wheel"
+            )
 
-            # Find the downloaded wheel
-            wheels = list(tmppath.glob("pytauri_wheel*.whl"))
-            if not wheels:
-                raise RuntimeError(f"No pytauri-wheel found in {tmppath}")
+        pytauri_wheel_dir = Path(spec.origin).parent
+        self.app.display_info(f"Found pytauri_wheel at: {pytauri_wheel_dir}")
 
-            wheel_path = wheels[0]
-            self.app.display_info(f"Downloaded: {wheel_path.name}")
-
-            # Extract the wheel (it's a zip file)
-            with zipfile.ZipFile(wheel_path, "r") as whl:
-                # Extract only the pytauri_wheel package contents
-                for member in whl.namelist():
-                    if member.startswith("pytauri_wheel/") and not member.endswith("/"):
-                        # Get the relative path within pytauri_wheel/
-                        rel_path = member[len("pytauri_wheel/") :]
-                        if rel_path:
-                            dest = vendor_dir / rel_path
-                            dest.parent.mkdir(parents=True, exist_ok=True)
-                            with whl.open(member) as src, dest.open("wb") as dst:
-                                dst.write(src.read())
+        # Copy the entire pytauri_wheel package to vendor directory
+        for item in pytauri_wheel_dir.iterdir():
+            dest = vendor_dir / item.name
+            if item.is_dir():
+                if dest.exists():
+                    shutil.rmtree(dest)
+                shutil.copytree(item, dest)
+            else:
+                shutil.copy2(item, dest)
 
         # Create __init__.py that re-exports from vendor location
         init_content = '''"""Vendored pytauri_wheel package."""
@@ -140,4 +126,6 @@ __all__ = ["builder_factory", "context_factory"]
         # Add vendor directory to wheel
         build_data["force_include"][str(vendor_dir)] = "pywry/_vendor/pytauri_wheel"
 
-        self.app.display_success("Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel")
+        self.app.display_success(
+            "Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel"
+        )
