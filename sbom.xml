@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:dae3a89e-d3db-4547-9976-378d5ebe0178" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:a0dae234-7533-4146-b160-6d4480c1e6be" version="1">
   <metadata>
-    <timestamp>2026-02-03T01:11:41.937029+00:00</timestamp>
+    <timestamp>2026-02-03T02:14:59.817654+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
@@ -3075,16 +3075,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="wrapt==2.1.0">
+    <component type="library" bom-ref="wrapt==2.1.1">
       <name>wrapt</name>
-      <version>2.1.0</version>
+      <version>2.1.1</version>
       <description>Module for decorators, wrappers and monkey patching.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-2-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/wrapt@2.1.0</purl>
+      <purl>pkg:pypi/wrapt@2.1.1</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://wrapt.readthedocs.io/</url>
@@ -3423,7 +3423,7 @@
     </dependency>
     <dependency ref="psygnal==0.15.1">
       <dependency ref="pydantic==2.12.5"/>
-      <dependency ref="wrapt==2.1.0"/>
+      <dependency ref="wrapt==2.1.1"/>
     </dependency>
     <dependency ref="ptyprocess==0.7.0"/>
     <dependency ref="pure_eval==0.2.3">
@@ -3577,7 +3577,7 @@
       <dependency ref="redis==7.1.0"/>
       <dependency ref="typing_extensions==4.15.0"/>
       <dependency ref="urllib3==2.6.3"/>
-      <dependency ref="wrapt==2.1.0"/>
+      <dependency ref="wrapt==2.1.1"/>
     </dependency>
     <dependency ref="tomlkit==0.14.0"/>
     <dependency ref="traitlets==5.14.3">
@@ -3605,7 +3605,7 @@
     <dependency ref="webcolors==25.10.0"/>
     <dependency ref="websockets==16.0"/>
     <dependency ref="widgetsnbextension==4.0.15"/>
-    <dependency ref="wrapt==2.1.0">
+    <dependency ref="wrapt==2.1.1">
       <dependency ref="pytest==9.0.2"/>
     </dependency>
     <dependency ref="zipp==3.23.0">
