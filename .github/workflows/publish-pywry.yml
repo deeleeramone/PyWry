@@ -422,6 +422,9 @@ jobs:
     needs: [build-linux-x86_64, build-linux-aarch64, build-macos-x86_64, build-macos-arm64, build-windows-amd64, build-windows-arm64]
     if: always() && (needs.build-linux-x86_64.result == 'success')
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: .
     permissions:
       contents: read
 
@@ -462,6 +465,9 @@ jobs:
     needs: [merge-artifacts]
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: .
     environment:
       name: testpypi
       url: https://test.pypi.org/p/pywry
@@ -658,6 +664,9 @@ jobs:
     name: Publish to PyPI
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: .
     environment:
       name: pypi
       url: https://pypi.org/p/pywry
@@ -671,7 +680,6 @@ jobs:
         run: |
           mkdir -p dist
           gh release download ${{ github.event.release.tag_name }} --dir dist --repo ${{ github.repository }}
-        working-directory: .
 
       - name: Filter only distribution files
         run: |
@@ -681,7 +689,6 @@ jobs:
           mv clean_dist dist
           echo "📦 Publishing to PyPI:"
           ls -la dist/
-        working-directory: .
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
