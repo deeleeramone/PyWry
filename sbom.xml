@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:f141e87c-37bf-457c-b2ad-74cfa6ea2ffe" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:dae3a89e-d3db-4547-9976-378d5ebe0178" version="1">
   <metadata>
-    <timestamp>2026-02-02T03:49:40.719315+00:00</timestamp>
+    <timestamp>2026-02-03T01:11:41.937029+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
@@ -1027,16 +1027,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="ipython==9.9.0">
+    <component type="library" bom-ref="ipython==9.10.0">
       <name>ipython</name>
-      <version>9.9.0</version>
+      <version>9.10.0</version>
       <description>IPython: Productive Interactive Computing</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/ipython@9.9.0</purl>
+      <purl>pkg:pypi/ipython@9.10.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://ipython.readthedocs.io/</url>
@@ -1476,16 +1476,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="narwhals==2.15.0">
+    <component type="library" bom-ref="narwhals==2.16.0">
       <name>narwhals</name>
-      <version>2.15.0</version>
+      <version>2.16.0</version>
       <description>Extremely lightweight compatibility layer between dataframe libraries</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/narwhals@2.15.0</purl>
+      <purl>pkg:pypi/narwhals@2.16.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://narwhals-dev.github.io/narwhals/</url>
@@ -3206,7 +3206,7 @@
     </dependency>
     <dependency ref="executing==2.2.1">
       <dependency ref="asttokens==3.0.1"/>
-      <dependency ref="ipython==9.9.0"/>
+      <dependency ref="ipython==9.10.0"/>
       <dependency ref="pytest==9.0.2"/>
     </dependency>
     <dependency ref="fakeredis==2.33.0">
@@ -3246,14 +3246,14 @@
       <dependency ref="ruff==0.14.14"/>
     </dependency>
     <dependency ref="importlib_metadata==8.7.1">
-      <dependency ref="ipython==9.9.0"/>
+      <dependency ref="ipython==9.10.0"/>
       <dependency ref="mypy==1.19.1"/>
       <dependency ref="packaging==25.0"/>
       <dependency ref="pytest==9.0.2"/>
       <dependency ref="zipp==3.23.0"/>
     </dependency>
     <dependency ref="iniconfig==2.3.0"/>
-    <dependency ref="ipython==9.9.0">
+    <dependency ref="ipython==9.10.0">
       <dependency ref="Pygments==2.19.2"/>
       <dependency ref="decorator==5.2.1"/>
       <dependency ref="ipython_pygments_lexers==1.1.1"/>
@@ -3275,7 +3275,7 @@
     </dependency>
     <dependency ref="ipywidgets==8.1.8">
       <dependency ref="comm==0.2.3"/>
-      <dependency ref="ipython==9.9.0"/>
+      <dependency ref="ipython==9.10.0"/>
       <dependency ref="jsonschema==4.26.0"/>
       <dependency ref="jupyterlab_widgets==3.0.16"/>
       <dependency ref="pytest==9.0.2"/>
@@ -3359,7 +3359,7 @@
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="mypy_extensions==1.1.0"/>
-    <dependency ref="narwhals==2.15.0">
+    <dependency ref="narwhals==2.16.0">
       <dependency ref="packaging==25.0"/>
       <dependency ref="pandas==3.0.0"/>
     </dependency>
@@ -3406,7 +3406,7 @@
     </dependency>
     <dependency ref="plotly==6.5.2">
       <dependency ref="anywidget==0.9.21"/>
-      <dependency ref="narwhals==2.15.0"/>
+      <dependency ref="narwhals==2.16.0"/>
       <dependency ref="numpy==2.4.2"/>
       <dependency ref="packaging==25.0"/>
       <dependency ref="pandas==3.0.0"/>
