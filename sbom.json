@@ -3957,7 +3957,7 @@
       "version": "4.0.15"
     },
     {
-      "bom-ref": "wrapt==2.1.0",
+      "bom-ref": "wrapt==2.1.1",
       "description": "Module for decorators, wrappers and monkey patching.",
       "externalReferences": [
         {
@@ -3990,9 +3990,9 @@
         }
       ],
       "name": "wrapt",
-      "purl": "pkg:pypi/wrapt@2.1.0",
+      "purl": "pkg:pypi/wrapt@2.1.1",
       "type": "library",
-      "version": "2.1.0"
+      "version": "2.1.1"
     },
     {
       "bom-ref": "zipp==3.23.0",
@@ -4502,7 +4502,7 @@
     {
       "dependsOn": [
         "pydantic==2.12.5",
-        "wrapt==2.1.0"
+        "wrapt==2.1.1"
       ],
       "ref": "psygnal==0.15.1"
     },
@@ -4746,7 +4746,7 @@
         "redis==7.1.0",
         "typing_extensions==4.15.0",
         "urllib3==2.6.3",
-        "wrapt==2.1.0"
+        "wrapt==2.1.1"
       ],
       "ref": "testcontainers==4.14.1"
     },
@@ -4810,7 +4810,7 @@
       "dependsOn": [
         "pytest==9.0.2"
       ],
-      "ref": "wrapt==2.1.0"
+      "ref": "wrapt==2.1.1"
     },
     {
       "dependsOn": [
@@ -4852,7 +4852,7 @@
       "type": "application",
       "version": "2.0.0"
     },
-    "timestamp": "2026-02-03T01:11:42.688706+00:00",
+    "timestamp": "2026-02-03T02:15:00.570894+00:00",
     "tools": {
       "components": [
         {
@@ -4956,7 +4956,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:bcd746b3-8206-44e3-a78c-22b4c69d26cd",
+  "serialNumber": "urn:uuid:dea24a92-023e-4a7d-8291-48a88a075201",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
