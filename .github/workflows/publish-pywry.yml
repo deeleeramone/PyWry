@@ -463,7 +463,7 @@ jobs:
   publish-testpypi:
     name: Publish to TestPyPI
     needs: [merge-artifacts]
-    if: github.event_name == 'workflow_dispatch'
+    if: always() && needs.merge-artifacts.result == 'success' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -497,7 +497,7 @@ jobs:
   test-testpypi:
     name: Test from TestPyPI - ${{ matrix.os }}
     needs: [merge-artifacts, publish-testpypi]
-    if: github.event_name == 'workflow_dispatch'
+    if: always() && needs.publish-testpypi.result == 'success' && github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -599,7 +599,7 @@ jobs:
   create-release:
     name: Create Draft Release
     needs: [merge-artifacts]
-    if: github.event_name == 'workflow_dispatch'
+    if: always() && needs.merge-artifacts.result == 'success' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
