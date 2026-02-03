@@ -103,25 +103,3 @@ exclude = ["tests/"]
 [[tool.mypy.overrides]]
 module = ["plotly.*", "anywidget", "anywidget.*", "ipywidgets", "ipywidgets.*"]
 ignore_missing_imports = true
-
-# =============================================================================
-# cibuildwheel configuration for platform-specific wheels
-# =============================================================================
-[tool.cibuildwheel]
-build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
-skip = "pp* *-musllinux*"
-test-command = "python -c \"import pywry; print(f'pywry {pywry.__version__} loaded successfully')\""
-dependency-versions = "latest"
-
-[tool.cibuildwheel.linux]
-before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
-environment = { PATH = "$HOME/.cargo/bin:$PATH" }
-repair-wheel-command = ""
-
-[tool.cibuildwheel.macos]
-# Disable delocate repair - we bundle pre-built pytauri-wheel binaries
-repair-wheel-command = ""
-
-[tool.cibuildwheel.windows]
-# No repair needed on Windows
-repair-wheel-command = ""

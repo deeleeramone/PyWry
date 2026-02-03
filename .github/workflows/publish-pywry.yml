@@ -100,15 +100,24 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-0 libgtk-3-0
 
       - name: Extract version
         id: version
@@ -119,17 +128,15 @@ jobs:
           echo "📦 Building pywry version: $VERSION"
 
       - name: Build sdist
+        if: matrix.python-version == '3.12'
         run: |
           pip install build
           python -m build --sdist
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.1
-        with:
-          package-dir: pywry
-          output-dir: pywry/dist
-        env:
-          CIBW_ARCHS: x86_64
+      - name: Build wheel
+        run: |
+          pip install build hatchling pytauri-wheel
+          python -m build --wheel
 
       - name: List dist contents
         shell: bash
@@ -143,11 +150,12 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-linux-x86_64
+          name: wheels-linux-x86_64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
 
       - name: Upload sdist
+        if: matrix.python-version == '3.12'
         uses: actions/upload-artifact@v4
         with:
           name: sdist
@@ -166,23 +174,29 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.1
-        with:
-          package-dir: pywry
-          output-dir: pywry/dist
-        env:
-          CIBW_ARCHS: aarch64
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-0 libgtk-3-0
+
+      - name: Build wheel
+        run: |
+          pip install build hatchling pytauri-wheel
+          python -m build --wheel
 
       - name: List dist contents
         shell: bash
@@ -196,7 +210,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-linux-aarch64
+          name: wheels-linux-aarch64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
 
@@ -204,28 +218,29 @@ jobs:
     name: Build wheels - macOS x86_64
     needs: [test]
     if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
-    runs-on: macos-15-intel
+    runs-on: macos-15
     permissions:
       contents: read
       id-token: write
       attestations: write
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.1
-        with:
-          package-dir: pywry
-          output-dir: pywry/dist
-        env:
-          CIBW_ARCHS: x86_64
+      - name: Build wheel
+        run: |
+          pip install build hatchling pytauri-wheel
+          python -m build --wheel
 
       - name: List dist contents
         shell: bash
@@ -239,7 +254,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-macos-x86_64
+          name: wheels-macos-x86_64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
 
@@ -252,23 +267,24 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.1
-        with:
-          package-dir: pywry
-          output-dir: pywry/dist
-        env:
-          CIBW_ARCHS: arm64
+      - name: Build wheel
+        run: |
+          pip install build hatchling pytauri-wheel
+          python -m build --wheel
 
       - name: List dist contents
         shell: bash
@@ -295,23 +311,24 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.1
-        with:
-          package-dir: pywry
-          output-dir: pywry/dist
-        env:
-          CIBW_ARCHS: AMD64
+      - name: Build wheel
+        run: |
+          pip install build hatchling pytauri-wheel
+          python -m build --wheel
 
       - name: List dist contents
         shell: bash
@@ -325,7 +342,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-windows-amd64
+          name: wheels-windows-amd64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
 
@@ -338,41 +355,24 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
 
-      - name: Cache vcpkg packages
-        uses: actions/cache@v4
-        with:
-          path: C:/vcpkg/installed
-          key: vcpkg-arm64-windows-openssl-${{ hashFiles('.github/workflows/publish-pywry.yml') }}
-          restore-keys: |
-            vcpkg-arm64-windows-openssl-
-
-      - name: Install OpenSSL via vcpkg
-        shell: pwsh
+      - name: Build wheel
         run: |
-          $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
-          & "$env:VCPKG_ROOT\vcpkg" install openssl:arm64-windows
-          $opensslDir = "$env:VCPKG_ROOT\installed\arm64-windows"
-          echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=$opensslDir\lib" >> $env:GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=$opensslDir\include" >> $env:GITHUB_ENV
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.3.1
-        with:
-          package-dir: pywry
-          output-dir: pywry/dist
-        env:
-          CIBW_ARCHS: ARM64
+          pip install build hatchling pytauri-wheel
+          python -m build --wheel
 
       - name: List dist contents
         shell: bash
@@ -386,7 +386,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-windows-arm64
+          name: wheels-windows-arm64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
 
