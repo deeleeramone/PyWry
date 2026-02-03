@@ -113,7 +113,7 @@ jobs:
             arch: aarch64
             cibw_archs: aarch64
             build_sdist: false
-          # macOS Intel
+          # macOS Intel (macos-15 is x86_64)
           - os: macos-15
             arch: x86_64
             cibw_archs: x86_64
@@ -188,7 +188,7 @@ jobs:
           python -m build --sdist
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.22
+        uses: pypa/cibuildwheel@v3.3.1
         with:
           package-dir: pywry
           output-dir: pywry/dist

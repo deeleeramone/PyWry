@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import os
 import platform
-import shutil
 import sys
 
 from pathlib import Path
@@ -27,10 +26,45 @@ def get_wheel_platform_tag() -> str:
     """Get the platform tag for the output wheel.
 
     This is the tag that will be used in the wheel filename.
-    We use manylinux_2_35 for Linux to match pytauri-wheel.
+    We use manylinux_2_28 for Linux for broad compatibility.
+
+    Uses cibuildwheel environment variables when available to get
+    the correct target architecture for cross-compilation.
     """
     system = platform.system().lower()
+
+    # Get target architecture from cibuildwheel env vars, fall back to host
     machine = platform.machine().lower()
+
+    # _PYTHON_HOST_PLATFORM is the most reliable for cross-compilation
+    # Format: macosx-14.0-arm64 or macosx-13.0-x86_64
+    host_platform = os.environ.get("_PYTHON_HOST_PLATFORM", "")
+    if host_platform:
+        if "arm64" in host_platform:
+            machine = "arm64"
+        elif "x86_64" in host_platform:
+            machine = "x86_64"
+        elif "aarch64" in host_platform:
+            machine = "aarch64"
+
+    # cibuildwheel sets AUDITWHEEL_ARCH for Linux builds
+    if "AUDITWHEEL_ARCH" in os.environ:
+        machine = os.environ["AUDITWHEEL_ARCH"].lower()
+
+    # cibuildwheel sets ARCHFLAGS for macOS cross-compilation
+    archflags = os.environ.get("ARCHFLAGS", "")
+    if "-arch arm64" in archflags:
+        machine = "arm64"
+    elif "-arch x86_64" in archflags:
+        machine = "x86_64"
+
+    # cibuildwheel also sets CIBW_ARCHS or can be detected from wheel name
+    cibw_archs = os.environ.get("CIBW_ARCHS", "").lower()
+    if cibw_archs:
+        if "arm64" in cibw_archs or "aarch64" in cibw_archs:
+            machine = "arm64" if system == "darwin" else "aarch64"
+        elif "x86_64" in cibw_archs or "amd64" in cibw_archs:
+            machine = "x86_64"
 
     if system == "darwin":
         if machine == "arm64":
@@ -38,10 +72,10 @@ def get_wheel_platform_tag() -> str:
         return "macosx_13_0_x86_64"
     if system == "linux":
         if machine == "aarch64":
-            return "manylinux_2_35_aarch64"
-        return "manylinux_2_35_x86_64"
+            return "manylinux_2_28_aarch64"
+        return "manylinux_2_28_x86_64"
     if system == "windows":
-        if machine == "arm64":
+        if machine in ("arm64", "aarch64"):
             return "win_arm64"
         return "win_amd64"
 
@@ -66,9 +100,7 @@ class CustomBuildHook(BuildHookInterface):
 
         # Skip for editable installs
         if version == "editable":
-            self.app.display_info(
-                "Skipping pytauri-wheel bundling for editable install"
-            )
+            self.app.display_info("Skipping pytauri-wheel bundling for editable install")
             return
 
         python_tag = get_python_tag()
@@ -80,14 +112,10 @@ class CustomBuildHook(BuildHookInterface):
 
         # Check if bundling is enabled (can be disabled for development)
         if os.environ.get("PYWRY_SKIP_BUNDLE", "").lower() in ("1", "true", "yes"):
-            self.app.display_info(
-                "Skipping pytauri-wheel bundling (PYWRY_SKIP_BUNDLE=1)"
-            )
+            self.app.display_info("Skipping pytauri-wheel bundling (PYWRY_SKIP_BUNDLE=1)")
             return
 
-        self.app.display_info(
-            f"Bundling pytauri-wheel for {python_tag}-{wheel_platform_tag}"
-        )
+        self.app.display_info(f"Bundling pytauri-wheel for {python_tag}-{wheel_platform_tag}")
 
         # Create vendor directory in the package
         vendor_dir = Path(self.root) / "pywry" / "_vendor" / "pytauri_wheel"
@@ -95,6 +123,7 @@ class CustomBuildHook(BuildHookInterface):
 
         # Find the installed pytauri_wheel package location
         import importlib.util
+        import shutil
 
         spec = importlib.util.find_spec("pytauri_wheel")
         if spec is None or spec.origin is None:
@@ -126,6 +155,4 @@ __all__ = ["builder_factory", "context_factory"]
         # Add vendor directory to wheel
         build_data["force_include"][str(vendor_dir)] = "pywry/_vendor/pytauri_wheel"
 
-        self.app.display_success(
-            "Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel"
-        )
+        self.app.display_success("Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel")
