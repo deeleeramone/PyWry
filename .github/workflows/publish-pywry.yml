@@ -601,12 +601,13 @@ jobs:
     needs: [merge-artifacts]
     if: always() && needs.merge-artifacts.result == 'success' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: .
     permissions:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Download dist artifacts
         uses: actions/download-artifact@v4
         with:
