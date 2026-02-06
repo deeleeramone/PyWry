@@ -284,9 +284,7 @@ class Modal(BaseModel):
             f'data-reset-on-close="{str(self.reset_on_close).lower()}"',
         ]
         if self.on_close_event:
-            data_attrs.append(
-                f'data-on-close-event="{html.escape(self.on_close_event)}"'
-            )
+            data_attrs.append(f'data-on-close-event="{html.escape(self.on_close_event)}"')
 
         open_class = " pywry-modal-open" if self.open_on_load else ""
 
@@ -487,9 +485,7 @@ def wrap_content_with_modals(
     # Collect scripts from modals
     modal_scripts_list = [get_modal_script()]  # Core handlers first
     modal_scripts_list.extend(
-        f"<script>{script}</script>"
-        for modal in normalized
-        for script in modal.collect_scripts()
+        f"<script>{script}</script>" for modal in normalized for script in modal.collect_scripts()
     )
 
     modal_scripts = "\n".join(modal_scripts_list)

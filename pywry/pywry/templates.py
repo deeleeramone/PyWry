@@ -377,9 +377,7 @@ def build_custom_css(content: HtmlContent, loader: AssetLoader | None = None) ->
     return "\n".join(parts)
 
 
-def build_custom_scripts(
-    content: HtmlContent, loader: AssetLoader | None = None
-) -> str:
+def build_custom_scripts(content: HtmlContent, loader: AssetLoader | None = None) -> str:
     """Build custom JavaScript from files.
 
     Parameters
@@ -617,9 +615,7 @@ def _inject_into_complete_doc(
         html_end = user_html.find(">", html_pos)
         if html_end != -1:
             before = user_html[: html_end + 1]
-            after = _inject_modal_before_body_close(
-                user_html[html_end + 1 :], modal_html
-            )
+            after = _inject_modal_before_body_close(user_html[html_end + 1 :], modal_html)
             return before + f"<head>{injection}</head>" + after
     return user_html
 
@@ -707,9 +703,7 @@ def build_html(
     theme_class = build_theme_class(config.theme)
 
     # Build modal HTML and scripts
-    modal_html, modal_scripts = (
-        wrap_content_with_modals("", modals) if modals else ("", "")
-    )
+    modal_html, modal_scripts = wrap_content_with_modals("", modals) if modals else ("", "")
 
     # Build all injection components
     components = {
@@ -725,9 +719,7 @@ def build_html(
         "custom_scripts": build_custom_scripts(content, loader),
         "global_css": build_global_css(asset_settings, loader),
         "global_scripts": build_global_scripts(asset_settings, loader),
-        "custom_init": (
-            f"<script>{content.init_script}</script>" if content.init_script else ""
-        ),
+        "custom_init": (f"<script>{content.init_script}</script>" if content.init_script else ""),
     }
 
     # Process user HTML
@@ -738,16 +730,14 @@ def build_html(
     if toolbars:
         user_html = wrap_content_with_toolbars(user_html, toolbars)
 
-    is_complete_doc = user_html.lower().startswith(
-        "<!doctype"
-    ) or user_html.lower().startswith("<html")
+    is_complete_doc = user_html.lower().startswith("<!doctype") or user_html.lower().startswith(
+        "<html"
+    )
 
     if is_complete_doc:
         return _inject_into_complete_doc(user_html, theme_class, modal_html, components)
 
-    return _build_fragment_document(
-        user_html, config, theme_class, modal_html, components
-    )
+    return _build_fragment_document(user_html, config, theme_class, modal_html, components)
 
 
 def build_content_update_script(html_content: str) -> str:
