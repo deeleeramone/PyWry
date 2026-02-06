@@ -294,6 +294,7 @@ def create_plotly_widget(  # pylint: disable=too-many-branches
     height: int = 500,
     port: int | None = None,
     toolbars: list[Any] | None = None,
+    modals: list[Any] | None = None,
     force_iframe: bool = False,
 ) -> Any:
     """Create a Plotly widget using the best available backend.
@@ -322,6 +323,12 @@ def create_plotly_widget(  # pylint: disable=too-many-branches
         List of toolbars. Each can be a Toolbar model or dict with:
         - position: "top", "bottom", "left", "right", "inside"
         - items: list of item configs (Button, Select, etc.)
+    modals : list[Modal | dict], optional
+        List of modals. Each can be a Modal model or dict with:
+        - component_id: unique identifier for the modal
+        - title: modal header title
+        - items: list of content items (HTML, form elements, etc.)
+        - size: 'small', 'medium', 'large', or 'fullscreen'
     force_iframe : bool, optional
         If True, force use of InlineWidget instead of anywidget.
         Required for BROWSER mode which needs open_in_browser() method.
@@ -340,6 +347,7 @@ def create_plotly_widget(  # pylint: disable=too-many-branches
     use_anywidget = HAS_ANYWIDGET and not force_iframe and not is_headless()
     if use_anywidget:
         from . import inline
+        from .modal import wrap_content_with_modals
         from .widget import PyWryPlotlyWidget
 
         # Generate token for widget authentication
@@ -359,6 +367,11 @@ def create_plotly_widget(  # pylint: disable=too-many-branches
         # Inject toolbars using position-based layout
         html = _wrap_content_with_toolbars(html, toolbars)
 
+        # Inject modals HTML and scripts
+        if modals:
+            modal_html, modal_scripts = wrap_content_with_modals("", modals)
+            html = f"{html}{modal_html}{modal_scripts}"
+
         return PyWryPlotlyWidget(
             content=html,
             figure_json=figure_json,  # Pass figure data directly to widget
@@ -369,6 +382,7 @@ def create_plotly_widget(  # pylint: disable=too-many-branches
 
     # Fallback to InlineWidget (FastAPI server)
     from . import inline
+    from .modal import wrap_content_with_modals
 
     # Generate token for widget authentication
     widget_token = inline._generate_widget_token(widget_id)
@@ -377,6 +391,11 @@ def create_plotly_widget(  # pylint: disable=too-many-branches
     html = inline.generate_plotly_html(
         figure_json, widget_id, title, theme, toolbars=toolbars, token=widget_token
     )
+
+    # Inject modals HTML and scripts
+    if modals:
+        modal_html, modal_scripts = wrap_content_with_modals("", modals)
+        html = f"{html}{modal_html}{modal_scripts}"
 
     return inline.InlineWidget(
         html=html,
@@ -449,6 +468,7 @@ def create_dataframe_widget(  # pylint: disable=too-many-branches,too-many-argum
     height: int = 500,
     header_html: str = "",
     toolbars: list[Any] | None = None,
+    modals: list[Any] | None = None,
     port: int | None = None,
     force_iframe: bool = False,
 ) -> Any:
@@ -480,6 +500,12 @@ def create_dataframe_widget(  # pylint: disable=too-many-branches,too-many-argum
         List of toolbars. Each can be a Toolbar model or dict with:
         - position: "top", "bottom", "left", "right", "inside"
         - items: list of item configs (Button, Select, etc.)
+    modals : list[Modal | dict], optional
+        List of modals. Each can be a Modal model or dict with:
+        - component_id: unique identifier for the modal
+        - title: modal header title
+        - items: list of content items (HTML, form elements, etc.)
+        - size: 'small', 'medium', 'large', or 'fullscreen'
     port : int, optional
         Server port (only for InlineWidget fallback).
     force_iframe : bool, optional
@@ -494,6 +520,7 @@ def create_dataframe_widget(  # pylint: disable=too-many-branches,too-many-argum
     """
     from . import inline
     from .grid import to_js_grid_config
+    from .modal import wrap_content_with_modals
     from .runtime import is_headless
 
     # Use anywidget when available for better performance (unless forced to use IFrame)
@@ -520,6 +547,11 @@ def create_dataframe_widget(  # pylint: disable=too-many-branches,too-many-argum
         if header_html and not toolbars:
             content_html = f"<div style='display: flex; flex-direction: column; height: 100%; width: 100%;'>{header_html}{grid_html}</div>"
 
+        # Inject modals HTML and scripts
+        if modals:
+            modal_html, modal_scripts = wrap_content_with_modals("", modals)
+            content_html = f"{content_html}{modal_html}{modal_scripts}"
+
         return PyWryAgGridWidget(
             content=content_html,
             theme=theme,
@@ -544,6 +576,11 @@ def create_dataframe_widget(  # pylint: disable=too-many-branches,too-many-argum
         toolbars=toolbars,
         token=widget_token,
     )
+
+    # Inject modals HTML and scripts
+    if modals:
+        modal_html, modal_scripts = wrap_content_with_modals("", modals)
+        html = f"{html}{modal_html}{modal_scripts}"
 
     widget = inline.InlineWidget(
         html=html,

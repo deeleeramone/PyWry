@@ -22,6 +22,57 @@ from typing import Any
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 
+def _get_target_architecture(system: str) -> str:
+    """Detect target architecture from environment variables.
+
+    Checks cibuildwheel environment variables for cross-compilation,
+    falling back to the host machine architecture.
+    """
+    # _PYTHON_HOST_PLATFORM is the most reliable for cross-compilation
+    # Format: macosx-14.0-arm64 or macosx-13.0-x86_64
+    host_platform = os.environ.get("_PYTHON_HOST_PLATFORM", "")
+    arch_map = {"arm64": "arm64", "x86_64": "x86_64", "aarch64": "aarch64"}
+    for arch_key, arch_val in arch_map.items():
+        if arch_key in host_platform:
+            return arch_val
+
+    # cibuildwheel sets AUDITWHEEL_ARCH for Linux builds
+    if "AUDITWHEEL_ARCH" in os.environ:
+        return os.environ["AUDITWHEEL_ARCH"].lower()
+
+    # cibuildwheel sets ARCHFLAGS for macOS cross-compilation
+    archflags = os.environ.get("ARCHFLAGS", "")
+    for flag, arch in [("-arch arm64", "arm64"), ("-arch x86_64", "x86_64")]:
+        if flag in archflags:
+            return arch
+
+    # cibuildwheel also sets CIBW_ARCHS or can be detected from wheel name
+    cibw_archs = os.environ.get("CIBW_ARCHS", "").lower()
+    if "arm64" in cibw_archs or "aarch64" in cibw_archs:
+        return "arm64" if system == "darwin" else "aarch64"
+    if "x86_64" in cibw_archs or "amd64" in cibw_archs:
+        return "x86_64"
+
+    # Fall back to host machine architecture
+    return platform.machine().lower()
+
+
+def _get_platform_tag_for_system(system: str, machine: str) -> str:
+    """Get the platform tag for the given system and architecture."""
+    if system == "darwin":
+        return "macosx_14_0_arm64" if machine == "arm64" else "macosx_13_0_x86_64"
+    if system == "linux":
+        # Use manylinux_2_35 to match pytauri-wheel's published wheels
+        return (
+            "manylinux_2_35_aarch64"
+            if machine == "aarch64"
+            else "manylinux_2_35_x86_64"
+        )
+    if system == "windows":
+        return "win_arm64" if machine in ("arm64", "aarch64") else "win_amd64"
+    raise RuntimeError(f"Unsupported platform: {system}-{machine}")
+
+
 def get_wheel_platform_tag() -> str:
     """Get the platform tag for the output wheel.
 
@@ -32,55 +83,8 @@ def get_wheel_platform_tag() -> str:
     the correct target architecture for cross-compilation.
     """
     system = platform.system().lower()
-
-    # Get target architecture from cibuildwheel env vars, fall back to host
-    machine = platform.machine().lower()
-
-    # _PYTHON_HOST_PLATFORM is the most reliable for cross-compilation
-    # Format: macosx-14.0-arm64 or macosx-13.0-x86_64
-    host_platform = os.environ.get("_PYTHON_HOST_PLATFORM", "")
-    if host_platform:
-        if "arm64" in host_platform:
-            machine = "arm64"
-        elif "x86_64" in host_platform:
-            machine = "x86_64"
-        elif "aarch64" in host_platform:
-            machine = "aarch64"
-
-    # cibuildwheel sets AUDITWHEEL_ARCH for Linux builds
-    if "AUDITWHEEL_ARCH" in os.environ:
-        machine = os.environ["AUDITWHEEL_ARCH"].lower()
-
-    # cibuildwheel sets ARCHFLAGS for macOS cross-compilation
-    archflags = os.environ.get("ARCHFLAGS", "")
-    if "-arch arm64" in archflags:
-        machine = "arm64"
-    elif "-arch x86_64" in archflags:
-        machine = "x86_64"
-
-    # cibuildwheel also sets CIBW_ARCHS or can be detected from wheel name
-    cibw_archs = os.environ.get("CIBW_ARCHS", "").lower()
-    if cibw_archs:
-        if "arm64" in cibw_archs or "aarch64" in cibw_archs:
-            machine = "arm64" if system == "darwin" else "aarch64"
-        elif "x86_64" in cibw_archs or "amd64" in cibw_archs:
-            machine = "x86_64"
-
-    if system == "darwin":
-        if machine == "arm64":
-            return "macosx_14_0_arm64"
-        return "macosx_13_0_x86_64"
-    if system == "linux":
-        # Use manylinux_2_35 to match pytauri-wheel's published wheels
-        if machine == "aarch64":
-            return "manylinux_2_35_aarch64"
-        return "manylinux_2_35_x86_64"
-    if system == "windows":
-        if machine in ("arm64", "aarch64"):
-            return "win_arm64"
-        return "win_amd64"
-
-    raise RuntimeError(f"Unsupported platform: {system}-{machine}")
+    machine = _get_target_architecture(system)
+    return _get_platform_tag_for_system(system, machine)
 
 
 def get_python_tag() -> str:
@@ -88,7 +92,7 @@ def get_python_tag() -> str:
     return f"cp{sys.version_info.major}{sys.version_info.minor}"
 
 
-class CustomBuildHook(BuildHookInterface):
+class CustomBuildHook(BuildHookInterface[Any]):
     """Build hook to bundle pytauri-wheel into pywry."""
 
     PLUGIN_NAME = "custom"

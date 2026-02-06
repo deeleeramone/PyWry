@@ -1,0 +1,243 @@
+site_name: PyWry Documentation
+site_description: Blazingly fast rendering library for native windows, Jupyter widgets, and browser tabs
+site_author: OpenBB
+repo_url: https://github.com/deeleeramone/PyWry
+repo_name: deeleeramone/PyWry
+edit_uri: edit/main/docs/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+  logo: assets/PyWry-icon.png
+  favicon: assets/PyWry-icon.png
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      enabled: true
+      default_handler: python
+      handlers:
+        python:
+          paths: [".."]  # Path to pywry package (relative to docs/)
+          options:
+            # General
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_root_toc_entry: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            # Members
+            members_order: source
+            group_by_category: true
+            show_category_heading: true
+            # Filters - exclude private members
+            filters:
+              - "!^_"           # Exclude private members (starting with _)
+              - "!^__"          # Exclude dunder methods
+              - "^__init__$"    # But include __init__
+            # Docstrings
+            docstring_style: numpy
+            docstring_section_style: spacy
+            show_docstring_description: true
+            show_docstring_parameters: true   # Show parameter descriptions
+            show_docstring_returns: true      # Show return descriptions
+            show_docstring_raises: true
+            show_docstring_examples: true
+            show_docstring_other_parameters: true
+            show_docstring_attributes: true   # Show attribute descriptions
+            # Signatures - these are the ACTUAL types from code
+            show_signature: true
+            show_signature_annotations: true
+            separate_signature: true
+            line_length: 80
+            annotations_path: source  # Use actual source annotations
+            # Inheritance
+            inherited_members: false
+            # Filters
+            show_if_no_docstring: false
+            # Type annotations
+            signature_crossrefs: true
+            merge_init_into_class: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/deeleeramone/PyWry
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/pywry/
+  generator: false
+
+nav:
+  - Home:
+    - index.md
+    - Features: features.md
+    - Changelog: changelog.md
+
+  - Getting Started:
+    - getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Rendering Paths: getting-started/rendering-paths.md
+
+  - Guides:
+    - guides/index.md
+    - Core Concepts:
+      - Event System: guides/events.md
+      - Configuration: guides/configuration.md
+      - Hot Reload: guides/hot-reload.md
+    - UI Components:
+      - Toolbar System: guides/toolbars.md
+      - Theming & CSS: guides/theming.md
+    - Integrations:
+      - Plotly Charts: guides/plotly.md
+      - AgGrid Tables: guides/aggrid.md
+    - Advanced:
+      - JavaScript Bridge: guides/javascript-bridge.md
+      - Managing Windows: guides/window-management.md
+      - Browser Mode: guides/browser-mode.md
+      - Deploy Mode: guides/deploy-mode.md
+
+  - Components:
+    - components/index.md
+    - Actions:
+      - Button: components/button.md
+    - Selection:
+      - Select: components/select.md
+      - MultiSelect: components/multiselect.md
+      - RadioGroup: components/radiogroup.md
+      - TabGroup: components/tabgroup.md
+    - Text Input:
+      - TextInput: components/textinput.md
+      - TextArea: components/textarea.md
+      - SearchInput: components/searchinput.md
+      - SecretInput: components/secretinput.md
+    - Numeric & Date:
+      - NumberInput: components/numberinput.md
+      - DateInput: components/dateinput.md
+      - SliderInput: components/sliderinput.md
+      - RangeInput: components/rangeinput.md
+    - Boolean:
+      - Toggle: components/toggle.md
+      - Checkbox: components/checkbox.md
+    - Layout:
+      - Div: components/div.md
+      - Marquee: components/marquee.md
+      - TickerItem: components/tickeritem.md
+    - Container:
+      - Toolbar: components/toolbar.md
+    - Base Classes:
+      - Option: components/option.md
+      - ToolbarItem: components/toolbaritem.md
+
+  - API Reference:
+    - reference/index.md
+    - Core:
+      - pywry: reference/pywry.md
+      - InlineWidget: reference/inline-widget.md
+    - Models:
+      - pywry.models: reference/models.md
+    - Configuration:
+      - pywry.config: reference/config.md
+    - Widgets:
+      - pywry.widget: reference/widget.md
+    - State:
+      - State Management: reference/state.md
+    - Plotly:
+      - pywry.plotly_config: reference/plotly-config.md
+    - Grid:
+      - pywry.grid: reference/grid.md
+    - Callbacks:
+      - pywry.callbacks: reference/callbacks.md
+    - Styling:
+      - CSS Reference: reference/css.md
+    - MCP:
+      - MCP Server: reference/mcp.md
+    - Utilities:
+      - pywry.asset_loader: reference/asset-loader.md
+      - pywry.hot_reload: reference/hot-reload.md
+
+  - MCP Server:
+    - mcp/index.md
+    - Setup: mcp/setup.md
+    - Capabilities: mcp/capabilities.md
+    - Examples: mcp/examples.md
+
+  - Examples:
+    - examples/index.md

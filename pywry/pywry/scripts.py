@@ -66,6 +66,26 @@ PYWRY_BRIDGE_JS = """
             console.error('Invalid event type:', eventType, 'Must match namespace:event-name pattern');
             return;
         }
+
+        // Intercept modal events and handle them locally (client-side)
+        if (eventType && eventType.startsWith('modal:')) {
+            var parts = eventType.split(':');
+            if (parts.length >= 3 && window.pywry && window.pywry.modal) {
+                var action = parts[1];
+                var modalId = parts.slice(2).join(':');
+                if (action === 'open') {
+                    window.pywry.modal.open(modalId);
+                    return;
+                } else if (action === 'close') {
+                    window.pywry.modal.close(modalId);
+                    return;
+                } else if (action === 'toggle') {
+                    window.pywry.modal.toggle(modalId);
+                    return;
+                }
+            }
+        }
+
         const payload = {
             label: window.__PYWRY_LABEL__ || 'main',
             event_type: eventType,

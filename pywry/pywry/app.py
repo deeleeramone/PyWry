@@ -44,6 +44,7 @@ from .window_manager import (
 
 
 if TYPE_CHECKING:
+    from .modal import Modal
     from .toolbar import Toolbar
     from .widget_protocol import BaseWidget
     from .window_manager import WindowLifecycle
@@ -234,6 +235,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
         label: str | None = None,
         watch: bool | None = None,
         toolbars: list[dict[str, Any] | Toolbar] | None = None,
+        modals: list[dict[str, Any] | Modal] | None = None,
     ) -> NativeWindowHandle | BaseWidget:
         """Show content in a window.
 
@@ -265,6 +267,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             Enable hot reload for CSS/JS files (overrides HtmlContent.watch).
         toolbars : list[dict], optional
             List of toolbar configs. Each toolbar has 'position' and 'items' keys.
+        modals : list[dict], optional
+            List of modal configs. Each modal has 'title' and 'items' keys.
 
         Returns
         -------
@@ -311,6 +315,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                     include_aggrid=include_aggrid,
                     aggrid_theme=aggrid_theme,
                     toolbars=toolbars,
+                    modals=modals,
                     open_browser=True,
                 )
 
@@ -330,6 +335,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                     include_aggrid=include_aggrid,
                     aggrid_theme=aggrid_theme,
                     toolbars=toolbars,
+                    modals=modals,
                     open_browser=False,
                 )
 
@@ -352,6 +358,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                     include_aggrid=include_aggrid,
                     aggrid_theme=aggrid_theme,
                     toolbars=toolbars,
+                    modals=modals,
                     open_browser=False,
                 )
 
@@ -372,6 +379,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 width=widget_width,
                 height=f"{height or self._default_config.height}px",
                 toolbars=toolbars,
+                modals=modals,
             )
             widget.display()  # Auto-display in notebook
             return widget
@@ -412,6 +420,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             loader=self._asset_loader,
             enable_hot_reload=enable_hot_reload,
             toolbars=toolbars,
+            modals=modals,
         )
 
         # Show in window (pass label for multi-window mode)
@@ -442,6 +451,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
         on_hover: Any = None,
         on_select: Any = None,
         toolbars: list[dict[str, Any] | Toolbar] | None = None,
+        modals: list[dict[str, Any] | Modal] | None = None,
         config: Any = None,
     ) -> NativeWindowHandle | BaseWidget:
         """Show a Plotly figure.
@@ -473,6 +483,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             Selection callback for notebook mode.
         toolbars : list[dict], optional
             List of toolbar configs. Each toolbar has 'position' and 'items' keys.
+        modals : list[dict], optional
+            List of modal configs. Each modal has 'title' and 'items' keys.
         config : PlotlyConfig or dict, optional
             Plotly.js configuration (modebar, responsive, etc.).
 
@@ -506,6 +518,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 theme="dark" if self._theme == ThemeMode.DARK else "light",
                 callbacks=inline_callbacks,
                 toolbars=toolbars,
+                modals=modals,
                 config=config,
                 open_browser=is_browser_mode,  # Open in browser for BROWSER mode
             )
@@ -568,6 +581,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             include_plotly=True,
             label=label,
             toolbars=toolbars,
+            modals=modals,
         )
 
     def show_dataframe(  # pylint: disable=too-many-branches
@@ -582,6 +596,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
         aggrid_theme: Literal["quartz", "alpine", "balham", "material"] = "alpine",
         grid_options: dict[str, Any] | None = None,
         toolbars: list[dict[str, Any] | Toolbar] | None = None,
+        modals: list[dict[str, Any] | Modal] | None = None,
         inline_css: str | None = None,
         on_cell_click: Any = None,
         on_row_selected: Any = None,
@@ -654,6 +669,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 theme="dark" if self._theme == ThemeMode.DARK else "light",
                 aggrid_theme=aggrid_theme,
                 toolbars=toolbars,
+                modals=modals,
                 callbacks=inline_callbacks,
                 open_browser=is_browser_mode,  # Open in browser for BROWSER mode
             )
@@ -801,6 +817,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             aggrid_theme=aggrid_theme,
             label=label,
             toolbars=toolbars,
+            modals=modals,
         )
 
     def emit(self, event_type: str, data: dict[str, Any], label: str | None = None) -> None:

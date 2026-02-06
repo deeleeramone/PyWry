@@ -66,6 +66,10 @@ SKILL_METADATA: dict[str, dict[str, str]] = {
         "name": "Forms and User Input",
         "description": "Building interactive forms with validation",
     },
+    "modals": {
+        "name": "Modals",
+        "description": "Overlay dialogs for settings, confirmations, forms - with X close, Escape key, and reset behavior",
+    },
 }
 
 

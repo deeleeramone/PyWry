@@ -2999,3 +2999,149 @@ html.light .pywry-tooltip.arrow-top::before,
 .pywry-ghost-icon { color: var(--pywry-ghost-icon); }
 .pywry-ghost-icon:hover { color: var(--pywry-ghost-icon-hover); }
 .pywry-info-icon { color: var(--pywry-info-icon); }
+
+/* =============================================================================
+   MODAL COMPONENT
+   ============================================================================= */
+
+/* Modal Overlay - covers entire viewport */
+.pywry-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, var(--pywry-modal-overlay-opacity, 0.5));
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity var(--pywry-transition-normal, 0.2s ease);
+}
+
+.pywry-modal-overlay.pywry-modal-open {
+    display: flex;
+    opacity: 1;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .pywry-modal-overlay {
+        transition: none;
+    }
+    .pywry-modal-container {
+        animation: none;
+    }
+}
+
+/* Modal Container - the actual modal box */
+.pywry-modal-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--pywry-bg-secondary);
+    color: var(--pywry-text-primary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg, 8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    animation: pywry-modal-slide-in 0.2s ease-out;
+    width: fit-content;
+    min-width: 280px;
+    max-width: 90vw;
+}
+
+@keyframes pywry-modal-slide-in {
+    from {
+        transform: translateY(-16px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Modal Size Presets - use as max-width hints */
+.pywry-modal-sm { max-width: 400px; }
+.pywry-modal-md { max-width: 560px; }
+.pywry-modal-lg { max-width: 720px; }
+.pywry-modal-xl { max-width: 960px; }
+.pywry-modal-full { width: 95vw; }
+
+/* Close Button - in header row */
+.pywry-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    border-radius: var(--pywry-radius, 4px);
+    color: var(--pywry-text-secondary);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color var(--pywry-transition-fast, 0.1s ease),
+                color var(--pywry-transition-fast, 0.1s ease);
+    flex-shrink: 0;
+}
+
+.pywry-modal-close:hover {
+    background-color: var(--pywry-bg-hover);
+    color: var(--pywry-text-primary);
+}
+
+.pywry-modal-close:focus-visible {
+    outline: 2px solid var(--pywry-border-focus);
+    outline-offset: 2px;
+}
+
+/* Modal Header */
+.pywry-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--pywry-spacing-md, 16px);
+    padding: var(--pywry-spacing-md, 16px);
+}
+
+.pywry-modal-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--pywry-text-primary);
+}
+
+/* Modal Body */
+.pywry-modal-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--pywry-spacing-lg, 24px);
+    padding: var(--pywry-spacing-md, 16px) var(--pywry-spacing-lg, 24px) var(--pywry-spacing-xl, 32px);
+    overflow-y: auto;
+}
+
+/* Modal Footer (optional, for action buttons) */
+.pywry-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--pywry-spacing-sm, 8px);
+    padding: var(--pywry-spacing-md, 16px);
+    border-top: 1px solid var(--pywry-border-color);
+}
+
+/* Light theme adjustments */
+.pywry-theme-light .pywry-modal-container,
+html.light .pywry-modal-container {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+/* Body scroll lock when modal is open */
+body.pywry-modal-body-locked {
+    overflow: hidden !important;
+}

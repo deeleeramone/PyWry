@@ -77,7 +77,7 @@ class TestMCPHandlersReal:
     """
 
     @pytest.mark.asyncio
-    async def test_real_create_widget_with_toolbars(self, clean_state):
+    async def test_real_create_widget_with_toolbars(self, _clean_state):
         """Test creating a real widget with toolbars using actual PyWry code."""
         from pywry.mcp.handlers import handle_tool
 
@@ -87,7 +87,9 @@ class TestMCPHandlersReal:
             def cb(data: Any, event_type: str, label: str = "") -> None:
                 if _wid not in events:
                     events[_wid] = []
-                events[_wid].append({"event_type": event_type, "data": data, "label": label})
+                events[_wid].append(
+                    {"event_type": event_type, "data": data, "label": label}
+                )
 
             return cb
 
@@ -147,7 +149,7 @@ class TestMCPHandlersReal:
         assert len(config["toolbars"][0]["items"]) == 3
 
     @pytest.mark.asyncio
-    async def test_real_widget_manipulation(self, clean_state):
+    async def test_real_widget_manipulation(self, _clean_state):
         """Test manipulating a real widget."""
         from pywry.mcp.handlers import handle_tool
         from pywry.mcp.state import _widgets
@@ -212,7 +214,7 @@ class TestMCPHandlersReal:
         assert last_event[1]["styles"]["color"] == "red"
 
     @pytest.mark.asyncio
-    async def test_real_widget_with_select_component(self, clean_state):
+    async def test_real_widget_with_select_component(self, _clean_state):
         """Test creating widget with Select component."""
         from pywry.mcp.handlers import handle_tool
 
@@ -253,7 +255,7 @@ class TestMCPHandlersReal:
         assert result.get("created") is True
 
     @pytest.mark.asyncio
-    async def test_real_widget_with_slider(self, clean_state):
+    async def test_real_widget_with_slider(self, _clean_state):
         """Test creating widget with Slider component."""
         from pywry.mcp.handlers import handle_tool
 
@@ -293,7 +295,7 @@ class TestMCPHandlersReal:
         assert result.get("created") is True
 
     @pytest.mark.asyncio
-    async def test_real_widget_with_marquee(self, clean_state):
+    async def test_real_widget_with_marquee(self, _clean_state):
         """Test creating widget with Marquee ticker."""
         from pywry.mcp.handlers import handle_tool
 
@@ -329,7 +331,7 @@ class TestMCPHandlersReal:
         assert result.get("created") is True
 
     @pytest.mark.asyncio
-    async def test_real_export_widget_code(self, clean_state):
+    async def test_real_export_widget_code(self, _clean_state):
         """Test exporting a real widget as Python code."""
         from pywry.mcp.handlers import handle_tool
 
@@ -390,7 +392,7 @@ class TestMCPHandlersReal:
             pytest.fail(f"Exported code has syntax error: {e}")
 
     @pytest.mark.asyncio
-    async def test_real_widget_lifecycle(self, clean_state):
+    async def test_real_widget_lifecycle(self, _clean_state):
         """Test complete widget lifecycle: create -> list -> destroy."""
         from pywry.mcp.handlers import handle_tool
         from pywry.mcp.state import _widgets
@@ -462,7 +464,9 @@ class TestMCPRealSkillsAndResources:
         for comp in ["button", "select", "toggle", "slider", "marquee"]:
             source = get_component_source(comp)
             assert source is not None, f"No source for {comp}"
-            assert "class" in source.lower(), f"Source for {comp} doesn't look like a class"
+            assert (
+                "class" in source.lower()
+            ), f"Source for {comp} doesn't look like a class"
             assert len(source) > 50, f"Source for {comp} too short"
 
     def test_resource_uris_are_readable(self):
@@ -534,7 +538,9 @@ class TestMCPRealComponentBuilding:
             component = build_toolbar_item(config)
             assert component is not None, f"Failed to build {config['type']}"
             # Component should have a build_html method
-            assert hasattr(component, "build_html"), f"{config['type']} missing build_html"
+            assert hasattr(
+                component, "build_html"
+            ), f"{config['type']} missing build_html"
 
     def test_built_components_generate_valid_html(self):
         """Test that built components generate valid HTML."""
@@ -572,9 +578,9 @@ class TestMCPRealComponentBuilding:
 
             # Should contain the event name
             if "event" in config:
-                assert config["event"] in html or "data-event" in html, (
-                    f"Event not in HTML for {config['type']}"
-                )
+                assert (
+                    config["event"] in html or "data-event" in html
+                ), f"Event not in HTML for {config['type']}"
 
     def test_toolbar_builds_with_multiple_items(self):
         """Test building a complete toolbar with multiple items."""
@@ -646,7 +652,7 @@ class TestMCPRealEventFlow:
     """Test real event handling and callback execution."""
 
     @pytest.mark.asyncio
-    async def test_events_are_captured_in_events_dict(self, clean_state):
+    async def test_events_are_captured_in_events_dict(self, _clean_state):
         """Test that widget events are captured in the events dictionary."""
         from pywry.mcp.handlers import handle_tool
         from pywry.mcp.server import _make_event_callback
@@ -692,7 +698,7 @@ class TestMCPRealEventFlow:
         assert last_event["data"]["clicked"] is True
 
     @pytest.mark.asyncio
-    async def test_get_events_returns_captured_events(self, clean_state):
+    async def test_get_events_returns_captured_events(self, _clean_state):
         """Test that get_events handler returns captured events."""
         from pywry.mcp.handlers import handle_tool
         from pywry.mcp.server import _make_event_callback

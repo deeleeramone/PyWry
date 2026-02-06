@@ -40,7 +40,9 @@ def _get_toolbar_handlers_js() -> str:
     """
     toolbar_handlers_file = _SRC_DIR / "toolbar-handlers.js"
     if not toolbar_handlers_file.exists():
-        raise FileNotFoundError(f"Toolbar handlers JS not found: {toolbar_handlers_file}")
+        raise FileNotFoundError(
+            f"Toolbar handlers JS not found: {toolbar_handlers_file}"
+        )
     return toolbar_handlers_file.read_text(encoding="utf-8")
 
 
@@ -1294,7 +1296,9 @@ def _get_pywry_base_css() -> str:
 
 if HAS_ANYWIDGET:
 
-    class PyWryWidget(anywidget.AnyWidget, EmittingWidget):  # pylint: disable=abstract-method
+    class PyWryWidget(
+        anywidget.AnyWidget, EmittingWidget
+    ):  # pylint: disable=abstract-method
         """Widget for inline notebook rendering using anywidget (no Plotly).
 
         Implements BaseWidget protocol for unified API.
@@ -1341,7 +1345,9 @@ if HAS_ANYWIDGET:
 
             super().__init__(**kwargs)
             self._label = f"w-{uuid.uuid4().hex[:8]}"
-            self._handlers: dict[str, list[Callable[[dict[str, Any], str, str], Any]]] = {}
+            self._handlers: dict[
+                str, list[Callable[[dict[str, Any], str, str], Any]]
+            ] = {}
             self.observe(self._handle_js_event, names=["_js_event"])
 
         @property
@@ -1398,7 +1404,9 @@ if HAS_ANYWIDGET:
             data : dict
                 JSON-serializable payload to send to JavaScript.
             """
-            event = json.dumps({"type": event_type, "data": data or {}, "ts": uuid.uuid4().hex})
+            event = json.dumps(
+                {"type": event_type, "data": data or {}, "ts": uuid.uuid4().hex}
+            )
             self._py_event = event
             self.send_state("_py_event")  # Force sync to frontend
 
@@ -1426,11 +1434,14 @@ if HAS_ANYWIDGET:
         def from_html(
             cls,
             content: str,
-            callbacks: (dict[str, Callable[[dict[str, Any], str, str], Any]] | None) = None,
+            callbacks: (
+                dict[str, Callable[[dict[str, Any], str, str], Any]] | None
+            ) = None,
             theme: str = "dark",
             width: str = "100%",
             height: str = "500px",
             toolbars: list | None = None,
+            modals: list | None = None,
         ) -> PyWryWidget:
             """Create a PyWryWidget from HTML content with callbacks.
 
@@ -1448,12 +1459,15 @@ if HAS_ANYWIDGET:
                 Widget height (CSS value or int pixels).
             toolbars : list, optional
                 List of toolbar configurations.
+            modals : list, optional
+                List of modal configurations.
 
             Returns
             -------
             PyWryWidget
                 Configured widget with callbacks registered.
             """
+            from .modal import Modal, wrap_content_with_modals
             from .toolbar import (
                 Toolbar,
                 register_secret_handlers_for_toolbar,
@@ -1463,6 +1477,11 @@ if HAS_ANYWIDGET:
             # Always wrap content with proper container structure
             # This ensures consistent styling even without toolbars
             content = wrap_content_with_toolbars(content, toolbars)
+
+            # Build modal HTML and scripts and append to content
+            if modals:
+                modal_html, modal_scripts = wrap_content_with_modals("", modals)
+                content = content + modal_html + modal_scripts
 
             # Normalize height to string with px
             height_str = f"{height}px" if isinstance(height, int) else height
@@ -1491,9 +1510,23 @@ if HAS_ANYWIDGET:
                             widget.emit,
                         )
 
+            # Register secret handlers for modals as well
+            if modals:
+                for modal_cfg in modals:
+                    if isinstance(modal_cfg, Modal):
+                        # Modal has get_secret_inputs() like Toolbar
+                        for secret_input in modal_cfg.get_secret_inputs():
+                            from .toolbar import register_secret
+
+                            register_secret(
+                                secret_input.component_id, secret_input.value
+                            )
+
             return widget
 
-    class PyWryPlotlyWidget(PyWryWidget, PlotlyStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
+    class PyWryPlotlyWidget(
+        PyWryWidget, PlotlyStateMixin
+    ):  # pylint: disable=abstract-method,too-many-ancestors
         """Widget for inline notebook rendering with Plotly.js bundled.
 
         Dynamically loads Plotly.js from bundled assets and combines it
@@ -1544,7 +1577,9 @@ if HAS_ANYWIDGET:
             **kwargs
                  Additional arguments passed to PyWryWidget.
             """
-            super().__init__(content=content, theme=theme, width=width, height=height, **kwargs)
+            super().__init__(
+                content=content, theme=theme, width=width, height=height, **kwargs
+            )
             self.figure_json = figure_json
             self.chart_id = chart_id or self._label
             self.observe(self._handle_js_event, names=["_js_event"])
@@ -1556,7 +1591,9 @@ if HAS_ANYWIDGET:
             payload.setdefault("chartId", self.chart_id)
             super().emit(event_type, payload)
 
-    class PyWryAgGridWidget(PyWryWidget, GridStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
+    class PyWryAgGridWidget(
+        PyWryWidget, GridStateMixin
+    ):  # pylint: disable=abstract-method,too-many-ancestors
         """Widget for inline notebook rendering with AG Grid bundled.
 
         Implements BaseWidget protocol for unified API.
@@ -1610,7 +1647,9 @@ if HAS_ANYWIDGET:
             **kwargs
                  Additional arguments passed to PyWryWidget.
             """
-            super().__init__(content=content, theme=theme, width=width, height=height, **kwargs)
+            super().__init__(
+                content=content, theme=theme, width=width, height=height, **kwargs
+            )
             self._export_dir = export_dir
             self.aggrid_theme = aggrid_theme
             self.grid_config = grid_config
@@ -1638,7 +1677,9 @@ if HAS_ANYWIDGET:
         def _register_csv_export_handler(self) -> None:
             """Register automatic CSV export handler for context menu exports."""
 
-            def handle_export(data: dict[str, Any], _event_type: str, _label: str) -> None:
+            def handle_export(
+                data: dict[str, Any], _event_type: str, _label: str
+            ) -> None:
                 csv_content = data.get("csvContent", "")
                 suggested_name = data.get("fileName", "export.csv")
 
@@ -1692,7 +1733,9 @@ if HAS_ANYWIDGET:
                 columns = list(data.keys())
                 if columns:
                     length = len(data[columns[0]])
-                    return [{col: data[col][i] for col in columns} for i in range(length)]
+                    return [
+                        {col: data[col][i] for col in columns} for i in range(length)
+                    ]
             return []
 
         def display(self) -> None:

@@ -280,6 +280,7 @@ def clear_cache() -> None:
     get_openbb_icon.cache_clear()
     get_toast_notifications_js.cache_clear()
     get_toast_css.cache_clear()
+    get_modal_handlers_js.cache_clear()
 
 
 @lru_cache(maxsize=1)
@@ -316,4 +317,24 @@ def get_toast_css() -> str:
         debug("Loading toast CSS from style")
         return css_file.read_text(encoding="utf-8")
     debug("Toast CSS not found")
+    return ""
+
+
+@lru_cache(maxsize=1)
+def get_modal_handlers_js() -> str:
+    """Get the PyWry Modal handlers JavaScript.
+
+    This provides the pywry.modal object for opening, closing,
+    and managing modal overlays.
+
+    Returns
+    -------
+    str
+        The modal handlers JavaScript content.
+    """
+    js_file = SRC_DIR / "modal-handlers.js"
+    if js_file.exists():
+        debug("Loading modal handlers JS from src")
+        return js_file.read_text(encoding="utf-8")
+    debug("Modal handlers JS not found")
     return ""

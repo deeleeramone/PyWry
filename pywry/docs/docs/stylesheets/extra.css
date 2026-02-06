@@ -1,0 +1,86 @@
+/* PyWry Documentation - Compact, no wasted space */
+
+:root {
+  --md-primary-fg-color: #6366f1;
+  --md-accent-fg-color: #22d3ee;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #0d1117;
+  --md-code-bg-color: #161b22;
+}
+
+/* Eliminate wasted space */
+.md-main__inner { max-width: 100%; }
+.md-content__inner { max-width: 100%; margin: 0; padding: 0 1rem; }
+.md-typeset h1 { margin-top: 0; }
+
+/* Compact sidebars */
+.md-sidebar { width: 12rem; }
+.md-sidebar--primary { width: 12rem; }
+.md-sidebar--secondary { width: 11rem; }
+.md-nav__item { font-size: 0.75rem; }
+.md-nav__link { padding: 0.3em 0.6em; }
+
+/* Compact typography */
+.md-typeset { font-size: 0.8rem; line-height: 1.5; }
+.md-typeset h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+.md-typeset h2 { font-size: 1.25rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.md-typeset h3 { font-size: 1rem; margin-top: 1rem; margin-bottom: 0.4rem; }
+.md-typeset p { margin: 0.5em 0; }
+.md-typeset ul, .md-typeset ol { margin: 0.5em 0; }
+.md-typeset li { margin: 0.15em 0; }
+
+/* Compact code blocks */
+.md-typeset pre { margin: 0.5em 0; }
+.md-typeset pre > code { font-size: 0.75rem; line-height: 1.4; padding: 0.6em; }
+.md-typeset code { font-size: 0.75rem; padding: 0.1em 0.3em; }
+
+/* Compact tables */
+.md-typeset table { font-size: 0.75rem; margin: 0.5em 0; }
+.md-typeset table th, .md-typeset table td { padding: 0.4em 0.6em; }
+
+/* Compact admonitions */
+.md-typeset .admonition { margin: 0.5em 0; padding: 0.5em 0.75em; font-size: 0.75rem; }
+.md-typeset .admonition-title { padding: 0.4em 0.6em; font-size: 0.75rem; }
+
+/* Homepage hero - minimal */
+.hero { text-align: center; padding: 1rem 0 0.5rem; }
+.hero h1 {
+  font-size: 2rem;
+  margin: 0;
+  background: linear-gradient(135deg, #6366f1, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero .tagline { font-size: 0.9rem; margin: 0.25rem 0 0.5rem; opacity: 0.85; }
+
+/* Navigation cards - compact grid */
+.nav-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.75rem 0; }
+.nav-card {
+  display: block;
+  padding: 0.6rem 0.75rem;
+  background: var(--md-code-bg-color);
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--md-typeset-color);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.nav-card:hover { border-color: var(--md-primary-fg-color); }
+.nav-card h4 { margin: 0 0 0.15rem; font-size: 0.8rem; color: var(--md-primary-fg-color); }
+.nav-card p { margin: 0; font-size: 0.7rem; opacity: 0.7; }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .nav-cards { grid-template-columns: 1fr 1fr; }
+  .md-sidebar { width: 100%; }
+}
+@media (max-width: 480px) {
+  .nav-cards { grid-template-columns: 1fr; }
+}
+
+/* mkdocstrings compact */
+.doc-heading { font-size: 1rem !important; }
+.doc-signature { font-size: 0.7rem !important; }
+.doc-contents { font-size: 0.75rem !important; }

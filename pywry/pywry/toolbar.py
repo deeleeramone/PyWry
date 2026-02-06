@@ -210,16 +210,21 @@ ItemType = Literal[
 
 
 # Event pattern: namespace:event-name (e.g., "app:refresh", "view:change")
-# Namespace: starts with letter, alphanumeric only
+# Also allows modal:action:id pattern (e.g., "modal:open:my-modal")
 # Event name: starts with letter, alphanumeric + underscores + hyphens
-EVENT_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9]*:[a-zA-Z][a-zA-Z0-9_-]*$")
+EVENT_PATTERN = re.compile(
+    r"^[a-zA-Z][a-zA-Z0-9]*:[a-zA-Z][a-zA-Z0-9_-]*(?::[a-zA-Z][a-zA-Z0-9_-]*)?$"
+)
 
 # Reserved namespaces that users should not use
-RESERVED_NAMESPACES = frozenset({"pywry", "plotly", "grid"})
+RESERVED_NAMESPACES = frozenset({"pywry", "plotly", "grid", "modal"})
 
 # Exceptions to reserved namespaces
 ALLOWED_RESERVED_PATTERNS = [
     "plotly:modebar-",
+    "modal:open:",
+    "modal:close:",
+    "modal:toggle:",
 ]
 
 

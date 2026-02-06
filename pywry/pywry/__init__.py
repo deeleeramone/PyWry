@@ -30,6 +30,7 @@ from .grid import (
 )
 from .hot_reload import HotReloadManager
 from .inline import block, show_dataframe, show_plotly
+from .modal import Modal
 from .models import (
     HtmlContent,
     ThemeMode,
@@ -103,6 +104,7 @@ __all__ = [
     "HtmlContent",
     "LogSettings",
     "Marquee",
+    "Modal",
     "ModeBarButton",
     "ModeBarConfig",
     "MultiSelect",

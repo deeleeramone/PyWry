@@ -1,0 +1,17 @@
+# PyWry Documentation Requirements
+mkdocs>=1.5.0
+mkdocs-material>=9.5.0
+mkdocs-autorefs>=1.0.0
+
+# Auto-generated API documentation from source
+mkdocstrings[python]>=0.26.0
+griffe>=1.0.0
+
+# For cross-references
+mkdocs-gen-files>=0.5.0
+mkdocs-literate-nav>=0.6.0
+mkdocs-section-index>=0.3.0
+
+# Needed for building docs (dependencies of pywry)
+pydantic>=2.0
+pydantic-settings>=2.0

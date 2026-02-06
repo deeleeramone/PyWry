@@ -21,6 +21,7 @@ from .assets import (
     get_pywry_css,
     get_toast_css,
 )
+from .modal import Modal, wrap_content_with_modals
 from .models import HtmlContent, ThemeMode, WindowConfig
 from .scripts import build_init_script
 from .toolbar import (
@@ -376,7 +377,9 @@ def build_custom_css(content: HtmlContent, loader: AssetLoader | None = None) ->
     return "\n".join(parts)
 
 
-def build_custom_scripts(content: HtmlContent, loader: AssetLoader | None = None) -> str:
+def build_custom_scripts(
+    content: HtmlContent, loader: AssetLoader | None = None
+) -> str:
     """Build custom JavaScript from files.
 
     Parameters
@@ -545,7 +548,120 @@ def fix_plotly_template(content: str, theme: ThemeMode) -> str:
     return re.sub(pattern, replacement, content)
 
 
-def build_html(  # pylint: disable=too-many-statements
+def _add_theme_class_to_html_tag(html_str: str, theme_cls: str) -> str:
+    """Add theme class to <html> tag, preserving existing classes."""
+    pattern = r"(<html)(\s+[^>]*)?>"
+
+    def replacer(match: re.Match[str]) -> str:
+        opening = match.group(1)
+        attrs = match.group(2) or ""
+        class_pattern = r'class\s*=\s*["\']([^"\']*)["\']'
+        class_match = re.search(class_pattern, attrs)
+        if class_match:
+            existing = class_match.group(1)
+            if theme_cls not in existing.split():
+                new_class = f"{existing} {theme_cls}"
+                attrs = re.sub(class_pattern, f'class="{new_class}"', attrs)
+        else:
+            attrs = f' class="{theme_cls}"' + attrs
+        return f"{opening}{attrs}>"
+
+    return re.sub(pattern, replacer, html_str, count=1, flags=re.IGNORECASE)
+
+
+def _inject_modal_before_body_close(html_str: str, modal_html: str) -> str:
+    """Inject modal HTML before </body> tag if present."""
+    if not modal_html:
+        return html_str
+    body_close_pos = html_str.lower().find("</body>")
+    if body_close_pos != -1:
+        return html_str[:body_close_pos] + modal_html + html_str[body_close_pos:]
+    return html_str
+
+
+def _build_head_injection(components: dict[str, str]) -> str:
+    """Build the head injection string from components."""
+    return f"""
+        {components["csp_meta"]}
+        {components["base_styles"]}
+        {components["global_css"]}
+        {components["custom_css"]}
+        {components["plotly_script"]}
+        {components["aggrid_script"]}
+        {components["json_script"]}
+        <script>{components["init_script"]}</script>
+        {components["toolbar_script"]}
+        {components["modal_scripts"]}
+        {components["global_scripts"]}
+        {components["custom_scripts"]}
+        {components["custom_init"]}
+    """
+
+
+def _inject_into_complete_doc(
+    user_html: str, theme_class: str, modal_html: str, components: dict[str, str]
+) -> str:
+    """Inject scripts into a complete HTML document."""
+    user_html = _add_theme_class_to_html_tag(user_html, theme_class)
+    injection = _build_head_injection(components)
+
+    # Find the </head> tag and inject before it
+    head_close_pos = user_html.lower().find("</head>")
+    if head_close_pos != -1:
+        user_html = _inject_modal_before_body_close(user_html, modal_html)
+        return user_html[:head_close_pos] + injection + user_html[head_close_pos:]
+
+    # No </head> found, inject at the beginning after <html>
+    html_pos = user_html.lower().find("<html")
+    if html_pos != -1:
+        html_end = user_html.find(">", html_pos)
+        if html_end != -1:
+            before = user_html[: html_end + 1]
+            after = _inject_modal_before_body_close(
+                user_html[html_end + 1 :], modal_html
+            )
+            return before + f"<head>{injection}</head>" + after
+    return user_html
+
+
+def _build_fragment_document(
+    user_html: str,
+    config: WindowConfig,
+    theme_class: str,
+    modal_html: str,
+    components: dict[str, str],
+) -> str:
+    """Build a complete document wrapper for HTML fragments."""
+    return f"""<!DOCTYPE html>
+<html lang="en" class="pywry-native {theme_class}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {components["csp_meta"]}
+    <title>{html.escape(config.title)}</title>
+    {components["base_styles"]}
+    {components["global_css"]}
+    {components["custom_css"]}
+    {components["plotly_script"]}
+    {components["aggrid_script"]}
+    {components["json_script"]}
+    <script>{components["init_script"]}</script>
+    {components["toolbar_script"]}
+    {components["modal_scripts"]}
+    {components["global_scripts"]}
+    {components["custom_scripts"]}
+</head>
+<body>
+    <div class="pywry-container">
+        {user_html}
+    </div>
+    {components["custom_init"]}
+    {modal_html}
+</body>
+</html>"""
+
+
+def build_html(
     content: HtmlContent,
     config: WindowConfig,
     window_label: str,
@@ -553,6 +669,7 @@ def build_html(  # pylint: disable=too-many-statements
     loader: AssetLoader | None = None,
     enable_hot_reload: bool = False,
     toolbars: Sequence[Toolbar | dict[str, Any]] | None = None,
+    modals: Sequence[Modal | dict[str, Any]] | None = None,
 ) -> str:
     """Build the complete HTML document for a PyWry window.
 
@@ -574,158 +691,63 @@ def build_html(  # pylint: disable=too-many-statements
         List of toolbar configurations. Each can be a Toolbar model or dict with:
         - position: "top", "bottom", "left", "right", "inside"
         - items: list of toolbar item configurations (Button, Select, etc.)
+    modals : list[Modal | dict] or None, optional
+        List of modal configurations. Each can be a Modal model or dict with:
+        - title: Modal header title
+        - items: list of input item configurations (Button, TextInput, etc.)
+        - size: "sm", "md", "lg", "xl", "full"
 
     Returns
     -------
     str
         The complete HTML document as a string.
     """
-    # Get settings components
     csp_settings = settings.csp if settings else None
     asset_settings = settings.asset if settings else None
-
     theme_class = build_theme_class(config.theme)
-    csp_meta = build_csp_meta(csp_settings)
-    base_styles = build_base_styles(settings)
-    json_script = build_json_data_script(content.json_data)
-    plotly_script = build_plotly_script(config)
-    aggrid_script = build_aggrid_script(config)
-    init_script = build_init_script(window_label, enable_hot_reload)
-    toolbar_script = get_toolbar_script() if toolbars else ""
 
-    # Custom CSS and scripts from content
-    custom_css = build_custom_css(content, loader)
-    custom_scripts = build_custom_scripts(content, loader)
+    # Build modal HTML and scripts
+    modal_html, modal_scripts = (
+        wrap_content_with_modals("", modals) if modals else ("", "")
+    )
 
-    # Global CSS and scripts from AssetSettings
-    global_css = build_global_css(asset_settings, loader)
-    global_scripts = build_global_scripts(asset_settings, loader)
+    # Build all injection components
+    components = {
+        "csp_meta": build_csp_meta(csp_settings),
+        "base_styles": build_base_styles(settings),
+        "json_script": build_json_data_script(content.json_data),
+        "plotly_script": build_plotly_script(config),
+        "aggrid_script": build_aggrid_script(config),
+        "init_script": build_init_script(window_label, enable_hot_reload),
+        "toolbar_script": get_toolbar_script() if toolbars else "",
+        "modal_scripts": modal_scripts,
+        "custom_css": build_custom_css(content, loader),
+        "custom_scripts": build_custom_scripts(content, loader),
+        "global_css": build_global_css(asset_settings, loader),
+        "global_scripts": build_global_scripts(asset_settings, loader),
+        "custom_init": (
+            f"<script>{content.init_script}</script>" if content.init_script else ""
+        ),
+    }
 
-    # Custom init script from content - placed at end of body so DOM is ready
-    custom_init = ""
-    if content.init_script:
-        custom_init = f"<script>{content.init_script}</script>"
-
-    # Check if content.html is a complete HTML document or a fragment
+    # Process user HTML
     user_html = content.html.strip()
-
-    # Fix AG Grid and Plotly themes in user HTML to match window theme
     user_html = fix_aggrid_theme_classes(user_html, config.theme)
     user_html = fix_plotly_template(user_html, config.theme)
 
-    is_complete_doc = user_html.lower().startswith("<!doctype") or user_html.lower().startswith(
-        "<html"
-    )
-
-    # Build and inject toolbars using centralized function
     if toolbars:
-        # Use the canonical wrap_content_with_toolbars from toolbar.py
-        # This handles all 7 positions: header, footer, top, bottom, left, right, inside
         user_html = wrap_content_with_toolbars(user_html, toolbars)
 
+    is_complete_doc = user_html.lower().startswith(
+        "<!doctype"
+    ) or user_html.lower().startswith("<html")
+
     if is_complete_doc:
-        # Inject our scripts into the existing document
-        # First, add theme class to <html> tag
-        # Find <html ...> tag and add class
-        def add_theme_class_to_html_tag(html_str: str, theme_cls: str) -> str:
-            """Add theme class to <html> tag, preserving existing classes."""
-            pattern = r"(<html)(\s+[^>]*)?>"
+        return _inject_into_complete_doc(user_html, theme_class, modal_html, components)
 
-            def replacer(match: re.Match[str]) -> str:
-                opening = match.group(1)
-                attrs = match.group(2) or ""
-
-                # Check if class attribute exists
-                class_pattern = r'class\s*=\s*["\']([^"\']*)["\']'
-                class_match = re.search(class_pattern, attrs)
-                if class_match:
-                    existing = class_match.group(1)
-                    if theme_cls not in existing.split():
-                        new_class = f"{existing} {theme_cls}"
-                        attrs = re.sub(class_pattern, f'class="{new_class}"', attrs)
-                else:
-                    attrs = f' class="{theme_cls}"' + attrs
-                return f"{opening}{attrs}>"
-
-            return re.sub(pattern, replacer, html_str, count=1, flags=re.IGNORECASE)
-
-        user_html = add_theme_class_to_html_tag(user_html, theme_class)
-
-        # Find the </head> tag and inject before it
-        head_close_pos = user_html.lower().find("</head>")
-        if head_close_pos != -1:
-            injection = f"""
-                {csp_meta}
-                {base_styles}
-                {global_css}
-                {custom_css}
-                {plotly_script}
-                {aggrid_script}
-                {json_script}
-                <script>{init_script}</script>
-                {toolbar_script}
-                {global_scripts}
-                {custom_scripts}
-                {custom_init}
-            """
-            return user_html[:head_close_pos] + injection + user_html[head_close_pos:]
-
-        # No </head> found, inject at the beginning after <html>
-        html_pos = user_html.lower().find("<html")
-        if html_pos != -1:
-            # Find the end of the <html> tag
-            html_end = user_html.find(">", html_pos)
-            if html_end != -1:
-                before = user_html[: html_end + 1]
-                after = user_html[html_end + 1 :]
-                return (
-                    before
-                    + f"""
-                    <head>
-                        {csp_meta}
-                        {base_styles}
-                        {global_css}
-                        {custom_css}
-                        {plotly_script}
-                        {aggrid_script}
-                        {json_script}
-                        <script>{init_script}</script>
-                        {toolbar_script}
-                        {global_scripts}
-                        {custom_scripts}
-                        {custom_init}
-                    </head>
-                """
-                    + after
-                )
-        return user_html
-
-    # Build a complete document wrapper for HTML fragments
-    return f"""<!DOCTYPE html>
-<html lang="en" class="pywry-native {theme_class}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {csp_meta}
-    <title>{html.escape(config.title)}</title>
-    {base_styles}
-    {global_css}
-    {custom_css}
-    {plotly_script}
-    {aggrid_script}
-    {json_script}
-    <script>{init_script}</script>
-    {toolbar_script}
-    {global_scripts}
-    {custom_scripts}
-</head>
-<body>
-    <div class="pywry-container">
-        {user_html}
-    </div>
-    {custom_init}
-</body>
-</html>"""
+    return _build_fragment_document(
+        user_html, config, theme_class, modal_html, components
+    )
 
 
 def build_content_update_script(html_content: str) -> str:

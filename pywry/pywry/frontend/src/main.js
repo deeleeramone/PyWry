@@ -66,6 +66,26 @@ window.pywry = {
   },
 
   emit: function(eventType, data) {
+    // Intercept modal events and handle them locally
+    if (eventType && eventType.startsWith('modal:')) {
+      var parts = eventType.split(':');
+      if (parts.length >= 3) {
+        var action = parts[1];
+        var modalId = parts.slice(2).join(':');
+        if (window.pywry && window.pywry.modal) {
+          if (action === 'open') {
+            window.pywry.modal.open(modalId);
+            return;
+          } else if (action === 'close') {
+            window.pywry.modal.close(modalId);
+            return;
+          } else if (action === 'toggle') {
+            window.pywry.modal.toggle(modalId);
+            return;
+          }
+        }
+      }
+    }
     this.sendEvent(eventType, data);
   }
 };
