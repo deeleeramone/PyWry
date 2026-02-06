@@ -63,11 +63,7 @@ def _get_platform_tag_for_system(system: str, machine: str) -> str:
         return "macosx_14_0_arm64" if machine == "arm64" else "macosx_13_0_x86_64"
     if system == "linux":
         # Use manylinux_2_35 to match pytauri-wheel's published wheels
-        return (
-            "manylinux_2_35_aarch64"
-            if machine == "aarch64"
-            else "manylinux_2_35_x86_64"
-        )
+        return "manylinux_2_35_aarch64" if machine == "aarch64" else "manylinux_2_35_x86_64"
     if system == "windows":
         return "win_arm64" if machine in ("arm64", "aarch64") else "win_amd64"
     raise RuntimeError(f"Unsupported platform: {system}-{machine}")
@@ -105,9 +101,7 @@ class CustomBuildHook(BuildHookInterface[Any]):
 
         # Skip for editable installs
         if version == "editable":
-            self.app.display_info(
-                "Skipping pytauri-wheel bundling for editable install"
-            )
+            self.app.display_info("Skipping pytauri-wheel bundling for editable install")
             return
 
         python_tag = get_python_tag()
@@ -119,14 +113,10 @@ class CustomBuildHook(BuildHookInterface[Any]):
 
         # Check if bundling is enabled (can be disabled for development)
         if os.environ.get("PYWRY_SKIP_BUNDLE", "").lower() in ("1", "true", "yes"):
-            self.app.display_info(
-                "Skipping pytauri-wheel bundling (PYWRY_SKIP_BUNDLE=1)"
-            )
+            self.app.display_info("Skipping pytauri-wheel bundling (PYWRY_SKIP_BUNDLE=1)")
             return
 
-        self.app.display_info(
-            f"Bundling pytauri-wheel for {python_tag}-{wheel_platform_tag}"
-        )
+        self.app.display_info(f"Bundling pytauri-wheel for {python_tag}-{wheel_platform_tag}")
 
         # Create vendor directory in the package
         vendor_dir = Path(self.root) / "pywry" / "_vendor" / "pytauri_wheel"
@@ -167,6 +157,4 @@ __all__ = ["builder_factory", "context_factory"]
         # Add vendor directory to wheel
         build_data["force_include"][str(vendor_dir)] = "pywry/_vendor/pytauri_wheel"
 
-        self.app.display_success(
-            "Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel"
-        )
+        self.app.display_success("Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel")

@@ -87,9 +87,7 @@ class TestMCPHandlersReal:
             def cb(data: Any, event_type: str, label: str = "") -> None:
                 if _wid not in events:
                     events[_wid] = []
-                events[_wid].append(
-                    {"event_type": event_type, "data": data, "label": label}
-                )
+                events[_wid].append({"event_type": event_type, "data": data, "label": label})
 
             return cb
 
@@ -464,9 +462,7 @@ class TestMCPRealSkillsAndResources:
         for comp in ["button", "select", "toggle", "slider", "marquee"]:
             source = get_component_source(comp)
             assert source is not None, f"No source for {comp}"
-            assert (
-                "class" in source.lower()
-            ), f"Source for {comp} doesn't look like a class"
+            assert "class" in source.lower(), f"Source for {comp} doesn't look like a class"
             assert len(source) > 50, f"Source for {comp} too short"
 
     def test_resource_uris_are_readable(self):
@@ -538,9 +534,7 @@ class TestMCPRealComponentBuilding:
             component = build_toolbar_item(config)
             assert component is not None, f"Failed to build {config['type']}"
             # Component should have a build_html method
-            assert hasattr(
-                component, "build_html"
-            ), f"{config['type']} missing build_html"
+            assert hasattr(component, "build_html"), f"{config['type']} missing build_html"
 
     def test_built_components_generate_valid_html(self):
         """Test that built components generate valid HTML."""
@@ -578,9 +572,9 @@ class TestMCPRealComponentBuilding:
 
             # Should contain the event name
             if "event" in config:
-                assert (
-                    config["event"] in html or "data-event" in html
-                ), f"Event not in HTML for {config['type']}"
+                assert config["event"] in html or "data-event" in html, (
+                    f"Event not in HTML for {config['type']}"
+                )
 
     def test_toolbar_builds_with_multiple_items(self):
         """Test building a complete toolbar with multiple items."""

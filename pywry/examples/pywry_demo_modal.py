@@ -20,25 +20,19 @@ widget = None
 def on_title_change(data: dict[str, Any], _event_type: str, _label: str) -> None:
     """Update chart title in place."""
     if widget:
-        widget.emit(
-            "plotly:update-layout", {"layout": {"title.text": data.get("value")}}
-        )
+        widget.emit("plotly:update-layout", {"layout": {"title.text": data.get("value")}})
 
 
 def on_xlabel_change(data: dict[str, Any], _event_type: str, _label: str) -> None:
     """Update X-axis label in place."""
     if widget:
-        widget.emit(
-            "plotly:update-layout", {"layout": {"xaxis.title.text": data.get("value")}}
-        )
+        widget.emit("plotly:update-layout", {"layout": {"xaxis.title.text": data.get("value")}})
 
 
 def on_ylabel_change(data: dict[str, Any], _event_type: str, _label: str) -> None:
     """Update Y-axis label in place."""
     if widget:
-        widget.emit(
-            "plotly:update-layout", {"layout": {"yaxis.title.text": data.get("value")}}
-        )
+        widget.emit("plotly:update-layout", {"layout": {"yaxis.title.text": data.get("value")}})
 
 
 def on_color_change(data: dict[str, Any], _event_type: str, _label: str) -> None:
