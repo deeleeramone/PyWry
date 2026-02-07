@@ -9,7 +9,7 @@ These are REAL tests that actually:
 Run with: pytest tests/test_mcp_e2e.py -v
 """
 
-# pylint: disable=too-many-lines,redefined-outer-name
+# pylint: disable=too-many-lines,redefined-outer-name, unused-argument
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ class TestMCPHandlersReal:
     """
 
     @pytest.mark.asyncio
-    async def test_real_create_widget_with_toolbars(self, _clean_state):
+    async def test_real_create_widget_with_toolbars(self, clean_state):
         """Test creating a real widget with toolbars using actual PyWry code."""
         from pywry.mcp.handlers import handle_tool
 
@@ -147,7 +147,7 @@ class TestMCPHandlersReal:
         assert len(config["toolbars"][0]["items"]) == 3
 
     @pytest.mark.asyncio
-    async def test_real_widget_manipulation(self, _clean_state):
+    async def test_real_widget_manipulation(self, clean_state):
         """Test manipulating a real widget."""
         from pywry.mcp.handlers import handle_tool
         from pywry.mcp.state import _widgets
@@ -212,7 +212,7 @@ class TestMCPHandlersReal:
         assert last_event[1]["styles"]["color"] == "red"
 
     @pytest.mark.asyncio
-    async def test_real_widget_with_select_component(self, _clean_state):
+    async def test_real_widget_with_select_component(self, clean_state):
         """Test creating widget with Select component."""
         from pywry.mcp.handlers import handle_tool
 
@@ -253,7 +253,7 @@ class TestMCPHandlersReal:
         assert result.get("created") is True
 
     @pytest.mark.asyncio
-    async def test_real_widget_with_slider(self, _clean_state):
+    async def test_real_widget_with_slider(self, clean_state):
         """Test creating widget with Slider component."""
         from pywry.mcp.handlers import handle_tool
 
@@ -293,7 +293,7 @@ class TestMCPHandlersReal:
         assert result.get("created") is True
 
     @pytest.mark.asyncio
-    async def test_real_widget_with_marquee(self, _clean_state):
+    async def test_real_widget_with_marquee(self, clean_state):
         """Test creating widget with Marquee ticker."""
         from pywry.mcp.handlers import handle_tool
 
@@ -329,7 +329,7 @@ class TestMCPHandlersReal:
         assert result.get("created") is True
 
     @pytest.mark.asyncio
-    async def test_real_export_widget_code(self, _clean_state):
+    async def test_real_export_widget_code(self, clean_state):
         """Test exporting a real widget as Python code."""
         from pywry.mcp.handlers import handle_tool
 
@@ -390,7 +390,7 @@ class TestMCPHandlersReal:
             pytest.fail(f"Exported code has syntax error: {e}")
 
     @pytest.mark.asyncio
-    async def test_real_widget_lifecycle(self, _clean_state):
+    async def test_real_widget_lifecycle(self, clean_state):
         """Test complete widget lifecycle: create -> list -> destroy."""
         from pywry.mcp.handlers import handle_tool
         from pywry.mcp.state import _widgets
@@ -646,7 +646,7 @@ class TestMCPRealEventFlow:
     """Test real event handling and callback execution."""
 
     @pytest.mark.asyncio
-    async def test_events_are_captured_in_events_dict(self, _clean_state):
+    async def test_events_are_captured_in_events_dict(self, clean_state):
         """Test that widget events are captured in the events dictionary."""
         from pywry.mcp.handlers import handle_tool
         from pywry.mcp.server import _make_event_callback
@@ -692,7 +692,7 @@ class TestMCPRealEventFlow:
         assert last_event["data"]["clicked"] is True
 
     @pytest.mark.asyncio
-    async def test_get_events_returns_captured_events(self, _clean_state):
+    async def test_get_events_returns_captured_events(self, clean_state):
         """Test that get_events handler returns captured events."""
         from pywry.mcp.handlers import handle_tool
         from pywry.mcp.server import _make_event_callback
