@@ -204,9 +204,7 @@ PROPERTY_GETTERS: dict[str, Callable[[Window], Any]] = {
     "is_fullscreen": lambda w: w.is_fullscreen(),
     "is_always_on_top": lambda w: w.is_always_on_top(),
     "is_always_on_bottom": lambda w: w.is_always_on_bottom(),
-    "is_devtools_open": lambda w: (
-        w.is_devtools_open() if hasattr(w, "is_devtools_open") else False
-    ),
+    "is_devtools_open": lambda w: w.is_devtools_open() if hasattr(w, "is_devtools_open") else False,
 }
 
 
