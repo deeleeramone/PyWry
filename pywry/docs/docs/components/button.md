@@ -1,37 +1,33 @@
 # Button
 
-Buttons trigger actions when clicked. They're the primary way users interact with your toolbar.
+Button clicks trigger an event to be sent from the frontend, to the Python handler function defined in the callbacks parameter of `app.show`.
 
-## Basic Usage
+Button click events will emit the instance's `componentId`, and any custom data assigned on initialization.
+
+Multiple buttons can be assigned to the same event handler.
+
+## Import
 
 ```python
 from pywry import Button
-
-save_btn = Button(
-    label="Save",
-    event="file:save",
-)
 ```
 
 ## Variants
 
-Buttons support different visual styles via the `variant` parameter:
+Buttons support typical styles via the `variant` parameter:
 
 ```python
-Button(label="Primary", event="action:primary", variant="primary")    # Blue, prominent
-Button(label="Success", event="action:success", variant="success")    # Green
-Button(label="Warning", event="action:warning", variant="warning")    # Yellow/Orange
-Button(label="Danger", event="action:danger", variant="danger")       # Red
-Button(label="Neutral", event="action:neutral", variant="neutral")    # Gray
+["primary", "secondary", "neutral", "outline", "ghost", "danger", "warning", "icon"]
 ```
 
-| Variant | Color | Use Case |
-|---------|-------|----------|
-| `primary` | Blue | Main actions (Save, Submit) |
-| `success` | Green | Positive actions (Confirm, Apply) |
-| `warning` | Yellow | Cautionary actions (Override) |
-| `danger` | Red | Destructive actions (Delete, Remove) |
-| `neutral` | Gray | Secondary actions (Cancel, Close) |
+<img width="500" height="40" alt="Button Variants - Dark" src="https://github.com/user-attachments/assets/ded61da3-e06a-40fd-b07a-55a7671bae4b" />
+<img width="500" height="40" alt="Button Variants - Light" src="https://github.com/user-attachments/assets/d746890b-ffc7-486d-85c5-a34b29960c98" />
+
+## Sizes
+
+Button sizes can be defined by presets, or can be overriden by supplying the `style` initialization parameter.
+
+<img width="300" height="60" alt="Button Sizes" src="https://github.com/user-attachments/assets/e2f8ce04-c38e-4655-8ba5-5ff846094f60" />
 
 ## Icons
 
@@ -43,16 +39,35 @@ Button(label="📤 Export", event="file:export")
 Button(label="🗑️ Delete", event="item:delete", variant="danger")
 ```
 
-## Disabled State
+## Attributes
 
-Disable buttons that shouldn't be clickable:
-
-```python
-Button(
-    label="Save",
-    event="file:save",
-    disabled=True,  # Grayed out and unclickable
-)
+```
+component_id: str | None
+    Unique identifier for state tracking (auto-generated if not provided)
+label: str | None
+    Display label
+description: str | None
+    Tooltip/hover text for accessibility and user guidance
+event: str
+    Event name emitted on interaction (format: namespace:event-name)
+style: str | None
+    Optional inline CSS
+disabled: bool | None
+    Whether the item is disabled. Set to False 
+variant : str
+    Button style variant.
+      - "primary" (theme-aware)
+      - "secondary" (subtle)
+      - "neutral" (blue)
+      - "ghost" (transparent)
+      - "outline" (bordered)
+      - "danger" (red)
+      - "warning" (orange)
+      - "icon" (ghost style, square aspect ratio)
+size : str or None
+    Button size variant. Options: None (default), "xs", "sm", "lg", "xl".
+data : dict
+    Additional data payload to include with the event.
 ```
 
 ## Handling Clicks
