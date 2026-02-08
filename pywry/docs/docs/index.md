@@ -19,6 +19,8 @@ A rendering library for native desktop windows, Jupyter widgets, and browser tab
 
 Built on [PyTauri](https://pypi.org/project/pytauri/) using Rust's Tauri framework. Uses OS webview instead of bundling a browser — a few MBs vs Electron's 150MB+.
 
+![Modal Demo](assets/modal_demo.gif)
+
 ## Install
 
 ```bash
