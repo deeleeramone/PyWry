@@ -20,7 +20,7 @@ widget = None
 def on_title_change(data: dict[str, Any], _event_type: str, _label: str) -> None:
     """Update chart title in place."""
     if widget:
-        widget.emit("plotly:update-layout", {"layout": {"title.text": data.get("value")}})
+        widget.emit("plotly:update-layout", {"layout": {"title.text": data.get("value", "")}})
 
 
 def on_xlabel_change(data: dict[str, Any], _event_type: str, _label: str) -> None:
@@ -75,6 +75,7 @@ def on_marker_change(data: dict[str, Any], _event_type: str, _label: str) -> Non
 settings_modal = Modal(
     component_id="settings-modal",
     title="Chart Settings",
+    reset_on_close=False,  # Keep changes in modal when closed
     items=[
         TextInput(
             label="Chart Title",
@@ -185,6 +186,7 @@ widget = app.show_plotly(
         "settings:width": on_width_change,
         "settings:marker": on_marker_change,
     },
+    config={"displayModeBar": False},
 )
 
 app.block()
