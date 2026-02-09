@@ -20,14 +20,30 @@ Buttons support typical styles via the `variant` parameter:
 ["primary", "secondary", "neutral", "outline", "ghost", "danger", "warning", "icon"]
 ```
 
-<img width="500" height="40" alt="Button Variants - Dark" src="https://github.com/user-attachments/assets/ded61da3-e06a-40fd-b07a-55a7671bae4b" />
-<img width="500" height="40" alt="Button Variants - Light" src="https://github.com/user-attachments/assets/d746890b-ffc7-486d-85c5-a34b29960c98" />
+<div class="component-preview center">
+  <button class="pywry-btn pywry-toolbar-button" data-event="demo:primary">Primary</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-secondary" data-event="demo:secondary">Secondary</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-neutral" data-event="demo:neutral">Neutral</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-ghost" data-event="demo:ghost">Ghost</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-outline" data-event="demo:outline">Outline</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-danger" data-event="demo:danger">Danger</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-warning" data-event="demo:warning">Warning</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-icon" 
+  style="font-size: 32px;"
+  data-event="demo:icon">⚙\ufe0e</button>
+</div>
 
 ## Sizes
 
 Button sizes can be defined by presets, or can be overriden by supplying the `style` initialization parameter.
 
-<img width="300" height="60" alt="Button Sizes" src="https://github.com/user-attachments/assets/e2f8ce04-c38e-4655-8ba5-5ff846094f60" />
+<div class="component-preview center">
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-neutral pywry-btn-xs" data-event="demo:xs">XS</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-neutral pywry-btn-sm" data-event="demo:sm">SM</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-neutral" data-event="demo:default">Default</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-neutral pywry-btn-lg" data-event="demo:lg">LG</button>
+  <button class="pywry-btn pywry-toolbar-button pywry-btn-neutral pywry-btn-xl" data-event="demo:xl">XL</button>
+</div>
 
 ## Icons
 
@@ -70,6 +86,16 @@ data : dict
     Additional data payload to include with the event.
 ```
 
+## Events
+
+Emits the `event` name with payload:
+
+```json
+{"componentId": "button-abc123"}
+```
+
+Any additional key/value pairs from the `data` parameter are merged into the payload.
+
 ## Handling Clicks
 
 Connect button clicks to Python callbacks:
@@ -79,7 +105,7 @@ from pywry import PyWry, Toolbar, Button
 
 def on_save(data, event_type, label):
     """Handle save button click."""
-    # data contains {"clicked": True} for buttons
+    # data contains {"componentId": "..."} plus any custom data keys
     # Perform your save operation here
     app.emit("pywry:alert", {"message": "Saved!", "type": "success"}, label)
 
@@ -96,7 +122,9 @@ app.show(
 ### Confirmation Dialog
 
 ```python
-from pywry import Button
+from pywry import PyWry, Toolbar, Button
+
+app = PyWry()
 
 def show_confirm(data, event_type, label):
     """Show a confirmation dialog before destructive action."""
@@ -112,39 +140,49 @@ def on_delete_confirmed(data, event_type, label):
         # Perform delete and show success
         app.emit("pywry:alert", {"message": "Deleted!", "type": "success"}, label)
 
-delete_btn = Button(
-    label="🗑️ Delete",
-    event="action:delete",
-    variant="danger",
+app.show(
+    "<h1>My Document</h1><p>Click delete to remove.</p>",
+    toolbars=[
+        Toolbar(position="top", items=[
+            Button(label="🗑️ Delete", event="action:delete", variant="danger")
+        ])
+    ],
+    callbacks={
+        "action:delete": show_confirm,
+        "delete:confirmed": on_delete_confirmed,
+    },
 )
-
-# Register callbacks
-callbacks = {
-    "action:delete": show_confirm,
-    "delete:confirmed": on_delete_confirmed,
-}
 ```
 
 ### Toggle State Buttons
 
 ```python
-from pywry import Button
+from pywry import PyWry, Toolbar, Button
 
+app = PyWry()
 current_state = {"playing": False}
 
 def on_toggle(data, event_type, label):
     is_playing = not current_state["playing"]
     current_state["playing"] = is_playing
     # Update button label dynamically
-    widget.emit("toolbar:set-value", {
+    app.emit("toolbar:set-value", {
         "componentId": "play-btn",
         "label": "⏸️ Pause" if is_playing else "▶️ Play"
-    })
+    }, label)
 
-play_btn = Button(
-    component_id="play-btn",  # Required for dynamic updates
-    label="▶️ Play",
-    event="media:toggle",
+app.show(
+    "<h1>Media Player</h1>",
+    toolbars=[
+        Toolbar(position="top", items=[
+            Button(
+                component_id="play-btn",  # Required for dynamic updates
+                label="▶️ Play",
+                event="media:toggle",
+            )
+        ])
+    ],
+    callbacks={"media:toggle": on_toggle},
 )
 ```
 

@@ -1,23 +1,14 @@
 ---
 title: PyWry
 hide:
-  - navigation
   - toc
 ---
 
 # PyWry
 
-A rendering library for native desktop windows, Jupyter widgets, and browser tabs with bidirectional Python-JavaScript communication.
+A rendering library for native desktop windows, Jupyter widgets, and browser tabs — with bidirectional Python-JavaScript communication.
 
-**Not a dashboard framework** — a rendering engine with three output paths from one API:
-
-| Mode | Environment | Backend |
-|------|-------------|---------|
-| `NEW_WINDOW` / `SINGLE_WINDOW` / `MULTI_WINDOW` | Native OS window | PyTauri (Tauri/Rust) + OS webview |
-| `NOTEBOOK` | Jupyter / VS Code / Colab | anywidget or IFrame + FastAPI |
-| `BROWSER` | System browser tab | FastAPI + WebSocket |
-
-Built on [PyTauri](https://pypi.org/project/pytauri/) using Rust's Tauri framework. Uses OS webview instead of bundling a browser — a few MBs vs Electron's 150MB+.
+Not a dashboard framework. A rendering engine that targets native OS windows, Jupyter notebooks, and browser tabs from one unified API. Built on [PyTauri](https://pypi.org/project/pytauri/) (Rust/Tauri), it uses the OS webview instead of bundling a browser — a few MBs versus Electron's 150 MB+.
 
 ![Modal Demo](assets/modal_demo.gif)
 
@@ -28,16 +19,6 @@ pip install pywry
 ```
 
 ## Hello World
-
-```python
-from pywry import PyWry
-
-app = PyWry()
-app.show("Hello World!")
-app.block()
-```
-
-## Interactive Example
 
 ```python
 from pywry import PyWry, Toolbar, Button
@@ -54,61 +35,63 @@ app.show(
     toolbars=[toolbar],
     callbacks={"app:click": on_click},
 )
+app.block()
 ```
 
-## DataFrame with AgGrid
+<div class="grid cards" markdown>
 
-```python
-from pywry import PyWry
-import pandas as pd
+-   :material-monitor:{ .lg .middle } **Native Desktop Windows**
 
-app = PyWry()
-df = pd.DataFrame({"name": ["Alice", "Bob", "Carol"], "age": [30, 25, 35]})
+    ---
 
-def on_select(data, event_type, label):
-    names = ", ".join(row["name"] for row in data["rows"])
-    app.emit("pywry:alert", {"message": f"Selected: {names}"}, label)
+    OS webview via PyTauri — lightweight, fast, no bundled browser
 
-app.show_dataframe(df, callbacks={"grid:row-selected": on_select})
-```
+-   :material-notebook:{ .lg .middle } **Jupyter Notebooks**
 
-## Plotly Chart
+    ---
 
-```python
-from pywry import PyWry, Toolbar, Button
-import plotly.express as px
+    anywidget with traitlet sync, IFrame fallback for any kernel
 
-app = PyWry(theme="light")
-fig = px.scatter(px.data.iris(), x="sepal_width", y="sepal_length", color="species")
+-   :material-web:{ .lg .middle } **Browser Mode**
 
-def on_click(data, event_type, label):
-    point = data["points"][0]
-    app.emit("plotly:update-layout", {"layout": {"title": f"({point['x']:.2f}, {point['y']:.2f})"}}, label)
+    ---
 
-def on_reset(data, event_type, label):
-    app.emit("plotly:reset-zoom", {}, label)
+    FastAPI + WebSocket server, optional Redis for horizontal scaling
 
-app.show_plotly(
-    fig,
-    toolbars=[Toolbar(position="top", items=[Button(label="Reset Zoom", event="app:reset")])],
-    callbacks={"plotly:click": on_click, "app:reset": on_reset},
-)
-```
+-   :material-view-dashboard:{ .lg .middle } **18 Toolbar Components**
+
+    ---
+
+    Buttons, selects, toggles, sliders, date pickers — all declarative Pydantic models
+
+-   :material-swap-horizontal:{ .lg .middle } **Two-Way Events**
+
+    ---
+
+    Python ↔ JS communication with pre-wired Plotly and AG Grid support
+
+-   :material-palette:{ .lg .middle } **Theming & Hot Reload**
+
+    ---
+
+    Light/dark modes, 60+ CSS variables, live CSS/JS updates during development
+
+</div>
 
 ## Documentation
 
 <div class="nav-cards">
+  <a href="getting-started/" class="nav-card">
+    <h4>Getting Started</h4>
+    <p>What PyWry is and how it works</p>
+  </a>
   <a href="getting-started/installation/" class="nav-card">
     <h4>Installation</h4>
     <p>Install and setup</p>
   </a>
   <a href="getting-started/quickstart/" class="nav-card">
     <h4>Quick Start</h4>
-    <p>First window in 5 min</p>
-  </a>
-  <a href="getting-started/rendering-paths/" class="nav-card">
-    <h4>Rendering Paths</h4>
-    <p>Native, Notebook, Browser</p>
+    <p>First window in 5 minutes</p>
   </a>
   <a href="guides/events/" class="nav-card">
     <h4>Event System</h4>

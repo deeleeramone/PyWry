@@ -5,7 +5,9 @@ The container that holds and organizes UI components. Toolbars can be positioned
 ## Basic Usage
 
 ```python
-from pywry import Toolbar, Button, Select, Option
+from pywry import PyWry, Toolbar, Button, Select, Option
+
+app = PyWry()
 
 toolbar = Toolbar(
     position="top",
@@ -41,27 +43,32 @@ Toolbar(position="inside", items=[...])   # Overlays content
 
 ### Layout Hierarchy
 
-```
-┌─────────────────────────────────────────┐
-│                 HEADER                  │
-├───────┬─────────────────────────┬───────┤
-│       │          TOP            │       │
-│  L    ├─────────────────────────┤   R   │
-│  E    │                         │   I   │
-│  F    │   CONTENT + INSIDE      │   G   │
-│  T    │                         │   H   │
-│       ├─────────────────────────┤   T   │
-│       │        BOTTOM           │       │
-├───────┴─────────────────────────┴───────┤
-│                 FOOTER                  │
-└─────────────────────────────────────────┘
-```
+<div class="layout-diagram">
+  <div class="ld-header">HEADER</div>
+  <div class="ld-body">
+    <div class="ld-left">LEFT</div>
+    <div class="ld-center">
+      <div class="ld-top">TOP</div>
+      <div class="ld-content">
+        CONTENT
+        <div class="ld-inside">INSIDE</div>
+      </div>
+      <div class="ld-bottom">BOTTOM</div>
+    </div>
+    <div class="ld-right">RIGHT</div>
+  </div>
+  <div class="ld-footer">FOOTER</div>
+</div>
 
 ## Multiple Toolbars
 
 Use multiple toolbars for complex layouts:
 
 ```python
+from pywry import PyWry, Toolbar, Button, Div
+
+app = PyWry()
+
 app.show(
     "<h1>Dashboard</h1>",
     toolbars=[

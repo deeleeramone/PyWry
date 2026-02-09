@@ -1,6 +1,6 @@
 # Configuration
 
-PyWry uses a layered configuration system that allows you to set defaults at multiple levels.
+PyWry uses a layered configuration system — settings can come from built-in defaults, TOML files, or environment variables, all merged with a clear priority order. This guide explains how to configure your application. For the full settings API, see the [Configuration Reference](../reference/config.md).
 
 ## Configuration Sources
 
@@ -149,25 +149,24 @@ localhost_ports = SecuritySettings.localhost(ports=[8000, 8080])
 
 ## Window Settings
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `title` | `str` | `"PyWry"` | Window title |
-| `width` | `int` | `800` | Window width |
-| `height` | `int` | `600` | Window height |
-| `center` | `bool` | `True` | Center window on screen |
-| `resizable` | `bool` | `True` | Allow window resizing |
-| `devtools` | `bool` | `False` | Open developer tools |
-| `on_window_close` | `str` | `"hide"` | `"hide"` or `"close"` (MULTI_WINDOW only) |
+Window properties can be set in config or passed directly to `show()`:
+
+```python
+handle = app.show(
+    "<h1>Hello</h1>",
+    title="My Application",
+    width=1280,
+    height=720,
+)
+```
+
+For the full list of window settings, see [`WindowSettings`](../reference/config.md).
 
 ## Server Settings
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `host` | `str` | `"127.0.0.1"` | Server bind address |
-| `port` | `int` | `8765` | Server port |
-| `auto_start` | `bool` | `True` | Auto-start on first widget |
-| `cors_origins` | `list` | `["*"]` | CORS allowed origins |
-| `websocket_require_token` | `bool` | `True` | Require per-widget token |
+Server settings control the FastAPI backend used in browser and inline modes.
+
+For the full list of server settings, see [`ServerSettings`](../reference/config.md).
 
 ## CLI Commands
 
@@ -192,6 +191,6 @@ pywry init
 
 ## Next Steps
 
-- **[PyWrySettings Reference](../reference/config.md)** — Complete settings reference
-- **[SecuritySettings](../reference/config.md#pywry.config.SecuritySettings)** — CSP configuration
-- **[ThemeSettings](../reference/config.md#pywry.config.ThemeSettings)** — Theme configuration
+- **[Configuration Reference](../reference/config.md)** — Complete `PyWrySettings` API
+- **[Deploy Mode](deploy-mode.md)** — Production server configuration
+- **[Browser Mode](browser-mode.md)** — Server settings for browser mode

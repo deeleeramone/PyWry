@@ -443,6 +443,93 @@ class TestToolbarStateMixin:
         assert event == "toolbar:set-values"
         assert data["values"] == values
 
+    def test_set_toolbar_value_with_label(self) -> None:
+        """Test set_toolbar_value with label attribute."""
+        widget = MockToolbarWidget()
+
+        widget.set_toolbar_value(component_id="btn_1", label="Loading...")
+
+        event, data = widget.get_last_event()
+        assert event == "toolbar:set-value"
+        assert data["componentId"] == "btn_1"
+        assert data["label"] == "Loading..."
+        assert "value" not in data
+
+    def test_set_toolbar_value_with_disabled(self) -> None:
+        """Test set_toolbar_value with disabled attribute."""
+        widget = MockToolbarWidget()
+
+        widget.set_toolbar_value(component_id="submit_btn", disabled=True)
+
+        event, data = widget.get_last_event()
+        assert event == "toolbar:set-value"
+        assert data["componentId"] == "submit_btn"
+        assert data["disabled"] is True
+
+    def test_set_toolbar_value_with_multiple_attrs(self) -> None:
+        """Test set_toolbar_value with value and multiple attributes."""
+        widget = MockToolbarWidget()
+
+        widget.set_toolbar_value(
+            component_id="theme_select",
+            value="dark",
+            label="Theme:",
+            disabled=False,
+            tooltip="Select theme",
+        )
+
+        event, data = widget.get_last_event()
+        assert event == "toolbar:set-value"
+        assert data["componentId"] == "theme_select"
+        assert data["value"] == "dark"
+        assert data["label"] == "Theme:"
+        assert data["disabled"] is False
+        assert data["tooltip"] == "Select theme"
+
+    def test_set_toolbar_value_with_options(self) -> None:
+        """Test set_toolbar_value can update dropdown options."""
+        widget = MockToolbarWidget()
+        new_options = [
+            {"label": "Option A", "value": "a"},
+            {"label": "Option B", "value": "b"},
+        ]
+
+        widget.set_toolbar_value(component_id="dropdown_1", value="a", options=new_options)
+
+        event, data = widget.get_last_event()
+        assert event == "toolbar:set-value"
+        assert data["componentId"] == "dropdown_1"
+        assert data["value"] == "a"
+        assert data["options"] == new_options
+
+    def test_set_toolbar_value_with_style(self) -> None:
+        """Test set_toolbar_value with style attribute."""
+        widget = MockToolbarWidget()
+
+        widget.set_toolbar_value(
+            component_id="btn_1", style={"backgroundColor": "red", "color": "white"}
+        )
+
+        event, data = widget.get_last_event()
+        assert event == "toolbar:set-value"
+        assert data["style"]["backgroundColor"] == "red"
+        assert data["style"]["color"] == "white"
+
+    def test_set_toolbar_value_with_class_modifier(self) -> None:
+        """Test set_toolbar_value with className modifier."""
+        widget = MockToolbarWidget()
+
+        widget.set_toolbar_value(
+            component_id="btn_1",
+            className={"add": ["highlight"], "remove": ["hidden"]},
+        )
+
+        event, data = widget.get_last_event()
+        assert event == "toolbar:set-value"
+        # Use 'className' because '**kwargs' keeps the key name as-is
+        assert data["className"]["add"] == ["highlight"]
+        assert data["className"]["remove"] == ["hidden"]
+
 
 # =============================================================================
 # Combined Mixin Tests

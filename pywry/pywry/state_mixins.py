@@ -15,6 +15,17 @@ import json
 from typing import Any, Literal
 
 
+# Sentinel value to distinguish "not passed" from "passed as None"
+class _Unset:
+    """Sentinel to indicate a parameter was not provided."""
+
+    def __repr__(self) -> str:
+        return "<UNSET>"
+
+
+_UNSET = _Unset()
+
+
 class EmittingWidget:
     """Base class for state mixins, providing the emit interface."""
 
@@ -322,12 +333,40 @@ class ToolbarStateMixin(EmittingWidget):  # pylint: disable=abstract-method
         self.emit("toolbar:request-state", payload)
 
     def set_toolbar_value(
-        self, component_id: str, value: Any, toolbar_id: str | None = None
+        self,
+        component_id: str,
+        value: Any = _UNSET,
+        toolbar_id: str | None = None,
+        **attrs: Any,
     ) -> None:
-        """Set a single toolbar input value."""
-        payload: dict[str, Any] = {"componentId": component_id, "value": value}
+        """Set a toolbar component's value and/or attributes.
+
+        Parameters
+        ----------
+        component_id : str
+            The component_id of the toolbar item to update.
+        value : Any, optional
+            The new value for the component.
+        toolbar_id : str, optional
+            The toolbar ID (if applicable).
+        **attrs : Any
+            Additional attributes to set on the component:
+            - label/text: Update text content
+            - disabled: Enable/disable the component
+            - variant: Button variant (primary, secondary, danger, etc.)
+            - tooltip/description: Update tooltip text
+            - options: Update dropdown/select options
+            - style: Inline styles (str or dict)
+            - className/class: Add/remove CSS classes
+            - placeholder, min, max, step: Input constraints
+        """
+        payload: dict[str, Any] = {"componentId": component_id}
+        if not isinstance(value, _Unset):
+            payload["value"] = value
         if toolbar_id:
             payload["toolbarId"] = toolbar_id
+        # Add any additional attributes
+        payload.update(attrs)
         self.emit("toolbar:set-value", payload)
 
     def set_toolbar_values(self, values: dict[str, Any], toolbar_id: str | None = None) -> None:

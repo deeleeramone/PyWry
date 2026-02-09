@@ -1,21 +1,17 @@
 # JavaScript Bridge
 
-PyWry exposes a JavaScript API through `window.pywry` for direct browser-side interaction.
+PyWry exposes a `window.pywry` object in every window/widget for direct JavaScript interaction. This guide covers practical patterns for writing custom JavaScript that communicates with your Python code.
 
-## The window.pywry Object
+For the full JavaScript API specification, see the [Event Reference](../reference/events.md#javascript-api).
 
-Every PyWry window has access to a global `window.pywry` object:
+## Overview
 
-```javascript
-window.pywry = {
-    emit(event, data),      // Send event to Python
-    on(event, handler),     // Listen for events from Python
-    off(event, handler),    // Remove event listener
-    label,                  // Current window/widget label
-    config,                 // Widget configuration
-    version,                // PyWry version string
-};
-```
+The `window.pywry` object provides:
+
+- `emit(event, data)` — Send an event to Python
+- `on(event, handler)` — Listen for events from Python
+- `off(event, handler)` — Remove a listener
+- `label` — Current window/widget label
 
 ## Sending Events to Python
 
@@ -140,41 +136,7 @@ gridOptions.api.setQuickFilter("search text");
 
 ## Tauri Access (Native Mode Only)
 
-In native desktop mode, you can access Tauri APIs:
-
-```javascript
-// Check if running in Tauri
-if (window.__TAURI__) {
-    const { invoke } = window.__TAURI__.core;
-    
-    // Call Rust commands
-    const result = await invoke("my_command", { arg: "value" });
-    
-    // File dialogs
-    const { open } = window.__TAURI__.dialog;
-    const selected = await open({ multiple: false });
-    
-    // Filesystem
-    const { readTextFile } = window.__TAURI__.fs;
-    const content = await readTextFile(selected);
-}
-```
-
-### Available Tauri Plugins
-
-| Plugin | Namespace | Description |
-|--------|-----------|-------------|
-| Shell | `window.__TAURI__.shell` | Execute commands |
-| Dialog | `window.__TAURI__.dialog` | File dialogs |
-| Filesystem | `window.__TAURI__.fs` | File operations |
-| Clipboard | `window.__TAURI__.clipboard` | Copy/paste |
-| Notification | `window.__TAURI__.notification` | System notifications |
-| OS | `window.__TAURI__.os` | OS information |
-| Path | `window.__TAURI__.path` | Path utilities |
-| Process | `window.__TAURI__.process` | Process control |
-| HTTP | `window.__TAURI__.http` | HTTP client |
-| WebSocket | `window.__TAURI__.websocket` | WebSocket client |
-| Updater | `window.__TAURI__.updater` | App updates |
+In native desktop mode, you can access [Tauri APIs](https://tauri.app/references/javascript/) for OS-level capabilities like file dialogs, clipboard, and notifications. See the [Event Reference](../reference/events.md#tauri-access-native-mode-only) for the full list of available plugins.
 
 ### Example: File Dialog
 
@@ -289,6 +251,6 @@ const debouncedSearch = debounce((query) => {
 
 ## Next Steps
 
-- **[Event System](events.md)** — Python event handling
+- **[Event Reference](../reference/events.md#javascript-api)** — Full JavaScript API specification
+- **[Event System](events.md)** — Python-side event handling
 - **[Window Management](window-management.md)** — Multiple windows
-- **[PyWry API Reference](../reference/pywry.md)** — Full API reference

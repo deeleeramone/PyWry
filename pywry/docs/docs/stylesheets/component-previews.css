@@ -1,0 +1,595 @@
+/* ==========================================================
+   Component Preview Styles
+   Uses the ACTUAL PyWry component HTML and CSS.
+   Theme auto-adapts to MkDocs Material dark/light toggle.
+   ========================================================== */
+
+/* ── Container ───────────────────────────────────────── */
+.component-preview {
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 0.75rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  line-height: 1.4;
+
+  /* Dark theme variables (default — matches "slate" scheme) */
+  --pywry-font-family: Inter, 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --pywry-font-size: 14px;
+  --pywry-font-weight-normal: 400;
+  --pywry-font-weight-medium: 500;
+  --pywry-radius: 4px;
+  --pywry-radius-lg: 6px;
+  --pywry-radius-sm: 3px;
+  --pywry-spacing-xs: 2px;
+  --pywry-spacing-sm: 4px;
+  --pywry-spacing-md: 6px;
+  --pywry-spacing-lg: 8px;
+  --pywry-transition-fast: 0.1s ease;
+  --pywry-transition-normal: 0.2s ease;
+  --pywry-accent: #0078d4;
+  --pywry-accent-hover: #106ebe;
+  --pywry-text-accent: rgb(51, 187, 255);
+  --pywry-btn-neutral-bg: rgb(0, 136, 204);
+  --pywry-btn-neutral-text: #ffffff;
+  --pywry-btn-neutral-hover: rgb(0, 115, 173);
+  --pywry-bg-primary: #212124;
+  --pywry-bg-secondary: rgba(21, 21, 24, 1);
+  --pywry-bg-tertiary: rgba(31, 30, 35, 1);
+  --pywry-bg-hover: rgba(255, 255, 255, 0.08);
+  --pywry-text-primary: #ebebed;
+  --pywry-text-secondary: #a0a0a0;
+  --pywry-text-muted: #707070;
+  --pywry-border-color: #333;
+  --pywry-border-focus: #555;
+  --pywry-tab-bg: #2a2a2e;
+  --pywry-tab-active-bg: #3d3d42;
+  --pywry-tab-hover-bg: #353538;
+  --pywry-btn-primary-bg: #e2e2e2;
+  --pywry-btn-primary-text: #151518;
+  --pywry-btn-primary-hover: #cccccc;
+  --pywry-btn-secondary-bg: #3d3d42;
+  --pywry-btn-secondary-text: #ebebed;
+  --pywry-btn-secondary-hover: #4a4a50;
+  --pywry-btn-secondary-border: rgba(90, 90, 100, 0.5);
+
+  background-color: var(--pywry-bg-primary);
+  color: var(--pywry-text-primary);
+  font-family: var(--pywry-font-family);
+  font-size: var(--pywry-font-size);
+  border: 1px solid var(--pywry-border-color);
+  position: relative; z-index: 2; /* above following content, below sticky header (z-index: 4) */
+}
+.component-preview:has(.pywry-dropdown.pywry-open) { z-index: 3; }
+.component-preview.col { flex-direction: column; align-items: stretch; }
+.component-preview.center { justify-content: center; }
+
+/* ── Light theme — auto-applied when MkDocs uses "default" ── */
+[data-md-color-scheme="default"] .component-preview {
+  --pywry-bg-primary: #f5f5f5;
+  --pywry-bg-secondary: #ffffff;
+  --pywry-bg-hover: rgba(0, 0, 0, 0.06);
+  --pywry-text-primary: #000000;
+  --pywry-text-secondary: #666666;
+  --pywry-text-muted: #999999;
+  --pywry-border-color: #ccc;
+  --pywry-border-focus: #999;
+  --pywry-tab-bg: #e8e8ec;
+  --pywry-tab-active-bg: #ffffff;
+  --pywry-tab-hover-bg: #f0f0f4;
+  --pywry-btn-primary-bg: #2c2c32;
+  --pywry-btn-primary-text: #ffffff;
+  --pywry-btn-primary-hover: #1a1a1e;
+  --pywry-btn-secondary-bg: #d0d0d8;
+  --pywry-btn-secondary-text: #2c2c32;
+  --pywry-btn-secondary-hover: #c0c0c8;
+  --pywry-btn-secondary-border: rgba(180, 180, 190, 1);
+}
+
+/* Separator utility */
+.component-preview .preview-sep {
+  width: 1px; height: 20px;
+  background: var(--pywry-border-color);
+  margin: 0 4px;
+}
+
+/* ── Actual PyWry Component CSS ──────────────────────── */
+
+/* Shared: input-group, input-label, input */
+.component-preview .pywry-input-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pywry-spacing-sm);
+  flex-shrink: 0;
+  overflow: visible;
+}
+.component-preview .pywry-input-group:not(.pywry-input-inline) {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.component-preview .pywry-input-label {
+  font-weight: var(--pywry-font-weight-medium);
+  font-family: var(--pywry-font-family);
+  font-size: var(--pywry-font-size);
+  color: var(--pywry-text-secondary);
+  white-space: nowrap;
+}
+.component-preview .pywry-input {
+  padding: var(--pywry-spacing-sm) var(--pywry-spacing-md);
+  background-color: var(--pywry-bg-secondary);
+  color: var(--pywry-text-primary);
+  border: 1px solid var(--pywry-border-color);
+  border-radius: var(--pywry-radius-lg);
+  font-family: var(--pywry-font-family);
+  font-size: var(--pywry-font-size);
+  transition: border-color var(--pywry-transition-fast), box-shadow var(--pywry-transition-fast);
+}
+.component-preview .pywry-input:hover { border-color: var(--pywry-border-focus); }
+.component-preview .pywry-input:focus { outline: none; border-color: var(--pywry-border-focus); }
+.component-preview .pywry-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.component-preview .pywry-input::placeholder { color: var(--pywry-text-secondary); opacity: 0.6; }
+.component-preview .pywry-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+/* Button */
+.component-preview .pywry-btn {
+  padding: var(--pywry-spacing-xs) var(--pywry-spacing-sm);
+  cursor: pointer;
+  background-color: var(--pywry-btn-primary-bg);
+  color: var(--pywry-btn-primary-text);
+  border: none;
+  border-radius: var(--pywry-radius);
+  font-weight: var(--pywry-font-weight-medium);
+  font-family: var(--pywry-font-family);
+  font-size: var(--pywry-font-size);
+  transition: background-color var(--pywry-transition-fast), box-shadow var(--pywry-transition-fast);
+  display: inline-flex; align-items: center; justify-content: center;
+  white-space: nowrap; line-height: 1.2;
+}
+.component-preview .pywry-btn:hover { background-color: var(--pywry-btn-primary-hover); }
+.component-preview .pywry-btn:focus, .component-preview .pywry-btn:focus-visible { outline: none; box-shadow: none; }
+.component-preview .pywry-btn:active { opacity: 0.9; }
+.component-preview .pywry-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.component-preview .pywry-btn.pywry-btn-secondary { background-color: var(--pywry-btn-secondary-bg); color: var(--pywry-btn-secondary-text); border: none; }
+.component-preview .pywry-btn.pywry-btn-secondary:hover { background-color: var(--pywry-btn-secondary-hover); }
+.component-preview .pywry-btn.pywry-btn-neutral { background-color: var(--pywry-btn-neutral-bg); color: var(--pywry-btn-neutral-text); border: none; }
+.component-preview .pywry-btn.pywry-btn-neutral:hover { background-color: var(--pywry-btn-neutral-hover); }
+.component-preview .pywry-btn.pywry-btn-ghost { background-color: transparent; color: var(--pywry-text-primary); border: none; }
+.component-preview .pywry-btn.pywry-btn-ghost:hover { color: var(--pywry-text-secondary); }
+.component-preview .pywry-btn.pywry-btn-outline { background-color: transparent; color: var(--pywry-text-primary); border: 1px solid var(--pywry-border-color); }
+.component-preview .pywry-btn.pywry-btn-outline:hover { border-color: var(--pywry-border-focus); }
+.component-preview .pywry-btn.pywry-btn-danger { background-color: #c63f43; color: #fff; }
+.component-preview .pywry-btn.pywry-btn-danger:hover { background-color: #a63539; }
+.component-preview .pywry-btn.pywry-btn-warning { background-color: #d58438; color: #fff; }
+.component-preview .pywry-btn.pywry-btn-warning:hover { background-color: #b5702f; }
+.component-preview .pywry-btn.pywry-btn-icon { background-color: transparent; color: var(--pywry-text-muted); padding: var(--pywry-spacing-xs); min-width: auto; aspect-ratio: 1; }
+.component-preview .pywry-btn.pywry-btn-icon:hover { color: var(--pywry-text-primary); }
+.component-preview .pywry-btn.pywry-btn-xs { padding: 2px 6px; font-size: 11px; border-radius: 3px; }
+.component-preview .pywry-btn.pywry-btn-sm { padding: 4px 8px; font-size: 12px; border-radius: 4px; }
+.component-preview .pywry-btn.pywry-btn-lg { padding: 10px 20px; font-size: 15px; border-radius: 6px; }
+.component-preview .pywry-btn.pywry-btn-xl { padding: 14px 28px; font-size: 16px; border-radius: 8px; }
+
+/* Toggle */
+.component-preview .pywry-toggle {
+  display: inline-flex; align-items: center;
+  position: relative; width: 32px; height: 16px; cursor: pointer;
+}
+.component-preview .pywry-toggle-input { position: absolute; opacity: 0; width: 0; height: 0; }
+.component-preview .pywry-toggle-slider {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--pywry-border-color);
+  border-radius: 16px;
+  transition: background-color var(--pywry-transition-fast);
+}
+.component-preview .pywry-toggle-slider::before {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 12px; height: 12px;
+  background-color: var(--pywry-text-secondary);
+  border-radius: 50%;
+  transition: transform var(--pywry-transition-fast), background-color var(--pywry-transition-fast);
+}
+.component-preview .pywry-toggle-input:checked + .pywry-toggle-slider { background-color: var(--pywry-accent); }
+.component-preview .pywry-toggle-input:checked + .pywry-toggle-slider::before { transform: translateX(16px); background-color: white; }
+.component-preview .pywry-toggle:hover .pywry-toggle-slider { background-color: var(--pywry-bg-hover); }
+.component-preview .pywry-toggle-input:checked + .pywry-toggle-slider:hover { background-color: var(--pywry-accent-hover); }
+
+/* Checkbox */
+.component-preview .pywry-checkbox {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-family: var(--pywry-font-family); font-size: var(--pywry-font-size);
+  color: var(--pywry-text-primary);
+}
+.component-preview .pywry-checkbox-input { position: absolute; opacity: 0; width: 0; height: 0; }
+.component-preview .pywry-checkbox-box {
+  position: relative; width: 18px; height: 18px;
+  background-color: var(--pywry-bg-secondary);
+  border: 1.5px solid var(--pywry-border-color);
+  border-radius: 4px;
+  transition: all var(--pywry-transition-fast);
+  flex-shrink: 0;
+}
+.component-preview .pywry-checkbox-box::after {
+  content: ""; position: absolute; display: none;
+  left: 5px; top: 1px; width: 5px; height: 10px;
+  border: solid white; border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.component-preview .pywry-checkbox-input:checked + .pywry-checkbox-box { background-color: var(--pywry-accent); border-color: var(--pywry-accent); }
+.component-preview .pywry-checkbox-input:checked + .pywry-checkbox-box::after { display: block; }
+.component-preview .pywry-checkbox:hover .pywry-checkbox-box { border-color: var(--pywry-border-focus); }
+.component-preview .pywry-checkbox-label { user-select: none; }
+
+/* Select / Dropdown */
+.component-preview .pywry-dropdown {
+  position: relative; display: inline-flex; flex-direction: column; min-width: 120px;
+}
+.component-preview .pywry-dropdown-selected {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: var(--pywry-spacing-sm) var(--pywry-spacing-lg);
+  cursor: pointer;
+  background-color: var(--pywry-bg-secondary);
+  color: var(--pywry-text-primary);
+  border: 1px solid var(--pywry-border-color);
+  border-radius: var(--pywry-radius-lg);
+  font-family: var(--pywry-font-family); font-size: var(--pywry-font-size);
+  transition: border-color var(--pywry-transition-fast);
+  user-select: none; white-space: nowrap;
+}
+.component-preview .pywry-dropdown-selected:hover { border-color: var(--pywry-border-focus); }
+.component-preview .pywry-dropdown-text { white-space: nowrap; }
+.component-preview .pywry-dropdown-arrow {
+  width: 0; height: 0; flex-shrink: 0;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 5px solid var(--pywry-text-secondary);
+  transition: transform var(--pywry-transition-fast);
+}
+.component-preview .pywry-dropdown.pywry-open .pywry-dropdown-arrow { transform: rotate(180deg); }
+.component-preview .pywry-dropdown-menu {
+  display: none; position: absolute; top: 100%; left: 0;
+  min-width: max-content; margin-top: 2px;
+  background-color: var(--pywry-bg-primary);
+  border: 1px solid var(--pywry-border-focus);
+  border-radius: var(--pywry-radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 100; max-height: 200px; overflow-y: auto;
+}
+.component-preview .pywry-dropdown.pywry-open .pywry-dropdown-menu { display: block; }
+.component-preview .pywry-dropdown-option {
+  padding: var(--pywry-spacing-sm) var(--pywry-spacing-lg); padding-left: 28px;
+  cursor: pointer; color: var(--pywry-text-primary);
+  font-family: var(--pywry-font-family); font-size: var(--pywry-font-size);
+  transition: background-color var(--pywry-transition-fast);
+  white-space: nowrap; position: relative;
+}
+.component-preview .pywry-dropdown-option:hover { background-color: var(--pywry-bg-hover); }
+.component-preview .pywry-dropdown-option.pywry-selected::before { content: "✓"; position: absolute; left: 10px; }
+
+/* MultiSelect */
+.component-preview .pywry-dropdown.pywry-multiselect .pywry-dropdown-menu { padding: 0; max-height: none; overflow-y: visible; }
+.component-preview .pywry-multiselect-header {
+  display: flex; align-items: center; gap: var(--pywry-spacing-xs);
+  padding: var(--pywry-spacing-sm);
+  border-bottom: 1px solid var(--pywry-border-color);
+  position: sticky; top: 0; background-color: var(--pywry-bg-primary); z-index: 1;
+}
+.component-preview .pywry-multiselect-header .pywry-search-inline { flex: 1; min-width: 0; }
+.component-preview .pywry-multiselect-actions { display: flex; gap: 2px; }
+.component-preview .pywry-multiselect-action {
+  padding: var(--pywry-spacing-xs) var(--pywry-spacing-sm);
+  background: transparent; color: var(--pywry-text-secondary); border: none;
+  border-radius: var(--pywry-radius-sm);
+  font-family: var(--pywry-font-family); font-size: calc(var(--pywry-font-size) - 1px);
+  cursor: pointer; transition: color var(--pywry-transition-fast), background-color var(--pywry-transition-fast);
+}
+.component-preview .pywry-multiselect-action:hover { color: var(--pywry-text-primary); background-color: var(--pywry-bg-hover); }
+.component-preview .pywry-multiselect-options {
+  max-height: 200px; overflow-y: auto; padding: var(--pywry-spacing-xs) 0;
+}
+.component-preview .pywry-multiselect-option {
+  display: flex; align-items: center; gap: var(--pywry-spacing-sm);
+  padding: var(--pywry-spacing-sm) var(--pywry-spacing-md);
+  cursor: pointer; color: var(--pywry-text-primary);
+  font-family: var(--pywry-font-family); font-size: var(--pywry-font-size);
+  transition: background-color var(--pywry-transition-fast); white-space: nowrap;
+}
+.component-preview .pywry-multiselect-option:hover { background-color: var(--pywry-bg-hover); }
+.component-preview .pywry-multiselect-checkbox {
+  width: 14px; height: 14px; accent-color: var(--pywry-accent); cursor: pointer; flex-shrink: 0;
+}
+.component-preview .pywry-multiselect-label { flex: 1; }
+
+/* Select Searchable */
+.component-preview .pywry-dropdown.pywry-searchable .pywry-dropdown-menu { padding: 0; max-height: none; overflow-y: visible; }
+.component-preview .pywry-select-header {
+  display: flex; align-items: center;
+  padding: var(--pywry-spacing-sm);
+  border-bottom: 1px solid var(--pywry-border-color);
+  position: sticky; top: 0; background-color: var(--pywry-bg-primary); z-index: 1;
+}
+.component-preview .pywry-search-inline { width: 100%; }
+.component-preview .pywry-select-options { max-height: 200px; overflow-y: auto; padding: var(--pywry-spacing-xs) 0; }
+
+/* TextInput */
+.component-preview .pywry-input-text { min-width: 120px; padding-left: var(--pywry-spacing-lg); padding-right: var(--pywry-spacing-lg); }
+
+/* NumberInput */
+.component-preview .pywry-input-number { width: 80px; padding-left: var(--pywry-spacing-lg); padding-right: var(--pywry-spacing-sm); -moz-appearance: textfield; }
+.component-preview .pywry-input-number::-webkit-outer-spin-button,
+.component-preview .pywry-input-number::-webkit-inner-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
+.component-preview .pywry-number-wrapper { display: inline-flex; align-items: center; position: relative; }
+.component-preview .pywry-number-wrapper .pywry-input-number { padding-right: 24px; }
+.component-preview .pywry-number-spinner {
+  display: flex; flex-direction: column; position: absolute; right: 2px;
+  top: 50%; transform: translateY(-50%); height: calc(100% - 4px); width: 18px;
+  opacity: 0.6; transition: opacity var(--pywry-transition-fast);
+}
+.component-preview .pywry-number-wrapper:hover .pywry-number-spinner,
+.component-preview .pywry-number-wrapper:focus-within .pywry-number-spinner { opacity: 1; }
+.component-preview .pywry-number-spinner button {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: var(--pywry-text-secondary);
+  cursor: pointer; padding: 0; font-size: 8px; line-height: 1;
+  transition: color var(--pywry-transition-fast);
+}
+.component-preview .pywry-number-spinner button:hover { color: var(--pywry-text-primary); }
+.component-preview .pywry-number-spinner button:active { color: var(--pywry-accent); }
+
+/* DateInput */
+.component-preview .pywry-input-date {
+  min-width: 130px; cursor: pointer; color-scheme: dark; position: relative;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 6px center; background-size: 14px;
+  padding-right: 28px;
+}
+.component-preview .pywry-input-date::-webkit-calendar-picker-indicator {
+  opacity: 0; width: 28px; height: 100%; cursor: pointer; position: absolute; top: 0; right: 0;
+}
+[data-md-color-scheme="default"] .component-preview .pywry-input-date {
+  color-scheme: light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+}
+
+/* TextArea */
+.component-preview .pywry-textarea {
+  min-width: 200px; max-width: calc(100% - 10px); min-height: 60px;
+  padding: var(--pywry-spacing-md); line-height: 1.4; font-family: inherit;
+  resize: both; overflow: auto; vertical-align: top; box-sizing: border-box;
+}
+.component-preview .pywry-textarea-group {
+  display: flex; flex-direction: column; gap: var(--pywry-spacing-xs);
+  align-items: flex-start; width: 100%; max-width: 100%; overflow: hidden; box-sizing: border-box;
+}
+.component-preview .pywry-textarea-group .pywry-input-label { margin-bottom: 0; }
+
+/* SliderInput */
+.component-preview .pywry-input-range {
+  -webkit-appearance: none; appearance: none;
+  width: 120px; height: 6px;
+  background: var(--pywry-border-color); border-radius: 3px;
+  outline: none; cursor: pointer; border: none; padding: 0;
+}
+.component-preview .pywry-input-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; background: var(--pywry-accent);
+  border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--pywry-bg-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s ease;
+}
+.component-preview .pywry-input-range::-webkit-slider-thumb:hover { transform: scale(1.1); }
+.component-preview .pywry-input-range::-moz-range-thumb {
+  width: 16px; height: 16px; background: var(--pywry-accent);
+  border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--pywry-bg-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.component-preview .pywry-range-value {
+  font-family: var(--pywry-font-family); font-size: var(--pywry-font-size);
+  font-weight: var(--pywry-font-weight-medium); color: var(--pywry-text-primary);
+  min-width: 28px; text-align: center;
+}
+
+/* RangeInput (dual-handle) */
+.component-preview .pywry-range-group { display: inline-flex; align-items: center; gap: 8px; position: relative; }
+.component-preview .pywry-range-track { position: relative; width: 120px; height: 6px; }
+.component-preview .pywry-range-track input[type="range"] {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; -webkit-appearance: none; appearance: none;
+  background: transparent; margin: 0; padding: 0;
+}
+.component-preview .pywry-range-track input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: transparent; border-radius: 3px; }
+.component-preview .pywry-range-track input[type="range"]::-webkit-slider-thumb {
+  pointer-events: auto; -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--pywry-accent); cursor: pointer; margin-top: -5px;
+  border: 2px solid var(--pywry-bg-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.component-preview .pywry-range-track input[type="range"]::-moz-range-track { height: 6px; background: transparent; border-radius: 3px; }
+.component-preview .pywry-range-track input[type="range"]::-moz-range-thumb {
+  pointer-events: auto; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--pywry-accent); cursor: pointer;
+  border: 2px solid var(--pywry-bg-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.component-preview .pywry-range-track-bg {
+  position: absolute; top: 0; left: 0; width: 100%; height: 6px;
+  background: var(--pywry-border-color); border-radius: 3px; pointer-events: none;
+}
+.component-preview .pywry-range-track-fill {
+  position: absolute; top: 0; height: 6px;
+  background: var(--pywry-accent); border-radius: 3px; pointer-events: none;
+}
+
+/* RadioGroup */
+.component-preview .pywry-radio-group { display: inline-flex; gap: 12px; }
+.component-preview .pywry-radio-horizontal { flex-direction: row; align-items: center; }
+.component-preview .pywry-radio-option {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-family: var(--pywry-font-family); font-size: var(--pywry-font-size);
+  color: var(--pywry-text-primary);
+}
+.component-preview .pywry-radio-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+.component-preview .pywry-radio-button {
+  position: relative; width: 16px; height: 16px;
+  background-color: var(--pywry-bg-secondary);
+  border: 1px solid var(--pywry-border-color);
+  border-radius: 50%; transition: all var(--pywry-transition-fast); flex-shrink: 0;
+}
+.component-preview .pywry-radio-button::after {
+  content: ""; position: absolute; display: none;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 8px; height: 8px; background-color: white; border-radius: 50%;
+}
+.component-preview .pywry-radio-option input[type="radio"]:checked + .pywry-radio-button { background-color: var(--pywry-accent); border-color: var(--pywry-accent); }
+.component-preview .pywry-radio-option input[type="radio"]:checked + .pywry-radio-button::after { display: block; }
+.component-preview .pywry-radio-option:hover .pywry-radio-button { border-color: var(--pywry-border-focus); }
+.component-preview .pywry-radio-label { user-select: none; }
+
+/* TabGroup */
+.component-preview .pywry-tab-group {
+  display: inline-flex; align-items: stretch;
+  background: var(--pywry-tab-bg);
+  border: 1px solid var(--pywry-border-color);
+  border-radius: var(--pywry-radius); padding: 2px; gap: 2px;
+}
+.component-preview .pywry-tab {
+  position: relative; padding: 6px 12px;
+  background: transparent; border: none;
+  border-radius: calc(var(--pywry-radius) - 2px);
+  font-family: var(--pywry-font-family); font-size: var(--pywry-font-size);
+  color: var(--pywry-text-secondary); cursor: pointer;
+  transition: all var(--pywry-transition-fast);
+  white-space: nowrap; user-select: none;
+}
+.component-preview .pywry-tab:hover { color: var(--pywry-text-primary); background: var(--pywry-tab-hover-bg); }
+.component-preview .pywry-tab-active {
+  color: var(--pywry-text-primary); background: var(--pywry-tab-active-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.component-preview .pywry-tab-active:hover { background: var(--pywry-tab-active-bg); }
+
+/* SecretInput */
+.component-preview .pywry-secret-wrapper { display: inline-flex; align-items: center; position: relative; }
+.component-preview .pywry-input-secret { min-width: 140px; padding-left: var(--pywry-spacing-lg); padding-right: 78px; cursor: default; }
+.component-preview .pywry-input-secret[readonly] { background: var(--pywry-bg-secondary); cursor: default; }
+.component-preview .pywry-secret-actions {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 0;
+  opacity: 1; pointer-events: auto;
+}
+.component-preview .pywry-secret-btn {
+  background: transparent; border: none; padding: 4px; cursor: pointer;
+  color: var(--pywry-text-muted); display: flex; align-items: center; justify-content: center;
+  border-radius: var(--pywry-radius-sm); transition: color 0.15s ease;
+}
+.component-preview .pywry-secret-btn:hover { color: var(--pywry-text-primary); }
+.component-preview .pywry-secret-btn:focus { outline: none; color: var(--pywry-text-primary); }
+.component-preview .pywry-secret-btn svg { display: block; width: 14px; height: 14px; }
+.component-preview .pywry-secret-textarea {
+  resize: both; overflow: auto; white-space: pre; word-wrap: normal;
+  font-family: var(--pywry-font-family); font-size: var(--pywry-font-size);
+  padding: var(--pywry-spacing-sm) var(--pywry-spacing-lg);
+  padding-right: 56px; box-sizing: border-box;
+}
+.component-preview .pywry-secret-edit-actions { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+.component-preview .pywry-secret-confirm { color: #3fb950; }
+.component-preview .pywry-secret-confirm:hover { color: #56d364; }
+.component-preview .pywry-secret-cancel { color: #f85149; }
+.component-preview .pywry-secret-cancel:hover { color: #ff7b72; }
+
+/* SearchInput */
+.component-preview .pywry-search-wrapper { position: relative; display: inline-flex; align-items: center; flex: 1; min-width: 0; }
+.component-preview .pywry-search-icon { position: absolute; left: var(--pywry-spacing-sm); pointer-events: none; color: var(--pywry-text-muted); flex-shrink: 0; }
+.component-preview .pywry-search-input { width: 100%; padding-left: calc(var(--pywry-spacing-sm) + 14px + var(--pywry-spacing-xs)) !important; min-width: 120px; }
+
+/* Marquee */
+.component-preview .pywry-marquee {
+  display: flex; overflow: hidden; position: relative;
+  flex: 1; min-width: 0; max-width: 100%; white-space: nowrap;
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+.component-preview .pywry-marquee.pywry-marquee-static { mask-image: none; -webkit-mask-image: none; }
+.component-preview .pywry-marquee-track {
+  display: inline-flex; align-items: center;
+  animation: pywry-marquee-scroll-left var(--pywry-marquee-speed, 15s) linear infinite;
+  will-change: transform;
+}
+.component-preview .pywry-marquee-static .pywry-marquee-track { animation: none; }
+.component-preview .pywry-marquee-content {
+  display: inline-flex; align-items: center;
+  gap: var(--pywry-spacing-sm); flex-shrink: 0; padding-right: 50px;
+}
+.component-preview .pywry-marquee-static .pywry-marquee-content { padding-right: 0; }
+.component-preview .pywry-marquee-pause:hover .pywry-marquee-track { animation-play-state: paused; }
+
+/* TickerItem */
+.component-preview .pywry-ticker-item {
+  display: inline-flex; align-items: center; gap: var(--pywry-spacing-xs);
+  padding: 0 var(--pywry-spacing-sm); white-space: nowrap;
+}
+.component-preview .pywry-ticker-item.stock-up,
+.component-preview .pywry-ticker-item.ticker-up { color: var(--pywry-success, #22c55e); }
+.component-preview .pywry-ticker-item.stock-down,
+.component-preview .pywry-ticker-item.ticker-down { color: var(--pywry-danger, #ef4444); }
+.component-preview .pywry-ticker-item.ticker-neutral { color: var(--pywry-text-secondary); }
+
+/* Div */
+.component-preview .pywry-div { color: var(--pywry-text-primary); font-family: var(--pywry-font-family); font-size: var(--pywry-font-size); }
+
+@keyframes pywry-marquee-scroll-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ==========================================================
+   Layout Diagram
+   Visual representation of PyWry's 7 toolbar positions
+   ========================================================== */
+
+.layout-diagram {
+  background: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px; padding: 0; margin: 0.75rem 0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px; color: #c9d1d9; overflow: hidden;
+}
+.layout-diagram .ld-header,
+.layout-diagram .ld-footer {
+  background: rgba(99, 102, 241, 0.12);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.25);
+  padding: 8px 16px; text-align: center; font-weight: 600; color: #818cf8;
+}
+.layout-diagram .ld-footer {
+  border-bottom: none; border-top: 1px solid rgba(99, 102, 241, 0.25);
+}
+.layout-diagram .ld-body { display: flex; min-height: 140px; }
+.layout-diagram .ld-left,
+.layout-diagram .ld-right {
+  background: rgba(34, 211, 238, 0.08);
+  padding: 16px 14px; display: flex; align-items: center; justify-content: center;
+  font-weight: 600; color: #22d3ee; min-width: 64px;
+}
+.layout-diagram .ld-left  { border-right: 1px solid rgba(34, 211, 238, 0.2); }
+.layout-diagram .ld-right { border-left: 1px solid rgba(34, 211, 238, 0.2); }
+.layout-diagram .ld-center { flex: 1; display: flex; flex-direction: column; }
+.layout-diagram .ld-top,
+.layout-diagram .ld-bottom {
+  background: rgba(251, 191, 36, 0.08);
+  padding: 6px 16px; text-align: center; font-weight: 600; color: #fbbf24;
+}
+.layout-diagram .ld-top    { border-bottom: 1px solid rgba(251, 191, 36, 0.2); }
+.layout-diagram .ld-bottom { border-top: 1px solid rgba(251, 191, 36, 0.2); }
+.layout-diagram .ld-content {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 20px; position: relative; color: #8b949e;
+}
+.layout-diagram .ld-inside {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(244, 114, 182, 0.12);
+  border: 1px dashed rgba(244, 114, 182, 0.35);
+  border-radius: 4px; padding: 4px 8px;
+  font-size: 11px; font-weight: 600; color: #f472b6;
+}

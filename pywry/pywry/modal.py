@@ -116,7 +116,7 @@ def _get_item_type_map() -> dict[str, type[ToolbarItem]]:
             "toggle": Toggle,
             "checkbox": Checkbox,
             "radio": RadioGroup,
-            "tabs": TabGroup,
+            "tab": TabGroup,
             "div": Div,
             "marquee": Marquee,
         }

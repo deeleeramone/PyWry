@@ -2,28 +2,18 @@
 
 The base class for all toolbar components. You typically won't use ToolbarItem directly—instead use specific components like Button, Select, or TextInput.
 
-## Component Hierarchy
+## Components
 
-```
-ToolbarItem (base)
-├── Button
-├── Select
-├── MultiSelect
-├── RadioGroup
-├── TabGroup
-├── TextInput
-├── TextArea
-├── SearchInput
-├── SecretInput
-├── NumberInput
-├── DateInput
-├── SliderInput
-├── RangeInput
-├── Toggle
-├── Checkbox
-├── Div
-└── Marquee
-```
+All toolbar components inherit from `ToolbarItem`:
+
+| Category | Components |
+|----------|-----------|
+| **Actions** | [Button](button.md) |
+| **Selection** | [Select](select.md), [MultiSelect](multiselect.md), [RadioGroup](radiogroup.md), [TabGroup](tabgroup.md) |
+| **Text Input** | [TextInput](textinput.md), [TextArea](textarea.md), [SearchInput](searchinput.md), [SecretInput](secretinput.md) |
+| **Numeric** | [NumberInput](numberinput.md), [DateInput](dateinput.md), [SliderInput](sliderinput.md), [RangeInput](rangeinput.md) |
+| **Toggles** | [Toggle](toggle.md), [Checkbox](checkbox.md) |
+| **Layout** | [Div](div.md), [Marquee](marquee.md) |
 
 ## Common Properties
 
@@ -40,24 +30,31 @@ All toolbar items inherit these properties:
 The `component_id` is essential for dynamic updates:
 
 ```python
-from pywry import Button
+from pywry import PyWry, Toolbar, Button
 
-# Without ID - cannot update dynamically
-Button(label="Click", event="action:click")
+app = PyWry()
 
-# With ID - can update later
-Button(
-    component_id="my-button",
-    label="Click",
-    event="action:click",
+def on_click(data, event_type, label):
+    # Update the button dynamically
+    app.emit("toolbar:set-value", {
+        "componentId": "my-button",
+        "label": "Clicked!",
+        "disabled": True,
+    }, label)
+
+app.show(
+    "<h1>Demo</h1>",
+    toolbars=[
+        Toolbar(position="top", items=[
+            Button(
+                component_id="my-button",  # ID required for dynamic updates
+                label="Click Me",
+                event="action:click",
+            )
+        ])
+    ],
+    callbacks={"action:click": on_click},
 )
-
-# Later, update the button
-widget.emit("toolbar:set-value", {
-    "componentId": "my-button",
-    "label": "Clicked!",
-    "disabled": True,
-})
 ```
 
 ## Type System
@@ -78,20 +75,31 @@ This type is used internally for rendering and serialization.
 All components can be disabled:
 
 ```python
-# Initially disabled
-Button(label="Submit", event="form:submit", disabled=True)
+from pywry import PyWry, Toolbar, Button
 
-# Disable dynamically
-widget.emit("toolbar:set-value", {
-    "componentId": "submit-btn",
-    "disabled": True,
-})
+app = PyWry()
 
-# Enable dynamically
-widget.emit("toolbar:set-value", {
-    "componentId": "submit-btn",
-    "disabled": False,
-})
+def on_click(data, event_type, label):
+    # Disable button after click
+    app.emit("toolbar:set-value", {
+        "componentId": "submit-btn",
+        "disabled": True,
+        "label": "Submitting...",
+    }, label)
+
+app.show(
+    "<h1>Form</h1>",
+    toolbars=[
+        Toolbar(position="top", items=[
+            Button(
+                component_id="submit-btn",
+                label="Submit",
+                event="form:submit",
+            )
+        ])
+    ],
+    callbacks={"form:submit": on_click},
+)
 ```
 
 ## Creating Custom Components

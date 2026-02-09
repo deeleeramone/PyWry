@@ -1,6 +1,8 @@
 # Plotly Charts
 
-PyWry provides first-class support for Plotly.js charts with automatic asset loading and event handling.
+PyWry provides first-class Plotly support — pass a Plotly figure to `show_plotly()` and get a fully interactive chart with pre-wired events, automatic theming, and programmatic update capabilities.
+
+For the complete Plotly configuration API, see [`PlotlyConfig`](../reference/plotly-config.md). For all Plotly events and payloads, see the [Event Reference](../reference/events.md#plotly-events-plotly).
 
 ## Basic Usage
 
@@ -36,19 +38,7 @@ config = PlotlyConfig(
 handle = app.show_plotly(fig, config=config)
 ```
 
-### PlotlyConfig Properties
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `responsive` | `bool` | `True` | Auto-resize with container |
-| `static_plot` | `bool` | `False` | Disable interactivity |
-| `scroll_zoom` | `bool` | `False` | Enable scroll wheel zoom |
-| `display_mode_bar` | `bool \| str` | `"hover"` | Show mode bar |
-| `display_logo` | `bool` | `False` | Show Plotly logo |
-| `double_click` | `str` | `"reset+autosize"` | Double-click behavior |
-| `editable` | `bool` | `False` | Allow editing titles/legends |
-| `mode_bar_buttons_to_remove` | `list` | `None` | Hide specific buttons |
-| `mode_bar_buttons_to_add` | `list` | `None` | Add custom buttons |
+For the full list of `PlotlyConfig` properties, see the [API Reference](../reference/plotly-config.md).
 
 ## Custom Mode Bar Buttons
 
@@ -100,16 +90,7 @@ handle = app.show_plotly(
 )
 ```
 
-### Available Events
-
-| Event | Trigger | Payload |
-|-------|---------|---------|
-| `plotly:click` | Point clicked | `{ points, point_indices, chartId }` |
-| `plotly:hover` | Point hovered | `{ points, point_indices, chartId }` |
-| `plotly:unhover` | Mouse leaves point | `{ chartId }` |
-| `plotly:selected` | Box/lasso selection | `{ points, range, chartId }` |
-| `plotly:deselect` | Selection cleared | `{ chartId }` |
-| `plotly:relayout` | Zoom/pan/resize | `{ relayout_data, chartId }` |
+For the complete list of Plotly events and payload structures, see the [Event Reference](../reference/events.md#plotly-events-plotly).
 
 ## Updating Charts
 
@@ -224,3 +205,10 @@ To change theme dynamically:
 ```python
 handle.emit("pywry:update-theme", {"theme": "light"})
 ```
+
+## Next Steps
+
+- **[`PlotlyConfig` Reference](../reference/plotly-config.md)** — All configuration options
+- **[Event Reference](../reference/events.md#plotly-events-plotly)** — Plotly event payloads
+- **[Toolbar System](toolbars.md)** — Adding controls to your charts
+- **[Theming & CSS](theming.md)** — Visual customization

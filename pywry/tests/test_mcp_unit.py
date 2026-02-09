@@ -12,6 +12,7 @@ Tests cover all MCP submodules:
 """
 
 # pylint: disable=protected-access,redefined-outer-name,too-many-lines
+# pylint: disable=E1121,
 
 from __future__ import annotations
 
@@ -1141,16 +1142,18 @@ class TestServerModule:
 
     def test_make_event_callback(self) -> None:
         """_make_event_callback creates working callback."""
-        from pywry.mcp.server import _make_event_callback
+        from pywry.mcp.server import _events, _make_event_callback
 
-        events: dict[str, list[dict[str, Any]]] = {}
-        callback = _make_event_callback(events, "widget-1")
+        _events.pop("widget-1", None)
+        callback = _make_event_callback("widget-1")
 
         callback({"clicked": True}, "button:click", "Save")
 
-        assert "widget-1" in events
-        assert len(events["widget-1"]) == 1
-        assert events["widget-1"][0]["event_type"] == "button:click"
+        assert "widget-1" in _events
+        assert len(_events["widget-1"]) == 1
+        assert _events["widget-1"][0]["event_type"] == "button:click"
+
+        _events.pop("widget-1", None)
 
     def test_create_server(self) -> None:
         """create_server returns configured Server."""
@@ -1165,12 +1168,12 @@ class TestServerModule:
 
     def test_create_server_custom_name(self) -> None:
         """create_server accepts custom name."""
-        from pywry.mcp.server import HAS_MCP, create_server
+        from pywry.mcp.server import HAS_MCP, MCPSettings, create_server
 
         if not HAS_MCP:
             pytest.skip("mcp package not available")
 
-        server = create_server(name="my-custom-server")
+        server = create_server(MCPSettings(name="my-custom-server"))
         assert server.name == "my-custom-server"
 
 

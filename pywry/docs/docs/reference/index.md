@@ -9,6 +9,12 @@ Complete API documentation for PyWry.
 | [pywry](pywry.md) | Main `PyWry` class for native windows |
 | [InlineWidget](inline-widget.md) | Browser/notebook widgets via FastAPI |
 
+## Events
+
+| Module | Description |
+|--------|-------------|
+| [Event Reference](events.md) | All events, payloads, and the JavaScript bridge API |
+
 ## Models & Configuration
 
 | Module | Description |

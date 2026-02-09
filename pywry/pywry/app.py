@@ -133,6 +133,10 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             self._hot_reload_manager.start()
             info("Hot reload enabled")
 
+        # Registry of inline (anywidget/IFrame) widgets for notebook mode
+        # Maps widget label -> widget instance, so app.emit() can route to them
+        self._inline_widgets: dict[str, Any] = {}
+
         # Cache for bundled assets
         self._plotly_js: str | None = None
         self._aggrid_js: str | None = None
@@ -161,6 +165,17 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             return BrowserMode()
         # MULTI_WINDOW
         return MultiWindowMode()
+
+    def _register_inline_widget(self, widget: Any) -> None:
+        """Register an inline widget so app.emit() can route events to it.
+
+        Parameters
+        ----------
+        widget : BaseWidget
+            Widget instance with a ``label`` attribute and ``emit`` method.
+        """
+        if hasattr(widget, "label") and hasattr(widget, "emit"):
+            self._inline_widgets[widget.label] = widget
 
     @property
     def settings(self) -> PyWrySettings:
@@ -304,7 +319,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             if is_browser_mode:
                 from . import inline as pywry_inline
 
-                return pywry_inline.show(
+                widget = pywry_inline.show(
                     content=html_str,
                     title=title or self._default_config.title,
                     width="100%",
@@ -318,13 +333,15 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                     modals=modals,
                     open_browser=True,
                 )
+                self._register_inline_widget(widget)
+                return widget
 
             # For notebook inline: use PyWryWidget (AnyWidget) for plain HTML
             # Use InlineWidget only for Plotly/AG Grid (they need specialized handling)
             if include_plotly or include_aggrid:
                 from . import inline as pywry_inline
 
-                return pywry_inline.show(
+                widget = pywry_inline.show(
                     content=html_str,
                     title=title or self._default_config.title,
                     width="100%",
@@ -338,6 +355,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                     modals=modals,
                     open_browser=False,
                 )
+                self._register_inline_widget(widget)
+                return widget
 
             # Plain HTML with toolbars: use PyWryWidget (AnyWidget) if available
             # Otherwise fall back to InlineWidget (IFrame)
@@ -347,7 +366,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 # Fall back to InlineWidget when anywidget is not available
                 from . import inline as pywry_inline
 
-                return pywry_inline.show(
+                widget = pywry_inline.show(
                     content=html_str,
                     title=title or self._default_config.title,
                     width="100%",
@@ -361,6 +380,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                     modals=modals,
                     open_browser=False,
                 )
+                self._register_inline_widget(widget)
+                return widget
 
             from .widget import PyWryWidget
 
@@ -381,6 +402,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 toolbars=toolbars,
                 modals=modals,
             )
+            self._register_inline_widget(widget)
             widget.display()  # Auto-display in notebook
             return widget
 
@@ -522,7 +544,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 config=config,
                 open_browser=is_browser_mode,  # Open in browser for BROWSER mode
             )
-
+            self._register_inline_widget(widget)
             return widget
 
         # Generate unique chart ID
@@ -661,7 +683,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             if on_row_selected and "row_selected" not in inline_callbacks:
                 inline_callbacks["row_selected"] = on_row_selected
 
-            return pywry_inline.show_dataframe(
+            widget = pywry_inline.show_dataframe(
                 df=data,
                 title=title or "Data Table",
                 width="100%",
@@ -673,6 +695,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 callbacks=inline_callbacks,
                 open_browser=is_browser_mode,  # Open in browser for BROWSER mode
             )
+            self._register_inline_widget(widget)
+            return widget
 
         # Use unified grid config builder for column defs with type detection
         from .grid import build_column_defs, normalize_data
@@ -833,6 +857,10 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             Window label. If None, targets all active windows.
         """
         labels = [label] if label else self._mode.get_labels()
+
+        # Also include inline (notebook) widgets when targeting all
+        if not label and self._inline_widgets:
+            labels = list(set(labels) | set(self._inline_widgets.keys()))
 
         for lbl in labels:
             self.send_event(event_type, data, label=lbl)
@@ -1150,16 +1178,29 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             True if event was sent to at least one window.
         """
         if label:
+            # Check inline widgets first (notebook/anywidget mode)
+            inline_widget = self._inline_widgets.get(label)
+            if inline_widget is not None:
+                inline_widget.emit(event_type, data)
+                return True
             return self._mode.send_event(label, event_type, data)
 
-        # Send to all windows
-        labels = self._mode.get_labels()
-        if not labels:
+        # Send to all windows (native + inline)
+        labels = list(self._mode.get_labels())
+        # Include inline widgets when targeting all
+        inline_labels = set(self._inline_widgets.keys()) - set(labels)
+        all_labels = labels + list(inline_labels)
+
+        if not all_labels:
             return False
 
         success = False
-        for lbl in labels:
-            if self._mode.send_event(lbl, event_type, data):
+        for lbl in all_labels:
+            inline_widget = self._inline_widgets.get(lbl)
+            if inline_widget is not None:
+                inline_widget.emit(event_type, data)
+                success = True
+            elif self._mode.send_event(lbl, event_type, data):
                 success = True
 
         return success

@@ -2632,6 +2632,12 @@ html.light .pywry-input-date {
 .pywry-content:has(.pywry-plotly) .pywry-scroll-container {
     overflow: hidden;
     padding: 16px;
+    /* Must be flex column so children with flex:1 (pywry-plotly, pywry-grid) fill height.
+       Without this, anywidget context has no flex parent and charts collapse to content height. */
+    display: flex;
+    display: -webkit-flex;
+    flex-direction: column;
+    -webkit-flex-direction: column;
 }
 
 .pywry-grid {

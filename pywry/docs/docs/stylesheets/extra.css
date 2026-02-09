@@ -10,10 +10,32 @@
   --md-code-bg-color: #161b22;
 }
 
+/* Header styling - reduce padding */
+.md-header__inner {
+  padding: 0 0.5rem;
+}
+.md-tabs__inner {
+  padding: 0 0.5rem;
+}
+
 /* Eliminate wasted space */
 .md-main__inner { max-width: 100%; }
 .md-content__inner { max-width: 100%; margin: 0; padding: 0 1rem; }
 .md-typeset h1 { margin-top: 0; }
+
+/* Center content when navigation is hidden (e.g., index page) */
+.md-content--center .md-content__inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* When no sidebar exists, center the content */
+.md-main:not(:has(.md-sidebar--primary)) .md-content__inner,
+.md-main:not(:has(.md-sidebar--secondary)) .md-content__inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
 
 /* Compact sidebars */
 .md-sidebar { width: 12rem; }

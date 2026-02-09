@@ -45,6 +45,10 @@ theme:
 
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/component-previews.css
+
+extra_javascript:
+  - javascripts/component-previews.js
 
 markdown_extensions:
   - abbr
@@ -129,7 +133,7 @@ plugins:
             line_length: 80
             annotations_path: source  # Use actual source annotations
             # Inheritance
-            inherited_members: false
+            inherited_members: true
             # Filters
             show_if_no_docstring: false
             # Type annotations
@@ -211,6 +215,8 @@ nav:
     - Core:
       - pywry: reference/pywry.md
       - InlineWidget: reference/inline-widget.md
+    - Events:
+      - Event Reference: reference/events.md
     - Models:
       - pywry.models: reference/models.md
     - Configuration:
@@ -229,6 +235,29 @@ nav:
       - CSS Reference: reference/css.md
     - MCP:
       - MCP Server: reference/mcp.md
+    - Components:
+      - reference/components/index.md
+      - Button: reference/components/button.md
+      - Checkbox: reference/components/checkbox.md
+      - DateInput: reference/components/dateinput.md
+      - Div: reference/components/div.md
+      - Marquee: reference/components/marquee.md
+      - MultiSelect: reference/components/multiselect.md
+      - NumberInput: reference/components/numberinput.md
+      - Option: reference/components/option.md
+      - RadioGroup: reference/components/radiogroup.md
+      - RangeInput: reference/components/rangeinput.md
+      - SearchInput: reference/components/searchinput.md
+      - SecretInput: reference/components/secretinput.md
+      - Select: reference/components/select.md
+      - SliderInput: reference/components/sliderinput.md
+      - TabGroup: reference/components/tabgroup.md
+      - TextArea: reference/components/textarea.md
+      - TextInput: reference/components/textinput.md
+      - TickerItem: reference/components/tickeritem.md
+      - Toggle: reference/components/toggle.md
+      - Toolbar: reference/components/toolbar.md
+      - ToolbarItem: reference/components/toolbaritem.md
     - Utilities:
       - pywry.asset_loader: reference/asset-loader.md
       - pywry.hot_reload: reference/hot-reload.md

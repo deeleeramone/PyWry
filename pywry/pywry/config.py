@@ -573,8 +573,8 @@ class ServerSettings(BaseSettings):
 class MCPSettings(BaseSettings):
     """MCP (Model Context Protocol) server settings.
 
-    Controls the MCP server for AI agent integration. The MCP server
-    manages its own runtime (native windows or headless mode) and state.
+    Controls the MCP server for AI agent integration using FastMCP.
+    The MCP server manages its own runtime (native windows or headless mode) and state.
 
     Environment prefix: PYWRY_MCP__
     Example: PYWRY_MCP__TRANSPORT=sse
@@ -587,24 +587,82 @@ class MCPSettings(BaseSettings):
         extra="ignore",
     )
 
+    # Server identity
+    name: str = Field(
+        default="pywry-widgets",
+        description="MCP server name (advertised to clients)",
+    )
+    version: str | None = Field(
+        default=None,
+        description="Server version string (auto-detected from package if None)",
+    )
+    instructions: str | None = Field(
+        default=None,
+        description="Server instructions shown to AI agents describing capabilities",
+    )
+
     # Transport settings
-    transport: Literal["stdio", "sse"] = Field(
+    transport: Literal["stdio", "sse", "streamable-http"] = Field(
         default="stdio",
-        description="Transport type: 'stdio' for CLI/Claude Desktop, 'sse' for HTTP",
+        description="Transport type: 'stdio' for CLI/Claude Desktop, 'sse' or 'streamable-http' for HTTP",
     )
     host: str = Field(
         default="127.0.0.1",
-        description="Host for SSE transport",
+        description="Host for HTTP transports (SSE/streamable-http)",
     )
     port: int = Field(
         default=8001,
         ge=1,
         le=65535,
-        description="Port for SSE transport",
+        description="Port for HTTP transports",
     )
-    name: str = Field(
-        default="pywry-widgets",
-        description="MCP server name (advertised to clients)",
+
+    # HTTP endpoint paths (FastMCP)
+    sse_path: str = Field(
+        default="/sse",
+        description="SSE endpoint path (for SSE transport)",
+    )
+    message_path: str = Field(
+        default="/messages/",
+        description="Message endpoint path (for SSE transport)",
+    )
+    streamable_http_path: str = Field(
+        default="/mcp",
+        description="Streamable HTTP endpoint path (for streamable-http transport)",
+    )
+
+    # HTTP behavior (FastMCP)
+    json_response: bool = Field(
+        default=False,
+        description="Return JSON instead of SSE for HTTP transports",
+    )
+    stateless_http: bool = Field(
+        default=False,
+        description="Enable stateless HTTP mode (no session management)",
+    )
+
+    # Validation and error handling (FastMCP)
+    strict_input_validation: bool = Field(
+        default=False,
+        description="Enable stricter JSON schema validation for tool inputs",
+    )
+    mask_error_details: bool = Field(
+        default=False,
+        description="Hide detailed error messages in production (show generic errors)",
+    )
+    debug: bool = Field(
+        default=False,
+        description="Enable FastMCP debug mode (verbose logging, detailed errors)",
+    )
+
+    # Tool filtering (FastMCP)
+    include_tags: Annotated[list[str], NoDecode] = Field(
+        default_factory=list,
+        description="Only expose tools with these tags (empty = all tools)",
+    )
+    exclude_tags: Annotated[list[str], NoDecode] = Field(
+        default_factory=list,
+        description="Exclude tools with these tags",
     )
 
     # Rendering mode
@@ -660,6 +718,14 @@ class MCPSettings(BaseSettings):
         default=True,
         description="Auto-load skill documents when agents connect",
     )
+
+    @field_validator("include_tags", "exclude_tags", mode="before")
+    @classmethod
+    def parse_comma_separated(cls, v: Any) -> list[str]:
+        """Parse comma-separated strings from env vars."""
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v or []
 
 
 class PyWrySettings(BaseSettings):

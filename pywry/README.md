@@ -2289,7 +2289,7 @@ These events are emitted automatically when users interact with toolbar chrome:
 |-------|-----------|---------|-------------|
 | `toolbar:state-response` | JS → Python | `{ toolbars, components, timestamp, context? }` | Response to state request |
 | `toolbar:request-state` | Python → JS | `{ toolbarId?, componentId?, context? }` | Request current state |
-| `toolbar:set-value` | Python → JS | `{ componentId, value, toolbarId? }` | Set single component value |
+| `toolbar:set-value` | Python → JS | `{ componentId, value?, label?, disabled?, ...attrs }` | Set component value and/or attributes |
 | `toolbar:set-values` | Python → JS | `{ values: { id: value, ... }, toolbarId? }` | Set multiple component values |
 
 #### Marquee Events
@@ -4243,6 +4243,45 @@ handle = app.show(
     callbacks={"app:reset": on_reset}
 )
 ```
+
+**Setting Component Attributes** (labels, disabled state, etc.):
+
+```python
+def on_submit(data, event_type, label):
+    """Show loading state then re-enable."""
+    # Update button label and disable
+    handle.set_toolbar_value("submit-btn", label="Saving...", disabled=True)
+    
+    # ... do work ...
+    
+    # Re-enable with original label
+    handle.set_toolbar_value("submit-btn", label="Submit", disabled=False)
+
+def on_category_change(data, event_type, label):
+    """Update dropdown options dynamically."""
+    category = data.get("value")
+    if category == "fruits":
+        options = [{"label": "Apple", "value": "apple"}, {"label": "Banana", "value": "banana"}]
+    else:
+        options = [{"label": "Carrot", "value": "carrot"}, {"label": "Broccoli", "value": "broccoli"}]
+    
+    handle.set_toolbar_value("item-select", value=options[0]["value"], options=options)
+```
+
+Supported attributes for `set_toolbar_value()`:
+
+| Attribute | Description | Example |
+|-----------|-------------|---------|
+| `value` | Component value | `value="dark"` |
+| `label`/`text` | Text content | `label="Loading..."` |
+| `disabled` | Enable/disable | `disabled=True` |
+| `variant` | Button style | `variant="danger"` |
+| `tooltip`/`description` | Hover text | `tooltip="Click to save"` |
+| `options` | Dropdown options | `options=[{"label": "A", "value": "a"}]` |
+| `style` | Inline CSS | `style={"color": "red"}` |
+| `className` | CSS classes | `className={"add": ["active"]}` |
+| `placeholder` | Input hint | `placeholder="Search..."` |
+| `min`/`max`/`step` | Input constraints | `min=0, max=100` |
 
 </details>
 

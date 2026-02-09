@@ -969,6 +969,24 @@ app.on("toolbar:state-response", on_state)
 # Set single component value
 app.emit("toolbar:set-value", {"componentId": "my-select", "value": "option2"}, label)
 
+# Set value with attributes (label, disabled, etc.)
+app.emit("toolbar:set-value", {
+    "componentId": "submit-btn",
+    "label": "Saving...",
+    "disabled": True
+}, label)
+
+# Update dropdown options dynamically
+app.emit("toolbar:set-value", {
+    "componentId": "type-select",
+    "value": "bar",
+    "options": [{"label": "Bar", "value": "bar"}, {"label": "Line", "value": "line"}]
+}, label)
+
+# Or use widget method (recommended)
+widget.set_toolbar_value("submit-btn", label="Saving...", disabled=True)
+widget.set_toolbar_value("type-select", value="bar", options=[...])
+
 # Set multiple values
 app.emit("toolbar:set-values", {"values": {"select-1": "A", "toggle-1": True}}, label)
 ```

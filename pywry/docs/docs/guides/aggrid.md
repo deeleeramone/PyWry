@@ -1,6 +1,8 @@
-# AgGrid Tables
+# AG Grid Tables
 
-PyWry provides first-class support for AG Grid with automatic asset loading and event handling.
+PyWry provides first-class AG Grid support — pass a Pandas DataFrame to `show_dataframe()` and get sortable, filterable, editable data tables with pre-wired events.
+
+For the complete column and grid configuration API, see the [Grid Reference](../reference/grid.md). For all grid events and payloads, see the [Event Reference](../reference/events.md#ag-grid-events-grid).
 
 ## Basic Usage
 
@@ -37,28 +39,7 @@ columns = [
 handle = app.show_dataframe(df, column_defs=columns)
 ```
 
-### ColDef Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `field` | `str` | Column data field |
-| `header_name` | `str` | Display header |
-| `width` | `int` | Column width in pixels |
-| `min_width` | `int` | Minimum column width |
-| `max_width` | `int` | Maximum column width |
-| `flex` | `int` | Flex sizing factor |
-| `sortable` | `bool` | Enable sorting |
-| `filter` | `bool \| str` | Enable filtering |
-| `editable` | `bool` | Allow editing |
-| `resizable` | `bool` | Allow resizing |
-| `pinned` | `str` | Pin to `"left"` or `"right"` |
-| `hide` | `bool` | Hide column |
-| `value_formatter` | `str` | JS expression for formatting |
-| `value_getter` | `str` | JS expression for value |
-| `cell_renderer` | `str` | Custom cell renderer |
-| `cell_class` | `str \| list` | CSS class for cells |
-| `cell_style` | `dict` | Inline styles for cells |
-| `cell_data_type` | `str` | Data type hint |
+For the full list of `ColDef` properties, see the [Grid Reference](../reference/grid.md).
 
 ## Grid Options
 
@@ -77,19 +58,7 @@ options = GridOptions(
 handle = app.show_dataframe(df, grid_options=options)
 ```
 
-### GridOptions Properties
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `pagination` | `bool` | `None` | Enable pagination |
-| `pagination_page_size` | `int` | `100` | Rows per page |
-| `row_selection` | `dict \| bool` | `None` | Row selection config |
-| `cell_selection` | `bool` | `True` | Enable cell selection |
-| `animate_rows` | `bool` | `True` | Animate row changes |
-| `single_click_edit` | `bool` | `None` | Edit on single click |
-| `undo_redo_cell_editing` | `bool` | `True` | Enable undo/redo |
-| `dom_layout` | `str` | `"normal"` | Layout mode |
-| `default_col_def` | `dict` | `None` | Default column properties |
+For the full list of `GridOptions` properties, see the [Grid Reference](../reference/grid.md).
 
 ## Grid Events
 
@@ -121,16 +90,7 @@ handle = app.show_dataframe(
 )
 ```
 
-### Available Events
-
-| Event | Trigger | Payload |
-|-------|---------|---------|
-| `grid:row-selected` | Row selection changes | `{ rows, gridId }` |
-| `grid:cell-click` | Cell clicked | `{ rowIndex, colId, value, data, gridId }` |
-| `grid:cell-double-click` | Cell double-clicked | `{ rowIndex, colId, value, data, gridId }` |
-| `grid:cell-edit` | Cell edited | `{ rowId, colId, oldValue, newValue, gridId }` |
-| `grid:filter-changed` | Filter applied | `{ filterModel, gridId }` |
-| `grid:sort-changed` | Sort applied | `{ sortModel, gridId }` |
+For the complete list of grid events and payload structures, see the [Event Reference](../reference/events.md#ag-grid-events-grid).
 
 ## Updating Grid Data
 
@@ -154,8 +114,6 @@ handle = app.show_dataframe(df, aggrid_theme="material")
 Themes automatically adapt to PyWry's light/dark mode.
 
 ## With Toolbars
-
-Add interactive controls above the grid:
 
 ```python
 from pywry import Toolbar, Button, TextInput
@@ -188,3 +146,10 @@ handle = app.show_dataframe(
     },
 )
 ```
+
+## Next Steps
+
+- **[Grid Reference](../reference/grid.md)** — Full `ColDef`, `GridOptions` API
+- **[Event Reference](../reference/events.md#ag-grid-events-grid)** — All grid event payloads
+- **[Toolbar System](toolbars.md)** — Building interactive controls
+- **[Theming & CSS](theming.md)** — Styling the grid

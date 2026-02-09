@@ -320,77 +320,12 @@ app.block()
 
 ---
 
-## The Callback Signature
-
-Every callback function receives three arguments:
-
-```python
-def my_callback(data: dict, event_type: str, label: str) -> None:
-    """
-    Parameters
-    ----------
-    data : dict
-        The event payload from JavaScript. Contents depend on the event type.
-        For example, `grid:row-selected` includes `{"rows": [...]}`.
-    
-    event_type : str
-        The event name that triggered this callback (e.g., "app:click").
-    
-    label : str
-        The unique identifier of the window/widget that sent the event.
-        Use this to target responses back to the correct window.
-    """
-    pass
-```
-
----
-
-## Sending Events to JavaScript
-
-There are two ways to send events from Python to JavaScript:
-
-### Using the handle/widget returned by `show_*()`
-
-```python
-handle = app.show("<h1>Hello</h1>")
-handle.emit("pywry:set-content", {"selector": "h1", "text": "Updated!"})
-```
-
-### Using `app.emit()` with a label
-
-```python
-handle = app.show("<h1>Hello</h1>")
-app.emit("pywry:set-content", {"selector": "h1", "text": "Updated!"}, handle.label)
-```
-
-Both approaches work identically. Inside a callback, you typically use `app.emit(..., label)` since you receive the `label` as a parameter.
-
----
-
-## Common Built-in Events
-
-PyWry includes many pre-registered events you can use immediately:
-
-| Event | Direction | Description |
-|-------|-----------|-------------|
-| `pywry:set-content` | Python → JS | Update element text/HTML by selector or id |
-| `pywry:alert` | Python → JS | Show a toast notification |
-| `pywry:set-style` | Python → JS | Update element CSS styles |
-| `pywry:inject-css` | Python → JS | Add custom CSS to the page |
-| `plotly:click` | JS → Python | Plotly chart point clicked |
-| `plotly:update-layout` | Python → JS | Update Plotly chart layout |
-| `grid:row-selected` | JS → Python | AG Grid rows selected |
-| `grid:update-data` | Python → JS | Update AG Grid data |
-
-See the [Event System](../guides/events.md) guide for the complete list.
-
----
-
 ## Next Steps
 
 You now understand the basics of PyWry. Continue with:
 
-- [Rendering Paths](rendering-paths.md) — Learn about native windows, notebook widgets, and browser mode
-- [Event System](../guides/events.md) — Complete event reference
-- [Toolbar System](../guides/toolbars.md) — All 18 toolbar components
+- [Rendering Paths](rendering-paths.md) — Native windows, notebook widgets, and browser mode
+- [Event System](../guides/events.md) — How callbacks work and common patterns
+- [Event Reference](../reference/events.md) — Complete list of all events and payloads
+- [Toolbar System](../guides/toolbars.md) — Building interactive controls
 - [Configuration](../guides/configuration.md) — TOML files, environment variables, security presets

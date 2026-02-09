@@ -250,7 +250,10 @@ def handle_mcp(args: argparse.Namespace) -> int:
     transport = args.transport if args.transport is not None else mcp_config.transport
     port = args.port if args.port is not None else mcp_config.port
     host = args.host if args.host is not None else mcp_config.host
-    name = args.name if args.name is not None else mcp_config.name
+
+    # Apply name override to the config object
+    if args.name is not None:
+        mcp_config = mcp_config.model_copy(update={"name": args.name})
 
     # Handle headless mode: CLI flags override config, which overrides PYWRY_HEADLESS env
     import os
@@ -270,8 +273,8 @@ def handle_mcp(args: argparse.Namespace) -> int:
             transport=transport,
             port=port,
             host=host,
-            name=name,
             headless=headless,
+            settings=mcp_config,
         )
     except KeyboardInterrupt:
         print("\nMCP server stopped.")

@@ -145,24 +145,34 @@ app.show(
 Components can have initial values that update dynamically:
 
 ```python
-from pywry import SliderInput
+from pywry import PyWry, Toolbar, SliderInput, Button
 
-# Initial value
-slider = SliderInput(
-    component_id="volume-slider",
-    label="Volume",
-    event="audio:volume",
-    value=50,  # Initial value
-    min=0,
-    max=100,
-)
+app = PyWry()
 
-# Update programmatically in a callback
 def on_max_volume(data, event_type, label):
-    widget.emit("toolbar:set-value", {
+    app.emit("toolbar:set-value", {
         "componentId": "volume-slider",
         "value": 100
-    })
+    }, label)
+    app.emit("pywry:alert", {"message": "Volume set to max!", "type": "info"}, label)
+
+app.show(
+    "<h1>Audio Controls</h1>",
+    toolbars=[
+        Toolbar(position="top", items=[
+            SliderInput(
+                component_id="volume-slider",
+                label="Volume",
+                event="audio:volume",
+                value=50,
+                min=0,
+                max=100,
+            ),
+            Button(label="Max Volume", event="audio:max", variant="primary"),
+        ])
+    ],
+    callbacks={"audio:max": on_max_volume},
+)
 ```
 
 ## Next Steps

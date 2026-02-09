@@ -1,5 +1,7 @@
 """JavaScript bridge scripts for PyWry."""
 
+# pylint: disable=C0302
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -658,7 +660,7 @@ TOOLBAR_BRIDGE_JS = """
         return null;
     }
 
-    function setComponentValue(componentId, value, options) {
+    function setComponentValue(componentId, value, attrs) {
         var el = document.getElementById(componentId);
         if (!el) return false;
 
@@ -669,8 +671,252 @@ TOOLBAR_BRIDGE_JS = """
             return false;
         }
 
+        // Generic attribute setter - handles any attribute for any component
+        // Accepts attrs object with attribute name: value pairs
+        if (attrs && typeof attrs === 'object') {
+            Object.keys(attrs).forEach(function(attrName) {
+                var attrValue = attrs[attrName];
+
+                // Skip componentId, toolbarId, value (handled separately), options (handled separately)
+                if (attrName === 'componentId' || attrName === 'toolbarId') return;
+
+                // Handle specific attribute types
+                switch (attrName) {
+                    case 'label':
+                    case 'text':
+                        // Update text content - find text element or use el directly
+                        if (el.classList.contains('pywry-toolbar-button') || el.tagName === 'BUTTON') {
+                            el.textContent = attrValue;
+                        } else if (el.classList.contains('pywry-dropdown')) {
+                            var textEl = el.querySelector('.pywry-dropdown-text');
+                            if (textEl) textEl.textContent = attrValue;
+                        } else if (el.classList.contains('pywry-checkbox') || el.classList.contains('pywry-toggle')) {
+                            var labelEl = el.querySelector('.pywry-checkbox-label, .pywry-input-label');
+                            if (labelEl) labelEl.textContent = attrValue;
+                        } else if (el.classList.contains('pywry-tab-group')) {
+                            // For tab groups, label refers to the group label
+                            var groupLabel = el.closest('.pywry-input-group');
+                            if (groupLabel) {
+                                var lbl = groupLabel.querySelector('.pywry-input-label');
+                                if (lbl) lbl.textContent = attrValue;
+                            }
+                        } else {
+                            // Generic fallback - try to find label span or set text directly
+                            var label = el.querySelector('.pywry-input-label');
+                            if (label) {
+                                label.textContent = attrValue;
+                            } else if (el.textContent !== undefined) {
+                                el.textContent = attrValue;
+                            }
+                        }
+                        break;
+
+                    case 'html':
+                    case 'innerHTML':
+                        // Update HTML content
+                        if (el.classList.contains('pywry-toolbar-button') || el.tagName === 'BUTTON') {
+                            el.innerHTML = attrValue;
+                        } else if (el.classList.contains('pywry-dropdown')) {
+                            var textEl = el.querySelector('.pywry-dropdown-text');
+                            if (textEl) textEl.innerHTML = attrValue;
+                        } else {
+                            el.innerHTML = attrValue;
+                        }
+                        break;
+
+                    case 'disabled':
+                        // Toggle disabled state
+                        if (attrValue) {
+                            el.setAttribute('disabled', 'disabled');
+                            el.classList.add('pywry-disabled');
+                            // Also disable any inputs inside
+                            el.querySelectorAll('input, button, select, textarea').forEach(function(inp) {
+                                inp.setAttribute('disabled', 'disabled');
+                            });
+                        } else {
+                            el.removeAttribute('disabled');
+                            el.classList.remove('pywry-disabled');
+                            el.querySelectorAll('input, button, select, textarea').forEach(function(inp) {
+                                inp.removeAttribute('disabled');
+                            });
+                        }
+                        break;
+
+                    case 'variant':
+                        // Swap variant class for buttons
+                        if (el.classList.contains('pywry-toolbar-button') || el.tagName === 'BUTTON') {
+                            // Remove existing variant classes
+                            var variants = ['primary', 'secondary', 'neutral', 'ghost', 'outline', 'danger', 'warning', 'icon'];
+                            variants.forEach(function(v) {
+                                el.classList.remove('pywry-btn-' + v);
+                            });
+                            // Add new variant (if not primary, which is default with no class)
+                            if (attrValue && attrValue !== 'primary') {
+                                el.classList.add('pywry-btn-' + attrValue);
+                            }
+                        }
+                        break;
+
+                    case 'size':
+                        // Swap size class for buttons/tabs
+                        if (el.classList.contains('pywry-toolbar-button') || el.tagName === 'BUTTON' || el.classList.contains('pywry-tab-group')) {
+                            var sizes = ['xs', 'sm', 'lg', 'xl'];
+                            sizes.forEach(function(s) {
+                                el.classList.remove('pywry-btn-' + s);
+                                el.classList.remove('pywry-tab-' + s);
+                            });
+                            if (attrValue) {
+                                if (el.classList.contains('pywry-tab-group')) {
+                                    el.classList.add('pywry-tab-' + attrValue);
+                                } else {
+                                    el.classList.add('pywry-btn-' + attrValue);
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'description':
+                    case 'tooltip':
+                        // Update data-tooltip attribute
+                        if (attrValue) {
+                            el.setAttribute('data-tooltip', attrValue);
+                        } else {
+                            el.removeAttribute('data-tooltip');
+                        }
+                        break;
+
+                    case 'data':
+                        // Update data-data attribute (JSON payload for buttons)
+                        if (attrValue) {
+                            el.setAttribute('data-data', JSON.stringify(attrValue));
+                        } else {
+                            el.removeAttribute('data-data');
+                        }
+                        break;
+
+                    case 'event':
+                        // Update data-event attribute
+                        el.setAttribute('data-event', attrValue);
+                        break;
+
+                    case 'style':
+                        // Update inline styles - can be string or object
+                        if (typeof attrValue === 'string') {
+                            el.style.cssText = attrValue;
+                        } else if (typeof attrValue === 'object') {
+                            Object.keys(attrValue).forEach(function(prop) {
+                                el.style[prop] = attrValue[prop];
+                            });
+                        }
+                        break;
+
+                    case 'className':
+                    case 'class':
+                        // Add/remove CSS classes
+                        if (typeof attrValue === 'string') {
+                            attrValue.split(' ').forEach(function(cls) {
+                                if (cls) el.classList.add(cls);
+                            });
+                        } else if (typeof attrValue === 'object') {
+                            // Object format: {add: ['cls1'], remove: ['cls2']}
+                            if (attrValue.add) {
+                                (Array.isArray(attrValue.add) ? attrValue.add : [attrValue.add]).forEach(function(cls) {
+                                    if (cls) el.classList.add(cls);
+                                });
+                            }
+                            if (attrValue.remove) {
+                                (Array.isArray(attrValue.remove) ? attrValue.remove : [attrValue.remove]).forEach(function(cls) {
+                                    if (cls) el.classList.remove(cls);
+                                });
+                            }
+                        }
+                        break;
+
+                    case 'checked':
+                        // Toggle checked state for checkboxes/toggles
+                        var checkbox = el.querySelector('input[type="checkbox"]') || (el.type === 'checkbox' ? el : null);
+                        if (checkbox) {
+                            checkbox.checked = !!attrValue;
+                            // Update visual state
+                            if (attrValue) {
+                                el.classList.add('pywry-toggle-checked');
+                            } else {
+                                el.classList.remove('pywry-toggle-checked');
+                            }
+                        }
+                        break;
+
+                    case 'selected':
+                        // Update selected value for radio groups, tab groups
+                        if (el.classList.contains('pywry-radio-group')) {
+                            el.querySelectorAll('input[type="radio"]').forEach(function(radio) {
+                                radio.checked = radio.value === attrValue;
+                            });
+                        } else if (el.classList.contains('pywry-tab-group')) {
+                            el.querySelectorAll('.pywry-tab').forEach(function(tab) {
+                                if (tab.dataset.value === attrValue) {
+                                    tab.classList.add('pywry-tab-active');
+                                } else {
+                                    tab.classList.remove('pywry-tab-active');
+                                }
+                            });
+                        }
+                        break;
+
+                    case 'placeholder':
+                        // Update placeholder for inputs
+                        var input = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ? el : el.querySelector('input, textarea');
+                        if (input) {
+                            input.setAttribute('placeholder', attrValue);
+                        }
+                        break;
+
+                    case 'min':
+                    case 'max':
+                    case 'step':
+                        // Update constraints for number/range inputs
+                        var numInput = el.tagName === 'INPUT' ? el : el.querySelector('input[type="number"], input[type="range"]');
+                        if (numInput) {
+                            numInput.setAttribute(attrName, attrValue);
+                        }
+                        break;
+
+                    case 'options':
+                        // Handled separately below for dropdowns
+                        break;
+
+                    case 'value':
+                        // Handled separately below
+                        break;
+
+                    default:
+                        // Generic attribute setter - set as data attribute or HTML attribute
+                        if (attrName.startsWith('data-')) {
+                            el.setAttribute(attrName, attrValue);
+                        } else {
+                            // Try to set as property first, then as attribute
+                            try {
+                                if (attrName in el) {
+                                    el[attrName] = attrValue;
+                                } else {
+                                    el.setAttribute(attrName, attrValue);
+                                }
+                            } catch (e) {
+                                el.setAttribute(attrName, attrValue);
+                            }
+                        }
+                }
+            });
+        }
+
+        // Handle value and options (backward compatible behavior)
+        var options = attrs && attrs.options;
+        if (value === undefined && attrs && attrs.value !== undefined) {
+            value = attrs.value;
+        }
+
         if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
-            el.value = value;
+            if (value !== undefined) el.value = value;
             return true;
         } else if (el.classList.contains('pywry-dropdown')) {
             if (options && Array.isArray(options)) {
@@ -683,26 +929,113 @@ TOOLBAR_BRIDGE_JS = """
                     }).join('');
                 }
             }
-            var textEl = el.querySelector('.pywry-dropdown-text');
-            if (textEl) {
-                var optionEl = el.querySelector('.pywry-dropdown-option[data-value="' + value + '"]');
-                if (optionEl) {
-                    textEl.textContent = optionEl.textContent;
-                    el.querySelectorAll('.pywry-dropdown-option').forEach(function(opt) {
-                        opt.classList.remove('pywry-selected');
-                    });
-                    optionEl.classList.add('pywry-selected');
+            if (value !== undefined) {
+                var textEl = el.querySelector('.pywry-dropdown-text');
+                if (textEl) {
+                    var optionEl = el.querySelector('.pywry-dropdown-option[data-value="' + value + '"]');
+                    if (optionEl) {
+                        textEl.textContent = optionEl.textContent;
+                        el.querySelectorAll('.pywry-dropdown-option').forEach(function(opt) {
+                            opt.classList.remove('pywry-selected');
+                        });
+                        optionEl.classList.add('pywry-selected');
+                    }
                 }
             }
             return true;
         } else if (el.classList.contains('pywry-multiselect')) {
-            var values = Array.isArray(value) ? value : [value];
-            el.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
-                cb.checked = values.includes(cb.value);
-            });
+            if (value !== undefined) {
+                var values = Array.isArray(value) ? value : [value];
+                el.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+                    cb.checked = values.includes(cb.value);
+                });
+            }
+            return true;
+        } else if (el.classList.contains('pywry-toggle')) {
+            if (value !== undefined) {
+                var checkbox = el.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !!value;
+                    if (value) {
+                        el.classList.add('pywry-toggle-checked');
+                    } else {
+                        el.classList.remove('pywry-toggle-checked');
+                    }
+                }
+            }
+            return true;
+        } else if (el.classList.contains('pywry-checkbox')) {
+            if (value !== undefined) {
+                var checkbox = el.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = !!value;
+            }
+            return true;
+        } else if (el.classList.contains('pywry-radio-group')) {
+            if (value !== undefined) {
+                el.querySelectorAll('input[type="radio"]').forEach(function(radio) {
+                    radio.checked = radio.value === value;
+                });
+            }
+            return true;
+        } else if (el.classList.contains('pywry-tab-group')) {
+            if (value !== undefined) {
+                el.querySelectorAll('.pywry-tab').forEach(function(tab) {
+                    if (tab.dataset.value === value) {
+                        tab.classList.add('pywry-tab-active');
+                    } else {
+                        tab.classList.remove('pywry-tab-active');
+                    }
+                });
+            }
+            return true;
+        } else if (el.classList.contains('pywry-range-group')) {
+            // Dual-handle range slider
+            if (attrs && (attrs.start !== undefined || attrs.end !== undefined)) {
+                var startInput = el.querySelector('input[data-range="start"]');
+                var endInput = el.querySelector('input[data-range="end"]');
+                var fill = el.querySelector('.pywry-range-track-fill');
+                var startDisp = el.querySelector('.pywry-range-start-value');
+                var endDisp = el.querySelector('.pywry-range-end-value');
+
+                if (startInput && attrs.start !== undefined) startInput.value = attrs.start;
+                if (endInput && attrs.end !== undefined) endInput.value = attrs.end;
+
+                // Update visual fill
+                if (fill && startInput && endInput) {
+                    var min = parseFloat(startInput.min) || 0;
+                    var max = parseFloat(startInput.max) || 100;
+                    var range = max - min;
+                    var startVal = parseFloat(startInput.value);
+                    var endVal = parseFloat(endInput.value);
+                    var startPct = ((startVal - min) / range) * 100;
+                    var endPct = ((endVal - min) / range) * 100;
+                    fill.style.left = startPct + '%';
+                    fill.style.width = (endPct - startPct) + '%';
+                }
+                if (startDisp && attrs.start !== undefined) startDisp.textContent = attrs.start;
+                if (endDisp && attrs.end !== undefined) endDisp.textContent = attrs.end;
+            }
+            return true;
+        } else if (el.classList.contains('pywry-input-range') || (el.tagName === 'INPUT' && el.type === 'range')) {
+            // Single slider
+            if (value !== undefined) {
+                el.value = value;
+                var display = el.nextElementSibling;
+                if (display && display.classList.contains('pywry-range-value')) {
+                    display.textContent = value;
+                }
+            }
             return true;
         }
-        return false;
+
+        // Generic fallback - try to set value if provided
+        if (value !== undefined && 'value' in el) {
+            el.value = value;
+            return true;
+        }
+
+        // Return true if we processed any attrs
+        return attrs && Object.keys(attrs).length > 0;
     }
 
     window.pywry.on('toolbar:request-state', function(data) {
@@ -727,8 +1060,9 @@ TOOLBAR_BRIDGE_JS = """
     });
 
     window.pywry.on('toolbar:set-value', function(data) {
-        if (data && data.componentId && data.value !== undefined) {
-            setComponentValue(data.componentId, data.value, data.options);
+        if (data && data.componentId) {
+            // Pass entire data object as attrs for generic attribute setting
+            setComponentValue(data.componentId, data.value, data);
         }
     });
 

@@ -1,7 +1,7 @@
 [project]
 name = "pywry"
 version = "2.0.0"
-description = "A blazingly fast 100% Python library for cross-platform webview window handling and content rendering, with offline support for AgGrid and Plotly."
+description = "A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python."
 authors = [{ name = "PyWry", email = "pywry2@gmail.com" }]
 license = { text = "Apache 2.0" }
 readme = "README.md"
@@ -56,23 +56,26 @@ dev = [
     "plotly>=6.5.0",
     "fakeredis>=2.33.0",
     "testcontainers>=4.14.0",
-    "mcp>=1.26.0",
+    "fastmcp>=2.14.5,<3",
+    "ipykernel>=7.2.0",
 ]
 notebook = [
     "anywidget>=0.9.0",
+    "ipykernel>=7.2.0",
 ]
 mcp = [
-    "mcp>=1.26.0",
+    "fastmcp>=2.14.5,<3",
 ]
 all = [
     "anywidget>=0.9.0",
-    "mcp>=1.26.0",
+    "fastmcp>=2.14.5,<3",
+    "ipykernel>=7.2.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/deeleeramone/PyWry"
 Repository = "https://github.com/deeleeramone/PyWry"
-Documentation = "https://github.com/deeleeramone/PyWry/pywry#readme"
+Documentation = "https://deeleeramone.github.io/PyWry/"
 
 [build-system]
 requires = ["hatchling>=1.21.0", "pip", "pytauri-wheel>=0.8.0"]

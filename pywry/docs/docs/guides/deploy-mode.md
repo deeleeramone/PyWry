@@ -1,6 +1,8 @@
 # Deploy Mode
 
-Deploy mode runs PyWry as a standalone web server for production use.
+Deploy mode runs PyWry as a standalone web server for production use. It serves widgets over HTTP with WebSocket communication, and optionally uses Redis for distributed state across multiple workers.
+
+For server and deploy configuration options, see the [Configuration Guide](configuration.md) and [Configuration Reference](../reference/config.md).
 
 ## Quick Start
 
@@ -35,27 +37,20 @@ python my_app.py
 
 ## Environment Variables
 
-### Server Settings
+Deploy mode is configured primarily through environment variables. The most important ones:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PYWRY_SERVER__HOST` | `127.0.0.1` | Server bind address |
-| `PYWRY_SERVER__PORT` | `8765` | Server port |
-| `PYWRY_SERVER__WORKERS` | `1` | Number of worker processes |
-| `PYWRY_SERVER__LOG_LEVEL` | `warning` | Log level |
-| `PYWRY_SERVER__RELOAD` | `false` | Enable auto-reload |
-| `PYWRY_SERVER__SSL_CERTFILE` | — | Path to SSL certificate |
-| `PYWRY_SERVER__SSL_KEYFILE` | — | Path to SSL key |
+```bash
+# Server
+export PYWRY_SERVER__HOST=0.0.0.0
+export PYWRY_SERVER__PORT=8080
+export PYWRY_SERVER__WORKERS=4
 
-### State Backend
+# State backend
+export PYWRY_DEPLOY__STATE_BACKEND=redis
+export PYWRY_DEPLOY__REDIS_URL=redis://localhost:6379/0
+```
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PYWRY_DEPLOY__STATE_BACKEND` | `memory` | `memory` or `redis` |
-| `PYWRY_DEPLOY__REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
-| `PYWRY_DEPLOY__REDIS_PREFIX` | `pywry` | Key prefix for Redis |
-| `PYWRY_DEPLOY__WIDGET_TTL` | `86400` | Widget TTL in seconds |
-| `PYWRY_DEPLOY__CONNECTION_TTL` | `300` | Connection TTL in seconds |
+For the complete list, see the [Configuration Reference](../reference/config.md).
 
 ## Memory vs Redis Backend
 
@@ -158,80 +153,18 @@ if __name__ == "__main__":
 
 ## Key Functions
 
-### `deploy()`
+Deploy mode uses functions from `pywry.inline`:
 
-Starts the uvicorn server with settings from configuration.
+- **`deploy()`** — Starts the uvicorn server using settings from configuration
+- **`get_server_app()`** — Returns the FastAPI app instance (add your own routes to this)
+- **`get_widget_html_async(label)`** — Retrieves rendered HTML for a widget by label
+- **`show()` / `show_plotly()` / `show_dataframe()`** — Create widgets (in headless mode, returns handle without opening a browser)
 
-```python
-from pywry.inline import deploy
+For the complete API, see the [InlineWidget Reference](../reference/inline-widget.md).
 
-deploy()  # Reads settings from env vars / config files
-```
+## Configuration
 
-### `get_server_app()`
-
-Returns the FastAPI app instance. Add your own routes to this.
-
-```python
-from pywry.inline import get_server_app
-
-app = get_server_app()
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-```
-
-### `get_widget_html_async(label)`
-
-Retrieves the HTML for a widget by its label.
-
-```python
-from pywry.inline import get_widget_html_async
-
-html = await get_widget_html_async("my-widget")
-```
-
-### `show()`, `show_plotly()`, `show_dataframe()`
-
-Create widgets. In deploy mode (headless), these return the widget handle without opening a browser.
-
-```python
-from pywry.inline import show, show_plotly, show_dataframe
-
-widget = show("<h1>Hello</h1>", title="My Widget")
-chart = show_plotly(fig, title="Chart")
-grid = show_dataframe(df, title="Data")
-```
-
-## Configuration Files
-
-Settings can also be set in config files:
-
-### pywry.toml
-
-```toml
-[server]
-host = "0.0.0.0"
-port = 8080
-log_level = "info"
-workers = 4
-
-[deploy]
-state_backend = "redis"
-redis_url = "redis://localhost:6379/0"
-```
-
-### pyproject.toml
-
-```toml
-[tool.pywry.server]
-host = "0.0.0.0"
-port = 8080
-
-[tool.pywry.deploy]
-state_backend = "redis"
-```
+Deploy settings can also be set in config files. See the [Configuration Guide](configuration.md) for details on TOML files, `pyproject.toml`, and the full settings hierarchy.
 
 ## Docker
 

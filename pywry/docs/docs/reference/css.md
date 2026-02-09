@@ -298,21 +298,30 @@ html.light { /* Light mode on html */ }
 Inject CSS at runtime via Python:
 
 ```python
+# In a callback (using app.emit with label)
+def on_apply_styles(data, event_type, label):
+    app.emit("pywry:inject-css", {
+        "id": "my-custom-styles",
+        "css": """
+            .my-class {
+                color: var(--pywry-text-accent);
+                background: var(--pywry-bg-secondary);
+            }
+        """
+    }, label)
+
+# Or with a widget handle
+widget = app.show("<h1>Demo</h1>")
 widget.emit("pywry:inject-css", {
     "id": "my-custom-styles",
-    "css": """
-        .my-class {
-            color: var(--pywry-text-accent);
-            background: var(--pywry-bg-secondary);
-        }
-    """
+    "css": ".highlight { background: yellow; }"
 })
 ```
 
 Remove injected CSS:
 
 ```python
-widget.emit("pywry:remove-css", {"id": "my-custom-styles"})
+app.emit("pywry:remove-css", {"id": "my-custom-styles"}, label)
 ```
 
 ## Inline Styles
@@ -320,23 +329,21 @@ widget.emit("pywry:remove-css", {"id": "my-custom-styles"})
 Set inline styles via Python:
 
 ```python
-widget.emit("pywry:set-style", {
+# By element ID
+app.emit("pywry:set-style", {
     "id": "my-element",
     "styles": {
         "fontSize": "24px",
         "fontWeight": "bold",
         "color": "red"
     }
-})
-```
+}, label)
 
-Or by selector:
-
-```python
-widget.emit("pywry:set-style", {
+# By CSS selector
+app.emit("pywry:set-style", {
     "selector": ".my-class",
     "styles": {"display": "none"}
-})
+}, label)
 ```
 
 ## Override Examples
@@ -378,18 +385,29 @@ app = PyWry(html=content, head=custom_css)
 ### Custom Button Styles
 
 ```python
-widget.emit("pywry:inject-css", {
-    "id": "custom-buttons",
-    "css": """
-        .pywry-btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-        }
-        .pywry-btn-primary:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        }
-    """
-})
+from pywry import PyWry, Toolbar, Button
+
+app = PyWry()
+
+def on_customize(data, event_type, label):
+    app.emit("pywry:inject-css", {
+        "id": "custom-buttons",
+        "css": """
+            .pywry-btn-primary {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border: none;
+            }
+            .pywry-btn-primary:hover {
+                background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            }
+        """
+    }, label)
+
+app.show(
+    "<h1>Styled Buttons</h1>",
+    toolbars=[Toolbar(position="top", items=[Button(label="Customize", event="ui:customize", variant="primary")])],
+    callbacks={"ui:customize": on_customize},
+)
 ```
 
 ## AG Grid Theme Integration
@@ -407,5 +425,6 @@ PyWry automatically syncs AG Grid themes:
 Update theme via event:
 
 ```python
-widget.emit("pywry:update-theme", {"theme": "ag-theme-quartz"})
+# In a callback
+app.emit("pywry:update-theme", {"theme": "light"}, label)
 ```

@@ -10,6 +10,7 @@ Run with: pytest tests/test_mcp_e2e.py -v
 """
 
 # pylint: disable=too-many-lines,redefined-outer-name, unused-argument
+# pylint: disable=E1121
 
 from __future__ import annotations
 

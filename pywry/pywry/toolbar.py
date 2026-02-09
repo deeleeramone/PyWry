@@ -1,4 +1,4 @@
-# pylint: disable=too-many-lines,unused-argument
+# pylint: disable=too-many-lines,unused-argument,line-too-long
 """Pydantic models for PyWry toolbar components.
 
 This module provides strongly-typed models for toolbar configurations:
@@ -280,13 +280,20 @@ class Option(BaseModel):
 class ToolbarItem(BaseModel):
     """Base class for all toolbar items.
 
-    All items have:
-    - component_id: Unique identifier for state tracking (auto-generated if not provided)
-    - label: Display label (meaning varies by item type)
-    - description: Tooltip/hover text for accessibility and user guidance
-    - event: Event name emitted on interaction (format: namespace:event-name)
-    - style: Optional inline CSS
-    - disabled: Whether the item is disabled
+    Attributes
+    ----------
+    component_id : str
+        Unique identifier for state tracking (auto-generated if not provided).
+    label : str
+        Display label (meaning varies by item type).
+    description : str
+        Tooltip/hover text for accessibility and user guidance.
+    event : str
+        Event name emitted on interaction (format: ``namespace:event-name``).
+    style : str
+        Optional inline CSS applied to the component wrapper.
+    disabled : bool
+        Whether the item is disabled (default: False).
     """
 
     model_config = ConfigDict(
@@ -418,22 +425,29 @@ class Button(ToolbarItem):
 class Select(ToolbarItem):
     """A single-select dropdown with optional search.
 
-    Emits: {value: <selected_value>}
+    Emits ``{value: ..., componentId: ...}`` on selection change.
 
     Attributes
     ----------
-        options: List of Option items for the dropdown
-        selected: Currently selected value
-        searchable: Enable search input to filter options (default: False)
+    options : list of Option
+        List of Option items for the dropdown.
+    selected : str
+        Currently selected value.
+    searchable : bool
+        Enable search input to filter options (default: False).
 
-    Example:
-        Select(
-            label="Theme:",
-            event="theme:change",
-            options=[Option(label="Dark", value="dark"), Option(label="Light", value="light")],
-            selected="dark",
-            searchable=True,
-        )
+    Examples
+    --------
+    >>> Select(
+    ...     label="Theme:",
+    ...     event="theme:change",
+    ...     options=[
+    ...         Option(label="Dark", value="dark"),
+    ...         Option(label="Light", value="light"),
+    ...     ],
+    ...     selected="dark",
+    ...     searchable=True,
+    ... )
     """
 
     type: Literal["select"] = "select"
@@ -518,17 +532,25 @@ class Select(ToolbarItem):
 class MultiSelect(ToolbarItem):
     """A multi-select dropdown with checkboxes.
 
-    Emits: {values: [<selected_values>]}
+    Emits ``{values: [...], componentId: ...}`` on selection change.
 
     Selected items appear at the top of the dropdown, unselected items below.
 
-    Example:
-        MultiSelect(
-            label="Columns:",
-            event="columns:filter",
-            options=[Option(label="Name"), Option(label="Age"), Option(label="City")],
-            selected=["Name", "Age"],
-        )
+    Attributes
+    ----------
+    options : list of Option
+        List of Option items for the dropdown.
+    selected : list of str
+        Currently selected values.
+
+    Examples
+    --------
+    >>> MultiSelect(
+    ...     label="Columns:",
+    ...     event="columns:filter",
+    ...     options=[Option(label="Name"), Option(label="Age"), Option(label="City")],
+    ...     selected=["Name", "Age"],
+    ... )
     """
 
     type: Literal["multiselect"] = "multiselect"
@@ -636,10 +658,25 @@ class MultiSelect(ToolbarItem):
 class TextInput(ToolbarItem):
     """A text input field with debounced change events.
 
-    Emits: {value: <text_value>}
+    Emits ``{value: ..., componentId: ...}`` on input change.
 
-    Example:
-        TextInput(label="Search:", event="search:query", placeholder="Type to search...", debounce=300)
+    Attributes
+    ----------
+    value : str
+        Initial text value (default: "").
+    placeholder : str
+        Placeholder text shown when empty (default: "").
+    debounce : int
+        Milliseconds to debounce input events (default: 300).
+
+    Examples
+    --------
+    >>> TextInput(
+    ...     label="Search:",
+    ...     event="search:query",
+    ...     placeholder="Type to search...",
+    ...     debounce=300,
+    ... )
     """
 
     type: Literal["text"] = "text"
@@ -731,46 +768,52 @@ class SecretInput(ToolbarItem):
 
     Attributes
     ----------
-        value: Secret value stored as SecretStr (NEVER rendered in HTML)
-        placeholder: Placeholder text shown when empty
-        debounce: Milliseconds to debounce input events (default: 300)
-        show_toggle: Show the visibility toggle button (default: True)
-        show_copy: Show the copy to clipboard button (default: True)
-        handler: Optional callable for custom secret storage.
-            Signature: (value, *, component_id, event, label, **metadata) -> str | None
-            - value: None to get the secret, string to set the secret
-            - component_id: unique component ID for tracking
-            - event: the event string
-            - label: optional label text
-            - metadata: additional attributes
-            If not provided, uses internal SecretStr storage.
+    value : SecretStr
+        Secret value stored as SecretStr (NEVER rendered in HTML).
+    placeholder : str
+        Placeholder text shown when empty (default: "").
+    debounce : int
+        Milliseconds to debounce input events (default: 300).
+    show_toggle : bool
+        Show the visibility toggle button (default: True).
+    show_copy : bool
+        Show the copy to clipboard button (default: True).
+    handler : callable or None
+        Optional callable for custom secret storage.
+        Signature: ``(value, *, component_id, event, label, **metadata) -> str | None``.
+        Pass ``None`` to get the secret, a string to set it.
+        If not provided, uses internal SecretStr storage.
+    value_exists : bool or None
+        Flag indicating a value exists externally. If None, computed from value.
 
-    Example:
-        # Simple usage with internal storage:
-        SecretInput(
-            label="API Key:",
-            event="settings:api_key",
-            value="my-secret",
-        )
+    Examples
+    --------
+    Simple usage with internal storage:
 
-        # Custom handler with component metadata:
-        def api_key_handler(
-            value: str | None,
-            *,
-            component_id: str,
-            event: str,
-            label: str | None = None,
-            **metadata,
-        ) -> str | None:
-            if value is None:
-                return secrets_manager.get(component_id)
-            secrets_manager.set(component_id, value)
-            return value
+    >>> SecretInput(
+    ...     label="API Key:",
+    ...     event="settings:api_key",
+    ...     value="my-secret",
+    ... )
 
-        SecretInput(
-            event="settings:api_key",
-            handler=api_key_handler,
-        )
+    Custom handler with component metadata:
+
+    >>> def api_key_handler(
+    ...     value,
+    ...     *,
+    ...     component_id,
+    ...     event,
+    ...     label=None,
+    ...     **metadata,
+    ... ):
+    ...     if value is None:
+    ...         return secrets_manager.get(component_id)
+    ...     secrets_manager.set(component_id, value)
+    ...     return value
+    >>> SecretInput(
+    ...     event="settings:api_key",
+    ...     handler=api_key_handler,
+    ... )
     """
 
     model_config = {"arbitrary_types_allowed": True}
@@ -1129,32 +1172,43 @@ class SecretInput(ToolbarItem):
 class TextArea(ToolbarItem):
     """A multi-line text area that supports resizing and paste.
 
-    Emits: {value: <text_value>}
+    Emits ``{value: ..., componentId: ...}`` on input change.
 
     The textarea is resizable in all directions by default. Use the resize
     attribute to control resize behavior.
 
     Attributes
     ----------
-        value: Initial text content
-        placeholder: Placeholder text shown when empty
-        debounce: Milliseconds to debounce input events (default: 300)
-        rows: Initial number of visible text rows (default: 3)
-        cols: Initial number of visible columns (default: 40)
-        resize: CSS resize behavior ("both", "horizontal", "vertical", "none")
-        min_height: Minimum height CSS value (e.g., "50px")
-        max_height: Maximum height CSS value (e.g., "500px")
-        min_width: Minimum width CSS value (e.g., "100px")
-        max_width: Maximum width CSS value (e.g., "100%")
+    value : str
+        Initial text content (default: "").
+    placeholder : str
+        Placeholder text shown when empty (default: "").
+    debounce : int
+        Milliseconds to debounce input events (default: 300).
+    rows : int
+        Initial number of visible text rows (default: 3).
+    cols : int
+        Initial number of visible columns (default: 40).
+    resize : str
+        CSS resize behavior: "both", "horizontal", "vertical", or "none" (default: "both").
+    min_height : str
+        Minimum height CSS value (e.g., "50px").
+    max_height : str
+        Maximum height CSS value (e.g., "500px").
+    min_width : str
+        Minimum width CSS value (e.g., "100px").
+    max_width : str
+        Maximum width CSS value (e.g., "100%").
 
-    Example:
-        TextArea(
-            label="Notes:",
-            event="notes:update",
-            placeholder="Enter your notes here...",
-            rows=5,
-            resize="vertical",
-        )
+    Examples
+    --------
+    >>> TextArea(
+    ...     label="Notes:",
+    ...     event="notes:update",
+    ...     placeholder="Enter your notes here...",
+    ...     rows=5,
+    ...     resize="vertical",
+    ... )
     """
 
     type: Literal["textarea"] = "textarea"
@@ -1234,25 +1288,33 @@ class SearchInput(ToolbarItem):
     (spellcheck, autocomplete, autocorrect, autocapitalize) are disabled by
     default for cleaner search/filter UX.
 
-    Emits: {value: <search_query>}
+    Emits ``{value: ..., componentId: ...}`` on search input change.
 
     Attributes
     ----------
-        value: Current search text value
-        placeholder: Placeholder text (default: "Search...")
-        debounce: Milliseconds to wait before emitting (default: 300)
-        spellcheck: Enable browser spell checking (default: False)
-        autocomplete: Browser autocomplete behavior (default: "off")
-        autocorrect: Enable browser auto-correction (default: "off")
-        autocapitalize: Control mobile keyboard capitalization (default: "off")
+    value : str
+        Current search text value (default: "").
+    placeholder : str
+        Placeholder text (default: "Search...").
+    debounce : int
+        Milliseconds to wait before emitting (default: 300).
+    spellcheck : bool
+        Enable browser spell checking (default: False).
+    autocomplete : str
+        Browser autocomplete behavior (default: "off").
+    autocorrect : str
+        Enable browser auto-correction: "on" or "off" (default: "off").
+    autocapitalize : str
+        Control mobile keyboard capitalization (default: "off").
 
-    Example:
-        SearchInput(
-            label="Filter:",
-            event="filter:search",
-            placeholder="Type to filter...",
-            debounce=200,
-        )
+    Examples
+    --------
+    >>> SearchInput(
+    ...     label="Filter:",
+    ...     event="filter:search",
+    ...     placeholder="Type to filter...",
+    ...     debounce=200,
+    ... )
     """
 
     type: Literal["search"] = "search"
@@ -1344,10 +1406,22 @@ class SearchInput(ToolbarItem):
 class NumberInput(ToolbarItem):
     """A numeric input field with optional min/max/step constraints.
 
-    Emits: {value: <number_value>}
+    Emits ``{value: ..., componentId: ...}`` on value change.
 
-    Example:
-        NumberInput(label="Limit:", event="limit:set", value=10, min=1, max=100, step=1)
+    Attributes
+    ----------
+    value : float or int or None
+        Initial numeric value (default: None).
+    min : float or int or None
+        Minimum allowed value (default: None).
+    max : float or int or None
+        Maximum allowed value (default: None).
+    step : float or int or None
+        Step increment for spinner buttons (default: None).
+
+    Examples
+    --------
+    >>> NumberInput(label="Limit:", event="limit:set", value=10, min=1, max=100, step=1)
     """
 
     type: Literal["number"] = "number"
@@ -1405,10 +1479,25 @@ class NumberInput(ToolbarItem):
 class DateInput(ToolbarItem):
     """A date picker input.
 
-    Emits: {value: <date_string>} (YYYY-MM-DD format)
+    Emits ``{value: ..., componentId: ...}`` on date change (YYYY-MM-DD format).
 
-    Example:
-        DateInput(label="Start Date:", event="date:start", value="2025-01-01", min="2020-01-01")
+    Attributes
+    ----------
+    value : str
+        Initial date string in YYYY-MM-DD format (default: "").
+    min : str
+        Earliest selectable date in YYYY-MM-DD format (default: "").
+    max : str
+        Latest selectable date in YYYY-MM-DD format (default: "").
+
+    Examples
+    --------
+    >>> DateInput(
+    ...     label="Start Date:",
+    ...     event="date:start",
+    ...     value="2025-01-01",
+    ...     min="2020-01-01",
+    ... )
     """
 
     type: Literal["date"] = "date"
@@ -1445,10 +1534,26 @@ class DateInput(ToolbarItem):
 class SliderInput(ToolbarItem):
     """A single-value slider input.
 
-    Emits: {value: <number_value>}
+    Emits ``{value: ..., componentId: ...}`` on slider change.
 
-    Example:
-        SliderInput(label="Zoom:", event="zoom:level", value=50, min=0, max=100, step=5, show_value=True)
+    Attributes
+    ----------
+    value : float or int
+        Initial slider value (default: 50).
+    min : float or int
+        Minimum value (default: 0).
+    max : float or int
+        Maximum value (default: 100).
+    step : float or int
+        Step increment (default: 1).
+    show_value : bool
+        Display the current value next to the slider (default: True).
+    debounce : int
+        Milliseconds to debounce input events (default: 50).
+
+    Examples
+    --------
+    >>> SliderInput(label="Zoom:", event="zoom:level", value=50, min=0, max=100, step=5)
     """
 
     type: Literal["slider"] = "slider"
@@ -1507,22 +1612,40 @@ class SliderInput(ToolbarItem):
 class RangeInput(ToolbarItem):
     """A dual-handle range slider for selecting a value range.
 
-    Emits: {start: <number>, end: <number>}
+    Emits ``{start: ..., end: ..., componentId: ...}`` on range change.
 
     This component provides a single slider track with two handles for selecting
     a minimum and maximum value. Unlike SliderInput which selects a single value,
     RangeInput allows users to define a range of values.
 
-    Example:
-        RangeInput(
-            label="Price Range:",
-            event="filter:price",
-            start=100,
-            end=500,
-            min=0,
-            max=1000,
-            step=10,
-        )
+    Attributes
+    ----------
+    start : float or int
+        Initial start (lower) value (default: 0).
+    end : float or int
+        Initial end (upper) value (default: 100).
+    min : float or int
+        Minimum allowed value for the track (default: 0).
+    max : float or int
+        Maximum allowed value for the track (default: 100).
+    step : float or int
+        Step increment (default: 1).
+    show_value : bool
+        Display the current range values next to the slider (default: True).
+    debounce : int
+        Milliseconds to debounce input events (default: 50).
+
+    Examples
+    --------
+    >>> RangeInput(
+    ...     label="Price Range:",
+    ...     event="filter:price",
+    ...     start=100,
+    ...     end=500,
+    ...     min=0,
+    ...     max=1000,
+    ...     step=10,
+    ... )
     """
 
     type: Literal["range"] = "range"
@@ -1637,10 +1760,16 @@ class RangeInput(ToolbarItem):
 class Toggle(ToolbarItem):
     """A toggle switch for boolean values.
 
-    Emits: {value: <boolean>}
+    Emits ``{value: ..., componentId: ...}`` on toggle.
 
-    Example:
-        Toggle(label="Dark Mode:", event="theme:toggle", value=True)
+    Attributes
+    ----------
+    value : bool
+        Initial toggle state (default: False).
+
+    Examples
+    --------
+    >>> Toggle(label="Dark Mode:", event="theme:toggle", value=True)
     """
 
     type: Literal["toggle"] = "toggle"
@@ -1676,10 +1805,16 @@ class Toggle(ToolbarItem):
 class Checkbox(ToolbarItem):
     """A single checkbox for boolean values.
 
-    Emits: {value: <boolean>}
+    Emits ``{value: ..., componentId: ...}`` on check/uncheck.
 
-    Example:
-        Checkbox(label="Enable notifications", event="settings:notify", value=True)
+    Attributes
+    ----------
+    value : bool
+        Initial checked state (default: False).
+
+    Examples
+    --------
+    >>> Checkbox(label="Enable notifications", event="settings:notify", value=True)
     """
 
     type: Literal["checkbox"] = "checkbox"
@@ -1714,7 +1849,7 @@ class Checkbox(ToolbarItem):
 class RadioGroup(ToolbarItem):
     """A group of radio buttons for single selection.
 
-    Emits: {value: <selected_value>}
+    Emits ``{value: ...}`` on selection change.
 
     Attributes
     ----------
@@ -1813,7 +1948,7 @@ class TabGroup(ToolbarItem):
     mode selection, or any mutually exclusive option set that benefits
     from a tab-like visual appearance.
 
-    Emits: {componentId, value: <selected_value>}
+    Emits ``{componentId: ..., value: ...}`` on tab change.
 
     Attributes
     ----------
@@ -1982,7 +2117,7 @@ class Div(ToolbarItem):
         # Build children HTML
         children_html = ""
         if self.children:
-            for child in self.children:
+            for child in self.children:  # pylint: disable=E1133
                 if hasattr(child, "build_html"):
                     # Pass this div's component_id as parent context
                     if isinstance(child, Div):
@@ -2006,7 +2141,7 @@ class Div(ToolbarItem):
         if self.script:
             if isinstance(self.script, Path) or (
                 isinstance(self.script, str)
-                and not self.script.strip().startswith(
+                and not self.script.strip().startswith(  # pylint: disable=E1101
                     (
                         "(",
                         "{",
@@ -2024,6 +2159,7 @@ class Div(ToolbarItem):
             ):
                 # Might be a file path - try to read it
                 script_path = Path(self.script) if isinstance(self.script, str) else self.script
+                # pylint: disable=E1101
                 if script_path.exists():
                     scripts.append(script_path.read_text(encoding="utf-8"))
                 else:
@@ -2034,7 +2170,7 @@ class Div(ToolbarItem):
 
         # Children's scripts (depth-first)
         if self.children:
-            for child in self.children:
+            for child in self.children:  # pylint: disable=E1133
                 if isinstance(child, Div):
                     scripts.extend(child.collect_scripts())
 
@@ -2178,97 +2314,63 @@ class Marquee(ToolbarItem):
     Displays content that scrolls horizontally or vertically across the container.
     Useful for news tickers, announcements, or any content that should scroll continuously.
 
-    Uses CSS animations instead of the deprecated <marquee> HTML element for
+    Uses CSS animations instead of the deprecated ``<marquee>`` HTML element for
     better browser compatibility, performance, and accessibility.
 
-    Emits: {value: <text>, componentId: <id>} when clicked (if clickable=True)
-
-    Dynamic Updates
-    ---------------
-    Use `toolbar:marquee-set-content` to update content from Python:
-
-        # Update text content
-        widget.emit("toolbar:marquee-set-content", {
-            "id": marquee.component_id,
-            "text": "New scrolling text!"
-        })
-
-        # Update with HTML content
-        widget.emit("toolbar:marquee-set-content", {
-            "id": marquee.component_id,
-            "html": "<b>Bold</b> and <em>italic</em> text"
-        })
-
-        # Change speed dynamically
-        widget.emit("toolbar:marquee-set-content", {
-            "id": marquee.component_id,
-            "speed": 10  # seconds per cycle
-        })
-
-        # Pause/resume animation
-        widget.emit("toolbar:marquee-set-content", {
-            "id": marquee.component_id,
-            "paused": True  # or False to resume
-        })
+    Emits ``{value: ..., componentId: ...}`` when clicked (if clickable=True).
 
     Attributes
     ----------
-        text: The text content to scroll. Can include simple inline HTML (<b>, <em>, <span>).
-        speed: Animation duration in seconds for one complete scroll cycle.
-            Lower values = faster scrolling. Default: 15 seconds.
-        direction: Scroll direction.
-            - "left" (default): Content moves from right to left
-            - "right": Content moves from left to right
-            - "up": Content moves from bottom to top
-            - "down": Content moves from top to bottom
-        behavior: Animation behavior.
-            - "scroll" (default): Continuous loop, content re-enters seamlessly
-            - "alternate": Bounces back and forth between edges
-            - "slide": Scrolls once and stops at the end
-            - "static": No scrolling, content stays in place (for dynamic updates)
-        pause_on_hover: Pause animation when mouse hovers over marquee. Default: True.
-        gap: Gap in pixels between repeated content for seamless looping. Default: 50.
-        clickable: Whether clicking the marquee emits an event. Default: False.
-        separator: Optional separator string between repeated content (e.g., " • ").
-        children: Nested toolbar items to scroll (alternative to text for complex content).
+    text : str
+        The text content to scroll. Can include simple inline HTML.
+    speed : float
+        Animation duration in seconds for one complete scroll cycle.
+        Lower values = faster scrolling (default: 15.0, range: 1.0 - 300.0).
+    direction : str
+        Scroll direction: "left" (default), "right", "up", or "down".
+    behavior : str
+        Animation behavior: "scroll" (default, continuous loop),
+        "alternate" (bounces), "slide" (scrolls once), or "static" (no scrolling).
+    pause_on_hover : bool
+        Pause animation when mouse hovers over marquee (default: True).
+    gap : int
+        Gap in pixels between repeated content for seamless looping (default: 50, range: 0 - 500).
+    clickable : bool
+        Whether clicking the marquee emits an event (default: False).
+    separator : str
+        Optional separator string between repeated content, e.g., " • " (default: "").
+    items : list of str or None
+        List of content items to cycle through for static behavior (default: None).
+    children : list or None
+        Nested toolbar items to scroll (alternative to text for complex content).
 
-    Example:
-        # Simple news ticker
-        Marquee(
-            text="Breaking News: Stock prices are up 5% today! • More updates coming soon...",
-            event="ticker:click",
-            speed=20,
-            pause_on_hover=True,
-        )
+    Examples
+    --------
+    Simple news ticker:
 
-        # Bouncing alert
-        Marquee(
-            text="⚠️ System maintenance scheduled",
-            behavior="alternate",
-            speed=8,
-            style="background: var(--pywry-accent); padding: 4px 8px;",
-        )
+    >>> Marquee(
+    ...     text="Breaking News: Stock prices are up 5% today!",
+    ...     event="ticker:click",
+    ...     speed=20,
+    ...     pause_on_hover=True,
+    ... )
 
-        # Vertical scrolling credits
-        Marquee(
-            text="Thank you for using PyWry!",
-            direction="up",
-            speed=10,
-        )
+    Bouncing alert:
 
-        # Complex nested content
-        Marquee(
-            children=[
-                Button(label="🔔 Alert", event="alert:click", variant="ghost"),
-                Div(content="<span>Important update available</span>"),
-            ],
-            speed=25,
-            clickable=False,
-        )
+    >>> Marquee(
+    ...     text="⚠️ System maintenance scheduled",
+    ...     behavior="alternate",
+    ...     speed=8,
+    ...     style="background: var(--pywry-accent); padding: 4px 8px;",
+    ... )
 
-        # Dynamic ticker with Python updates
-        ticker = Marquee(text="Loading...", speed=15, component_id="news-ticker")
-        # Later: widget.emit("toolbar:marquee-set-content", {"id": "news-ticker", "text": "New content!"})
+    Vertical scrolling credits:
+
+    >>> Marquee(
+    ...     text="Thank you for using PyWry!",
+    ...     direction="up",
+    ...     speed=10,
+    ... )
     """
 
     type: Literal["marquee"] = "marquee"
@@ -2295,7 +2397,8 @@ class Marquee(ToolbarItem):
     )
     items: list[str] | None = Field(
         default=None,
-        description="List of content items to cycle through (for static behavior with auto-cycling)",
+        description="List of content items to cycle through "
+        + "(for static behavior with auto-cycling)",
     )
     # Forward reference to support nested toolbar items
     children: list[Any] | None = Field(
@@ -2441,29 +2544,30 @@ class Marquee(ToolbarItem):
         if self.behavior == "static":
             marquee_html = (
                 f"<div {' '.join(attrs)}>"
-                f'<div class="pywry-marquee-track">'
-                f'<span class="pywry-marquee-content">{content_with_separator}</span>'
-                f"</div>"
-                f"</div>"
+                + '<div class="pywry-marquee-track">'
+                + f'<span class="pywry-marquee-content">{content_with_separator}</span>'
+                + "</div>"
+                + "</div>"
             )
         else:
             marquee_html = (
                 f"<div {' '.join(attrs)}>"
-                f'<div class="pywry-marquee-track">'
-                f'<span class="pywry-marquee-content">{content_with_separator}</span>'
-                f'<span class="pywry-marquee-content" aria-hidden="true">{content_with_separator}</span>'
-                f"</div>"
-                f"</div>"
+                + '<div class="pywry-marquee-track">'
+                + f'<span class="pywry-marquee-content">{content_with_separator}</span>'
+                + '<span class="pywry-marquee-content" aria-hidden="true">'
+                + f"{content_with_separator}</span>"
+                + "</div>"
+                + "</div>"
             )
 
         if not self.label:
             return marquee_html
 
         return (
-            f'<div class="pywry-input-group pywry-input-inline">'
-            f'<span class="pywry-input-label">{html.escape(self.label)}</span>'
-            f"{marquee_html}"
-            f"</div>"
+            '<div class="pywry-input-group pywry-input-inline">'
+            + f'<span class="pywry-input-label">{html.escape(self.label)}</span>'
+            + f"{marquee_html}"
+            + "</div>"
         )
 
     def collect_scripts(self) -> list[str]:
@@ -2476,7 +2580,7 @@ class Marquee(ToolbarItem):
         """
         scripts: list[str] = []
         if self.children:
-            for child in self.children:
+            for child in self.children:  # pylint: disable=E1133
                 if isinstance(child, (Div, Marquee)):
                     scripts.extend(child.collect_scripts())
         return scripts
@@ -2574,34 +2678,36 @@ class Toolbar(BaseModel):
 
     Attributes
     ----------
-        component_id: Unique identifier for this toolbar (auto-generated if not provided)
-        position: Where to place the toolbar ("top", "bottom", "left", "right", "inside")
-        items: List of toolbar items (Button, Select, TextInput, Div, etc.)
-        style: Optional inline CSS for the toolbar container
-        script: JS file path or inline string to inject into the toolbar
-        class_name: Custom CSS class added to the toolbar container
-        collapsible: Enable collapse/expand behavior with toggle button
-        resizable: Enable drag-to-resize on toolbar edge (direction based on position)
+    component_id : str
+        Unique identifier for this toolbar (auto-generated if not provided).
+    position : str
+        Where to place the toolbar: "top", "bottom", "left", "right", or "inside".
+    items : list
+        List of toolbar items (Button, Select, TextInput, Div, etc.).
+    style : str
+        Optional inline CSS for the toolbar container.
+    script : str or Path or None
+        JS file path or inline string to inject into the toolbar.
+    class_name : str
+        Custom CSS class added to the toolbar container.
+    collapsible : bool
+        Enable collapse/expand behavior with toggle button.
+    resizable : bool
+        Enable drag-to-resize on toolbar edge (direction based on position).
 
-    Example:
-        Toolbar(
-            position="top",
-            class_name="my-toolbar",
-            collapsible=True,
-            resizable=True,
-            items=[
-                Button(label="Refresh", event="app:refresh"),
-                Select(label="View:", event="view:change", options=[...]),
-                Div(content="<span>Custom</span>", class_name="custom-section"),
-            ],
-        )
-
-        # Inside toolbar with custom positioning
-        Toolbar(
-            position="inside",
-            style="bottom: 10px; right: 10px;",
-            items=[Button(label="Action", event="app:action")],
-        )
+    Examples
+    --------
+    >>> Toolbar(
+    ...     position="top",
+    ...     class_name="my-toolbar",
+    ...     collapsible=True,
+    ...     resizable=True,
+    ...     items=[
+    ...         Button(label="Refresh", event="app:refresh"),
+    ...         Select(label="View:", event="view:change", options=[...]),
+    ...         Div(content="<span>Custom</span>", class_name="custom-section"),
+    ...     ],
+    ... )
     """
 
     model_config = ConfigDict(
@@ -2732,7 +2838,7 @@ class Toolbar(BaseModel):
         if self.script:
             if isinstance(self.script, Path) or (
                 isinstance(self.script, str)
-                and not self.script.strip().startswith(
+                and not self.script.strip().startswith(  # pylint: disable=E1101
                     (
                         "(",
                         "{",
@@ -2749,6 +2855,7 @@ class Toolbar(BaseModel):
                 )
             ):
                 script_path = Path(self.script) if isinstance(self.script, str) else self.script
+                # pylint: disable=E1101
                 if script_path.exists():
                     scripts.append(script_path.read_text(encoding="utf-8"))
                 else:
@@ -3147,7 +3254,7 @@ def get_toolbar_script(*, with_script_tag: bool = True) -> str:
     Parameters
     ----------
     with_script_tag : bool, default True
-        If True, wrap in <script> tags. If False, return raw JavaScript
+        If True, wrap in ``<script>`` tags. If False, return raw JavaScript
         (for embedding inside an existing script block).
 
     Returns

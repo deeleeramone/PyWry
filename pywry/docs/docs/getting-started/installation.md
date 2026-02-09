@@ -38,24 +38,6 @@ app = PyWry()
 app.show("PyWry installed!")
 app.block()
 ```
-    pip install pywry
-    ```
-
-=== "conda"
-
-    ```bash
-    conda create -n pywry python=3.11
-    conda activate pywry
-    pip install pywry
-    ```
-
-=== "uv"
-
-    ```bash
-    uv venv
-    source .venv/bin/activate
-    uv pip install pywry
-    ```
 
 ## Next Steps
 

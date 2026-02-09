@@ -40,6 +40,8 @@ from .state_mixins import (
     PlotlyStateMixin,
     ToolbarStateMixin,
     _normalize_figure,
+    _UNSET,
+    _Unset,
 )
 from .toolbar import Toolbar, get_toolbar_script, wrap_content_with_toolbars
 from .widget_protocol import BaseWidget  # noqa: TC001
@@ -2645,23 +2647,57 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
         self.emit("toolbar:request-state", payload)
 
     def set_toolbar_value(
-        self, component_id: str, value: Any, toolbar_id: str | None = None
+        self,
+        component_id: str,
+        value: Any = _UNSET,
+        toolbar_id: str | None = None,
+        **attrs: Any,
     ) -> None:
-        """Set the value of a specific toolbar component.
+        """Set a toolbar component's value and/or attributes.
 
         Parameters
         ----------
         component_id : str
             The component_id of the toolbar item to update.
-        value : Any
+        value : Any, optional
             The new value for the component.
         toolbar_id : str, optional
             The toolbar ID (if applicable).
+        **attrs : Any
+            Additional attributes to set on the component:
+            - label/text: Update text content
+            - disabled: Enable/disable the component
+            - variant: Button variant (primary, secondary, danger, etc.)
+            - tooltip/description: Update tooltip text
+            - options: Update dropdown/select options
+            - style: Inline styles (str or dict)
+            - className/class: Add/remove CSS classes
+            - placeholder, min, max, step: Input constraints
+
+        Examples
+        --------
+        >>> # Update button label
+        >>> widget.set_toolbar_value("my-btn", label="Loading...")
+        >>> # Disable a component
+        >>> widget.set_toolbar_value("submit-btn", disabled=True)
+        >>> # Update dropdown value and options
+        >>> widget.set_toolbar_value(
+        ...     "type-select",
+        ...     value="bar",
+        ...     options=[
+        ...         {"label": "Bar", "value": "bar"},
+        ...         {"label": "Line", "value": "line"},
+        ...     ],
+        ... )
         """
-        self.emit(
-            "toolbar:set-value",
-            {"componentId": component_id, "value": value, "toolbarId": toolbar_id},
-        )
+        payload: dict[str, Any] = {"componentId": component_id}
+        if not isinstance(value, _Unset):
+            payload["value"] = value
+        if toolbar_id:
+            payload["toolbarId"] = toolbar_id
+        # Add any additional attributes
+        payload.update(attrs)
+        self.emit("toolbar:set-value", payload)
 
     def set_toolbar_values(self, values: dict[str, Any], toolbar_id: str | None = None) -> None:
         """Set multiple toolbar component values at once.

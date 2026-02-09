@@ -2,6 +2,14 @@
 
 A visual slider for selecting numeric values within a range.
 
+<div class="component-preview">
+  <span class="pywry-input-group pywry-input-inline">
+    <span class="pywry-input-label">Volume:</span>
+    <input type="range" class="pywry-input pywry-input-range" value="50" min="0" max="100" step="1">
+    <span class="pywry-range-value">50</span>
+  </span>
+</div>
+
 ## Basic Usage
 
 ```python
@@ -47,50 +55,51 @@ SliderInput(
 ### Real-time Updates
 
 ```python
+from pywry import PyWry, Toolbar, SliderInput, Div
+
+app = PyWry()
+
 def on_zoom_change(data, event_type, label):
     zoom_level = data["value"]
-    
-    # Update chart zoom in real-time
-    widget.emit("plotly:update-layout", {
-        "layout": {
-            "xaxis.range": [0, 100 / zoom_level],
-            "yaxis.range": [0, 100 / zoom_level],
-        }
-    })
+    app.emit("pywry:set-content", {
+        "selector": "#zoom-display",
+        "html": f"Zoom: {zoom_level}%"
+    }, label)
 
-SliderInput(
-    label="Zoom",
-    event="chart:zoom",
-    value=100,
-    min=50,
-    max=200,
-    step=10,
+app.show(
+    "<h1>Zoom Demo</h1><div id='zoom-display'>Zoom: 100%</div>",
+    toolbars=[
+        Toolbar(position="top", items=[
+            SliderInput(label="Zoom", event="chart:zoom", value=100, min=50, max=200, step=10)
+        ])
+    ],
+    callbacks={"chart:zoom": on_zoom_change},
 )
 ```
 
 ### With Labels
 
 ```python
-# Show percentage label
+from pywry import PyWry, Toolbar, SliderInput, Div
+
+app = PyWry()
+
 def format_slider_label(data, event_type, label):
     value = data["value"]
-    widget.emit("pywry:set-content", {
+    app.emit("pywry:set-content", {
         "selector": "#opacity-label",
         "html": f"{value}%"
-    })
+    }, label)
 
-toolbar = Toolbar(
-    position="top",
-    items=[
-        SliderInput(
-            label="Opacity",
-            event="style:opacity",
-            value=100,
-            min=0,
-            max=100,
-        ),
-        Div(component_id="opacity-label", content="100%"),
+app.show(
+    "<h1>Opacity Control</h1>",
+    toolbars=[
+        Toolbar(position="top", items=[
+            SliderInput(label="Opacity", event="style:opacity", value=100, min=0, max=100),
+            Div(component_id="opacity-label", content="100%"),
+        ])
     ],
+    callbacks={"style:opacity": format_slider_label},
 )
 ```
 
@@ -106,6 +115,45 @@ rgb_toolbar = Toolbar(
     ],
 )
 ```
+
+## Attributes
+
+```
+component_id : str | None
+    Unique identifier for state tracking (auto-generated if not provided)
+label : str | None
+    Display label shown next to the slider
+description : str | None
+    Tooltip/hover text for accessibility and user guidance
+event : str
+    Event name emitted on value change (format: namespace:event-name)
+style : str | None
+    Optional inline CSS
+disabled : bool
+    Whether the slider is disabled (default: False)
+value : float | int
+    Current slider value (default: 50)
+min : float | int
+    Minimum value (default: 0)
+max : float | int
+    Maximum value (default: 100)
+step : float | int
+    Increment step size (default: 1)
+show_value : bool
+    Display current value next to the slider (default: True)
+debounce : int
+    Milliseconds to debounce input events (default: 50)
+```
+
+## Events
+
+Emits the `event` name with payload:
+
+```json
+{"value": 75, "componentId": "slider-abc123"}
+```
+
+- `value` — current numeric value of the slider
 
 ## Slider vs NumberInput
 
