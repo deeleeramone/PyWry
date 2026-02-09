@@ -1168,7 +1168,8 @@ class TestServerModule:
 
     def test_create_server_custom_name(self) -> None:
         """create_server accepts custom name."""
-        from pywry.mcp.server import HAS_MCP, MCPSettings, create_server
+        from pywry.config import MCPSettings
+        from pywry.mcp.server import HAS_MCP, create_server
 
         if not HAS_MCP:
             pytest.skip("mcp package not available")
