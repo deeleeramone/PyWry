@@ -114,9 +114,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:/vcpkg/installed
-          key: vcpkg-arm64-windows-openssl-${{ hashFiles('.github/workflows/test-pywry.yml') }}
+          key: vcpkg-arm64-windows-openssl-lua-${{ hashFiles('.github/workflows/test-pywry.yml') }}
           restore-keys: |
-            vcpkg-arm64-windows-openssl-
+            vcpkg-arm64-windows-openssl-lua-
 
       - name: Install OpenSSL via vcpkg (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
@@ -128,6 +128,21 @@ jobs:
           echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=$opensslDir\lib" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=$opensslDir\include" >> $env:GITHUB_ENV
+
+      - name: Setup build environment (Windows ARM)
+        if: runner.os == 'Windows' && runner.arch == 'ARM64'
+        shell: pwsh
+        run: |
+          $buildTemp = "C:\buildtmp"
+          New-Item -ItemType Directory -Force -Path $buildTemp | Out-Null
+          echo "TMP=$buildTemp" >> $env:GITHUB_ENV
+          echo "TEMP=$buildTemp" >> $env:GITHUB_ENV
+          $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
+          & "$env:VCPKG_ROOT\vcpkg" install lua:arm64-windows
+          $luaDir = "$env:VCPKG_ROOT\installed\arm64-windows"
+          echo "LUA_DIR=$luaDir" >> $env:GITHUB_ENV
+          echo "LUA_LIB=$luaDir\lib" >> $env:GITHUB_ENV
+          echo "LUA_INC=$luaDir\include" >> $env:GITHUB_ENV
 
       - name: Install dependencies
         run: |
