@@ -16,11 +16,6 @@ AGGRID_JS_URL = (
 )
 AGGRID_CSS_BASE_URL = "https://cdn.jsdelivr.net/npm/ag-grid-community@35.0.0/styles"
 
-# OpenBB icon URL (placeholder - should be replaced with actual URL)
-OPENBB_ICON_URL = (
-    "https://raw.githubusercontent.com/OpenBB-finance/OpenBB/main/images/openbb_logo.png"
-)
-
 # Asset directory
 ASSETS_DIR = Path(__file__).parent / "pywry" / "frontend" / "assets"
 
