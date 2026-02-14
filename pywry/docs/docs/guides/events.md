@@ -169,6 +169,184 @@ callbacks = {
 }
 ```
 
+## How Events Are Constructed and Executed
+
+To understand what actually happens when you call `app.emit()` or when JavaScript fires an event, let's trace the full lifecycle using the **`pywry:download`** event as a concrete example. This event triggers a file download — it's a good illustration because it shows the complete Python → JS path, the payload structure, and how the same event is handled differently depending on the rendering mode.
+
+### The Python side: constructing the event
+
+When you call `app.emit()`, every rendering path starts the same way — Python builds a JSON payload with three fields:
+
+```python
+# Python: trigger a file download
+app.emit("pywry:download", {
+    "content": "Name,Value\nAlpha,1\nBeta,2",
+    "filename": "export.csv",
+    "mimeType": "text/csv;charset=utf-8",
+}, label="my-window")
+```
+
+The payload that Python hands off is always:
+
+```json
+{
+  "type": "pywry:download",
+  "data": {
+    "content": "Name,Value\nAlpha,1\nBeta,2",
+    "filename": "export.csv",
+    "mimeType": "text/csv;charset=utf-8"
+  }
+}
+```
+
+What happens next depends on how the widget is rendered.
+
+### Path 1: Native window (PyTauri)
+
+In native mode, `app.emit()` resolves the target window label and calls through the window manager to `runtime.emit_event()`:
+
+```
+app.emit(event_type, data, label)
+  → app.send_event(event_type, data, label)
+    → WindowMode.send_event(label, event_type, data)
+      → runtime.emit_event(label, event_type, data)
+```
+
+`runtime.emit_event()` serializes the event as a **JSON command** and writes it to the **stdin pipe** of the PyTauri subprocess:
+
+```json
+{
+  "action": "emit",
+  "label": "my-window",
+  "event": "pywry:download",
+  "payload": {
+    "content": "Name,Value\nAlpha,1\nBeta,2",
+    "filename": "export.csv",
+    "mimeType": "text/csv;charset=utf-8"
+  }
+}
+```
+
+The Rust/Tauri side reads this from stdin, parses it, and uses the **Tauri event system** (`emit_to`) to deliver the payload to the webview identified by `label`.
+
+On the JavaScript side, the event is received by a `window.__TAURI__.event.listen()` handler registered during page initialization:
+
+```javascript
+// scripts.py — Tauri event listener (registered automatically)
+window.__TAURI__.event.listen('pywry:download', function(event) {
+    var data = event.payload;
+    if (!data.content || !data.filename) {
+        console.error('[PyWry] Download requires content and filename');
+        return;
+    }
+    // Native mode: use Tauri's save dialog + filesystem API
+    window.__TAURI__.dialog.save({
+        defaultPath: data.filename,
+        title: 'Save File'
+    }).then(function(filePath) {
+        if (filePath) {
+            window.__TAURI__.fs.writeTextFile(filePath, data.content);
+        }
+    });
+});
+```
+
+In native mode, the user sees an **OS-native save dialog** and the file is written directly to disk using Tauri's filesystem API — no browser involved.
+
+### Path 2: Notebook widget (anywidget)
+
+In notebook mode, `emit()` serializes the event as a JSON string and writes it to a **traitlet** (`_py_event`), which anywidget syncs to the frontend via the Jupyter comms protocol:
+
+```python
+# widget.py — PyWryWidget.emit()
+def emit(self, event_type: str, data: dict) -> None:
+    event = json.dumps({"type": event_type, "data": data or {}, "ts": uuid.uuid4().hex})
+    self._py_event = event
+    self.send_state("_py_event")  # Force sync to frontend
+```
+
+On the JavaScript side, the anywidget model fires a `change:_py_event` event. The handler parses the JSON, checks the event type, and executes the download inline:
+
+```javascript
+// widget.py — anywidget JS (registered automatically)
+model.on('change:_py_event', () => {
+    const event = JSON.parse(model.get('_py_event') || '{}');
+    if (event.type === 'pywry:download' && event.data.content && event.data.filename) {
+        // Browser fallback: create a Blob and trigger download via <a> click
+        const mimeType = event.data.mimeType || 'application/octet-stream';
+        const blob = new Blob([event.data.content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = event.data.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+});
+```
+
+Since notebooks run inside a browser, there's no native save dialog — instead, the browser's built-in download mechanism creates the file.
+
+### Path 3: IFrame / Browser mode (WebSocket)
+
+In IFrame and browser mode, `emit()` sends the event as a JSON message over a **WebSocket** connection:
+
+```python
+# The server sends to the connected WebSocket for this widget
+await websocket.send_json({"type": "pywry:download", "data": payload})
+```
+
+JavaScript receives the message on the WebSocket `onmessage` handler, which dispatches it through `window.pywry._fire()`. The `pywry:download` handler registered via `window.pywry.on()` picks it up and uses the same Blob/anchor technique as the notebook path:
+
+```javascript
+// scripts.py — system event handler (registered automatically)
+window.pywry.on('pywry:download', function(data) {
+    if (!data.content || !data.filename) return;
+    // Browser fallback: Blob + invisible <a> click
+    var mimeType = data.mimeType || 'application/octet-stream';
+    var blob = new Blob([data.content], { type: mimeType });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = data.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+});
+```
+
+### Summary: same event, three transport layers
+
+| | Native Window | Notebook Widget | IFrame / Browser |
+|---|---|---|---|
+| **Transport** | stdin pipe → Tauri event system | traitlet sync via Jupyter comms | WebSocket JSON message |
+| **JS receives via** | `__TAURI__.event.listen()` | `model.on('change:_py_event')` | `WebSocket.onmessage` → `pywry._fire()` |
+| **Download mechanism** | OS save dialog + `fs.writeTextFile` | `Blob` + `<a>` click | `Blob` + `<a>` click |
+
+The key insight: **your Python code is identical regardless of rendering path.** You always call `app.emit("pywry:download", {...})`. PyWry selects the transport automatically, and the JavaScript handlers adapt to the capabilities of the environment (native filesystem API vs. browser download).
+
+### The JS → Python direction
+
+The reverse direction works the same way in mirror. When JavaScript calls `window.pywry.emit()`:
+
+- **Native**: Calls `__TAURI__.pytauri.pyInvoke('pywry_event', payload)` — Tauri IPC to the Rust subprocess, which forwards to Python callbacks
+- **Notebook**: Calls `model.set('_js_event', ...)` — traitlet change synced via Jupyter comms, observed by Python `_on_js_event` handler
+- **IFrame/Browser**: Calls `socket.send(JSON.stringify(msg))` — WebSocket message received by the FastAPI server, dispatched to Python callbacks
+
+The payload structure is consistent:
+
+```javascript
+// What JS sends (all paths)
+{
+    "type": "plotly:click",            // namespaced event name
+    "data": { "points": [...] },       // event-specific payload
+    "label": "my-window"               // window/widget identifier
+}
+```
+
 ## Next Steps
 
 - **[Event Reference](../reference/events.md)** — Complete list of all events and payloads

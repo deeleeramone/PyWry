@@ -33,7 +33,6 @@ theme:
     - navigation.top
     - navigation.indexes
     - navigation.footer
-    - navigation.sections
     - search.suggest
     - search.highlight
     - content.tabs.link
@@ -156,11 +155,16 @@ nav:
   - Docs:
     - getting-started/index.md
     - Getting Started:
+      - Why PyWry: getting-started/why-pywry.md
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quickstart.md
       - Rendering Paths: getting-started/rendering-paths.md
     - Concepts:
+      - app.show(): guides/app-show.md
+      - HtmlContent: guides/html-content.md
+      - Content Assembly: guides/content-assembly.md
       - Event System: guides/events.md
+      - State, Redis & RBAC: guides/state-and-auth.md
       - Configuration: guides/configuration.md
       - Hot Reload: guides/hot-reload.md
     - UI:
@@ -174,10 +178,8 @@ nav:
       - Window Management: guides/window-management.md
       - Browser Mode: guides/browser-mode.md
       - Deploy Mode: guides/deploy-mode.md
-    - Resources:
-      - Features: features.md
-      - Guides Overview: guides/index.md
-      - Changelog: changelog.md
+    - Features: features.md
+    - Changelog: changelog.md
 
   - API:
     - reference/index.md

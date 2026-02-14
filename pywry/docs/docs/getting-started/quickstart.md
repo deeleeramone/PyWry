@@ -39,7 +39,11 @@ app.block()  # Keep the window open until user closes it
 3. `app.block()` pauses your script until the window is closed
 
 !!! tip "When to use `block()`"
-    Use `app.block()` at the end of scripts to keep the window alive. In notebooks or servers, you typically don't need it.
+    Your application exits when the script finishes, or the IDE is stopped.
+    Use `app.block()` at the end of scripts to keep the window alive.
+    In notebooks or servers, you typically don't need it.
+
+    Use this technique to block the main application while waiting for oAuth2 providers to respond.
 
 ---
 

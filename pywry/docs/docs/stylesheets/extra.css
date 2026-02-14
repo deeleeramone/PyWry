@@ -78,8 +78,10 @@
   --md-code-fg-color:   #1e293b;
   --md-typeset-color:   #1e293b;
   --md-typeset-a-color: #0891b2;
-  --md-primary-fg-color:       #ffffff;
-  --md-primary-fg-color--light:#f7f7fc;
+  /* Header stays dark in light mode (Electron-style) */
+  --md-primary-fg-color:       #1a1d2e;
+  --md-primary-fg-color--light:#222538;
+  --md-primary-fg-color--dark:  #131522;
   --md-accent-fg-color: #0891b2;
   --md-footer-bg-color: #e2e4ec;
   --md-footer-bg-color--dark: #d4d6e0;
@@ -144,15 +146,18 @@
   min-width: auto;
 }
 
-[data-md-color-scheme="slate"] .md-header__title { color: #e0e0ec; }
-[data-md-color-scheme="default"] .md-header__title { color: #1e293b; }
+/* Header title is always light (header is always dark) */
+.md-header__title { color: #e0e0ec; }
 
 /* Hide the second topic (page title on scroll) for cleaner look */
 .md-header__topic + .md-header__topic { display: none; }
 
-/* Light-mode header tweaks */
-[data-md-color-scheme="default"] .md-header {
-  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+/* Header is always dark, so icons/text are always light */
+.md-header .md-header__button {
+  color: rgba(255,255,255,.7);
+}
+.md-header .md-header__button:hover {
+  color: #fff;
 }
 
 /* Spacer between nav and right-side tools */
@@ -183,27 +188,15 @@
   transition: color .15s, background .15s;
 }
 
-/* Dark mode link colours */
-[data-md-color-scheme="slate"] .md-header-nav__link {
+/* Header nav links – always light on dark header */
+.md-header-nav__link {
   color: rgba(255,255,255,.6);
 }
-[data-md-color-scheme="slate"] .md-header-nav__link:hover {
+.md-header-nav__link:hover {
   color: rgba(255,255,255,.9);
   background: rgba(255,255,255,.06);
 }
-[data-md-color-scheme="slate"] .md-header-nav__link--active {
-  color: var(--pywry-teal);
-}
-
-/* Light mode link colours */
-[data-md-color-scheme="default"] .md-header-nav__link {
-  color: #4b5563;
-}
-[data-md-color-scheme="default"] .md-header-nav__link:hover {
-  color: #111827;
-  background: rgba(0,0,0,.04);
-}
-[data-md-color-scheme="default"] .md-header-nav__link--active {
+.md-header-nav__link--active {
   color: var(--pywry-teal);
 }
 
@@ -237,22 +230,10 @@
   .md-nav--primary > .md-nav__title { display: none; }
 }
 
-/* Section headers (navigation.sections feature) */
-.md-nav--primary .md-nav__item--section > .md-nav__link {
-  font-size: .7rem;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: var(--pywry-text-muted);
-  pointer-events: none;
-  padding: .8rem .8rem .25rem;
-  margin-top: .4rem;
-}
-
-/* Regular nav links */
+/* ── Regular nav links ── */
 .md-nav__link {
-  font-size: .8rem;
-  padding: .32rem .8rem .32rem 1rem;
+  font-size: .82rem;
+  padding: .35rem .8rem .35rem 1rem;
   color: var(--pywry-sidebar-text);
   border-radius: 0;
   transition: color .12s, background .12s;
@@ -265,13 +246,44 @@
   background: var(--pywry-sidebar-hover);
 }
 
-/* Active page link – teal left border + teal text */
+/* Active page link – teal left border + teal text (Electron style) */
 .md-nav__link--active,
-.md-nav__item--active > .md-nav__link {
+.md-nav__item .md-nav__link--active {
   color: var(--pywry-sidebar-active) !important;
   border-left-color: var(--pywry-sidebar-active);
   font-weight: 600;
   background: var(--pywry-sidebar-hover);
+}
+
+/* ── Collapsible section headers – Electron-style ── */
+/* Section parent links: bolder, full-width, with chevron toggle */
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+.md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link {
+  font-size: .84rem;
+  font-weight: 600;
+  color: var(--pywry-sidebar-text);
+  padding: .45rem .8rem;
+  cursor: pointer;
+}
+
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link:hover,
+.md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link:hover {
+  color: var(--pywry-sidebar-active);
+  background: var(--pywry-sidebar-hover);
+}
+
+/* Expand/collapse chevron – right-aligned like Electron */
+.md-nav__icon {
+  order: 1;
+  margin-left: auto;
+  color: var(--pywry-text-muted);
+  transition: transform .2s;
+}
+
+/* The active section chevron points down (expanded) */
+.md-nav__item--active > .md-nav__link .md-nav__icon,
+.md-nav__item--active > label .md-nav__icon {
+  transform: rotate(90deg);
 }
 
 /* Nested list indentation */
@@ -281,9 +293,11 @@
 .md-nav--primary .md-nav .md-nav .md-nav__link {
   padding-left: 2rem;
 }
+.md-nav--primary .md-nav .md-nav .md-nav .md-nav__link {
+  padding-left: 2.5rem;
+}
 
-/* Nav toggle icon colour */
-.md-nav__icon { color: var(--pywry-text-muted); }
+
 
 /* =================================================================
    5. RIGHT SIDEBAR – table-of-contents (On this page)
@@ -292,6 +306,7 @@
 .md-sidebar--secondary {
   width: 13rem;
   border-left: 1px solid var(--pywry-sidebar-border);
+  background: var(--pywry-sidebar-bg);
 }
 
 /* "Table of contents" label */
@@ -335,6 +350,20 @@
   max-width: 52rem;
   margin: 0 auto;
   padding: 1.5rem 2rem 3rem;
+}
+
+/* Breadcrumb path (navigation.path) – Electron-style */
+.md-path {
+  font-size: .75rem;
+  color: var(--pywry-text-muted);
+  padding: .5rem 0 0;
+}
+.md-path__link {
+  color: var(--pywry-sidebar-active);
+  text-decoration: none;
+}
+.md-path__link:hover {
+  text-decoration: underline;
 }
 
 /* =================================================================
@@ -504,7 +533,7 @@
    13. HOMEPAGE – HERO
    ================================================================= */
 
-.electron-hero {
+.pywry-docs-hero {
   background: linear-gradient(
     180deg,
     var(--pywry-hero-bg-start) 0%,
@@ -515,19 +544,19 @@
   padding: 3rem 1.5rem 2.5rem;
 }
 
-.electron-hero__inner {
+.pywry-docs-hero__inner {
   max-width: 680px;
   margin: 0 auto;
 }
 
-.electron-hero__logo {
+.pywry-docs-hero__logo {
   width: 88px;
   height: 88px;
   margin-bottom: 1.25rem;
   filter: drop-shadow(0 0 20px rgba(71,200,219,.2));
 }
 
-.electron-hero__title {
+.pywry-docs-hero__title {
   font-size: 2rem;
   font-weight: 400;
   color: var(--pywry-teal);
@@ -536,7 +565,7 @@
   letter-spacing: -.01em;
 }
 
-.electron-hero__subtitle {
+.pywry-docs-hero__subtitle {
   font-size: 1rem;
   color: var(--pywry-text-muted);
   max-width: 540px;
@@ -544,7 +573,7 @@
   line-height: 1.55;
 }
 
-.electron-hero__cta {
+.pywry-docs-hero__cta {
   display: flex;
   gap: .75rem;
   justify-content: center;
@@ -581,11 +610,11 @@
   background: rgba(71,200,219,.08);
 }
 
-[data-md-color-scheme="default"] .electron-hero__title { color: var(--pywry-teal); }
+[data-md-color-scheme="default"] .pywry-docs-hero__title { color: var(--pywry-teal); }
 [data-md-color-scheme="default"] .btn--primary { color: #fff; }
 
 /* Accent bar below hero */
-.electron-accent-bar {
+.pywry-docs-accent-bar {
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--pywry-teal), transparent);
 }
@@ -714,19 +743,25 @@ svg.feature-card__icon {
 @media (max-width: 60em) {
   .feature-grid { grid-template-columns: repeat(2, 1fr); }
   .nav-cards    { grid-template-columns: repeat(2, 1fr); }
-  .electron-hero__title { font-size: 1.5rem; }
+  .pywry-docs-hero__title { font-size: 1.5rem; }
   .md-content__inner { padding: 1rem 1.25rem 2rem; }
 }
 
 @media (max-width: 480px) {
   .feature-grid { grid-template-columns: 1fr; padding: 0 1rem; }
   .nav-cards    { grid-template-columns: 1fr; }
-  .electron-hero { padding: 2rem 1rem 1.5rem; }
-  .electron-hero__logo { width: 64px; height: 64px; }
-  .electron-hero__title { font-size: 1.3rem; }
+  .pywry-docs-hero { padding: 2rem 1rem 1.5rem; }
+  .pywry-docs-hero__logo { width: 64px; height: 64px; }
+  .pywry-docs-hero__title { font-size: 1.3rem; }
 }
 
 /* =================================================================
-   SEARCH – overlay appears correctly
+   SEARCH – overlay + Electron-style compact look
    ================================================================= */
 .md-search__overlay { background: rgba(0,0,0,.5); }
+
+/* GitHub source in header – always light on dark */
+.md-source { color: rgba(255,255,255,.7); }
+.md-source:hover { color: #fff; }
+.md-source__icon svg { fill: rgba(255,255,255,.7); }
+.md-source:hover .md-source__icon svg { fill: #fff; }

@@ -2,28 +2,27 @@
 
 {# ── Hero banner (sits inside .md-container, above <main>) ── #}
 {% block hero %}
-  <section class="electron-hero">
-    <div class="electron-hero__inner">
+  <section class="pywry-docs-hero">
+    <div class="pywry-docs-hero__inner">
       <img src="{{ config.theme.logo | url }}"
-           class="electron-hero__logo"
+           class="pywry-docs-hero__logo"
            alt="PyWry" draggable="false">
-      <h1 class="electron-hero__title">
-        Render anywhere.<br>Desktop.&nbsp;Notebook.&nbsp;Browser.
+      <h1 class="pywry-docs-hero__title">
+        Build Once, Render Anywhere<br>Desktop&nbsp;-&nbsp;Notebook&nbsp;-&nbsp;Browser
       </h1>
-      <p class="electron-hero__subtitle">
-        Build native windows, Jupyter widgets, and browser&nbsp;tabs
-        from one Python&nbsp;API&nbsp;&mdash; powered by OS&nbsp;webviews,
-        not a bundled browser.
+      <p class="pywry-docs-hero__subtitle">
+        PyWry&nbsp;apps are lightweight, fast to start, and run on&nbsp;Windows, macOS, and Linux.
+        <br>Batteries included.
       </p>
-      <div class="electron-hero__cta">
+      <div class="pywry-docs-hero__cta">
         <a href="{{ 'getting-started/quickstart/' | url }}"
            class="btn btn--primary">Get Started &rarr;</a>
-        <a href="{{ 'features/' | url }}"
+        <a href="{{ 'getting-started/why-pywry/' | url }}"
            class="btn btn--secondary">Why PyWry?</a>
       </div>
     </div>
   </section>
-  <div class="electron-accent-bar"></div>
+  <div class="pywry-docs-accent-bar"></div>
 {% endblock %}
 
 {# ── Full-width homepage content ── #}
