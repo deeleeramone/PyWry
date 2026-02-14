@@ -1,4 +1,4 @@
-site_name: PyWry Documentation
+site_name: PyWry
 site_description: Blazingly fast rendering library for native windows, Jupyter widgets, and browser tabs
 site_author: OpenBB
 repo_url: https://github.com/deeleeramone/PyWry
@@ -7,15 +7,16 @@ edit_uri: edit/main/docs/docs/
 
 theme:
   name: material
+  custom_dir: docs/overrides
   palette:
     - scheme: slate
-      primary: indigo
+      primary: custom
       accent: cyan
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
     - scheme: default
-      primary: indigo
+      primary: custom
       accent: cyan
       toggle:
         icon: material/brightness-7
@@ -32,7 +33,7 @@ theme:
     - navigation.top
     - navigation.indexes
     - navigation.footer
-    - toc.integrate
+    - navigation.sections
     - search.suggest
     - search.highlight
     - content.tabs.link
@@ -151,22 +152,18 @@ extra:
 nav:
   - Home:
     - index.md
-    - Features: features.md
-    - Changelog: changelog.md
 
-  - Getting Started:
+  - Docs:
     - getting-started/index.md
-    - Installation: getting-started/installation.md
-    - Quick Start: getting-started/quickstart.md
-    - Rendering Paths: getting-started/rendering-paths.md
-
-  - Guides:
-    - guides/index.md
-    - Core Concepts:
+    - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - Rendering Paths: getting-started/rendering-paths.md
+    - Concepts:
       - Event System: guides/events.md
       - Configuration: guides/configuration.md
       - Hot Reload: guides/hot-reload.md
-    - UI Components:
+    - UI:
       - Toolbar System: guides/toolbars.md
       - Theming & CSS: guides/theming.md
     - Integrations:
@@ -174,67 +171,30 @@ nav:
       - AgGrid Tables: guides/aggrid.md
     - Advanced:
       - JavaScript Bridge: guides/javascript-bridge.md
-      - Managing Windows: guides/window-management.md
+      - Window Management: guides/window-management.md
       - Browser Mode: guides/browser-mode.md
       - Deploy Mode: guides/deploy-mode.md
+    - Resources:
+      - Features: features.md
+      - Guides Overview: guides/index.md
+      - Changelog: changelog.md
 
-  - Components:
-    - components/index.md
-    - Actions:
-      - Button: components/button.md
-    - Selection:
-      - Select: components/select.md
-      - MultiSelect: components/multiselect.md
-      - RadioGroup: components/radiogroup.md
-      - TabGroup: components/tabgroup.md
-    - Text Input:
-      - TextInput: components/textinput.md
-      - TextArea: components/textarea.md
-      - SearchInput: components/searchinput.md
-      - SecretInput: components/secretinput.md
-    - Numeric & Date:
-      - NumberInput: components/numberinput.md
-      - DateInput: components/dateinput.md
-      - SliderInput: components/sliderinput.md
-      - RangeInput: components/rangeinput.md
-    - Boolean:
-      - Toggle: components/toggle.md
-      - Checkbox: components/checkbox.md
-    - Layout:
-      - Div: components/div.md
-      - Marquee: components/marquee.md
-      - TickerItem: components/tickeritem.md
-    - Container:
-      - Toolbar: components/toolbar.md
-    - Base Classes:
-      - Option: components/option.md
-      - ToolbarItem: components/toolbaritem.md
-
-  - API Reference:
+  - API:
     - reference/index.md
-    - Core:
-      - pywry: reference/pywry.md
-      - InlineWidget: reference/inline-widget.md
-    - Events:
-      - Event Reference: reference/events.md
-    - Models:
-      - pywry.models: reference/models.md
-    - Configuration:
-      - pywry.config: reference/config.md
-    - Widgets:
-      - pywry.widget: reference/widget.md
-    - State:
-      - State Management: reference/state.md
-    - Plotly:
-      - pywry.plotly_config: reference/plotly-config.md
-    - Grid:
-      - pywry.grid: reference/grid.md
-    - Callbacks:
-      - pywry.callbacks: reference/callbacks.md
-    - Styling:
-      - CSS Reference: reference/css.md
-    - MCP:
-      - MCP Server: reference/mcp.md
+    - pywry: reference/pywry.md
+    - InlineWidget: reference/inline-widget.md
+    - Events: reference/events.md
+    - Models: reference/models.md
+    - Config: reference/config.md
+    - Widget: reference/widget.md
+    - State: reference/state.md
+    - Plotly: reference/plotly-config.md
+    - Grid: reference/grid.md
+    - Callbacks: reference/callbacks.md
+    - CSS: reference/css.md
+    - MCP: reference/mcp.md
+    - Asset Loader: reference/asset-loader.md
+    - Hot Reload: reference/hot-reload.md
     - Components:
       - reference/components/index.md
       - Button: reference/components/button.md
@@ -258,11 +218,32 @@ nav:
       - Toggle: reference/components/toggle.md
       - Toolbar: reference/components/toolbar.md
       - ToolbarItem: reference/components/toolbaritem.md
-    - Utilities:
-      - pywry.asset_loader: reference/asset-loader.md
-      - pywry.hot_reload: reference/hot-reload.md
 
-  - MCP Server:
+  - Components:
+    - components/index.md
+    - Button: components/button.md
+    - Select: components/select.md
+    - MultiSelect: components/multiselect.md
+    - RadioGroup: components/radiogroup.md
+    - TabGroup: components/tabgroup.md
+    - TextInput: components/textinput.md
+    - TextArea: components/textarea.md
+    - SearchInput: components/searchinput.md
+    - SecretInput: components/secretinput.md
+    - NumberInput: components/numberinput.md
+    - DateInput: components/dateinput.md
+    - SliderInput: components/sliderinput.md
+    - RangeInput: components/rangeinput.md
+    - Toggle: components/toggle.md
+    - Checkbox: components/checkbox.md
+    - Div: components/div.md
+    - Marquee: components/marquee.md
+    - TickerItem: components/tickeritem.md
+    - Toolbar: components/toolbar.md
+    - Option: components/option.md
+    - ToolbarItem: components/toolbaritem.md
+
+  - MCP:
     - mcp/index.md
     - Setup: mcp/setup.md
     - Capabilities: mcp/capabilities.md

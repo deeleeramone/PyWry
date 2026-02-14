@@ -1,0 +1,46 @@
+{% extends "main.html" %}
+
+{# ── Hero banner (sits inside .md-container, above <main>) ── #}
+{% block hero %}
+  <section class="electron-hero">
+    <div class="electron-hero__inner">
+      <img src="{{ config.theme.logo | url }}"
+           class="electron-hero__logo"
+           alt="PyWry" draggable="false">
+      <h1 class="electron-hero__title">
+        Render anywhere.<br>Desktop.&nbsp;Notebook.&nbsp;Browser.
+      </h1>
+      <p class="electron-hero__subtitle">
+        Build native windows, Jupyter widgets, and browser&nbsp;tabs
+        from one Python&nbsp;API&nbsp;&mdash; powered by OS&nbsp;webviews,
+        not a bundled browser.
+      </p>
+      <div class="electron-hero__cta">
+        <a href="{{ 'getting-started/quickstart/' | url }}"
+           class="btn btn--primary">Get Started &rarr;</a>
+        <a href="{{ 'features/' | url }}"
+           class="btn btn--secondary">Why PyWry?</a>
+      </div>
+    </div>
+  </section>
+  <div class="electron-accent-bar"></div>
+{% endblock %}
+
+{# ── Full-width homepage content ── #}
+{% block content %}
+<style>
+  /* Let feature-section stretch edge-to-edge */
+  .md-main__inner { padding: 0; margin: 0; }
+  .md-content      { max-width: 100%; }
+  .md-content__inner { max-width: 100%; padding: 0; margin: 0; }
+  /* Constrain nav-cards within the feature area */
+  .nav-cards {
+    max-width: 1080px;
+    margin-left: auto; margin-right: auto;
+    padding: 0 2rem 2rem;
+  }
+  /* Hide the auto-generated empty h1 */
+  .md-content__inner > h1 { display: none; }
+</style>
+{{ super() }}
+{% endblock %}

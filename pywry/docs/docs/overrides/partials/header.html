@@ -1,0 +1,100 @@
+{#-
+  PyWry – Electron-style unified header
+  Single bar: [logo] [name] [nav‑links …] ──── [palette] [search] [repo]
+-#}
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="{{ lang.t('header') }}">
+
+    {# ── Logo ── #}
+    <a href="{{ config.extra.homepage | d(nav.homepage.url, true) | url }}"
+       title="{{ config.site_name | e }}"
+       class="md-header__button md-logo"
+       aria-label="{{ config.site_name }}"
+       data-md-component="logo">
+      {% include "partials/logo.html" %}
+    </a>
+
+    {# ── Mobile drawer toggle ── #}
+    <label class="md-header__button md-icon" for="__drawer">
+      {% set icon = config.theme.icon.menu or "material/menu" %}
+      {% include ".icons/" ~ icon ~ ".svg" %}
+    </label>
+
+    {# ── Site name (compact, no scroll-topic) ── #}
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">{{ config.site_name }}</span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            {% if page.meta and page.meta.title %}
+              {{ page.meta.title }}
+            {% else %}
+              {{ page.title }}
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    {# ── Inline navigation links (replaces the tabs bar) ── #}
+    <nav class="md-header-nav" aria-label="Main navigation">
+      {% for nav_item in nav.items %}
+        {# Resolve the link URL the same way tabs-item.html does #}
+        {% if nav_item.children %}
+          {% set first = nav_item.children | first %}
+          {% if first.children %}
+            {% set link_url = (first.children | first).url %}
+          {% else %}
+            {% set link_url = first.url %}
+          {% endif %}
+        {% else %}
+          {% set link_url = nav_item.url %}
+        {% endif %}
+        <a href="{{ link_url | url }}"
+           class="md-header-nav__link{% if nav_item.active %} md-header-nav__link--active{% endif %}">
+          {{ nav_item.title }}
+        </a>
+      {% endfor %}
+    </nav>
+
+    {# ── Spacer ── #}
+    <div class="md-header__grow"></div>
+
+    {# ── Palette toggle ── #}
+    {% if config.theme.palette %}
+      {% if not config.theme.palette is mapping %}
+        {% include "partials/palette.html" %}
+      {% endif %}
+    {% endif %}
+    {% if not config.theme.palette is mapping %}
+      {% include "partials/javascripts/palette.html" %}
+    {% endif %}
+
+    {# ── Alternate language ── #}
+    {% if config.extra.alternate %}
+      {% include "partials/alternate.html" %}
+    {% endif %}
+
+    {# ── Search ── #}
+    {% if "material/search" in config.plugins %}
+      {% set search = config.plugins["material/search"] | attr("config") %}
+      {% if search.enabled %}
+        <label class="md-header__button md-icon" for="__search">
+          {% set icon = config.theme.icon.search or "material/magnify" %}
+          {% include ".icons/" ~ icon ~ ".svg" %}
+        </label>
+        {% include "partials/search.html" %}
+      {% endif %}
+    {% endif %}
+
+    {# ── Repository ── #}
+    {% if config.repo_url %}
+      <div class="md-header__source">
+        {% include "partials/source.html" %}
+      </div>
+    {% endif %}
+
+  </nav>
+</header>

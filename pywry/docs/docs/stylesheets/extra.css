@@ -1,108 +1,732 @@
-/* PyWry Documentation - Compact, no wasted space */
+/* ===================================================================
+   PyWry Documentation – Electron-inspired theme  (full site)
+   ===================================================================
+   Sections:
+     1.  Colour tokens
+     2.  Header (single-bar, Electron layout)
+     3.  Inline navigation links
+     4.  Left sidebar (navigation)
+     5.  Right sidebar (table-of-contents)
+     6.  Content area
+     7.  Typography
+     8.  Code blocks
+     9.  Admonitions
+    10.  Tables
+    11.  Links
+    12.  Footer
+    13.  Homepage – hero
+    14.  Homepage – feature cards
+    15.  Homepage – nav cards
+    16.  Scrollbar
+    17.  mkdocstrings
+    18.  Responsive
+   =================================================================== */
+
+/* =================================================================
+   1. COLOUR TOKENS
+   ================================================================= */
 
 :root {
-  --md-primary-fg-color: #1a1a2e;
-  --md-accent-fg-color: #22d3ee;
+  --pywry-teal:           #47c8db;
+  --pywry-teal-dim:       rgba(71, 200, 219, .55);
+  --md-primary-fg-color:       #1a1d2e;
+  --md-primary-fg-color--light: #222538;
+  --md-primary-fg-color--dark:  #131522;
+  --md-accent-fg-color:        var(--pywry-teal);
 }
 
+/* ── Dark (slate) ── */
 [data-md-color-scheme="slate"] {
-  --md-default-bg-color: #0d1117;
-  --md-code-bg-color: #161b22;
+  --md-default-bg-color:          #1b1e2b;
+  --md-default-bg-color--light:   #21243a;
+  --md-default-bg-color--lighter: #282c3c;
+  --md-code-bg-color:   #252838;
+  --md-code-fg-color:   #e0e0ec;
+  --md-typeset-color:   #c8c8d4;
+  --md-typeset-a-color: var(--pywry-teal);
+  --md-footer-bg-color:       #141625;
+  --md-footer-bg-color--dark: #0f1120;
+  --md-footer-fg-color:       #9ca3af;
+  --md-footer-fg-color--light:  #6b7280;
+  --md-footer-fg-color--lighter:#4b5563;
+  /* header */
+  --md-primary-fg-color:       #1a1d2e;
+  --md-primary-fg-color--light:#222538;
+  /* sidebar */
+  --pywry-sidebar-bg:     #1b1e2b;
+  --pywry-sidebar-text:   #a0a6b6;
+  --pywry-sidebar-active: var(--pywry-teal);
+  --pywry-sidebar-hover:  rgba(255,255,255,.05);
+  --pywry-sidebar-border: rgba(255,255,255,.06);
+  /* cards */
+  --pywry-card-bg:        #252838;
+  --pywry-card-border:    rgba(255,255,255,.06);
+  --pywry-card-border-hover: rgba(71,200,219,.3);
+  --pywry-text-muted:     #9ca3af;
+  /* hero */
+  --pywry-hero-bg-start:  #1b1e2b;
+  --pywry-hero-bg-mid:    #21243a;
+  --pywry-hero-bg-end:    #1b1e2b;
+  --pywry-feature-bg:     #171a27;
 }
 
-/* Header styling - reduce padding */
+/* ── Light (default) ── */
+[data-md-color-scheme="default"] {
+  --md-default-bg-color:   #f8f9fc;
+  --md-default-bg-color--light: #f0f2f7;
+  --md-code-bg-color:   #edf0f7;
+  --md-code-fg-color:   #1e293b;
+  --md-typeset-color:   #1e293b;
+  --md-typeset-a-color: #0891b2;
+  --md-primary-fg-color:       #ffffff;
+  --md-primary-fg-color--light:#f7f7fc;
+  --md-accent-fg-color: #0891b2;
+  --md-footer-bg-color: #e2e4ec;
+  --md-footer-bg-color--dark: #d4d6e0;
+  --md-footer-fg-color: #4b5563;
+  --md-footer-fg-color--light: #6b7280;
+  --pywry-teal:         #0891b2;
+  --pywry-teal-dim:     rgba(8,145,178,.55);
+  --pywry-sidebar-bg:      #f8f9fc;
+  --pywry-sidebar-text:    #4b5563;
+  --pywry-sidebar-active:  var(--pywry-teal);
+  --pywry-sidebar-hover:   rgba(0,0,0,.04);
+  --pywry-sidebar-border:  rgba(0,0,0,.08);
+  --pywry-card-bg:         #ffffff;
+  --pywry-card-border:     rgba(0,0,0,.08);
+  --pywry-card-border-hover: rgba(8,145,178,.3);
+  --pywry-text-muted:      #4b5563;
+  --pywry-hero-bg-start:   #f0f2f8;
+  --pywry-hero-bg-mid:     #e8eaf2;
+  --pywry-hero-bg-end:     #f0f2f8;
+  --pywry-feature-bg:      #eaecf3;
+}
+
+/* =================================================================
+   2. HEADER – single bar, dark, Electron vibe
+   ================================================================= */
+
+.md-header {
+  background: var(--md-primary-fg-color);
+  box-shadow: 0 1px 0 rgba(255,255,255,.04);
+  height: 3rem;
+  z-index: 4;
+}
+
 .md-header__inner {
-  padding: 0 0.5rem;
-}
-.md-tabs__inner {
-  padding: 0 0.5rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  max-width: 100% !important;
+  padding: 0 .8rem !important;
 }
 
-/* Eliminate wasted space */
+/* Logo: compact, minimal right margin */
+.md-header .md-logo {
+  padding: .2rem;
+  margin-right: .25rem;
+}
+.md-header .md-logo img,
+.md-header .md-logo svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Title: compact "PyWry" text next to logo */
+.md-header__title {
+  flex-grow: 0 !important;
+  flex-shrink: 0;
+  margin-right: .5rem;
+  font-size: .85rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  min-width: auto;
+}
+
+[data-md-color-scheme="slate"] .md-header__title { color: #e0e0ec; }
+[data-md-color-scheme="default"] .md-header__title { color: #1e293b; }
+
+/* Hide the second topic (page title on scroll) for cleaner look */
+.md-header__topic + .md-header__topic { display: none; }
+
+/* Light-mode header tweaks */
+[data-md-color-scheme="default"] .md-header {
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+/* Spacer between nav and right-side tools */
+.md-header__grow { flex: 1 1 0; }
+
+/* Source (GitHub) chip: subtler */
+.md-header__source { max-width: 10rem; }
+
+/* =================================================================
+   3. INLINE NAVIGATION LINKS (replaces tabs bar)
+   ================================================================= */
+
+.md-header-nav {
+  display: flex;
+  align-items: center;
+  gap: .1rem;
+  flex: 0 0 auto;
+  margin-left: .25rem;
+}
+
+.md-header-nav__link {
+  padding: .3rem .65rem;
+  font-size: .78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: color .15s, background .15s;
+}
+
+/* Dark mode link colours */
+[data-md-color-scheme="slate"] .md-header-nav__link {
+  color: rgba(255,255,255,.6);
+}
+[data-md-color-scheme="slate"] .md-header-nav__link:hover {
+  color: rgba(255,255,255,.9);
+  background: rgba(255,255,255,.06);
+}
+[data-md-color-scheme="slate"] .md-header-nav__link--active {
+  color: var(--pywry-teal);
+}
+
+/* Light mode link colours */
+[data-md-color-scheme="default"] .md-header-nav__link {
+  color: #4b5563;
+}
+[data-md-color-scheme="default"] .md-header-nav__link:hover {
+  color: #111827;
+  background: rgba(0,0,0,.04);
+}
+[data-md-color-scheme="default"] .md-header-nav__link--active {
+  color: var(--pywry-teal);
+}
+
+/* Hide the old tabs bar completely (just in case it renders) */
+.md-tabs { display: none !important; }
+
+/* =================================================================
+   4. LEFT SIDEBAR – cleaner, Electron-style
+   ================================================================= */
+
+.md-sidebar--primary {
+  width: 14rem;
+  background: var(--pywry-sidebar-bg);
+  border-right: 1px solid var(--pywry-sidebar-border);
+}
+
+/* Sidebar inner padding */
+.md-sidebar__inner { padding: .8rem 0; }
+
+/* Sidebar nav title (mobile only usually) */
+.md-nav--primary > .md-nav__title {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--pywry-text-muted);
+  padding: .4rem .8rem;
+}
+/* Hide the "Navigation" title text on desktop */
+@media (min-width: 76.25em) {
+  .md-nav--primary > .md-nav__title { display: none; }
+}
+
+/* Section headers (navigation.sections feature) */
+.md-nav--primary .md-nav__item--section > .md-nav__link {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--pywry-text-muted);
+  pointer-events: none;
+  padding: .8rem .8rem .25rem;
+  margin-top: .4rem;
+}
+
+/* Regular nav links */
+.md-nav__link {
+  font-size: .8rem;
+  padding: .32rem .8rem .32rem 1rem;
+  color: var(--pywry-sidebar-text);
+  border-radius: 0;
+  transition: color .12s, background .12s;
+  border-left: 2px solid transparent;
+  margin: 0;
+}
+
+.md-nav__link:hover {
+  color: var(--pywry-sidebar-active);
+  background: var(--pywry-sidebar-hover);
+}
+
+/* Active page link – teal left border + teal text */
+.md-nav__link--active,
+.md-nav__item--active > .md-nav__link {
+  color: var(--pywry-sidebar-active) !important;
+  border-left-color: var(--pywry-sidebar-active);
+  font-weight: 600;
+  background: var(--pywry-sidebar-hover);
+}
+
+/* Nested list indentation */
+.md-nav--primary .md-nav .md-nav__link {
+  padding-left: 1.5rem;
+}
+.md-nav--primary .md-nav .md-nav .md-nav__link {
+  padding-left: 2rem;
+}
+
+/* Nav toggle icon colour */
+.md-nav__icon { color: var(--pywry-text-muted); }
+
+/* =================================================================
+   5. RIGHT SIDEBAR – table-of-contents (On this page)
+   ================================================================= */
+
+.md-sidebar--secondary {
+  width: 13rem;
+  border-left: 1px solid var(--pywry-sidebar-border);
+}
+
+/* "Table of contents" label */
+.md-nav--secondary > .md-nav__title {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--pywry-text-muted);
+  padding: .8rem .8rem .4rem;
+}
+
+.md-nav--secondary .md-nav__link {
+  font-size: .75rem;
+  padding: .22rem .8rem;
+  color: var(--pywry-sidebar-text);
+  border-left: 2px solid transparent;
+}
+.md-nav--secondary .md-nav__link:hover {
+  color: var(--pywry-sidebar-active);
+}
+.md-nav--secondary .md-nav__link--active {
+  color: var(--pywry-sidebar-active);
+  border-left-color: var(--pywry-sidebar-active);
+}
+
+/* =================================================================
+   6. CONTENT AREA
+   ================================================================= */
+
 .md-main__inner { max-width: 100%; }
-.md-content__inner { max-width: 100%; margin: 0; padding: 0 1rem; }
-.md-typeset h1 { margin-top: 0; }
 
-/* Center content when navigation is hidden (e.g., index page) */
+.md-content__inner {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 3rem;
+}
+
+/* When there's no sidebar, centre content like Electron's standalone pages */
 .md-content--center .md-content__inner {
-  max-width: 900px;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 3rem;
+}
+
+/* =================================================================
+   7. TYPOGRAPHY
+   ================================================================= */
+
+.md-typeset {
+  font-size: .875rem;
+  line-height: 1.7;
+  color: var(--md-typeset-color);
+}
+
+.md-typeset h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  margin: 0 0 .8rem;
+  line-height: 1.25;
+  color: var(--md-typeset-color);
+}
+
+.md-typeset h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  margin: 2rem 0 .6rem;
+  padding-bottom: .3rem;
+  border-bottom: 1px solid var(--pywry-sidebar-border);
+}
+
+.md-typeset h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.4rem 0 .4rem;
+}
+
+.md-typeset h4 {
+  font-size: .95rem;
+  font-weight: 600;
+  margin: 1.2rem 0 .35rem;
+}
+
+.md-typeset p  { margin: .65em 0; }
+.md-typeset ul,
+.md-typeset ol { margin: .65em 0; }
+.md-typeset li { margin: .2em 0; }
+
+/* =================================================================
+   8. CODE BLOCKS
+   ================================================================= */
+
+.md-typeset pre {
+  margin: .75em 0;
+  border-radius: 8px;
+  border: 1px solid var(--pywry-card-border);
+}
+
+.md-typeset pre > code {
+  font-size: .8rem;
+  line-height: 1.55;
+  padding: .8em 1em;
+}
+
+.md-typeset code {
+  font-size: .82rem;
+  padding: .1em .3em;
+  border-radius: 4px;
+}
+
+/* Code copy button */
+.md-clipboard { color: var(--pywry-text-muted); }
+.md-clipboard:hover { color: var(--pywry-teal); }
+
+/* =================================================================
+   9. ADMONITIONS
+   ================================================================= */
+
+.md-typeset .admonition,
+.md-typeset details {
+  margin: .8em 0;
+  padding: .6em 1em;
+  font-size: .82rem;
+  border-radius: 8px;
+  border-width: 0 0 0 3px;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  padding: .5em .7em;
+  font-size: .82rem;
+  font-weight: 600;
+}
+
+/* =================================================================
+   10. TABLES
+   ================================================================= */
+
+.md-typeset table {
+  font-size: .82rem;
+  margin: .8em 0;
+  border-collapse: collapse;
+}
+
+.md-typeset table th,
+.md-typeset table td {
+  padding: .5em .75em;
+  border: 1px solid var(--pywry-sidebar-border);
+}
+
+.md-typeset table th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: .72rem;
+  letter-spacing: .04em;
+}
+
+/* =================================================================
+   11. LINKS
+   ================================================================= */
+
+.md-typeset a {
+  transition: color .15s;
+}
+.md-typeset a:hover {
+  text-decoration: underline;
+}
+
+/* Permalink anchors */
+.md-typeset .headerlink {
+  color: var(--pywry-teal-dim);
+  transition: color .15s;
+}
+.md-typeset .headerlink:hover {
+  color: var(--pywry-teal);
+}
+
+/* =================================================================
+   12. FOOTER
+   ================================================================= */
+
+.md-footer {
+  background: var(--md-footer-bg-color);
+  border-top: 1px solid var(--pywry-sidebar-border);
+}
+
+.md-footer-meta {
+  background: var(--md-footer-bg-color--dark);
+}
+
+/* Previous / Next navigation */
+.md-footer__link {
+  padding: 1rem;
+}
+
+.md-footer__title {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--md-footer-fg-color--light);
+}
+
+.md-footer__direction {
+  font-size: .65rem;
+}
+
+/* =================================================================
+   13. HOMEPAGE – HERO
+   ================================================================= */
+
+.electron-hero {
+  background: linear-gradient(
+    180deg,
+    var(--pywry-hero-bg-start) 0%,
+    var(--pywry-hero-bg-mid)   50%,
+    var(--pywry-hero-bg-end)   100%
+  );
+  text-align: center;
+  padding: 3rem 1.5rem 2.5rem;
+}
+
+.electron-hero__inner {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.electron-hero__logo {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 1.25rem;
+  filter: drop-shadow(0 0 20px rgba(71,200,219,.2));
+}
+
+.electron-hero__title {
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--pywry-teal);
+  margin: 0 0 .6rem;
+  line-height: 1.35;
+  letter-spacing: -.01em;
+}
+
+.electron-hero__subtitle {
+  font-size: 1rem;
+  color: var(--pywry-text-muted);
+  max-width: 540px;
+  margin: 0 auto 1.5rem;
+  line-height: 1.55;
+}
+
+.electron-hero__cta {
+  display: flex;
+  gap: .75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-block;
+  padding: .55rem 1.6rem;
+  border-radius: 6px;
+  font-size: .88rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  transition: all .18s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn--primary {
+  background: var(--pywry-teal);
+  color: #1b1e2b;
+}
+.btn--primary:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 18px rgba(71,200,219,.28);
+}
+
+.btn--secondary {
+  background: transparent;
+  color: var(--pywry-teal);
+  border: 1.5px solid var(--pywry-teal);
+}
+.btn--secondary:hover {
+  background: rgba(71,200,219,.08);
+}
+
+[data-md-color-scheme="default"] .electron-hero__title { color: var(--pywry-teal); }
+[data-md-color-scheme="default"] .btn--primary { color: #fff; }
+
+/* Accent bar below hero */
+.electron-accent-bar {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--pywry-teal), transparent);
+}
+
+/* =================================================================
+   14. HOMEPAGE – FEATURE CARDS (3×2 grid)
+   ================================================================= */
+
+.feature-section {
+  background: var(--pywry-feature-bg);
+  padding: 2.5rem 0 3rem;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 0 2rem;
 }
 
-/* When no sidebar exists, center the content */
-.md-main:not(:has(.md-sidebar--primary)) .md-content__inner,
-.md-main:not(:has(.md-sidebar--secondary)) .md-content__inner {
-  max-width: 900px;
-  margin: 0 auto;
+.feature-card {
+  background: var(--pywry-card-bg);
+  border: 1px solid var(--pywry-card-border);
+  border-radius: 10px;
+  padding: 1.4rem 1.3rem;
+  transition: border-color .2s, transform .15s;
+}
+.feature-card:hover {
+  border-color: var(--pywry-card-border-hover);
+  transform: translateY(-2px);
 }
 
-/* Compact sidebars */
-.md-sidebar { width: 12rem; }
-.md-sidebar--primary { width: 12rem; }
-.md-sidebar--secondary { width: 11rem; }
-.md-nav__item { font-size: 0.75rem; }
-.md-nav__link { padding: 0.3em 0.6em; }
+.feature-card__icon {
+  display: block;
+  color: var(--pywry-teal);
+  margin-bottom: .5rem;
+  width: 26px;
+  height: 26px;
+}
+svg.feature-card__icon {
+  stroke: var(--pywry-teal);
+  color: var(--pywry-teal);
+}
 
-/* Compact typography */
-.md-typeset { font-size: 0.8rem; line-height: 1.5; }
-.md-typeset h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
-.md-typeset h2 { font-size: 1.25rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
-.md-typeset h3 { font-size: 1rem; margin-top: 1rem; margin-bottom: 0.4rem; }
-.md-typeset p { margin: 0.5em 0; }
-.md-typeset ul, .md-typeset ol { margin: 0.5em 0; }
-.md-typeset li { margin: 0.15em 0; }
+.feature-card__title {
+  font-size: .95rem;
+  font-weight: 700;
+  color: #e0e0ec;
+  margin: 0 0 .3rem;
+  line-height: 1.3;
+}
+[data-md-color-scheme="default"] .feature-card__title { color: #1e293b; }
 
-/* Compact code blocks */
-.md-typeset pre { margin: 0.5em 0; }
-.md-typeset pre > code { font-size: 0.75rem; line-height: 1.4; padding: 0.6em; }
-.md-typeset code { font-size: 0.75rem; padding: 0.1em 0.3em; }
-
-/* Compact tables */
-.md-typeset table { font-size: 0.75rem; margin: 0.5em 0; }
-.md-typeset table th, .md-typeset table td { padding: 0.4em 0.6em; }
-
-/* Compact admonitions */
-.md-typeset .admonition { margin: 0.5em 0; padding: 0.5em 0.75em; font-size: 0.75rem; }
-.md-typeset .admonition-title { padding: 0.4em 0.6em; font-size: 0.75rem; }
-
-/* Homepage hero - minimal */
-.hero { text-align: center; padding: 1rem 0 0.5rem; }
-.hero h1 {
-  font-size: 2rem;
+.feature-card__desc {
+  font-size: .8rem;
+  color: var(--pywry-text-muted);
+  line-height: 1.55;
   margin: 0;
-  background: linear-gradient(135deg, #6366f1, #22d3ee);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
-.hero .tagline { font-size: 0.9rem; margin: 0.25rem 0 0.5rem; opacity: 0.85; }
 
-/* Navigation cards - compact grid */
-.nav-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.75rem 0; }
+/* =================================================================
+   15. HOMEPAGE – NAV CARDS
+   ================================================================= */
+
+.nav-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .85rem;
+  margin: 1.5rem 0 2rem;
+}
+
 .nav-card {
   display: block;
-  padding: 0.6rem 0.75rem;
-  background: var(--md-code-bg-color);
-  border-radius: 4px;
-  text-decoration: none;
+  padding: 1rem 1.2rem;
+  background: var(--pywry-card-bg);
+  border-radius: 8px;
+  text-decoration: none !important;
   color: var(--md-typeset-color);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--pywry-card-border);
+  transition: border-color .2s, transform .15s;
 }
-.nav-card:hover { border-color: var(--md-primary-fg-color); }
-.nav-card h4 { margin: 0 0 0.15rem; font-size: 0.8rem; color: var(--md-primary-fg-color); }
-.nav-card p { margin: 0; font-size: 0.7rem; opacity: 0.7; }
+.nav-card:hover {
+  border-color: var(--pywry-card-border-hover);
+  transform: translateY(-1px);
+}
+.nav-card h4 {
+  margin: 0 0 .15rem;
+  font-size: .88rem;
+  color: var(--pywry-teal);
+}
+.nav-card p {
+  margin: 0;
+  font-size: .78rem;
+  color: var(--pywry-text-muted);
+}
 
-/* Mobile */
-@media (max-width: 768px) {
-  .nav-cards { grid-template-columns: 1fr 1fr; }
-  .md-sidebar { width: 100%; }
+/* =================================================================
+   16. SCROLLBAR (dark mode)
+   ================================================================= */
+
+[data-md-color-scheme="slate"] ::-webkit-scrollbar       { width: 7px; height: 7px; }
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-track  { background: #1b1e2b; }
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb  { background: #3a3f54; border-radius: 4px; }
+[data-md-color-scheme="slate"] ::-webkit-scrollbar-thumb:hover { background: rgba(71,200,219,.4); }
+
+/* =================================================================
+   17. MKDOCSTRINGS
+   ================================================================= */
+
+.doc-heading   { font-size: 1rem !important; font-weight: 600; }
+.doc-signature { font-size: .75rem !important; }
+.doc-contents  { padding-left: 1rem; border-left: 2px solid var(--pywry-sidebar-border); }
+
+/* =================================================================
+   18. RESPONSIVE
+   ================================================================= */
+
+@media (max-width: 76.25em) {
+  /* Tablet: hide inline nav, rely on sidebar drawer */
+  .md-header-nav     { display: none; }
+  .md-sidebar--primary { width: 100%; border-right: none; }
 }
+
+@media (max-width: 60em) {
+  .feature-grid { grid-template-columns: repeat(2, 1fr); }
+  .nav-cards    { grid-template-columns: repeat(2, 1fr); }
+  .electron-hero__title { font-size: 1.5rem; }
+  .md-content__inner { padding: 1rem 1.25rem 2rem; }
+}
+
 @media (max-width: 480px) {
-  .nav-cards { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: 1fr; padding: 0 1rem; }
+  .nav-cards    { grid-template-columns: 1fr; }
+  .electron-hero { padding: 2rem 1rem 1.5rem; }
+  .electron-hero__logo { width: 64px; height: 64px; }
+  .electron-hero__title { font-size: 1.3rem; }
 }
 
-/* mkdocstrings compact */
-.doc-heading { font-size: 1rem !important; }
-.doc-signature { font-size: 0.7rem !important; }
-.doc-contents { font-size: 0.75rem !important; }
+/* =================================================================
+   SEARCH – overlay appears correctly
+   ================================================================= */
+.md-search__overlay { background: rgba(0,0,0,.5); }

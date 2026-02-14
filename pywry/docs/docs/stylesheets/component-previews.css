@@ -35,18 +35,18 @@
   --pywry-btn-neutral-bg: rgb(0, 136, 204);
   --pywry-btn-neutral-text: #ffffff;
   --pywry-btn-neutral-hover: rgb(0, 115, 173);
-  --pywry-bg-primary: #212124;
-  --pywry-bg-secondary: rgba(21, 21, 24, 1);
-  --pywry-bg-tertiary: rgba(31, 30, 35, 1);
+  --pywry-bg-primary: #252838;
+  --pywry-bg-secondary: rgba(27, 30, 43, 1);
+  --pywry-bg-tertiary: rgba(35, 38, 53, 1);
   --pywry-bg-hover: rgba(255, 255, 255, 0.08);
   --pywry-text-primary: #ebebed;
   --pywry-text-secondary: #a0a0a0;
   --pywry-text-muted: #707070;
-  --pywry-border-color: #333;
+  --pywry-border-color: rgba(255, 255, 255, 0.08);
   --pywry-border-focus: #555;
-  --pywry-tab-bg: #2a2a2e;
-  --pywry-tab-active-bg: #3d3d42;
-  --pywry-tab-hover-bg: #353538;
+  --pywry-tab-bg: #2b2e3b;
+  --pywry-tab-active-bg: #3b3f54;
+  --pywry-tab-hover-bg: #33374a;
   --pywry-btn-primary-bg: #e2e2e2;
   --pywry-btn-primary-text: #151518;
   --pywry-btn-primary-hover: #cccccc;
@@ -68,17 +68,17 @@
 
 /* ── Light theme — auto-applied when MkDocs uses "default" ── */
 [data-md-color-scheme="default"] .component-preview {
-  --pywry-bg-primary: #f5f5f5;
+  --pywry-bg-primary: #eef0f5;
   --pywry-bg-secondary: #ffffff;
   --pywry-bg-hover: rgba(0, 0, 0, 0.06);
   --pywry-text-primary: #000000;
   --pywry-text-secondary: #666666;
   --pywry-text-muted: #999999;
-  --pywry-border-color: #ccc;
+  --pywry-border-color: rgba(0, 0, 0, 0.1);
   --pywry-border-focus: #999;
-  --pywry-tab-bg: #e8e8ec;
+  --pywry-tab-bg: #e4e7f0;
   --pywry-tab-active-bg: #ffffff;
-  --pywry-tab-hover-bg: #f0f0f4;
+  --pywry-tab-hover-bg: #eceef5;
   --pywry-btn-primary-bg: #2c2c32;
   --pywry-btn-primary-text: #ffffff;
   --pywry-btn-primary-hover: #1a1a1e;
