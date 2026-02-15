@@ -46,17 +46,17 @@ The modal is hidden by default. It renders as an overlay div with a backdrop, an
 | `component_id` | `str` | auto | Unique identifier — used in open/close commands |
 | `title` | `str` | `"Modal"` | Header text |
 | `items` | `list[ToolbarItem]` | `[]` | Components inside the modal body |
-| `size` | `"sm"` \| `"md"` \| `"lg"` \| `"xl"` \| `"full"` | `"md"` | Preset width |
-| `width` | `str \| None` | `None` | Custom width (overrides `size`) |
+| `size` | `"sm" | "md" | "lg" | "xl" | "full"` | `"md"` | Preset width |
+| `width` | `str | None` | `None` | Custom width (overrides `size`) |
 | `max_height` | `str` | `"80vh"` | Maximum height before scrolling |
 | `overlay_opacity` | `float` | `0.5` | Backdrop darkness (0.0–1.0) |
 | `close_on_escape` | `bool` | `True` | ESC key closes the modal |
 | `close_on_overlay_click` | `bool` | `True` | Clicking outside closes the modal |
 | `reset_on_close` | `bool` | `True` | Reset all inputs when closed |
-| `on_close_event` | `str \| None` | `None` | Event emitted when modal closes |
+| `on_close_event` | `str | None` | `None` | Event emitted when modal closes |
 | `open_on_load` | `bool` | `False` | Open immediately on page load |
 | `style` | `str` | `""` | Inline CSS on the modal container |
-| `script` | `str \| Path \| None` | `None` | JavaScript to inject with the modal |
+| `script` | `str | Path | None` | `None` | JavaScript to inject with the modal |
 | `class_name` | `str` | `""` | Extra CSS class on the modal container |
 
 ### Size Presets

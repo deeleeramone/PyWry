@@ -43,9 +43,9 @@ The `alert()` method accepts these parameters:
 |:---|:---|:---|:---|
 | `message` | `str` | (required) | Toast body text |
 | `alert_type` | `str` | `"info"` | One of `info`, `success`, `warning`, `error`, `confirm` |
-| `title` | `str \| None` | `None` | Optional header text |
+| `title` | `str | None` | `None` | Optional header text |
 | `duration` | `int` | `5000` | Auto-dismiss time in milliseconds |
-| `callback_event` | `str \| None` | `None` | Event emitted when confirm toast is acknowledged |
+| `callback_event` | `str | None` | `None` | Event emitted when confirm toast is acknowledged |
 | `position` | `str` | `"top-right"` | Corner position |
 
 ### Positions

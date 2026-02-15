@@ -29,8 +29,8 @@ app.show(content)
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `html` | `str` | *(required)* | The HTML content to render — a fragment or a complete document |
-| `css_files` | `list[Path \| str]` | `None` | Paths to CSS files to inject as `<style>` tags |
-| `script_files` | `list[Path \| str]` | `None` | Paths to JavaScript files to inject as `<script>` tags |
+| `css_files` | `list[Path | str]` | `None` | Paths to CSS files to inject as `<style>` tags |
+| `script_files` | `list[Path | str]` | `None` | Paths to JavaScript files to inject as `<script>` tags |
 | `inline_css` | `str` | `None` | Raw CSS string injected as a `<style>` tag |
 | `json_data` | `dict` | `None` | Data injected as `window.json_data` in the page |
 | `init_script` | `str` | `None` | JavaScript code executed after all other scripts load |

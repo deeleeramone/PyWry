@@ -28,14 +28,14 @@ The `component_reference` skill is **mandatory** — it contains the only correc
 
 | Event | Payload | Purpose |
 |:---|:---|:---|
-| `grid:update-data` | `{"data": [...], "strategy": "set\|append\|update"}` | Replace, append, or merge grid rows |
+| `grid:update-data` | `{"data": [...], "strategy": "set|append|update"}` | Replace, append, or merge grid rows |
 | `grid:request-state` | `{}` | Request grid state (response via `grid:state-response`) |
 | `grid:restore-state` | `{"state": {...}}` | Restore a saved grid state |
-| `grid:reset-state` | `{"hard": true\|false}` | Soft reset (keeps columns) or hard reset |
+| `grid:reset-state` | `{"hard": true|false}` | Soft reset (keeps columns) or hard reset |
 | `plotly:update-figure` | `{"data": [...], "layout": {...}}` | Replace chart data and layout |
 | `plotly:request-state` | `{}` | Request chart state |
 | `pywry:set-content` | `{"id": "...", "text": "..."}` or `{"id": "...", "html": "..."}` | Update a DOM element |
-| `pywry:update-theme` | `{"theme": "dark\|light\|system"}` | Switch theme |
+| `pywry:update-theme` | `{"theme": "dark|light|system"}` | Switch theme |
 | `toolbar:set-value` | `{"componentId": "...", "value": "..."}` | Set a toolbar component's value |
 | `toolbar:request-state` | `{}` | Request all toolbar values (response via `toolbar:state-response`) |
 
@@ -484,8 +484,8 @@ All three parameters are **required**.
 | `pywry:set-content` | `{"id": "elementId", "text": "..."}` | Set element `textContent` |
 | `pywry:set-content` | `{"id": "elementId", "html": "..."}` | Set element `innerHTML` |
 | `pywry:set-style` | `{"id": "elementId", "styles": {"color": "red", "fontSize": "18px"}}` | Update CSS styles |
-| `pywry:update-theme` | `{"theme": "dark\|light\|system"}` | Switch theme |
-| `pywry:alert` | `{"message": "...", "type": "info\|success\|warning\|error"}` | Show toast |
+| `pywry:update-theme` | `{"theme": "dark|light|system"}` | Switch theme |
+| `pywry:alert` | `{"message": "...", "type": "info|success|warning|error"}` | Show toast |
 | `pywry:navigate` | `{"url": "https://..."}` | Client-side redirect |
 | `pywry:download` | `{"content": "...", "filename": "...", "mimeType": "text/plain"}` | Trigger file download |
 
