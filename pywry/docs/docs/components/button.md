@@ -29,8 +29,8 @@ Buttons support typical styles via the `variant` parameter:
   <button class="pywry-btn pywry-toolbar-button pywry-btn-danger" data-event="demo:danger">Danger</button>
   <button class="pywry-btn pywry-toolbar-button pywry-btn-warning" data-event="demo:warning">Warning</button>
   <button class="pywry-btn pywry-toolbar-button pywry-btn-icon" 
-  style="font-size: 32px;"
-  data-event="demo:icon">⚙\ufe0e</button>
+  style="font-size: 28px;"
+  data-event="demo:icon">⚙&#xFE0E;</button>
 </div>
 
 ## Sizes
