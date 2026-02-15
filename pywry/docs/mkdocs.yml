@@ -100,10 +100,10 @@ plugins:
           paths: [".."]  # Path to pywry package (relative to docs/)
           options:
             # General
-            show_source: true
+            show_source: false
             show_bases: true
             show_root_heading: true
-            show_root_full_path: false
+            show_root_full_path: true
             show_root_toc_entry: true
             show_symbol_type_heading: true
             show_symbol_type_toc: true
@@ -131,7 +131,7 @@ plugins:
             show_signature_annotations: true
             separate_signature: true
             line_length: 80
-            annotations_path: source  # Use actual source annotations
+            annotations_path: brief  # Use short public import paths
             # Inheritance
             inherited_members: true
             # Filters
@@ -149,8 +149,7 @@ extra:
   generator: false
 
 nav:
-  - Home:
-    - index.md
+  - PyWry: index.md
 
   - Docs:
     - getting-started/index.md
@@ -163,9 +162,11 @@ nav:
       - app.show(): guides/app-show.md
       - HtmlContent: guides/html-content.md
       - Content Assembly: guides/content-assembly.md
+      - Window Modes: guides/window-management.md
       - Event System: guides/events.md
-      - State, Redis & RBAC: guides/state-and-auth.md
+      - JavaScript Bridge: guides/javascript-bridge.md
       - Configuration: guides/configuration.md
+      - State, Redis & RBAC: guides/state-and-auth.md
       - Hot Reload: guides/hot-reload.md
     - UI:
       - Toolbar System: guides/toolbars.md
@@ -175,9 +176,7 @@ nav:
     - Integrations:
       - Plotly Charts: guides/plotly.md
       - AgGrid Tables: guides/aggrid.md
-    - Advanced:
-      - JavaScript Bridge: guides/javascript-bridge.md
-      - Window Management: guides/window-management.md
+    - Hosting:
       - Browser Mode: guides/browser-mode.md
       - Deploy Mode: guides/deploy-mode.md
     - Features: features.md
@@ -185,22 +184,32 @@ nav:
 
   - API:
     - reference/index.md
-    - pywry: reference/pywry.md
-    - InlineWidget: reference/inline-widget.md
+    - Core:
+      - PyWry: reference/pywry.md
+      - InlineWidget: reference/inline-widget.md
+      - Widget: reference/widget.md
+      - WindowProxy: reference/window-proxy.md
+      - Runtime: reference/runtime.md
+      - Widget Protocol: reference/widget-protocol.md
+      - Window Manager: reference/window-manager.md
+      - Window Dispatch: reference/window-dispatch.md
+      - Commands: reference/commands.md
     - Events: reference/events.md
-    - Models: reference/models.md
-    - Config: reference/config.md
-    - Widget: reference/widget.md
-    - State: reference/state.md
-    - Plotly: reference/plotly-config.md
-    - Grid: reference/grid.md
-    - Callbacks: reference/callbacks.md
-    - CSS: reference/css.md
-    - MCP: reference/mcp.md
-    - Asset Loader: reference/asset-loader.md
-    - Hot Reload: reference/hot-reload.md
-    - Components:
+    - Models & Config:
+      - Models: reference/models.md
+      - Config: reference/config.md
+      - Types: reference/types.md
+      - Exceptions: reference/exceptions.md
+    - State:
+      - State: reference/state.md
+      - Mixins: reference/state-mixins.md
+      - Auth & RBAC: reference/state-auth.md
+      - Redis: reference/state-redis.md
+    - UI:
       - reference/components/index.md
+      - CSS: reference/css.md
+      - Modal: reference/modal.md
+      - Toolbar Functions: reference/toolbar-functions.md
       - Button: reference/components/button.md
       - Checkbox: reference/components/checkbox.md
       - DateInput: reference/components/dateinput.md
@@ -222,6 +231,23 @@ nav:
       - Toggle: reference/components/toggle.md
       - Toolbar: reference/components/toolbar.md
       - ToolbarItem: reference/components/toolbaritem.md
+    - Integrations:
+      - Plotly: reference/plotly-config.md
+      - Grid: reference/grid.md
+      - MCP Guide: reference/mcp.md
+      - MCP API: reference/mcp-api.md
+    - Utilities:
+      - Callbacks: reference/callbacks.md
+      - Asset Loader: reference/asset-loader.md
+      - Assets: reference/assets.md
+      - Hot Reload: reference/hot-reload.md
+      - Templates: reference/templates.md
+      - Scripts: reference/scripts.md
+      - Log: reference/log.md
+      - Watcher: reference/watcher.md
+      - Notebook: reference/notebook.md
+      - CLI: reference/cli.md
+      - Utils: reference/utils.md
 
   - Components:
     - components/index.md
@@ -250,7 +276,8 @@ nav:
   - MCP:
     - mcp/index.md
     - Setup: mcp/setup.md
-    - Capabilities: mcp/capabilities.md
+    - Tools: mcp/tools.md
+    - Skills & Resources: mcp/skills.md
     - Examples: mcp/examples.md
 
   - Examples:

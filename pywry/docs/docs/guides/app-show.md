@@ -1,4 +1,4 @@
-# The `app.show()` Method
+# The app.show() Method
 
 `app.show()` is the primary entry point for rendering content in PyWry. It accepts HTML (as a string or `HtmlContent` object), determines the correct rendering path for the current environment, and returns a handle you can use to interact with the result.
 
@@ -36,7 +36,7 @@ app.show(
 
 ## Parameters in Detail
 
-### `content` — what to render
+### content — what to render
 
 Accepts either a plain HTML string or an `HtmlContent` object. When you pass a string, PyWry wraps it in a minimal document structure automatically. When you pass `HtmlContent`, you get control over CSS files, JS files, inline styles, JSON data injection, and hot reload watching. See the [HtmlContent guide](html-content.md) for details.
 
@@ -58,7 +58,7 @@ content = HtmlContent(
 app.show(content)
 ```
 
-### `title` — window title
+### title — window title
 
 Sets the title bar text in native window mode. Defaults to `"PyWry"`. Ignored in notebook and browser modes.
 
@@ -66,7 +66,7 @@ Sets the title bar text in native window mode. Defaults to `"PyWry"`. Ignored in
 app.show("<h1>Dashboard</h1>", title="Sales Dashboard")
 ```
 
-### `width` and `height` — dimensions
+### width and height — dimensions
 
 In native mode, `width` accepts an integer (pixels) for the OS window size. In notebook mode, `width` can also be a CSS string like `"100%"` or `"500px"`. `height` is always an integer (pixels).
 
@@ -80,7 +80,7 @@ app.show(html, width="100%", height=400)
 
 Defaults come from `WindowConfig` — 1280×720 unless overridden in your configuration.
 
-### `callbacks` — event handlers
+### callbacks — event handlers
 
 A dictionary mapping event names to Python callback functions. These are registered before the content is rendered, so they're ready to receive events immediately.
 
@@ -99,7 +99,7 @@ app.show(html, callbacks={
 
 See the [Event System guide](events.md) for the full callback signature and registration patterns.
 
-### `include_plotly` and `include_aggrid` — library loading
+### include_plotly and include_aggrid — library loading
 
 When `True`, PyWry injects the Plotly.js or AG Grid JavaScript and CSS libraries into the page. You don't need to set these manually if you use `app.show_plotly()` or `app.show_dataframe()` — they set the flags automatically.
 
@@ -111,7 +111,7 @@ app.show(plotly_html, include_plotly=True)
 app.show_plotly(fig)
 ```
 
-### `label` — window identity
+### label — window identity
 
 In `MULTI_WINDOW` mode, the `label` identifies which window to create or update. In `SINGLE_WINDOW` mode, the label is fixed and this parameter is ignored. Labels are used in callbacks to target events back to a specific window.
 
@@ -127,7 +127,7 @@ def on_filter(data, event_type, label):
     app.emit("app:update", {"filter": data}, "chart")  # target the chart window
 ```
 
-### `watch` — hot reload
+### watch — hot reload
 
 When `True`, PyWry watches the CSS and JS files referenced by `HtmlContent.css_files` and `HtmlContent.script_files` for changes, and live-reloads them in the browser without a full page refresh.
 
@@ -142,7 +142,7 @@ app.show(content, watch=True)  # or override here
 
 See the [Hot Reload guide](hot-reload.md) for details.
 
-### `toolbars` and `modals` — UI chrome
+### toolbars and modals — UI chrome
 
 Lists of `Toolbar` or `Modal` objects (or their dict equivalents) that wrap your content in an interactive layout. Toolbars are positioned around the content area; modals are hidden until triggered by events.
 
@@ -193,7 +193,7 @@ All implement the `BaseWidget` protocol, so `emit()` and `on()` work identically
 
 `app.show()` is the general-purpose method. PyWry also provides specialized variants that configure the right options automatically:
 
-### `app.show_plotly(figure, ...)`
+### app.show_plotly(figure, ...)
 
 Converts a Plotly figure to HTML, injects Plotly.js, and pre-wires chart events (`plotly:click`, `plotly:hover`, `plotly:selected`, `plotly:relayout`).
 
@@ -204,7 +204,7 @@ fig = px.scatter(x=[1, 2, 3], y=[1, 4, 9])
 app.show_plotly(fig, callbacks={"plotly:click": on_click})
 ```
 
-### `app.show_dataframe(data, ...)`
+### app.show_dataframe(data, ...)
 
 Converts a DataFrame to AG Grid HTML, injects the AG Grid library, and pre-wires grid events (`grid:cell-clicked`, `grid:selection-changed`, `grid:cell-edited`).
 
@@ -224,14 +224,14 @@ Both methods accept all the same optional parameters as `app.show()` (`title`, `
 ```mermaid
 flowchart TD
     A["app.show(content)"] --> B{"mode = BROWSER?"}
-    B -- Yes --> C["InlineWidget\nFastAPI + WebSocket\nopens system browser"]
+    B -- Yes --> C["InlineWidget<br>FastAPI + WebSocket<br>opens system browser"]
     B -- No --> D{"In a notebook?"}
-    D -- Yes --> E{"include_plotly\nor include_aggrid?"}
-    E -- Yes --> F["InlineWidget\nIFrame + WebSocket\nspecialized JS"]
-    E -- No --> G{"anywidget\navailable?"}
-    G -- Yes --> H["PyWryWidget\nanywidget + traitlet sync"]
-    G -- No --> I["InlineWidget\nIFrame + WebSocket\nfallback"]
-    D -- No --> J["NativeWindowHandle\nPyTauri + OS webview"]
+    D -- Yes --> E{"include_plotly<br>or include_aggrid?"}
+    E -- Yes --> F["InlineWidget<br>IFrame + WebSocket<br>specialized JS"]
+    E -- No --> G{"anywidget<br>available?"}
+    G -- Yes --> H["PyWryWidget<br>anywidget + traitlet sync"]
+    G -- No --> I["InlineWidget<br>IFrame + WebSocket<br>fallback"]
+    D -- No --> J["NativeWindowHandle<br>PyTauri + OS webview"]
 ```
 
 You can force a specific mode by setting it on the app:

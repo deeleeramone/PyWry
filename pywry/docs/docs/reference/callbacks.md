@@ -9,12 +9,12 @@ Callback registry for handling widget events.
 ::: pywry.callbacks.CallbackFunc
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
 
 ::: pywry.callbacks.WidgetType
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
 
 ---
 
@@ -23,10 +23,10 @@ Callback registry for handling widget events.
 ::: pywry.callbacks.get_registry
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
 
 ::: pywry.callbacks.CallbackRegistry
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true

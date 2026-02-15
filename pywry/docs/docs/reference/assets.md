@@ -1,122 +1,102 @@
-# pywry.grid
+# pywry.assets
 
-Configuration models for AG Grid integration.
-
----
-
-## Grid Options
-
-::: pywry.grid.GridOptions
-    options:
-      show_root_heading: true
-      heading_level: 2
-      members: true
+Built-in asset loaders for Plotly, AG Grid, CSS, icons, toasts, and modals.
 
 ---
 
-## Column Definition
+## Plotly Assets
 
-::: pywry.grid.ColDef
-    options:
-      show_root_heading: true
-      heading_level: 2
-      members: true
-
----
-
-## Column Group Definition
-
-::: pywry.grid.ColGroupDef
-    options:
-      show_root_heading: true
-      heading_level: 2
-      members: true
-
----
-
-## Default Column Definition
-
-::: pywry.grid.DefaultColDef
-    options:
-      show_root_heading: true
-      heading_level: 2
-      members: true
-
----
-
-## Row Selection
-
-::: pywry.grid.RowSelection
-    options:
-      show_root_heading: true
-      heading_level: 2
-      members: true
-
----
-
-## Utility Functions
-
-::: pywry.grid.build_grid_config
+::: pywry.assets.get_plotly_js
     options:
       show_root_heading: true
       heading_level: 2
 
-::: pywry.grid.to_js_grid_config
+::: pywry.assets.get_plotly_templates_js
     options:
       show_root_heading: true
       heading_level: 2
 
-::: pywry.grid.normalize_data
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: pywry.grid.build_column_defs
-    options:
-      show_root_heading: true
-      heading_level: 2
-
-::: pywry.grid.build_grid_html
+::: pywry.assets.get_plotly_defaults_js
     options:
       show_root_heading: true
       heading_level: 2
 
 ---
 
-## Grid Model
+## AG Grid Assets
 
-::: pywry.grid.AGGridModel
+::: pywry.assets.get_aggrid_js
     options:
       show_root_heading: true
       heading_level: 2
-      members: true
+
+::: pywry.assets.get_aggrid_css
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.assets.get_aggrid_defaults_js
+    options:
+      show_root_heading: true
+      heading_level: 2
 
 ---
 
-## Grid Context
+## Core CSS & JS
 
-::: pywry.grid.PyWryGridContext
+::: pywry.assets.get_pywry_css
     options:
       show_root_heading: true
       heading_level: 2
-      members: true
+
+::: pywry.assets.get_scrollbar_js
+    options:
+      show_root_heading: true
+      heading_level: 2
 
 ---
 
-## Grid Config
+## Toast & Modal Assets
 
-::: pywry.grid.GridConfig
+::: pywry.assets.get_toast_notifications_js
     options:
       show_root_heading: true
       heading_level: 2
-      members: true
+
+::: pywry.assets.get_toast_css
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.assets.get_modal_handlers_js
+    options:
+      show_root_heading: true
+      heading_level: 2
 
 ---
 
-## Grid Data
+## Icons
 
-::: pywry.grid.GridData
+::: pywry.assets.get_openbb_icon
     options:
       show_root_heading: true
       heading_level: 2
-      members: true
+
+::: pywry.assets.get_openbb_icon_path
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+---
+
+## Cache Management
+
+::: pywry.assets.clear_css_cache
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.assets.clear_cache
+    options:
+      show_root_heading: true
+      heading_level: 2

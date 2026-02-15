@@ -1,90 +1,156 @@
 # MCP Server
 
-Model Context Protocol server for AI agent integration. Expose PyWry widgets to LLMs like Claude.
+PyWry includes a [Model Context Protocol](https://modelcontextprotocol.io/) server that lets AI agents — like Claude — create, manipulate, and destroy interactive widgets. The agent calls MCP tools to render charts, tables, forms, and dashboards, and receives user interactions back as events.
 
 ## Quick Start
 
 ```bash
-# Run with stdio transport (default)
+# Install MCP support
+pip install pywry[mcp]
+
+# Run with stdio transport (default — for Claude Desktop)
 python -m pywry.mcp
 
-# Run with SSE transport
-python -m pywry.mcp --sse 8001
+# Run with SSE transport (for web-based MCP clients)
+python -m pywry.mcp --sse
 
-# Headless mode (inline widgets)
-python -m pywry.mcp --headless
+# Headless mode (browser widgets instead of native windows)
+pywry mcp --headless
 ```
 
 ## Claude Desktop Config
 
-```json
-{
-  "mcpServers": {
-    "pywry": {
-      "command": "python",
-      "args": ["-m", "pywry.mcp"]
+Add this to your Claude Desktop configuration file:
+
+=== "Basic (native windows)"
+
+    ```json
+    {
+      "mcpServers": {
+        "pywry": {
+          "command": "python",
+          "args": ["-m", "pywry.mcp"]
+        }
+      }
     }
-  }
-}
-```
+    ```
 
-For headless mode (browser widgets instead of native):
+=== "Headless (browser widgets)"
 
-```json
-{
-  "mcpServers": {
-    "pywry": {
-      "command": "python",
-      "args": ["-m", "pywry.mcp", "--headless"]
+    ```json
+    {
+      "mcpServers": {
+        "pywry": {
+          "command": "pywry",
+          "args": ["mcp", "--headless"]
+        }
+      }
     }
-  }
-}
+    ```
+
+=== "With virtual environment"
+
+    ```json
+    {
+      "mcpServers": {
+        "pywry": {
+          "command": "/path/to/venv/bin/python",
+          "args": ["-m", "pywry.mcp"]
+        }
+      }
+    }
+    ```
+
+Then ask Claude:
+
+> "Create a scatter plot showing monthly revenue vs. expenses"
+
+Claude will use the MCP tools to build and display the chart.
+
+## How It Works
+
+The MCP server bridges AI agents and PyWry's rendering engine:
+
+```mermaid
+flowchart LR
+    A["AI Agent<br>(Claude, etc.)"] <-->|"MCP Protocol<br>(stdio / SSE)"| B["PyWry MCP Server"]
+    B --> C["Tools<br>25 widget operations"]
+    B --> D["Resources<br>Docs, source, exports"]
+    B --> E["Skills<br>11 guidance prompts"]
+    C --> F["PyWry Widgets<br>(native or browser)"]
+    D --> B
+    E --> B
+    F -->|"User events"| B
+    B -->|"Event data"| A
 ```
 
-## Ask Claude
+1. **Agent calls a tool** (e.g., `create_widget` with HTML + toolbar config)
+2. **Server builds components** — converts JSON configs into Pydantic toolbar models, registers callbacks
+3. **PyWry renders the widget** — native OS window or browser tab depending on mode
+4. **User interacts** — clicks buttons, changes inputs, selects options
+5. **Events queue up** — agent calls `get_events` to retrieve them
+6. **Agent responds** — updates content, shows toasts, creates new widgets
 
-Now you can ask Claude to create visualizations:
+## Two Rendering Modes
 
-> "Create a scatter plot of sales data with x=month and y=revenue"
+| Mode | Flag | How widgets appear | Best for |
+|:---|:---|:---|:---|
+| **Native** (default) | (none) | OS-native windows via PyTauri | Local development, desktop apps |
+| **Headless** | `--headless` | Browser tabs via inline server | Remote servers, CI, Docker, SSH |
 
-Claude will use the MCP tools to generate and display the chart.
+In headless mode, `list_widgets` returns URLs like `http://127.0.0.1:PORT/widget/{id}` that can be opened in any browser.
 
-## Available Tools
+## Server Capabilities
 
-| Tool | Description |
-|------|-------------|
-| `get_skills` | Get component reference and guidance |
-| `create_widget` | Create HTML widget with toolbars |
-| `show_plotly` | Create Plotly chart widgets |
-| `show_dataframe` | Create AG Grid table widgets |
-| `set_content` | Update element text/HTML |
-| `set_style` | Update element CSS styles |
-| `show_toast` | Display toast notification |
-| `update_theme` | Switch dark/light theme |
-| `update_plotly` | Update Plotly figure |
-| `send_event` | Send custom event to widget |
-| `get_events` | Retrieve queued events |
+The MCP server exposes three types of capabilities:
 
-See [Capabilities](capabilities.md) for full tool reference.
+### Tools (25)
 
-## Architecture
+Operations the agent can call — creating widgets, updating content, managing state. Organized into five groups:
 
-```
-┌─────────────────────┐     MCP Protocol     ┌─────────────────────┐
-│   Claude Desktop    │◄───────────────────►│   PyWry MCP Server   │
-│   or AI Agent       │                      │                      │
-└─────────────────────┘                      └─────────────────────┘
-                                                       │
-                                                       ▼
-                                             ┌─────────────────────┐
-                                             │    PyWry Widgets    │
-                                             │  (Windows/Browser)  │
-                                             └─────────────────────┘
-```
+| Group | Tools | Purpose |
+|:---|:---|:---|
+| **Discovery** | `get_skills` | Retrieve guidance and component reference |
+| **Widget creation** | `create_widget`, `show_plotly`, `show_dataframe`, `build_div`, `build_ticker_item` | Build new widgets |
+| **Widget manipulation** | `set_content`, `set_style`, `show_toast`, `update_theme`, `inject_css`, `remove_css`, `navigate`, `download`, `update_plotly`, `update_marquee`, `update_ticker_item`, `send_event` | Modify existing widgets |
+| **Widget management** | `list_widgets`, `get_events`, `destroy_widget` | Track and clean up widgets |
+| **Resources & export** | `get_component_docs`, `get_component_source`, `export_widget`, `list_resources` | Documentation and code generation |
+
+### Resources
+
+Read-only data the agent can access via `pywry://` URIs:
+
+| URI | Content |
+|:---|:---|
+| `pywry://docs/events` | Built-in events reference |
+| `pywry://docs/quickstart` | Getting started guide |
+| `pywry://component/{name}` | Component documentation (18 components) |
+| `pywry://source/{name}` | Component Python source code |
+| `pywry://source/components` | All component sources combined |
+| `pywry://skill/{id}` | Skill guidance text |
+| `pywry://export/{widget_id}` | Export active widget as Python code |
+
+### Prompts (Skills)
+
+11 guidance prompts that teach the agent how to use PyWry effectively:
+
+| Skill | What it teaches |
+|:---|:---|
+| `component_reference` | **Mandatory** — all 18 components, properties, events, JSON schemas |
+| `interactive_buttons` | Auto-wired `elementId:action` callback pattern |
+| `native` | Desktop window mode, full-viewport layout |
+| `jupyter` | Notebook integration — AnyWidget and IFrame approaches |
+| `iframe` | Sandboxed embedding, postMessage communication |
+| `deploy` | Production SSE server, horizontal scaling, Redis |
+| `css_selectors` | Targeting elements for `set_content` / `set_style` |
+| `styling` | CSS variables, theme switching, `inject_css` |
+| `data_visualization` | Plotly charts, AG Grid tables, live data patterns |
+| `forms_and_inputs` | Form building with validation and event collection |
+| `modals` | Modal dialogs — schema, sizes, open/close/reset |
 
 ## Next Steps
 
-- **[Setup Guide](setup.md)** — Detailed installation instructions
-- **[Capabilities](capabilities.md)** — Full tool reference
-- **[Examples](examples.md)** — Common use cases
-- **[API Reference](../reference/mcp.md)** — Programmatic usage
+- **[Setup](setup.md)** — Installation, CLI options, client configuration
+- **[Tools Reference](tools.md)** — Every tool with parameters and examples
+- **[Skills & Resources](skills.md)** — How the agent learns PyWry
+- **[Examples](examples.md)** — Common workflows and patterns

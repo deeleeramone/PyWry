@@ -9,8 +9,7 @@ Main PyWry application class and top-level functions.
 ::: pywry.app.PyWry
     options:
       show_root_heading: true
-      show_source: true
-      heading_level: 3
+      heading_level: 2
 
 ---
 
@@ -21,17 +20,17 @@ These functions provide quick one-liner display for Plotly figures and DataFrame
 ::: pywry.inline.show_plotly
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
 
 ::: pywry.inline.show_dataframe
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
 
 ::: pywry.inline.block
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
 
 ---
 
@@ -40,4 +39,4 @@ These functions provide quick one-liner display for Plotly figures and DataFrame
 ::: pywry.window_manager.get_lifecycle
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2

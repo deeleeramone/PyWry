@@ -9,7 +9,7 @@ Configuration and settings classes for PyWry. Settings can be loaded from enviro
 ::: pywry.config.PyWrySettings
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -21,7 +21,7 @@ Content Security Policy configuration.
 ::: pywry.config.SecuritySettings
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -31,7 +31,7 @@ Content Security Policy configuration.
 ::: pywry.config.ThemeSettings
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -41,7 +41,7 @@ Content Security Policy configuration.
 ::: pywry.config.WindowSettings
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -51,7 +51,7 @@ Content Security Policy configuration.
 ::: pywry.config.TimeoutSettings
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -61,7 +61,7 @@ Content Security Policy configuration.
 ::: pywry.config.LogSettings
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -71,7 +71,7 @@ Content Security Policy configuration.
 ::: pywry.config.HotReloadSettings
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -81,5 +81,54 @@ Content Security Policy configuration.
 ::: pywry.config.AssetSettings
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
+
+---
+
+## Deploy Settings
+
+::: pywry.config.DeploySettings
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+---
+
+## Server Settings
+
+::: pywry.config.ServerSettings
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+---
+
+## MCP Settings
+
+::: pywry.config.MCPSettings
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+---
+
+## Settings Functions
+
+::: pywry.config.get_settings
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.config.clear_settings
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.config.reload_settings
+    options:
+      show_root_heading: true
+      heading_level: 2

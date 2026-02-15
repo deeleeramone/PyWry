@@ -290,6 +290,10 @@
 .md-nav--primary .md-nav .md-nav__link {
   padding-left: 1.5rem;
 }
+/* Prevent double-padding on nested sections with navigation.indexes container */
+.md-nav--primary .md-nav .md-nav__link.md-nav__container {
+  padding-left: 0;
+}
 .md-nav--primary .md-nav .md-nav .md-nav__link {
   padding-left: 2rem;
 }

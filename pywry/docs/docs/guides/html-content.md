@@ -177,7 +177,7 @@ The execution order is:
 8. Custom script files (from `HtmlContent`)
 9. **`init_script`** ← runs last
 
-## Hot Reload with `watch`
+## Hot Reload with watch
 
 When `watch=True`, PyWry monitors the files listed in `css_files` and `script_files` for changes. When a file is modified:
 
@@ -205,7 +205,7 @@ app.show(content, watch=True)
 
 See the [Hot Reload guide](hot-reload.md) for the full implementation details.
 
-## Passing `HtmlContent` vs. Strings
+## Passing HtmlContent vs. Strings
 
 You can always pass a string to `app.show()` — PyWry wraps it in an `HtmlContent(html=...)` internally:
 

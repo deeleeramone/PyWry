@@ -1,19 +1,19 @@
 # JavaScript Bridge
 
-PyWry exposes a `window.pywry` object in every window/widget for direct JavaScript interaction. This guide covers practical patterns for writing custom JavaScript that communicates with your Python code.
+Every PyWry window — native or browser-based — injects a `window.pywry` JavaScript object that connects the page's DOM to your Python code. This is how custom JavaScript sends events to Python and receives data back.
 
-For the full JavaScript API specification, see the [Event Reference](../reference/events.md#javascript-api).
+## The window.pywry Object
 
-## Overview
+The bridge is available globally in every widget. It provides four methods:
 
-The `window.pywry` object provides:
+| Method | Signature | What it does |
+|:---|:---|:---|
+| `emit(event, data)` | `(string, object?)` | Send an event from JavaScript to Python |
+| `on(event, callback)` | `(string, function)` | Listen for events sent from Python |
+| `off(event, callback?)` | `(string, function?)` | Remove a listener (all listeners for that event if no callback) |
+| `label` | `string` | The current window/widget label (read-only) |
 
-- `emit(event, data)` — Send an event to Python
-- `on(event, handler)` — Listen for events from Python
-- `off(event, handler)` — Remove a listener
-- `label` — Current window/widget label
-
-## Sending Events to Python
+### Sending Events to Python
 
 ```javascript
 // Simple event
@@ -23,43 +23,105 @@ window.pywry.emit("app:save", { id: 123 });
 window.pywry.emit("app:update", {
     selection: [1, 2, 3],
     timestamp: Date.now(),
-    metadata: { source: "user" }
+    metadata: { source: "user" },
 });
 ```
 
-In Python:
+Event names must follow a `namespace:event-name` pattern. The bridge validates this format and rejects bare names.
+
+In Python, register a callback for the event:
 
 ```python
 def on_save(data, event_type, label):
-    app.emit("pywry:alert", {"message": f"Saving ID: {data['id']}", "type": "info"}, label)
+    print(f"Saving ID {data['id']} from window {label}")
 
 handle = app.show(html, callbacks={"app:save": on_save})
 ```
 
-## Listening for Python Events
+### Listening for Python Events
 
 ```javascript
-// Register handler
-window.pywry.on("app:data-ready", function(data) {
-    console.log("Data received:", data);
+// Register a handler for data arriving from Python
+window.pywry.on("app:data-ready", function (data) {
     renderChart(data.values);
 });
+```
 
-// Remove handler
+From Python, send data to the browser:
+
+```python
+handle.emit("app:data-ready", {"values": [10, 20, 30, 40, 50]})
+```
+
+### Removing Listeners
+
+```javascript
+// Remove a specific handler
 const handler = (data) => console.log(data);
 window.pywry.on("app:update", handler);
 window.pywry.off("app:update", handler);
+
+// Remove ALL handlers for an event
+window.pywry.off("app:update");
 ```
 
-From Python:
+## Two Bridge Implementations
+
+The `window.pywry` API is the same in both modes, but the transport layer differs:
+
+| Mode | Transport | How it works |
+|:---|:---|:---|
+| **Native** (desktop) | PyTauri IPC | `emit()` calls `window.__TAURI__.pytauri.pyInvoke()`, which routes directly to a Rust→Python handler |
+| **Browser / Notebook** | WebSocket | `emit()` sends JSON `{type, data, widgetId, ts}` over a WebSocket connection to the FastAPI server |
+
+You don't need to think about this difference — write the same JavaScript for both modes. The bridge abstracts the transport.
+
+## Built-in System Events
+
+PyWry pre-registers handlers for several `pywry:*` events. You can trigger these from Python via `handle.emit()` or from JavaScript via `window.pywry.emit()`:
+
+| Event | Payload | Effect |
+|:---|:---|:---|
+| `pywry:update-html` | `{html}` | Replaces the `#app` container's innerHTML |
+| `pywry:set-content` | `{id?, selector?, html?, text?}` | Updates a specific element's content |
+| `pywry:set-style` | `{id?, selector?, styles}` | Sets inline CSS styles on elements |
+| `pywry:inject-css` | `{css, id}` | Injects or updates a `<style>` element |
+| `pywry:remove-css` | `{id}` | Removes a `<style>` element by ID |
+| `pywry:navigate` | `{url}` | Navigates to a URL (`window.location.href`) |
+| `pywry:download` | `{filename, content, mimeType}` | Triggers a file download (Tauri save dialog in native; blob in browser) |
+| `pywry:refresh` | — | Reloads the page |
+| `pywry:alert` | `{message, type?}` | Shows a toast notification (or browser `alert()` as fallback) |
+
+### Example: Updating Content from Python
 
 ```python
-handle.emit("app:data-ready", {"values": [1, 2, 3, 4, 5]})
+# Replace entire page content
+handle.emit("pywry:update-html", {"html": "<h1>New Dashboard</h1>"})
+
+# Update just one element by ID
+handle.emit("pywry:set-content", {"id": "status", "text": "Connected"})
+
+# Update by CSS selector, with HTML
+handle.emit("pywry:set-content", {"selector": ".results", "html": "<b>42 items</b>"})
+```
+
+### Example: Injecting CSS from Python
+
+```python
+handle.emit("pywry:inject-css", {
+    "id": "custom-theme",
+    "css": ":root { --bg-primary: #1a1a2e; --text-primary: #e0e0e0; }",
+})
+
+# Later, remove it
+handle.emit("pywry:remove-css", {"id": "custom-theme"})
 ```
 
 ## Complete Example
 
-### Python Side
+A text input in JavaScript that sends data to Python, which responds with a greeting:
+
+### Python
 
 ```python
 from pywry import PyWry
@@ -68,13 +130,13 @@ app = PyWry()
 
 html = """
 <div style="padding: 20px;">
-    <input type="text" id="name" placeholder="Enter name">
-    <button onclick="sendName()">Submit</button>
+    <input type="text" id="name" placeholder="Enter your name">
+    <button onclick="submitName()">Submit</button>
     <p id="response">Waiting...</p>
 </div>
 
 <script>
-function sendName() {
+function submitName() {
     const name = document.getElementById("name").value;
     window.pywry.emit("app:submit-name", { name: name });
 }
@@ -93,130 +155,103 @@ handle = app.show(html, callbacks={"app:submit-name": on_submit})
 app.block()
 ```
 
-## Using with Plotly
+The flow:
 
-Access Plotly charts directly:
+1. User types a name and clicks Submit
+2. `submitName()` calls `window.pywry.emit("app:submit-name", ...)`
+3. Python callback `on_submit` fires with the data
+4. Python sends back a greeting via `handle.emit("app:greeting", ...)`
+5. The JavaScript handler updates the DOM
+
+## Interacting with Plotly Charts
+
+Plotly charts expose their own event system. To bridge Plotly events to Python:
 
 ```javascript
-// Get the Plotly div
 const plotDiv = document.getElementById("plotly-chart");
 
-// React to Plotly events
-plotDiv.on("plotly_click", function(data) {
+plotDiv.on("plotly_click", function (data) {
     const point = data.points[0];
     window.pywry.emit("app:point-clicked", {
         x: point.x,
         y: point.y,
-        trace: point.curveNumber
+        trace: point.curveNumber,
     });
 });
-
-// Update chart programmatically
-Plotly.relayout(plotDiv, { title: "Updated Title" });
 ```
 
-## Using with AG Grid
+!!! tip "Built-in Plotly Events"
+    When you use `app.show_plotly()`, PyWry automatically wires `plotly_click`, `plotly_selected`, and `plotly_hover` events to the `plotly:click`, `plotly:selected`, and `plotly:hover` event names. You don't need to write this JavaScript yourself for the standard events — just register Python callbacks for `plotly:click`, etc.
 
-Access the grid API:
+## Interacting with AG Grid
+
+Access the AG Grid API when using `app.show_dataframe()`:
 
 ```javascript
-// Get grid instance
 const gridOptions = window.agGridInstance;
 
-// Get selected rows
+// Get selected rows and send to Python
 const selected = gridOptions.api.getSelectedRows();
 window.pywry.emit("app:selection", { rows: selected });
 
-// Update data
-gridOptions.api.setRowData(newData);
-
-// Apply filter
+// Apply a quick filter
 gridOptions.api.setQuickFilter("search text");
 ```
 
-## Tauri Access (Native Mode Only)
+## Tauri APIs (Native Mode Only)
 
-In native desktop mode, you can access [Tauri APIs](https://tauri.app/references/javascript/) for OS-level capabilities like file dialogs, clipboard, and notifications. See the [Event Reference](../reference/events.md#tauri-access-native-mode-only) for the full list of available plugins.
-
-### Example: File Dialog
+In native desktop mode, the full [Tauri JavaScript API](https://tauri.app/references/javascript/) is available via `window.__TAURI__`. This gives access to OS-level capabilities that browsers can't provide:
 
 ```javascript
-async function selectFile() {
-    if (!window.__TAURI__) {
-        console.log("Not in Tauri mode");
-        return;
-    }
-    
+// Check if running in native mode
+if (window.__TAURI__) {
+    // File dialog
     const { open } = window.__TAURI__.dialog;
-    const { readTextFile } = window.__TAURI__.fs;
-    
     const path = await open({
         multiple: false,
-        filters: [{ name: "CSV", extensions: ["csv"] }]
+        filters: [{ name: "CSV", extensions: ["csv"] }],
     });
-    
+
     if (path) {
+        const { readTextFile } = window.__TAURI__.fs;
         const content = await readTextFile(path);
-        window.pywry.emit("app:file-loaded", {
-            path: path,
-            content: content
-        });
+        window.pywry.emit("app:file-loaded", { path, content });
     }
 }
 ```
 
-## Detecting Runtime Mode
-
-```javascript
-// Check if running in native Tauri
-const isNative = !!window.__TAURI__;
-
-// Check if running in browser mode
-const isBrowser = !window.__TAURI__;
-
-// Get current label
-const label = window.pywry.label;
-```
-
-## Error Handling
-
-```javascript
-try {
-    window.pywry.emit("app:action", data);
-} catch (error) {
-    console.error("Failed to emit event:", error);
-}
-
-window.pywry.on("app:error", function(data) {
-    alert("Error: " + data.message);
-});
-```
+!!! note "Tauri APIs are not available in browser or notebook mode"
+    Check for `window.__TAURI__` before using any Tauri-specific API. In browser/notebook mode, only the `window.pywry` bridge is available.
 
 ## Best Practices
 
-### 1. Use Namespaced Events
+### Use Namespaced Event Names
 
 ```javascript
-// Good
+// Good — clear namespace
 window.pywry.emit("myapp:save-document", data);
 
-// Bad
+// Bad — bare name, will be rejected by the bridge
 window.pywry.emit("save", data);
 ```
 
-### 2. Handle Missing pywry Object
+### Guard Against Missing Bridge
+
+The bridge may not be ready immediately on page load. Use a safe wrapper:
 
 ```javascript
 function safeEmit(event, data) {
     if (window.pywry && typeof window.pywry.emit === "function") {
         window.pywry.emit(event, data);
     } else {
-        console.warn("PyWry not available");
+        console.warn("PyWry bridge not available");
     }
 }
 ```
 
-### 3. Clean Up Event Listeners
+### Clean Up Listeners
+
+Prevent memory leaks by removing handlers when you're done:
 
 ```javascript
 const handlers = [];
@@ -227,20 +262,21 @@ function addHandler(event, fn) {
 }
 
 function cleanup() {
-    handlers.forEach(({ event, fn }) => {
-        window.pywry.off(event, fn);
-    });
+    handlers.forEach(({ event, fn }) => window.pywry.off(event, fn));
+    handlers.length = 0;
 }
 ```
 
-### 4. Debounce Frequent Events
+### Debounce Frequent Events
+
+For events that fire rapidly (e.g., typing, dragging), debounce before emitting:
 
 ```javascript
 function debounce(fn, delay) {
-    let timeoutId;
-    return function(...args) {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => fn.apply(this, args), delay);
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn.apply(this, args), delay);
     };
 }
 
@@ -248,9 +284,3 @@ const debouncedSearch = debounce((query) => {
     window.pywry.emit("app:search", { query });
 }, 300);
 ```
-
-## Next Steps
-
-- **[Event Reference](../reference/events.md#javascript-api)** — Full JavaScript API specification
-- **[Event System](events.md)** — Python-side event handling
-- **[Window Management](window-management.md)** — Multiple windows

@@ -456,7 +456,7 @@ def wrap_content_with_modals(
 
     Parameters
     ----------
-    content : str
+    _content : str
         The main page content (unused, kept for API symmetry with toolbars).
     modals : Sequence[Modal | dict] | None
         List of Modal objects or dicts to render.

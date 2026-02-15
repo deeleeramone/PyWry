@@ -15,7 +15,7 @@ All events follow the `namespace:event-name` pattern:
 
 ---
 
-## System Events (`pywry:*`)
+## System Events (pywry:*)
 
 ### Lifecycle Events (JS → Python)
 
@@ -62,7 +62,7 @@ All events follow the `namespace:event-name` pattern:
 
 ---
 
-## Plotly Events (`plotly:*`)
+## Plotly Events (plotly:*)
 
 ### User Interactions (JS → Python)
 
@@ -108,7 +108,7 @@ All events follow the `namespace:event-name` pattern:
 
 ---
 
-## AG Grid Events (`grid:*`)
+## AG Grid Events (grid:*)
 
 ### User Interactions (JS → Python)
 
@@ -145,7 +145,7 @@ All events follow the `namespace:event-name` pattern:
 
 ---
 
-## Toolbar Events (`toolbar:*`)
+## Toolbar Events (toolbar:*)
 
 ### User Interactions (JS → Python)
 
@@ -213,7 +213,7 @@ Every toolbar component emits its custom event with these payloads:
 
 ## JavaScript API
 
-### The `window.pywry` Object
+### The window.pywry Object
 
 Every PyWry window/widget exposes a global bridge object:
 

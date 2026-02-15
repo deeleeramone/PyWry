@@ -9,7 +9,7 @@ Jupyter widget classes using anywidget for inline notebook rendering.
 ::: pywry.widget.PyWryWidget
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -19,7 +19,7 @@ Jupyter widget classes using anywidget for inline notebook rendering.
 ::: pywry.widget.PyWryPlotlyWidget
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -29,5 +29,5 @@ Jupyter widget classes using anywidget for inline notebook rendering.
 ::: pywry.widget.PyWryAgGridWidget
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true

@@ -47,7 +47,7 @@ sequenceDiagram
     User->>Component: Interact (click, type, select)
     Component->>JS: Dispatch custom event
     JS->>PY: Send via WebSocket / traitlet
-    PY->>PY: Execute callback function
+    Note right of PY: Execute callback function
     PY->>JS: widget.emit(event, data)
     JS->>Component: Update component state
 ```

@@ -9,7 +9,7 @@ Core Pydantic models for content, window configuration, and events.
 ::: pywry.models.WindowMode
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -19,7 +19,7 @@ Core Pydantic models for content, window configuration, and events.
 ::: pywry.models.ThemeMode
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -29,7 +29,7 @@ Core Pydantic models for content, window configuration, and events.
 ::: pywry.models.WindowConfig
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -39,7 +39,7 @@ Core Pydantic models for content, window configuration, and events.
 ::: pywry.models.HtmlContent
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
       members: true
 
 ---
@@ -101,4 +101,60 @@ Core Pydantic models for content, window configuration, and events.
 ::: pywry.models.validate_event_type
     options:
       show_root_heading: true
-      heading_level: 3
+      heading_level: 2
+
+---
+
+## Grid Events
+
+::: pywry.models.GridSelectionEvent
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+::: pywry.models.GridCellEvent
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+::: pywry.models.GridRowClickEvent
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+---
+
+## Event Payloads
+
+::: pywry.models.ResultPayload
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+::: pywry.models.GenericEventPayload
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+::: pywry.models.FilePathPayload
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+::: pywry.models.WindowClosedPayload
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+::: pywry.models.AlertPayload
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true

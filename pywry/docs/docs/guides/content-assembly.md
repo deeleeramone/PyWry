@@ -24,7 +24,7 @@ Here's what happens when `app.show(content)` is called in native window mode (th
 6. Assemble final HTML document
 7. Send to rendering path (native / notebook / browser)
 
-## What Goes Into `<head>`
+## What Goes Into &lt;head&gt;
 
 The `<head>` section is built from these components, injected in this exact order:
 
@@ -153,7 +153,7 @@ Each file in `HtmlContent.script_files` is injected as a `<script>` tag.
 
 `HtmlContent.init_script` runs last — it's the final `<script>` tag in the document. By the time it executes, everything else is available: `window.pywry`, `window.json_data`, all CSS applied, all libraries loaded.
 
-## What Goes Into `<body>`
+## What Goes Into &lt;body&gt;
 
 ### Content Wrapping
 

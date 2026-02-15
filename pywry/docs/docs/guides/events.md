@@ -35,7 +35,7 @@ def on_click(data): pass
 
 There are three ways to register handlers, depending on your workflow:
 
-### 1. The `callbacks` dict (recommended for most cases)
+### 1. The callbacks dict (recommended for most cases)
 
 Pass a mapping of event names to handler functions when creating a widget. This is the most common pattern and works across all rendering paths:
 
@@ -53,7 +53,7 @@ def on_click(data, event_type, label):
 app.show_plotly(fig, callbacks={"plotly:click": on_click})
 ```
 
-### 2. Using `handle.on()` after creation
+### 2. Using handle.on() after creation
 
 Register handlers on the returned handle. Useful when you need to add callbacks dynamically:
 
@@ -62,7 +62,7 @@ handle = app.show_plotly(fig)
 handle.on("plotly:click", on_click)
 ```
 
-### 3. Using `app.on()` with a label (native mode only)
+### 3. Using app.on() with a label (native mode only)
 
 Pre-register callbacks before showing content. The label connects the callback to the window:
 
