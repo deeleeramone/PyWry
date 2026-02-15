@@ -169,6 +169,8 @@ nav:
       - Hot Reload: guides/hot-reload.md
     - UI:
       - Toolbar System: guides/toolbars.md
+      - Modals: guides/modals.md
+      - Toasts & Alerts: guides/toasts.md
       - Theming & CSS: guides/theming.md
     - Integrations:
       - Plotly Charts: guides/plotly.md

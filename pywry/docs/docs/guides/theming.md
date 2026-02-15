@@ -1,59 +1,56 @@
 # Theming & CSS
 
-PyWry provides flexible theming options for customizing the look of your applications.
+PyWry uses CSS custom properties for theming. It ships with dark and light themes, supports automatic system detection, and lets you override everything with custom CSS.
 
-## CSS Variables
+## Theme Modes
 
-PyWry exposes CSS custom properties for easy theming:
+Three modes are available:
 
-```css
-:root {
-    /* Backgrounds */
-    --pywry-bg-primary: #ffffff;
-    --pywry-bg-secondary: #f8fafc;
-    --pywry-bg-tertiary: #f1f5f9;
-    
-    /* Text */
-    --pywry-text-primary: #0f172a;
-    --pywry-text-secondary: #475569;
-    --pywry-text-muted: #94a3b8;
-    
-    /* Borders */
-    --pywry-border-color: #e2e8f0;
-    --pywry-border-radius: 6px;
-    
-    /* Accents */
-    --pywry-accent: #3b82f6;
-    --pywry-accent-hover: #2563eb;
-    --pywry-accent-text: #ffffff;
-    
-    /* Toolbar */
-    --toolbar-bg: #1e293b;
-    --toolbar-border: #374151;
-    --toolbar-text: #f8fafc;
-    --toolbar-input-bg: #334155;
-    --toolbar-input-border: #475569;
-    --toolbar-button-bg: #3b82f6;
-    --toolbar-button-hover: #2563eb;
-}
+| Mode | Behavior |
+|:---|:---|
+| `system` | Follows the OS dark/light preference (default) |
+| `dark` | Always dark |
+| `light` | Always light |
+
+Set the mode in configuration:
+
+```toml
+# pywry.toml
+[theme]
+mode = "dark"
+```
+
+Or via environment variable:
+
+```bash
+export PYWRY_THEME__MODE=dark
+```
+
+Or in Python:
+
+```python
+from pywry import PyWry
+app = PyWry(theme="dark")
 ```
 
 ## Theme Classes
 
-PyWry automatically applies theme classes to the body:
+PyWry applies theme classes to the `<html>` element that you can target in CSS:
 
-| Class | Applied When |
-|-------|--------------|
-| `.pywry-theme-light` | Light theme active |
-| `.pywry-theme-dark` | Dark theme active |
-| `.pywry-theme-system` | Following system preference |
+| Class | When applied |
+|:---|:---|
+| `.pywry-theme-dark` + `html.dark` | Dark mode active |
+| `.pywry-theme-light` + `html.light` | Light mode active |
+| `.pywry-theme-system` | Following OS preference |
 
-## Switching Themes
+## Switching at Runtime
 
 ### From Python
 
 ```python
 handle.emit("pywry:update-theme", {"theme": "dark"})
+handle.emit("pywry:update-theme", {"theme": "light"})
+handle.emit("pywry:update-theme", {"theme": "system"})
 ```
 
 ### From JavaScript
@@ -62,21 +59,107 @@ handle.emit("pywry:update-theme", {"theme": "dark"})
 window.pywry.emit("pywry:update-theme", { theme: "light" });
 ```
 
-## Dark Theme Overrides
+When the theme changes, PyWry:
+
+1. Updates `html` classes and `dataset.themeMode`
+2. Switches Plotly figures to the matching template (`plotly_dark` / `plotly_white`)
+3. Swaps AG Grid theme classes (adds/removes `-dark` suffix)
+4. Fires a `pywry:theme-update` event so your code can react
+
+## CSS Variables
+
+All component styles are driven by CSS custom properties. Override them to customize the entire look.
+
+### Layout & Typography (theme-independent)
 
 ```css
-.pywry-theme-dark {
-    --pywry-bg-primary: #0f172a;
-    --pywry-bg-secondary: #1e293b;
-    --pywry-bg-tertiary: #334155;
-    
-    --pywry-text-primary: #f8fafc;
-    --pywry-text-secondary: #cbd5e1;
-    --pywry-text-muted: #64748b;
-    
-    --pywry-border-color: #334155;
+:root {
+    --pywry-font-family: /* system font stack */;
+    --pywry-font-size: 14px;
+    --pywry-font-weight-normal: 400;
+    --pywry-font-weight-medium: 500;
+
+    --pywry-radius: 4px;
+    --pywry-radius-lg: 6px;
+
+    --pywry-spacing-xs: 2px;
+    --pywry-spacing-sm: 4px;
+    --pywry-spacing-md: 6px;
+    --pywry-spacing-lg: 8px;
+
+    --pywry-transition-fast: 0.1s;
+    --pywry-transition-normal: 0.2s;
+
+    --pywry-accent: #0078d4;
+    --pywry-accent-hover: #106ebe;
+    --pywry-text-accent: rgb(51, 187, 255);
 }
 ```
+
+### Dark Theme
+
+These are the defaults applied in dark mode:
+
+```css
+:root, html.dark, .pywry-theme-dark {
+    --pywry-bg-primary: #212124;
+    --pywry-bg-secondary: rgba(21, 21, 24, 1);
+    --pywry-bg-tertiary: /* slightly lighter */;
+    --pywry-bg-hover: /* hover state */;
+    --pywry-bg-overlay: /* modal/overlay backdrop */;
+
+    --pywry-text-primary: #ebebed;
+    --pywry-text-secondary: #a0a0a0;
+    --pywry-text-muted: #707070;
+
+    --pywry-border-color: #333;
+    --pywry-border-focus: #555;
+
+    --pywry-btn-primary-bg: #e2e2e2;
+    --pywry-btn-primary-text: #151518;
+    --pywry-btn-primary-hover: /* lighter */;
+
+    --pywry-btn-secondary-bg: /* secondary bg */;
+    --pywry-btn-secondary-text: /* secondary text */;
+    --pywry-btn-secondary-border: /* secondary border */;
+
+    --pywry-tab-bg: /* tab background */;
+    --pywry-tab-active-bg: /* active tab */;
+    --pywry-tab-hover-bg: /* hovered tab */;
+
+    --pywry-toast-bg: /* toast background */;
+    --pywry-toast-color: /* toast text */;
+    --pywry-toast-accent: /* toast accent */;
+
+    --pywry-scrollbar-thumb: /* scrollbar color */;
+    --pywry-scrollbar-thumb-hover: /* scrollbar hover */;
+}
+```
+
+### Light Theme
+
+```css
+html.light, .pywry-theme-light {
+    --pywry-bg-primary: #f5f5f5;
+    --pywry-bg-secondary: #ffffff;
+    --pywry-bg-hover: /* light hover */;
+    --pywry-bg-overlay: /* light overlay */;
+
+    --pywry-text-primary: #000000;
+    --pywry-text-secondary: #666666;
+    --pywry-text-muted: #999999;
+
+    --pywry-border-color: #ccc;
+    --pywry-border-focus: #999;
+
+    /* All button, tab, input, toast variables
+       are overridden for light backgrounds */
+}
+```
+
+### System Theme
+
+When `mode="system"`, PyWry uses dark by default and applies light overrides via `@media (prefers-color-scheme: light)`.
 
 ## Custom CSS Files
 
@@ -87,6 +170,7 @@ from pywry import HtmlContent
 
 content = HtmlContent(
     html="<div id='app'></div>",
+    inline_css="body { font-size: 16px; }",
     css_files=["styles/main.css", "styles/theme.css"],
 )
 ```
@@ -97,245 +181,141 @@ content = HtmlContent(
 # pywry.toml
 [theme]
 css_file = "styles/custom.css"
+
+[asset]
+css_files = ["extra1.css", "extra2.css"]
 ```
 
-## CSS Injection
+### Runtime Injection
 
-Inject CSS dynamically at runtime:
+Inject or remove CSS dynamically:
 
 ```python
-# Inject CSS
+# Inject
 handle.emit("pywry:inject-css", {
-    "css": """
-        .highlight {
-            background: yellow;
-            padding: 2px 4px;
-        }
-    """,
-    "id": "custom-highlights",
+    "css": ".highlight { background: yellow; padding: 2px 4px; }",
+    "id": "my-highlights",
 })
 
-# Remove injected CSS
-handle.emit("pywry:remove-css", {"id": "custom-highlights"})
+# Remove
+handle.emit("pywry:remove-css", {"id": "my-highlights"})
 ```
 
-## Toolbar Styling
+From JavaScript:
 
-### Component-Specific Classes
-
-Each toolbar component has a predictable class name:
-
-```css
-/* Button styling */
-.pywry-button {
-    padding: 8px 16px;
-    border-radius: 6px;
-}
-
-/* Select styling */
-.pywry-select {
-    min-width: 120px;
-}
-
-/* Toggle styling */
-.pywry-toggle-track {
-    width: 48px;
-    height: 24px;
-}
+```javascript
+window.pywry.injectCSS(".highlight { color: red; }", "my-highlights");
+window.pywry.removeCSS("my-highlights");
 ```
 
-### Target by ID
+## Component Styling
+
+Every toolbar component has a predictable CSS class:
+
+| Component | Class |
+|:---|:---|
+| Button | `.pywry-button` |
+| Select | `.pywry-select` |
+| Toggle | `.pywry-toggle-track` |
+| TextInput | `.pywry-input` |
+| Toolbar container | `.pywry-toolbar` |
+| Modal | `.pywry-modal` |
+
+Target specific components by their `component_id`:
 
 ```css
-/* Style specific component by ID */
-#toolbar-export {
-    background-color: #10b981;
-}
-
-#toolbar-export:hover {
-    background-color: #059669;
-}
+#theme-select { min-width: 160px; }
+#submit-btn:hover { transform: translateY(-1px); }
 ```
 
 ## Plotly Theming
 
-PyWry's `PlotlyConfig` controls Plotly.js behavior (modebar, interactivity). For visual theming, set properties on the figure's layout:
+PyWry automatically switches Plotly figures between `plotly_dark` and `plotly_white` templates when the theme changes. For custom Plotly styling, set layout properties on the figure:
 
 ```python
-from pywry import PyWry, PlotlyConfig
 import plotly.graph_objects as go
 
-app = PyWry()
-
-# Create figure with layout styling
 fig = go.Figure(
     data=[go.Bar(x=["A", "B", "C"], y=[1, 2, 3])],
     layout={
-        "template": "plotly_dark",  # Built-in theme
         "paper_bgcolor": "transparent",
         "plot_bgcolor": "transparent",
         "margin": {"t": 40, "r": 20, "b": 40, "l": 60},
-    }
+    },
 )
 
-# PlotlyConfig controls modebar behavior, not visual styling
-config = PlotlyConfig(
-    display_mode_bar="hover",  # Show modebar on hover
-    display_logo=False,  # Hide Plotly logo
-    responsive=True,
-    scroll_zoom=True,
-)
-
-handle = app.show_plotly(fig, config=config)
+app.show_plotly(fig)
 ```
 
-## AgGrid Theming
+## AG Grid Theming
 
-AgGrid supports multiple built-in themes:
+AG Grid theme classes are swapped automatically when the PyWry theme changes. Available themes:
 
 ```python
 from pywry import GridOptions
 
 options = GridOptions(
-    theme="ag-theme-alpine-dark",  # Dark theme
-    # or "ag-theme-alpine", "ag-theme-balham", "ag-theme-quartz"
+    theme="ag-theme-alpine-dark",
+    # "ag-theme-alpine", "ag-theme-balham", "ag-theme-quartz"
 )
 ```
 
-## Responsive Design
-
-Use media queries for responsive layouts:
-
-```css
-/* Mobile */
-@media (max-width: 768px) {
-    .pywry-toolbar {
-        flex-wrap: wrap;
-    }
-    
-    .pywry-button {
-        flex: 1 1 100%;
-    }
-}
-
-/* Large screens */
-@media (min-width: 1200px) {
-    .pywry-container {
-        max-width: 1140px;
-        margin: 0 auto;
-    }
-}
-```
-
-## Animation
-
-Add smooth transitions:
-
-```css
-:root {
-    --pywry-transition: 0.2s ease-in-out;
-}
-
-.pywry-button {
-    transition: background-color var(--pywry-transition),
-                transform var(--pywry-transition);
-}
-
-.pywry-button:hover {
-    transform: translateY(-1px);
-}
-
-.pywry-button:active {
-    transform: translateY(0);
-}
-```
-
-## Font Configuration
-
-```css
-:root {
-    --pywry-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --pywry-font-size-sm: 12px;
-    --pywry-font-size-base: 14px;
-    --pywry-font-size-lg: 16px;
-    --pywry-font-weight-normal: 400;
-    --pywry-font-weight-medium: 500;
-    --pywry-font-weight-bold: 600;
-}
-```
-
-## Complete Theme Example
+## Complete Custom Theme Example
 
 ```css
 /* custom-theme.css */
 
-/* Light theme */
+/* Override variables for both themes */
 :root {
+    --pywry-accent: #6366f1;
+    --pywry-accent-hover: #4f46e5;
+    --pywry-radius: 8px;
+}
+
+.pywry-theme-dark {
+    --pywry-bg-primary: #0f172a;
+    --pywry-bg-secondary: #1e293b;
+    --pywry-text-primary: #f8fafc;
+    --pywry-border-color: #334155;
+}
+
+.pywry-theme-light {
     --pywry-bg-primary: #ffffff;
     --pywry-bg-secondary: #f3f4f6;
     --pywry-text-primary: #111827;
-    --pywry-text-secondary: #4b5563;
-    --pywry-accent: #6366f1;
-    --pywry-accent-hover: #4f46e5;
     --pywry-border-color: #e5e7eb;
-    --pywry-border-radius: 8px;
-    --pywry-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* Dark theme */
-.pywry-theme-dark {
-    --pywry-bg-primary: #111827;
-    --pywry-bg-secondary: #1f2937;
-    --pywry-text-primary: #f9fafb;
-    --pywry-text-secondary: #d1d5db;
-    --pywry-accent: #818cf8;
-    --pywry-accent-hover: #a5b4fc;
-    --pywry-border-color: #374151;
-    --pywry-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* Toolbar customization */
 .pywry-toolbar {
-    background: var(--pywry-bg-secondary);
-    border-bottom: 1px solid var(--pywry-border-color);
     padding: 12px 16px;
     gap: 12px;
 }
 
-/* Button styling */
-.pywry-button {
-    background: var(--pywry-accent);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: var(--pywry-border-radius);
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.15s;
+/* Button focus ring */
+.pywry-button:focus-visible {
+    outline: 2px solid var(--pywry-accent);
+    outline-offset: 2px;
 }
 
-.pywry-button:hover {
-    background: var(--pywry-accent-hover);
-}
-
-/* Input styling */
-.pywry-input {
-    background: var(--pywry-bg-primary);
-    color: var(--pywry-text-primary);
-    border: 1px solid var(--pywry-border-color);
-    border-radius: var(--pywry-border-radius);
-    padding: 8px 12px;
-}
-
+/* Input focus styling */
 .pywry-input:focus {
-    outline: none;
     border-color: var(--pywry-accent);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 ```
 
+Apply it:
+
+```python
+app.show(
+    HtmlContent(html="<h1>Styled</h1>", css_files=["custom-theme.css"]),
+)
+```
+
 ## Next Steps
 
-- **[Hot Reload](hot-reload.md)** — Live CSS updates
-- **[Toolbar System](toolbars.md)** — Component styling
-- **[Toolbar Components](../components/index.md)** — Complete toolbar API
+- **[Toolbar System](toolbars.md)** — Building interactive controls
+- **[Modals](modals.md)** — Popup dialogs with components
+- **[Toasts & Alerts](toasts.md)** — Notification styling
+- **[Hot Reload](hot-reload.md)** — Live CSS updates during development
