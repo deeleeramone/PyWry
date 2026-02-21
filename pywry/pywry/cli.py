@@ -362,29 +362,35 @@ def format_config_show(settings: PyWrySettings) -> str:
     lines = []
     lines.append("PyWry Configuration\n" + "=" * 40 + "\n")
 
-    sections = [
-        ("csp", settings.csp),
-        ("theme", settings.theme),
-        ("timeout", settings.timeout),
-        ("asset", settings.asset),
-        ("log", settings.log),
-        ("window", settings.window),
-        ("hot_reload", settings.hot_reload),
-        ("server", settings.server),
-        ("deploy", settings.deploy),
-        ("mcp", settings.mcp),
+    section_names = [
+        "csp",
+        "theme",
+        "timeout",
+        "asset",
+        "log",
+        "window",
+        "hot_reload",
+        "server",
+        "deploy",
+        "mcp",
     ]
+    all_data = settings.model_dump(
+        exclude=dict.fromkeys(section_names, _SENSITIVE_FIELDS),
+    )
 
-    for section_name, section in sections:
+    for section_name in section_names:
+        section_data = all_data.get(section_name, {})
         if lines[-1] != "":
             lines.append("")
         lines.append(f"[{section_name}]")
-        for field_name, field_value in section.model_dump(exclude=_SENSITIVE_FIELDS).items():
+        for field_name, field_value in section_data.items():
             lines.append(f"  {field_name} = {field_value!r}")
-        # Append redacted placeholders for any sensitive fields on this model.
+        # Append redacted placeholders for any sensitive fields defined
+        # on this section's model class.
+        section_cls = type(getattr(settings, section_name))
         lines.extend(
             f"  {rn} = '{_REDACTED}'"
-            for rn in sorted(_SENSITIVE_FIELDS & section.model_fields.keys())
+            for rn in sorted(_SENSITIVE_FIELDS & section_cls.model_fields.keys())
         )
 
     return "\n".join(lines)
