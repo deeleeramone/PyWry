@@ -676,7 +676,9 @@ class NativeWindowHandle:
         --------
         >>> handle.alert("File saved successfully")
         >>> handle.alert("Export complete", alert_type="success", title="Done")
-        >>> handle.alert("Are you sure?", alert_type="confirm", callback_event="app:confirm")
+        >>> handle.alert(
+        ...     "Are you sure?", alert_type="confirm", callback_event="app:confirm"
+        ... )
         """
         payload: dict[str, Any] = {
             "message": message,
@@ -749,9 +751,7 @@ class NativeWindowHandle:
         payload.update(attrs)
         self.emit("toolbar:set-value", payload)
 
-    def set_toolbar_values(
-        self, values: dict[str, Any], toolbar_id: str | None = None
-    ) -> None:
+    def set_toolbar_values(self, values: dict[str, Any], toolbar_id: str | None = None) -> None:
         """Set multiple toolbar component values at once.
 
         Parameters

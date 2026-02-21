@@ -170,15 +170,22 @@ class TestWindowProxyActions:
 
     def test_set_title(self) -> None:
         """set_title actually changes the window title."""
+        import contextlib
+
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Title</h1>", title="Original Title")
 
         # Change title
         proxy.set_title("New Title")
-        time.sleep(0.1)  # Allow IPC to complete
 
-        # Verify title changed
+        # Poll until title propagates through IPC (fire-and-forget is async)
+        deadline = time.time() + 3.0
         new_title = proxy.title
+        while "New Title" not in new_title and time.time() < deadline:
+            time.sleep(0.1)
+            with contextlib.suppress(IPCTimeoutError):
+                new_title = proxy.title
+
         assert "New Title" in new_title
         app.close()
 

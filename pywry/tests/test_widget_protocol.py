@@ -653,9 +653,7 @@ class TestNativeWindowHandleAlertAndToolbar:
     def test_request_toolbar_state_emits_event(self, native_handle, mock_app):
         """Test request_toolbar_state() emits toolbar:request-state."""
         native_handle.request_toolbar_state()
-        mock_app.emit.assert_called_once_with(
-            "toolbar:request-state", {}, "test-window"
-        )
+        mock_app.emit.assert_called_once_with("toolbar:request-state", {}, "test-window")
 
     def test_request_toolbar_state_with_toolbar_id(self, native_handle, mock_app):
         """Test request_toolbar_state() passes toolbar_id."""
