@@ -176,3 +176,99 @@ class SubprocessError(PyWryException):
         """
         super().__init__(message, exit_code=exit_code, **context)
         self.exit_code = exit_code
+
+
+class AuthenticationError(PyWryException):
+    """Base exception for all authentication failures.
+
+    Raised when an authentication operation fails, including
+    OAuth2 flows, token validation, or session management.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        provider: str | None = None,
+        flow_id: str | None = None,
+        **context: Any,
+    ) -> None:
+        """Initialize authentication error.
+
+        Parameters
+        ----------
+        message : str
+            Human-readable error message.
+        provider : str, optional
+            The OAuth2 provider name (e.g., "google", "github").
+        flow_id : str, optional
+            The unique identifier of the auth flow that failed.
+        **context : Any
+            Additional context.
+        """
+        super().__init__(message, provider=provider, flow_id=flow_id, **context)
+        self.provider = provider
+        self.flow_id = flow_id
+
+
+class AuthFlowCancelled(AuthenticationError):
+    """Authentication flow was cancelled.
+
+    Raised when the user closes the authentication window
+    or explicitly aborts the login flow.
+    """
+
+
+class AuthFlowTimeout(AuthenticationError):
+    """Authentication flow timed out.
+
+    Raised when the blocking wait for OAuth2 callback
+    exceeds the configured timeout.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        timeout: float,
+        provider: str | None = None,
+        flow_id: str | None = None,
+        **context: Any,
+    ) -> None:
+        """Initialize timeout error.
+
+        Parameters
+        ----------
+        message : str
+            Human-readable error message.
+        timeout : float
+            The timeout value in seconds.
+        provider : str, optional
+            The OAuth2 provider name.
+        flow_id : str, optional
+            The unique identifier of the auth flow.
+        **context : Any
+            Additional context.
+        """
+        super().__init__(message, provider=provider, flow_id=flow_id, timeout=timeout, **context)
+        self.timeout = timeout
+
+
+class TokenError(AuthenticationError):
+    """Base exception for token-related failures.
+
+    Raised when token operations (validation, refresh, exchange) fail.
+    """
+
+
+class TokenExpiredError(TokenError):
+    """Token has expired.
+
+    Raised when an access or refresh token is past its expiry time.
+    """
+
+
+class TokenRefreshError(TokenError):
+    """Token refresh failed.
+
+    Raised when attempting to refresh an expired access token
+    using a refresh token fails.
+    """

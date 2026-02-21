@@ -11,6 +11,8 @@ Environment variables use PYWRY_ prefix with nested delimiter __.
 Example: PYWRY_CSP__CONNECT_SRC, PYWRY_TIMEOUT__STARTUP
 """
 
+# pylint: disable=too-many-lines
+
 from __future__ import annotations
 
 import os
@@ -464,6 +466,139 @@ class DeploySettings(BaseSettings):
             return [s.strip() for s in v.split(",") if s.strip()]
         return v or []
 
+    # OAuth2 integration
+    oauth2_login_path: str = Field(
+        default="/auth/login",
+        description="Path for the OAuth2 login endpoint in deploy mode",
+    )
+    oauth2_callback_path: str = Field(
+        default="/auth/callback",
+        description="Path for the OAuth2 callback endpoint in deploy mode",
+    )
+    auth_public_paths: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["/auth/login", "/auth/callback", "/auth/status"],
+        description="Paths that do not require authentication (pre-auth routes)",
+    )
+
+    # Security: explicit redirect URI and HTTPS enforcement
+    auth_redirect_uri: str = Field(
+        default="",
+        description=(
+            "Explicit OAuth2 redirect URI for deploy mode. "
+            "When set, overrides request-derived Host header to prevent poisoning. "
+            "Example: https://myapp.example.com/auth/callback"
+        ),
+    )
+    force_https: bool = Field(
+        default=False,
+        description=(
+            "Enforce HTTPS for redirect URIs and cookies in deploy mode. "
+            "Should be True in production. When False, allows localhost HTTP for development."
+        ),
+    )
+
+    @field_validator("auth_public_paths", mode="before")
+    @classmethod
+    def parse_public_paths(cls, v: Any) -> list[str]:
+        """Parse comma-separated strings from env vars."""
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v or []
+
+
+class OAuth2Settings(BaseSettings):
+    """OAuth2 authentication configuration.
+
+    Environment prefix: PYWRY_OAUTH2__
+    Example: PYWRY_OAUTH2__CLIENT_ID=your-client-id
+    Example: PYWRY_OAUTH2__PROVIDER=google
+
+    TOML section: [tool.pywry.oauth2]
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="PYWRY_OAUTH2__",
+        extra="ignore",
+    )
+
+    # Provider selection
+    provider: Literal["google", "github", "microsoft", "oidc", "custom"] = Field(
+        default="custom",
+        description="OAuth2 provider type: google, github, microsoft, oidc, or custom",
+    )
+
+    # Client credentials
+    client_id: str = Field(
+        default="",
+        description="OAuth2 client ID from the provider",
+    )
+    client_secret: str = Field(
+        default="",
+        description="OAuth2 client secret (empty for public clients with PKCE)",
+    )
+
+    # Scopes
+    scopes: str = Field(
+        default="openid email profile",
+        description="Space-separated OAuth2 scopes to request",
+    )
+
+    # Endpoint URLs (required for custom/oidc providers)
+    authorize_url: str = Field(
+        default="",
+        description="Authorization endpoint URL (required for custom provider)",
+    )
+    token_url: str = Field(
+        default="",
+        description="Token exchange endpoint URL (required for custom provider)",
+    )
+    userinfo_url: str = Field(
+        default="",
+        description="User info endpoint URL (optional)",
+    )
+    issuer_url: str = Field(
+        default="",
+        description="OIDC issuer URL for auto-discovery (used by oidc provider)",
+    )
+
+    # Provider-specific
+    tenant_id: str = Field(
+        default="common",
+        description="Azure AD tenant ID (for Microsoft provider)",
+    )
+
+    # PKCE
+    use_pkce: bool = Field(
+        default=True,
+        description="Use PKCE (Proof Key for Code Exchange) for public clients",
+    )
+
+    # Token storage
+    token_store_backend: Literal["memory", "keyring", "redis"] = Field(
+        default="memory",
+        description="Token storage backend: memory, keyring, or redis",
+    )
+
+    # Timeouts
+    auth_timeout_seconds: float = Field(
+        default=120.0,
+        ge=10.0,
+        description="Maximum seconds to wait for OAuth2 callback",
+    )
+    refresh_buffer_seconds: int = Field(
+        default=60,
+        ge=10,
+        description="Seconds before token expiry to trigger background refresh",
+    )
+
+    @field_validator("client_id")
+    @classmethod
+    def validate_custom_provider(cls, v: str, info: Any) -> str:  # pylint: disable=unused-argument
+        """Validate that required fields are set for custom providers."""
+        # Validation happens at usage time rather than init time
+        # to allow partial configuration via env vars
+        return v
+
 
 class ServerSettings(BaseSettings):
     """Inline server settings for notebook/web mode.
@@ -758,6 +893,10 @@ class PyWrySettings(BaseSettings):
     server: ServerSettings = Field(default_factory=ServerSettings)
     deploy: DeploySettings = Field(default_factory=DeploySettings)
     mcp: MCPSettings = Field(default_factory=MCPSettings)
+    oauth2: OAuth2Settings | None = Field(
+        default=None,
+        description="OAuth2 authentication settings (None to disable)",
+    )
 
     # Tracks where each value came from (for CLI display)
     _sources: ClassVar[dict[str, str]] = {}
@@ -768,6 +907,14 @@ class PyWrySettings(BaseSettings):
 
         # Merge TOML config with explicit data (explicit takes precedence)
         merged = _deep_merge(toml_config, data)
+
+        # Auto-detect OAuth2 env vars: if PYWRY_OAUTH2__CLIENT_ID is set
+        # and oauth2 wasn't explicitly provided, instantiate OAuth2Settings
+        # so env-var based configuration works out of the box.
+        if ("oauth2" not in merged or merged["oauth2"] is None) and os.environ.get(
+            "PYWRY_OAUTH2__CLIENT_ID"
+        ):
+            merged["oauth2"] = OAuth2Settings()
 
         super().__init__(**merged)
 
@@ -787,6 +934,9 @@ class PyWrySettings(BaseSettings):
             ("deploy", self.deploy),
             ("mcp", self.mcp),
         ]
+
+        if self.oauth2 is not None:
+            sections.append(("oauth2", self.oauth2))
 
         for section_name, section in sections:
             lines.append(f"[{section_name}]")
