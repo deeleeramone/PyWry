@@ -196,7 +196,7 @@ class TestAuthFlowManagerNative:
         assert result.success
 
         # Verify tokens were stored
-        stored = asyncio.get_event_loop().run_until_complete(token_store.load("user123"))
+        stored = asyncio.run(token_store.load("user123"))
         assert stored is not None
         assert stored.access_token == "at_mock"
 

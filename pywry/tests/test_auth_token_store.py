@@ -86,50 +86,50 @@ class TestMemoryTokenStore:
         self, memory_store: MemoryTokenStore, sample_tokens: OAuthTokenSet
     ) -> None:
         """Save and load round-trip."""
-        asyncio.get_event_loop().run_until_complete(memory_store.save("user1", sample_tokens))
-        loaded = asyncio.get_event_loop().run_until_complete(memory_store.load("user1"))
+        asyncio.run(memory_store.save("user1", sample_tokens))
+        loaded = asyncio.run(memory_store.load("user1"))
         assert loaded is not None
         assert loaded.access_token == sample_tokens.access_token
         assert loaded.refresh_token == sample_tokens.refresh_token
 
     def test_load_missing(self, memory_store: MemoryTokenStore) -> None:
         """Load returns None for missing key."""
-        loaded = asyncio.get_event_loop().run_until_complete(memory_store.load("nonexistent"))
+        loaded = asyncio.run(memory_store.load("nonexistent"))
         assert loaded is None
 
     def test_exists(self, memory_store: MemoryTokenStore, sample_tokens: OAuthTokenSet) -> None:
         """exists() returns True after save."""
-        asyncio.get_event_loop().run_until_complete(memory_store.save("u1", sample_tokens))
-        assert asyncio.get_event_loop().run_until_complete(memory_store.exists("u1"))
-        assert not asyncio.get_event_loop().run_until_complete(memory_store.exists("u2"))
+        asyncio.run(memory_store.save("u1", sample_tokens))
+        assert asyncio.run(memory_store.exists("u1"))
+        assert not asyncio.run(memory_store.exists("u2"))
 
     def test_delete(self, memory_store: MemoryTokenStore, sample_tokens: OAuthTokenSet) -> None:
         """delete() removes tokens."""
-        asyncio.get_event_loop().run_until_complete(memory_store.save("u1", sample_tokens))
-        asyncio.get_event_loop().run_until_complete(memory_store.delete("u1"))
-        assert not asyncio.get_event_loop().run_until_complete(memory_store.exists("u1"))
+        asyncio.run(memory_store.save("u1", sample_tokens))
+        asyncio.run(memory_store.delete("u1"))
+        assert not asyncio.run(memory_store.exists("u1"))
 
     def test_delete_missing(self, memory_store: MemoryTokenStore) -> None:
         """delete() on missing key does not raise."""
-        asyncio.get_event_loop().run_until_complete(memory_store.delete("missing"))
+        asyncio.run(memory_store.delete("missing"))
 
     def test_list_keys(self, memory_store: MemoryTokenStore, sample_tokens: OAuthTokenSet) -> None:
         """list_keys() returns all stored keys."""
-        asyncio.get_event_loop().run_until_complete(memory_store.save("a", sample_tokens))
-        asyncio.get_event_loop().run_until_complete(memory_store.save("b", sample_tokens))
-        keys = asyncio.get_event_loop().run_until_complete(memory_store.list_keys())
+        asyncio.run(memory_store.save("a", sample_tokens))
+        asyncio.run(memory_store.save("b", sample_tokens))
+        keys = asyncio.run(memory_store.list_keys())
         assert set(keys) == {"a", "b"}
 
     def test_overwrite(self, memory_store: MemoryTokenStore, sample_tokens: OAuthTokenSet) -> None:
         """Saving under the same key overwrites."""
-        asyncio.get_event_loop().run_until_complete(memory_store.save("u1", sample_tokens))
+        asyncio.run(memory_store.save("u1", sample_tokens))
         new_tokens = OAuthTokenSet(
             access_token="at_new",
             expires_in=7200,
             issued_at=time.time(),
         )
-        asyncio.get_event_loop().run_until_complete(memory_store.save("u1", new_tokens))
-        loaded = asyncio.get_event_loop().run_until_complete(memory_store.load("u1"))
+        asyncio.run(memory_store.save("u1", new_tokens))
+        loaded = asyncio.run(memory_store.load("u1"))
         assert loaded is not None
         assert loaded.access_token == "at_new"
 

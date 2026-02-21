@@ -70,7 +70,7 @@ def expired_tokens() -> OAuthTokenSet:
 
 def _run(coro):
     """Run an async coroutine synchronously."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 # ── Tests ────────────────────────────────────────────────────────────
