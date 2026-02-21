@@ -65,7 +65,9 @@ def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Ca
                         # released and a new subprocess can re-register it.
                         extra = 5.0 if sys.platform == "win32" else 0.0
                         time.sleep(delay * (attempt + 1) + extra)
-            raise last_error  # type: ignore[misc]
+            if last_error is None:
+                raise RuntimeError("retry_on_subprocess_failure: no attempts were made")
+            raise last_error
 
         return wrapper  # type: ignore[return-value]
 
