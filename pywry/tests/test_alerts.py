@@ -13,6 +13,7 @@ Tests cover:
 
 from __future__ import annotations
 
+import sys
 import time
 
 from collections.abc import Callable
@@ -22,7 +23,12 @@ from typing import Any, TypeVar
 import pytest
 
 # Import shared test utilities from tests.conftest
-from tests.conftest import show_and_wait_ready, wait_for_result
+from tests.conftest import (
+    _clear_registries,
+    _stop_runtime_sync,
+    show_and_wait_ready,
+    wait_for_result,
+)
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -40,8 +46,6 @@ def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Ca
     def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            from pywry import runtime
-
             last_error: Exception | None = None
             for attempt in range(max_attempts):
                 try:
@@ -49,10 +53,18 @@ def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Ca
                 except (TimeoutError, AssertionError) as e:
                     last_error = e
                     if attempt < max_attempts - 1:
-                        # Clean up and wait before retry
-                        runtime.stop()
-                        # Progressive backoff for CI stability
-                        time.sleep(delay * (attempt + 1))
+                        # Stop runtime and poll until the subprocess is fully
+                        # terminated (matches _stop_runtime_sync in conftest).
+                        _stop_runtime_sync()
+                        # Clear stale callback/lifecycle state before the next
+                        # attempt so leftover registrations don't interfere.
+                        _clear_registries()
+                        # Progressive backoff.  On Windows, the OS needs extra
+                        # time after process termination before the WebView2
+                        # "Chrome_WidgetWin_0" window class registration is
+                        # released and a new subprocess can re-register it.
+                        extra = 5.0 if sys.platform == "win32" else 0.0
+                        time.sleep(delay * (attempt + 1) + extra)
             raise last_error  # type: ignore[misc]
 
         return wrapper  # type: ignore[return-value]
