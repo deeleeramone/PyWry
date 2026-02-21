@@ -149,7 +149,7 @@ handle = app.show(
 
 ## The Window Handle
 
-`app.show()` returns a handle object. In native mode this is a `WindowProxy` — a full-featured wrapper around the OS window. In browser/notebook mode it's an `InlineWidget` with a subset of the same interface.
+`app.show()` returns a `NativeWindowHandle` in native mode — a wrapper that provides the same `emit()` / `on()` interface as notebook widgets, plus access to the full OS window API via its `.proxy` attribute. In browser/notebook mode it's an `InlineWidget` with the same event interface.
 
 ### Common Methods (all modes)
 
@@ -158,10 +158,14 @@ handle = app.show(
 | `handle.emit(event, data)` | Send an event from Python to the window's JavaScript |
 | `handle.on(event, callback)` | Register a Python callback for events from the window |
 | `handle.label` | The window/widget label |
+| `handle.alert(message, ...)` | Show a toast notification |
+| `handle.set_toolbar_value(id, value, ...)` | Update a toolbar component's value |
+| `handle.set_toolbar_values({id: value, ...})` | Update multiple toolbar components |
+| `handle.request_toolbar_state()` | Request current toolbar state |
 
 ### Native-only Methods (WindowProxy)
 
-The `WindowProxy` exposes the full set of OS window operations:
+The `WindowProxy` (accessible via `handle.proxy`) exposes the full set of OS window operations:
 
 **Window state:**
 
@@ -187,28 +191,27 @@ The `WindowProxy` exposes the full set of OS window operations:
 | `set_resizable(bool)` | Toggle resizing |
 | `set_theme(ThemeMode)` | Change theme |
 
-**Read-only properties:**
+**Read-only properties (via `handle.proxy`):**
 
 ```python
-handle.title            # Current title
-handle.inner_size       # Content area size (PhysicalSize)
-handle.outer_size       # Window frame size
-handle.inner_position   # Content position on screen
-handle.is_fullscreen    # bool
-handle.is_maximized     # bool
-handle.is_focused       # bool
-handle.is_visible       # bool
-handle.current_monitor  # Monitor info (name, size, position, scale)
+handle.proxy.inner_size       # Content area size (PhysicalSize)
+handle.proxy.outer_size       # Window frame size
+handle.proxy.inner_position   # Content position on screen
+handle.proxy.is_fullscreen    # bool
+handle.proxy.is_maximized     # bool
+handle.proxy.is_focused       # bool
+handle.proxy.is_visible       # bool
+handle.proxy.current_monitor  # Monitor info (name, size, position, scale)
 ```
 
 **JavaScript execution:**
 
 ```python
 # Fire-and-forget
-handle.eval("document.title = 'Hello'")
+handle.eval_js("document.title = 'Hello'")
 
-# With return value (blocks up to timeout)
-result = handle.eval_with_result("document.querySelectorAll('li').length", timeout=5.0)
+# With return value (blocks up to timeout, via proxy)
+result = handle.proxy.eval_with_result("document.querySelectorAll('li').length", timeout=5.0)
 ```
 
 ## Updating Content
