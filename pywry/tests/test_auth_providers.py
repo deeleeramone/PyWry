@@ -256,9 +256,7 @@ class TestTokenExchange:
             mock_client.return_value = mock_instance
 
             with pytest.raises(TokenError):
-                asyncio.run(
-                    provider.exchange_code("bad_code", "http://localhost/cb")
-                )
+                asyncio.run(provider.exchange_code("bad_code", "http://localhost/cb"))
 
     def test_github_exchange_code_with_error_response(self) -> None:
         """GitHub returns error in JSON body, not HTTP status."""
@@ -279,9 +277,7 @@ class TestTokenExchange:
             mock_client.return_value = mock_instance
 
             with pytest.raises(TokenError, match="expired"):
-                asyncio.run(
-                    provider.exchange_code("bad", "http://localhost/cb")
-                )
+                asyncio.run(provider.exchange_code("bad", "http://localhost/cb"))
 
     def test_refresh_tokens_success(self, mock_response: dict) -> None:
         """Successful token refresh."""
@@ -365,9 +361,7 @@ class TestTokenRevocation:
             mock_instance.__aexit__ = AsyncMock(return_value=False)
             mock_client.return_value = mock_instance
 
-            result = asyncio.run(
-                provider.revoke_token("token_to_revoke")
-            )
+            result = asyncio.run(provider.revoke_token("token_to_revoke"))
 
         assert result is True
         mock_instance.post.assert_called_once()
@@ -392,9 +386,7 @@ class TestTokenRevocation:
             mock_instance.__aexit__ = AsyncMock(return_value=False)
             mock_client.return_value = mock_instance
 
-            result = asyncio.run(
-                provider.revoke_token("token_to_revoke")
-            )
+            result = asyncio.run(provider.revoke_token("token_to_revoke"))
 
         assert result is False
 
@@ -432,9 +424,7 @@ class TestTokenRevocation:
             mock_instance.__aexit__ = AsyncMock(return_value=False)
             mock_client.return_value = mock_instance
 
-            result = asyncio.run(
-                provider.revoke_token("ghp_abc123")
-            )
+            result = asyncio.run(provider.revoke_token("ghp_abc123"))
 
         assert result is True
         call_args = mock_instance.request.call_args
@@ -463,9 +453,7 @@ class TestTokenRevocation:
             mock_instance.__aexit__ = AsyncMock(return_value=False)
             mock_client.return_value = mock_instance
 
-            result = asyncio.run(
-                provider.revoke_token("ghp_abc123")
-            )
+            result = asyncio.run(provider.revoke_token("ghp_abc123"))
 
         assert result is False
 
