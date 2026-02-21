@@ -5,6 +5,8 @@ Shared types used across state store implementations.
 
 from __future__ import annotations
 
+import time
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal
@@ -143,3 +145,84 @@ CallbackResult = Any
 # Access control permission types
 Permission = Literal["read", "write", "admin"]
 ResourceType = Literal["widget", "session", "user", "system"]
+
+
+@dataclass
+class OAuthTokenSet:
+    """OAuth2 token set returned by a provider.
+
+    Attributes
+    ----------
+    access_token : str
+        The access token for API requests.
+    token_type : str
+        Token type, typically "Bearer".
+    refresh_token : str or None
+        Optional refresh token for obtaining new access tokens.
+    expires_in : int or None
+        Token lifetime in seconds from issuance.
+    id_token : str or None
+        Optional OIDC ID token (JWT).
+    scope : str
+        Space-separated list of granted scopes.
+    raw : dict[str, Any]
+        The raw token response from the provider.
+    issued_at : float
+        Unix timestamp when the token was issued.
+    """
+
+    access_token: str
+    token_type: str = "Bearer"  # noqa: S105
+    refresh_token: str | None = None
+    expires_in: int | None = None
+    id_token: str | None = None
+    scope: str = ""
+    raw: dict[str, Any] = field(default_factory=dict)
+    issued_at: float = field(default_factory=time.time)
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if the access token has expired."""
+        if self.expires_in is None:
+            return False
+        return time.time() > (self.issued_at + self.expires_in)
+
+    @property
+    def expires_at(self) -> float | None:
+        """Get the expiry timestamp, or None if no expiry."""
+        if self.expires_in is None:
+            return None
+        return self.issued_at + self.expires_in
+
+
+@dataclass
+class AuthFlowResult:
+    """Result of an OAuth2 authentication flow.
+
+    Attributes
+    ----------
+    success : bool
+        Whether authentication completed successfully.
+    tokens : OAuthTokenSet or None
+        The token set if authentication succeeded.
+    error : str or None
+        Error message if authentication failed.
+    user_info : dict[str, Any] or None
+        User profile information from the provider.
+    """
+
+    success: bool
+    tokens: OAuthTokenSet | None = None
+    error: str | None = None
+    user_info: dict[str, Any] | None = None
+
+
+class AuthFlowState(str, Enum):
+    """State of an OAuth2 authentication flow."""
+
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    FAILED = "failed"
+    TIMED_OUT = "timed_out"

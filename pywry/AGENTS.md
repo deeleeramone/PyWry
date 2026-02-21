@@ -144,8 +144,18 @@ pywry/
 │   ├── _factory.py      # Factory functions for store instantiation
 │   ├── memory.py        # In-memory state backends (default)
 │   ├── redis.py         # Redis-backed state backends
-│   ├── types.py         # Type definitions (StateBackend, WidgetData, etc.)
-│   └── auth.py          # Authentication and RBAC utilities
+│   ├── types.py         # Type definitions (StateBackend, WidgetData, OAuthTokenSet, etc.)
+│   ├── auth.py          # Authentication and RBAC utilities
+│   └── sync_helpers.py  # Sync↔async bridging (run_async, wait_for_event)
+├── auth/                # OAuth2 authentication system
+│   ├── __init__.py      # Public exports
+│   ├── pkce.py          # PKCE challenge generation (RFC 7636)
+│   ├── providers.py     # OAuthProvider ABC + Google, GitHub, Microsoft, OIDC implementations
+│   ├── token_store.py   # TokenStore ABC + Memory, Keyring, Redis backends
+│   ├── callback_server.py # Ephemeral localhost server for native auth redirects
+│   ├── deploy_routes.py # FastAPI /auth/* routes for deploy mode
+│   ├── flow.py          # AuthFlowManager orchestrator
+│   └── session.py       # SessionManager with automatic token refresh
 ├── utils/               # Utility helpers
 └── window_manager/      # Window mode implementations
     ├── controller.py
@@ -1131,6 +1141,72 @@ PYWRY_DEPLOY__DEFAULT_ROLE=viewer
 | `auth_secret` | `str \| None` | `None` | JWT signing secret |
 | `rbac_enabled` | `bool` | `False` | Enable role-based access |
 | `default_role` | `str` | `viewer` | Default user role |
+
+---
+
+## Authentication & OAuth2
+
+PyWry includes a full OAuth2 authentication system that works in both native window mode and deploy mode.
+
+### Quick Start (Native Mode)
+
+```python
+from pywry import PyWry
+
+app = PyWry()
+
+# Login with Google (configure via environment variables)
+# PYWRY_OAUTH2__PROVIDER=google
+# PYWRY_OAUTH2__CLIENT_ID=your-client-id
+# PYWRY_OAUTH2__CLIENT_SECRET=your-secret
+result = app.login()
+
+if result.success:
+    print(f"Logged in! Tokens: {result.tokens.token_type}")
+    app.show("<h1>Welcome!</h1>")
+    app.block()
+```
+
+### Quick Start (Deploy Mode)
+
+```bash
+PYWRY_DEPLOY__AUTH_ENABLED=true
+PYWRY_DEPLOY__STATE_BACKEND=redis
+PYWRY_OAUTH2__PROVIDER=github
+PYWRY_OAUTH2__CLIENT_ID=your-client-id
+PYWRY_OAUTH2__CLIENT_SECRET=your-secret
+```
+
+Deploy mode automatically mounts `/auth/login`, `/auth/callback`, `/auth/logout`, `/auth/status` routes.
+
+### Architecture
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `OAuthProvider` | `auth/providers.py` | ABC for OAuth2 providers (Google, GitHub, Microsoft, OIDC, custom) |
+| `PKCEChallenge` | `auth/pkce.py` | PKCE code challenge generation (RFC 7636) |
+| `TokenStore` | `auth/token_store.py` | ABC for token persistence (Memory, Keyring, Redis) |
+| `OAuthCallbackServer` | `auth/callback_server.py` | Ephemeral localhost HTTP server for native redirect capture |
+| `AuthFlowManager` | `auth/flow.py` | Orchestrates the complete OAuth2 flow |
+| `SessionManager` | `auth/session.py` | Token lifecycle with automatic background refresh |
+| `deploy_routes` | `auth/deploy_routes.py` | FastAPI `/auth/*` routes for production deployments |
+
+### OAuth2Settings
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `provider` | `str` | `"custom"` | `google`, `github`, `microsoft`, `oidc`, or `custom` |
+| `client_id` | `str` | `""` | OAuth2 client ID |
+| `client_secret` | `str` | `""` | Client secret (empty for PKCE public clients) |
+| `scopes` | `str` | `"openid email profile"` | Space-separated scopes |
+| `use_pkce` | `bool` | `True` | Enable PKCE for public clients |
+| `token_store_backend` | `str` | `"memory"` | `memory`, `keyring`, or `redis` |
+| `auth_timeout_seconds` | `float` | `120.0` | Max wait for OAuth callback |
+| `refresh_buffer_seconds` | `int` | `60` | Pre-expiry refresh margin |
+
+### Frontend Integration
+
+When authenticated, `window.__PYWRY_AUTH__` contains `{ user_id, roles, token_type }`. Use `window.pywry.auth.isAuthenticated()`, `.getState()`, `.login()`, `.logout()`, `.onAuthStateChange(cb)`.
 
 ---
 

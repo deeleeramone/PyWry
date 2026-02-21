@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import subprocess
 import sys
@@ -261,6 +262,20 @@ def handle_window_close(label: str) -> dict[str, Any]:
         Response dict.
     """
     debug(f"Window '{label}' closing - destroying resources")
+
+    # Fire on_close lifecycle callbacks
+    try:
+        from ..window_manager.lifecycle import get_lifecycle
+
+        lifecycle = get_lifecycle()
+        resources = lifecycle._windows.get(label)
+        if resources is not None:
+            resources.close_reason = "user_closed"
+            for callback in resources.on_close:
+                with contextlib.suppress(Exception):
+                    callback(label, "user_closed")
+    except Exception:
+        debug(f"Error during window close handler for {label}")
 
     # Dispatch close event first (in case handlers want to save state)
     get_registry().dispatch(label, "pywry:close", {"label": label})

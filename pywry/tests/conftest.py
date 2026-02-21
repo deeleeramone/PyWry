@@ -644,3 +644,72 @@ def session_store_with_fallback(unique_prefix: str = "test:"):
         # Fall back to memory
         store = MemorySessionStore()
         yield store, "memory"
+
+
+# =============================================================================
+# OAuth2 / Auth Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def mock_oauth_provider():
+    """Create a mock OAuth2 provider for tests.
+
+    Returns a MagicMock implementing the OAuthProvider interface with
+    sensible defaults: successful token exchange, user info, etc.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+
+    from pywry.state.types import OAuthTokenSet
+
+    provider = MagicMock()
+    provider.__class__.__name__ = "MockProvider"
+    provider.build_authorize_url.return_value = "https://mock.idp/authorize?state=test"
+
+    tokens = OAuthTokenSet(
+        access_token="at_fixture",
+        token_type="Bearer",
+        refresh_token="rt_fixture",
+        expires_in=3600,
+        issued_at=time.time(),
+    )
+    provider.exchange_code = AsyncMock(return_value=tokens)
+    provider.get_userinfo = AsyncMock(
+        return_value={"sub": "fixture_user", "email": "fixture@test.com"}
+    )
+    provider.refresh_tokens = AsyncMock(return_value=tokens)
+    provider.revoke_token = AsyncMock()
+    return provider
+
+
+@pytest.fixture
+def auth_settings():
+    """Create OAuth2Settings for tests."""
+    from pywry.config import OAuth2Settings
+
+    return OAuth2Settings(
+        provider="google",
+        client_id="test-client-id",
+        client_secret="test-client-secret",
+        scopes="openid email profile",
+    )
+
+
+@pytest.fixture
+def memory_token_store():
+    """Create a MemoryTokenStore for tests."""
+    from pywry.auth.token_store import MemoryTokenStore
+
+    return MemoryTokenStore()
+
+
+@pytest.fixture
+def auth_session_manager(mock_oauth_provider, memory_token_store):  # pylint: disable=redefined-outer-name
+    """Create a SessionManager wired to mock provider and memory store."""
+    from pywry.auth.session import SessionManager
+
+    return SessionManager(
+        provider=mock_oauth_provider,
+        token_store=memory_token_store,
+        session_key="test_user",
+    )

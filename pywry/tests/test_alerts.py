@@ -9,7 +9,7 @@ Tests cover:
 - E2E tests for inline notebook alerts
 """
 
-# pylint: disable=too-many-lines,unsubscriptable-object
+# pylint: disable=too-many-lines,unsubscriptable-object,too-many-lines
 
 from __future__ import annotations
 
