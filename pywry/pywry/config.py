@@ -104,14 +104,12 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
 
 
 # Field names that contain sensitive data and must be redacted in output.
-_SENSITIVE_FIELDS: frozenset[str] = frozenset(
-    {
-        "client_secret",
-        "ssl_keyfile_password",
-        "internal_api_token",
-        "redis_url",
-    }
-)
+_SENSITIVE_FIELDS: set[str] = {
+    "client_secret",
+    "ssl_keyfile_password",
+    "internal_api_token",
+    "redis_url",
+}
 
 _REDACTED = "********"
 
