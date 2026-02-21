@@ -384,7 +384,9 @@ All Redis store constructors accept a `redis_client` parameter for dependency in
 
 ## Next Steps
 
+- **[OAuth2 Authentication](oauth2.md)** — Add Google, GitHub, Microsoft, or custom OIDC login flows
 - **[Deploy Mode](deploy-mode.md)** — Running PyWry behind a production server
 - **[Configuration](configuration.md)** — Full settings reference
 - **[Event System](events.md)** — How events flow across rendering paths
 - **[API Reference: State](../reference/state.md)** — Full state API docs
+- **[API Reference: OAuth2](../reference/auth.md)** — Full OAuth2 API docs

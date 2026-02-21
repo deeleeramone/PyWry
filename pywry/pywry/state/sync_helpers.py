@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import threading
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeVar
 
 
@@ -131,6 +132,55 @@ def run_async(coro: Coroutine[Any, Any, T], timeout: float | None = 5.0) -> T:
     fallback_loop = _get_or_create_fallback_loop()
     future = asyncio.run_coroutine_threadsafe(coro, fallback_loop)
     return future.result(timeout=timeout)
+
+
+@dataclass
+class WaitResult:
+    """Result of a wait_for_event operation."""
+
+    completed: bool = False
+    cancelled: bool = False
+    timed_out: bool = False
+
+
+def wait_for_event(
+    event: threading.Event,
+    timeout: float | None = None,
+    cancellation: threading.Event | None = None,
+    poll_interval: float = 0.1,
+) -> WaitResult:
+    """Wait for a threading.Event with optional cancellation support.
+
+    Polls both the target event and an optional cancellation event
+    every ``poll_interval`` seconds.
+
+    Parameters
+    ----------
+    event : threading.Event
+        The event to wait for.
+    timeout : float or None
+        Maximum seconds to wait. None for no timeout.
+    cancellation : threading.Event, optional
+        If set, the wait is cancelled.
+    poll_interval : float
+        Polling interval in seconds (default 0.1).
+
+    Returns
+    -------
+    WaitResult
+        The result indicating completion, cancellation, or timeout.
+    """
+    elapsed = 0.0
+    while True:
+        if cancellation is not None and cancellation.is_set():
+            return WaitResult(cancelled=True)
+
+        if event.wait(timeout=poll_interval):
+            return WaitResult(completed=True)
+
+        elapsed += poll_interval
+        if timeout is not None and elapsed >= timeout:
+            return WaitResult(timed_out=True)
 
 
 def run_async_fire_and_forget(coro: Coroutine[Any, Any, Any]) -> None:

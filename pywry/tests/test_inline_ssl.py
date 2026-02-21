@@ -121,6 +121,7 @@ def test_https_server_configuration(ssl_certs):
 
     with patch("pywry.inline.get_settings") as mock_get_settings:
         settings_root = mock_get_settings.return_value
+        settings_root.deploy.auth_enabled = False
         settings_server = settings_root.server
 
         settings_server.ssl_certfile = cert_path
@@ -217,6 +218,7 @@ async def test_e2e_wss_callback_flow(  # noqa: PLR0915  # pylint: disable=too-ma
 
     with patch("pywry.inline.get_settings") as mock_get_settings:
         settings_root = mock_get_settings.return_value
+        settings_root.deploy.auth_enabled = False
         settings_server = settings_root.server
 
         settings_server.ssl_certfile = cert_path
@@ -319,6 +321,7 @@ def test_content_generation_https(ssl_certs):
 
     with patch("pywry.inline.get_settings") as mock_get_settings:
         settings_root = mock_get_settings.return_value
+        settings_root.deploy.auth_enabled = False
         settings_server = settings_root.server
         settings_server.ssl_certfile = cert_path
         settings_server.ssl_keyfile = key_path
@@ -409,6 +412,7 @@ def test_secret_never_in_https_response(ssl_certs):
 
     with patch("pywry.inline.get_settings") as mock_get_settings:
         settings_root = mock_get_settings.return_value
+        settings_root.deploy.auth_enabled = False
         _make_ssl_server_settings(settings_root.server, cert_path, key_path, 8770)
 
         # Create toolbar with secret
@@ -463,6 +467,7 @@ async def test_e2e_wss_secret_reveal_base64_encoded(ssl_certs):
 
     with patch("pywry.inline.get_settings") as mock_get_settings:
         settings_root = mock_get_settings.return_value
+        settings_root.deploy.auth_enabled = False
         _make_ssl_server_settings(settings_root.server, cert_path, key_path, 8771)
 
         # Create toolbar with secret
@@ -540,6 +545,7 @@ async def test_e2e_wss_secret_input_submission(ssl_certs):
 
     with patch("pywry.inline.get_settings") as mock_get_settings:
         settings_root = mock_get_settings.return_value
+        settings_root.deploy.auth_enabled = False
         _make_ssl_server_settings(settings_root.server, cert_path, key_path, 8772)
 
         # Create toolbar with empty secret
@@ -712,6 +718,7 @@ async def test_e2e_wss_custom_secret_handler_reveal(  # noqa: PLR0915  # pylint:
 
     with patch("pywry.inline.get_settings") as mock_get_settings:
         settings_root = mock_get_settings.return_value
+        settings_root.deploy.auth_enabled = False
         _make_ssl_server_settings(settings_root.server, cert_path, key_path, 8774)
 
         # Create toolbar with secret in registry
@@ -848,6 +855,7 @@ async def test_e2e_wss_custom_handler_with_context(  # noqa: PLR0915
 
     with patch("pywry.inline.get_settings") as mock_get_settings:
         settings_root = mock_get_settings.return_value
+        settings_root.deploy.auth_enabled = False
         _make_ssl_server_settings(settings_root.server, cert_path, key_path, 8775)
 
         toolbar = Toolbar(

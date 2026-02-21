@@ -1236,17 +1236,103 @@ def _get_app() -> FastAPI:  # noqa: C901, PLR0915  # pylint: disable=too-many-st
     app = FastAPI(lifespan=_lifespan)
     settings = get_settings().server
 
-    # CORS middleware with configurable settings
+    # ── CORS policy ──────────────────────────────────────────────────
+    # When auth is enabled, disallow wildcard origins with credentials
+    # (violates CORS spec and browsers will reject the response).
+    pywry_settings = get_settings()
+    deploy_settings = pywry_settings.deploy
+
+    cors_origins = list(settings.cors_origins)
+    cors_allow_credentials = settings.cors_allow_credentials
+
+    if deploy_settings.auth_enabled:
+        if cors_origins == ["*"] and cors_allow_credentials:
+            import logging as _cors_log
+
+            _cors_log.getLogger("pywry.auth").warning(
+                "cors_origins=['*'] with auth_enabled=True is insecure. "
+                "Setting cors_allow_credentials=False. Configure explicit "
+                "cors_origins for credentialed cross-origin requests."
+            )
+            cors_allow_credentials = False
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=settings.cors_allow_credentials,
+        allow_origins=cors_origins,
+        allow_credentials=cors_allow_credentials,
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
 
     _state.app = app
     _state.widget_prefix = settings.widget_prefix.rstrip("/")  # Store normalized prefix
+
+    # ── OAuth2 / Auth middleware integration ──────────────────────────
+
+    if deploy_settings.auth_enabled and pywry_settings.oauth2 is not None:
+        try:
+            from .auth.providers import create_provider_from_settings
+            from .auth.deploy_routes import create_auth_router
+            from .auth.token_store import get_token_store
+            from .state.auth import AuthConfig, AuthMiddleware
+            from .state._factory import get_session_store
+
+            # Build provider
+            oauth2_provider = create_provider_from_settings(pywry_settings.oauth2)
+
+            # Build config objects
+            auth_config = AuthConfig(
+                enabled=True,
+                session_cookie=deploy_settings.auth_session_cookie,
+                auth_header=deploy_settings.auth_header,
+                session_ttl=deploy_settings.session_ttl,
+            )
+
+            # Token store
+            token_backend = pywry_settings.oauth2.token_store_backend
+            token_store = get_token_store(backend=token_backend)
+
+            # Session store
+            session_store = get_session_store()
+
+            # Mount auth routes
+            auth_router = create_auth_router(
+                provider=oauth2_provider,
+                session_store=session_store,
+                token_store=token_store,
+                deploy_settings=deploy_settings,
+                auth_config=auth_config,
+                use_pkce=pywry_settings.oauth2.use_pkce,
+            )
+            app.include_router(auth_router)
+
+            # Add AuthMiddleware (after CORS — Starlette processes in reverse)
+            # Skip public paths (pre-auth routes)
+            public_paths = set(deploy_settings.auth_public_paths)
+            app.add_middleware(
+                AuthMiddleware,
+                session_store=session_store,
+                config=auth_config,
+                public_paths=public_paths,
+            )
+
+            import logging
+
+            logging.getLogger("pywry.auth").info(  # pylint: disable=logging-too-many-args
+                "OAuth2 auth enabled with %s provider", pywry_settings.oauth2.provider
+            )
+        except Exception as exc:
+            import logging
+
+            logging.getLogger("pywry.auth").critical(  # pylint: disable=logging-too-many-args
+                "FATAL: Failed to set up OAuth2 auth routes: %s. "
+                "Refusing to start in partially secured mode.",
+                exc,
+            )
+            raise RuntimeError(
+                f"OAuth2 auth initialization failed: {exc}. "
+                "Cannot start with auth_enabled=True and broken auth setup."
+            ) from exc
 
     # Initialize internal API token for protecting internal HTTP endpoints (not widget serving)
     if settings.internal_api_token:

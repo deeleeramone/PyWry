@@ -13,6 +13,7 @@ from ..log import debug, warn
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     from ..models import HtmlContent, WindowConfig
@@ -41,6 +42,10 @@ class WindowResources:
 
     # Timestamp when content was last set via IPC (to debounce content-request)
     content_set_at: datetime | None = None
+
+    # Lifecycle callbacks - invoked with (label, close_reason)
+    on_close: list[Callable[[str, str], None]] = field(default_factory=list)
+    close_reason: str | None = None
 
 
 class WindowLifecycle:
@@ -415,6 +420,14 @@ class WindowLifecycle:
             return False
 
         debug(f"Destroying window '{label}'")
+
+        # Fire on_close callbacks before cleanup
+        resources.close_reason = "programmatic"
+        for callback in resources.on_close:
+            try:
+                callback(label, "programmatic")
+            except Exception as exc:
+                warn(f"on_close callback error for '{label}': {exc}")
 
         # Clear all stored data
         resources.html_content = None
