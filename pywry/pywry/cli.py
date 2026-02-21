@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .config import _redact_value
+
 
 if TYPE_CHECKING:
     from .config import PyWrySettings
@@ -360,55 +362,26 @@ def format_config_show(settings: PyWrySettings) -> str:
     lines = []
     lines.append("PyWry Configuration\n" + "=" * 40 + "\n")
 
-    # Security (CSP)
-    lines.append("[csp]")
-    for field, value in settings.csp.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
+    sections = [
+        ("csp", settings.csp),
+        ("theme", settings.theme),
+        ("timeout", settings.timeout),
+        ("asset", settings.asset),
+        ("log", settings.log),
+        ("window", settings.window),
+        ("hot_reload", settings.hot_reload),
+        ("server", settings.server),
+        ("deploy", settings.deploy),
+        ("mcp", settings.mcp),
+    ]
 
-    # Theme
-    lines.append("\n[theme]")
-    for field, value in settings.theme.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Timeout
-    lines.append("\n[timeout]")
-    for field, value in settings.timeout.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Assets
-    lines.append("\n[asset]")
-    for field, value in settings.asset.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Logging
-    lines.append("\n[log]")
-    for field, value in settings.log.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Window
-    lines.append("\n[window]")
-    for field, value in settings.window.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Hot Reload
-    lines.append("\n[hot_reload]")
-    for field, value in settings.hot_reload.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Server
-    lines.append("\n[server]")
-    for field, value in settings.server.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Deploy
-    lines.append("\n[deploy]")
-    for field, value in settings.deploy.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # MCP
-    lines.append("\n[mcp]")
-    for field, value in settings.mcp.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
+    for section_name, section in sections:
+        if lines[-1] != "":
+            lines.append("")
+        lines.append(f"[{section_name}]")
+        for field, value in section.model_dump().items():
+            safe_value = _redact_value(field, value)
+            lines.append(f"  {field} = {safe_value!r}")
 
     return "\n".join(lines)
 

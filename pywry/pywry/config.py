@@ -103,6 +103,26 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     return result
 
 
+# Field names that contain sensitive data and must be redacted in output.
+_SENSITIVE_FIELDS: frozenset[str] = frozenset(
+    {
+        "client_secret",
+        "ssl_keyfile_password",
+        "internal_api_token",
+        "redis_url",
+    }
+)
+
+_REDACTED = "********"
+
+
+def _redact_value(field_name: str, value: Any) -> Any:
+    """Return a redacted placeholder if *field_name* is sensitive and the value is non-empty."""
+    if field_name in _SENSITIVE_FIELDS and value:
+        return _REDACTED
+    return value
+
+
 class SecuritySettings(BaseSettings):
     """Content Security Policy settings.
 
@@ -941,14 +961,15 @@ class PyWrySettings(BaseSettings):
         for section_name, section in sections:
             lines.append(f"[{section_name}]")
             for field_name, field_value in section.model_dump().items():
-                if isinstance(field_value, list):
-                    value_str = "[" + ", ".join(f'"{v}"' for v in field_value) + "]"
-                elif isinstance(field_value, bool):
-                    value_str = "true" if field_value else "false"
-                elif isinstance(field_value, str):
-                    value_str = f'"{field_value}"'
+                safe_value = _redact_value(field_name, field_value)
+                if isinstance(safe_value, list):
+                    value_str = "[" + ", ".join(f'"{v}"' for v in safe_value) + "]"
+                elif isinstance(safe_value, bool):
+                    value_str = "true" if safe_value else "false"
+                elif isinstance(safe_value, str):
+                    value_str = f'"{safe_value}"'
                 else:
-                    value_str = str(field_value)
+                    value_str = str(safe_value)
                 lines.append(f"{field_name} = {value_str}")
             lines.append("")
 
@@ -977,13 +998,14 @@ class PyWrySettings(BaseSettings):
 
         for section_name, section in sections:
             for field_name, field_value in section.model_dump().items():
+                safe_value = _redact_value(field_name, field_value)
                 env_name = f"PYWRY_{section_name}__{field_name.upper()}"
-                if isinstance(field_value, list):
-                    value_str = ",".join(str(v) for v in field_value)
-                elif isinstance(field_value, bool):
-                    value_str = "true" if field_value else "false"
+                if isinstance(safe_value, list):
+                    value_str = ",".join(str(v) for v in safe_value)
+                elif isinstance(safe_value, bool):
+                    value_str = "true" if safe_value else "false"
                 else:
-                    value_str = str(field_value)
+                    value_str = str(safe_value)
                 lines.append(f'export {env_name}="{value_str}"')
 
         return "\n".join(lines)
@@ -1009,8 +1031,9 @@ class PyWrySettings(BaseSettings):
             lines.append(f"\n{section_name}")
             lines.append("-" * 40)
             for field_name, field_value in section.model_dump().items():
+                safe_value = _redact_value(field_name, field_value)
                 # Truncate long values
-                value_str = str(field_value)
+                value_str = str(safe_value)
                 if len(value_str) > 50:
                     value_str = value_str[:47] + "..."
                 lines.append(f"  {field_name:20} = {value_str}")
