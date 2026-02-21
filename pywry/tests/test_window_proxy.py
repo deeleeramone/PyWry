@@ -8,6 +8,7 @@ Tests are marked slow because they spawn actual subprocess/windows.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 import time
@@ -170,8 +171,6 @@ class TestWindowProxyActions:
 
     def test_set_title(self) -> None:
         """set_title actually changes the window title."""
-        import contextlib
-
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Title</h1>", title="Original Title")
 
@@ -182,9 +181,10 @@ class TestWindowProxyActions:
         deadline = time.time() + 3.0
         new_title = proxy.title
         while "New Title" not in new_title and time.time() < deadline:
-            time.sleep(0.1)
             with contextlib.suppress(IPCTimeoutError):
                 new_title = proxy.title
+            if "New Title" not in new_title:
+                time.sleep(0.1)
 
         assert "New Title" in new_title
         app.close()
