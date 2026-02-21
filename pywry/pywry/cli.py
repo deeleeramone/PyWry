@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .config import _redact_value
+from .config import _REDACTED, _SENSITIVE_FIELDS
 
 
 if TYPE_CHECKING:
@@ -379,9 +379,12 @@ def format_config_show(settings: PyWrySettings) -> str:
         if lines[-1] != "":
             lines.append("")
         lines.append(f"[{section_name}]")
-        for field, value in section.model_dump().items():
-            safe_value = _redact_value(field, value)
-            lines.append(f"  {field} = {safe_value!r}")
+        for field, value in section.model_dump(exclude=_SENSITIVE_FIELDS).items():
+            lines.append(f"  {field} = {value!r}")
+        lines.extend(
+            f"  {rn} = '{_REDACTED}'"
+            for rn in sorted(_SENSITIVE_FIELDS & section.model_fields.keys())
+        )
 
     return "\n".join(lines)
 

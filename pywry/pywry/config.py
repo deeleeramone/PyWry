@@ -116,13 +116,6 @@ _SENSITIVE_FIELDS: frozenset[str] = frozenset(
 _REDACTED = "********"
 
 
-def _redact_value(field_name: str, value: Any) -> Any:
-    """Return a redacted placeholder if *field_name* is sensitive and the value is non-empty."""
-    if field_name in _SENSITIVE_FIELDS and value:
-        return _REDACTED
-    return value
-
-
 class SecuritySettings(BaseSettings):
     """Content Security Policy settings.
 
@@ -960,17 +953,23 @@ class PyWrySettings(BaseSettings):
 
         for section_name, section in sections:
             lines.append(f"[{section_name}]")
-            for field_name, field_value in section.model_dump().items():
-                safe_value = _redact_value(field_name, field_value)
-                if isinstance(safe_value, list):
-                    value_str = "[" + ", ".join(f'"{v}"' for v in safe_value) + "]"
-                elif isinstance(safe_value, bool):
-                    value_str = "true" if safe_value else "false"
-                elif isinstance(safe_value, str):
-                    value_str = f'"{safe_value}"'
+            # Exclude sensitive fields from model_dump so their values
+            # never enter the output string (satisfies CodeQL taint analysis).
+            for field_name, field_value in section.model_dump(exclude=_SENSITIVE_FIELDS).items():
+                if isinstance(field_value, list):
+                    value_str = "[" + ", ".join(f'"{v}"' for v in field_value) + "]"
+                elif isinstance(field_value, bool):
+                    value_str = "true" if field_value else "false"
+                elif isinstance(field_value, str):
+                    value_str = f'"{field_value}"'
                 else:
-                    value_str = str(safe_value)
+                    value_str = str(field_value)
                 lines.append(f"{field_name} = {value_str}")
+            # Append redacted placeholders for any sensitive fields on this model.
+            lines.extend(
+                f'{rn} = "{_REDACTED}"'
+                for rn in sorted(_SENSITIVE_FIELDS & section.model_fields.keys())
+            )
             lines.append("")
 
         return "\n".join(lines)
@@ -997,16 +996,18 @@ class PyWrySettings(BaseSettings):
         ]
 
         for section_name, section in sections:
-            for field_name, field_value in section.model_dump().items():
-                safe_value = _redact_value(field_name, field_value)
+            for field_name, field_value in section.model_dump(exclude=_SENSITIVE_FIELDS).items():
                 env_name = f"PYWRY_{section_name}__{field_name.upper()}"
-                if isinstance(safe_value, list):
-                    value_str = ",".join(str(v) for v in safe_value)
-                elif isinstance(safe_value, bool):
-                    value_str = "true" if safe_value else "false"
+                if isinstance(field_value, list):
+                    value_str = ",".join(str(v) for v in field_value)
+                elif isinstance(field_value, bool):
+                    value_str = "true" if field_value else "false"
                 else:
-                    value_str = str(safe_value)
+                    value_str = str(field_value)
                 lines.append(f'export {env_name}="{value_str}"')
+            for redacted_name in sorted(_SENSITIVE_FIELDS & section.model_fields.keys()):
+                env_name = f"PYWRY_{section_name}__{redacted_name.upper()}"
+                lines.append(f'export {env_name}="{_REDACTED}"')
 
         return "\n".join(lines)
 
@@ -1030,13 +1031,16 @@ class PyWrySettings(BaseSettings):
         for section_name, section in sections:
             lines.append(f"\n{section_name}")
             lines.append("-" * 40)
-            for field_name, field_value in section.model_dump().items():
-                safe_value = _redact_value(field_name, field_value)
+            for field_name, field_value in section.model_dump(exclude=_SENSITIVE_FIELDS).items():
                 # Truncate long values
-                value_str = str(safe_value)
+                value_str = str(field_value)
                 if len(value_str) > 50:
                     value_str = value_str[:47] + "..."
                 lines.append(f"  {field_name:20} = {value_str}")
+            lines.extend(
+                f"  {rn:20} = {_REDACTED}"
+                for rn in sorted(_SENSITIVE_FIELDS & section.model_fields.keys())
+            )
 
         return "\n".join(lines)
 
