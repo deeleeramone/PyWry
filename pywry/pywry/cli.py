@@ -8,8 +8,6 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .config import _REDACTED, _SENSITIVE_FIELDS
-
 
 if TYPE_CHECKING:
     from .config import PyWrySettings
@@ -359,6 +357,8 @@ def format_config_show(settings: PyWrySettings) -> str:
     str
         Formatted configuration string.
     """
+    from .config import _REDACTED, _SENSITIVE_FIELDS
+
     lines = []
     lines.append("PyWry Configuration\n" + "=" * 40 + "\n")
 
@@ -379,8 +379,9 @@ def format_config_show(settings: PyWrySettings) -> str:
         if lines[-1] != "":
             lines.append("")
         lines.append(f"[{section_name}]")
-        for field, value in section.model_dump(exclude=_SENSITIVE_FIELDS).items():
-            lines.append(f"  {field} = {value!r}")
+        for field_name, field_value in section.model_dump(exclude=_SENSITIVE_FIELDS).items():
+            lines.append(f"  {field_name} = {field_value!r}")
+        # Append redacted placeholders for any sensitive fields on this model.
         lines.extend(
             f"  {rn} = '{_REDACTED}'"
             for rn in sorted(_SENSITIVE_FIELDS & section.model_fields.keys())
