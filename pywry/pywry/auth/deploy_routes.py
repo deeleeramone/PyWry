@@ -101,7 +101,7 @@ class LoginRateLimiter:
     def __init__(self, max_requests: int = 10, window_seconds: float = 60.0) -> None:
         self._max_requests = max_requests
         self._window = window_seconds
-        self._requests: dict[str, collections.deque] = {}
+        self._requests: dict[str, collections.deque[float]] = {}
         self._lock = threading.Lock()
 
     def is_allowed(self, client_ip: str) -> bool:

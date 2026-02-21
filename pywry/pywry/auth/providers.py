@@ -133,6 +133,7 @@ class OAuthProvider(ABC):
         code: str,
         redirect_uri: str,
         pkce_verifier: str | None = None,
+        nonce: str | None = None,
     ) -> OAuthTokenSet:
         """Exchange authorization code for tokens.
 
@@ -144,6 +145,8 @@ class OAuthProvider(ABC):
             The redirect URI used in the authorization request.
         pkce_verifier : str, optional
             The PKCE code verifier if PKCE was used.
+        nonce : str, optional
+            The nonce sent in the authorize request (for ID token validation).
 
         Returns
         -------
@@ -319,7 +322,7 @@ class GenericOIDCProvider(OAuthProvider):
         resp = await client.get(self._jwks_uri, timeout=10.0)
         resp.raise_for_status()
         self._jwks_data = resp.json()
-        return self._jwks_data  # type: ignore[return-value]
+        return self._jwks_data
 
     async def validate_id_token(
         self,
@@ -379,7 +382,7 @@ class GenericOIDCProvider(OAuthProvider):
             msg = f"ID token validation failed: {exc}"
             raise TokenError(msg, provider=self.__class__.__name__) from exc
 
-        return dict(claims)  # type: ignore[arg-type]
+        return dict(claims)
 
     async def exchange_code(
         self,
@@ -584,6 +587,7 @@ class GitHubProvider(OAuthProvider):
         code: str,
         redirect_uri: str,
         pkce_verifier: str | None = None,
+        nonce: str | None = None,
     ) -> OAuthTokenSet:
         """Exchange authorization code for a GitHub access token."""
         data: dict[str, str] = {
