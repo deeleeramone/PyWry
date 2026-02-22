@@ -798,6 +798,13 @@ def start() -> bool:
     env["PYWRY_ON_WINDOW_CLOSE"] = _ON_WINDOW_CLOSE  # Pass close behavior to subprocess
     env["PYWRY_WINDOW_MODE"] = _WINDOW_MODE  # Pass window mode to subprocess
 
+    # On Windows, CREATE_NEW_PROCESS_GROUP prevents the subprocess from
+    # receiving CTRL_C_EVENT when the user presses Ctrl+C in the terminal.
+    # The parent handles shutdown cleanly via the IPC "quit" command.
+    creation_flags = 0
+    if sys.platform == "win32":
+        creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
+
     try:
         _process = subprocess.Popen(  # pylint: disable=R1732
             cmd,
@@ -809,6 +816,7 @@ def start() -> bool:
             bufsize=1,
             env=env,
             encoding="utf-8",
+            creationflags=creation_flags,
         )
     except Exception as e:
         log_error(f"Failed to start subprocess: {e}")
