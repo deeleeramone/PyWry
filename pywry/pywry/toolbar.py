@@ -1,4 +1,5 @@
 # pylint: disable=too-many-lines,unused-argument,line-too-long
+# flake8: noqa: PLR0912
 """Pydantic models for PyWry toolbar components.
 
 This module provides strongly-typed models for toolbar configurations:
@@ -258,6 +259,56 @@ def _generate_component_id(component_type: str = "item") -> str:
         A unique ID in the format "{component_type}-{uuid[:8]}".
     """
     return f"{component_type}-{uuid.uuid4().hex[:8]}"
+
+
+def _resolve_script_content(script: str | Path | None) -> str | None:
+    """Resolve a script field to its content string.
+
+    Handles ``Path`` objects, file-path strings, and inline JavaScript.
+    The heuristic mirrors the original ``collect_scripts`` logic:
+
+    * If the value is a ``Path`` **or** a string that does *not* start with
+      a recognised JS keyword/token, try to read it as a file.
+    * If the file does not exist, fall back to treating it as inline JS.
+    * If the string starts with a JS keyword/token, use it as-is.
+
+    Parameters
+    ----------
+    script : str | Path | None
+        The raw ``script`` field value.
+
+    Returns
+    -------
+    str | None
+        Resolved JavaScript source, or ``None`` when there is nothing.
+    """
+    if not script:
+        return None
+
+    if isinstance(script, Path) or (
+        isinstance(script, str)
+        and not script.strip().startswith(
+            (
+                "(",
+                "{",
+                "function",
+                "//",
+                "/*",
+                "var ",
+                "let ",
+                "const ",
+                "if ",
+                "for ",
+                "while ",
+            )
+        )
+    ):
+        script_path = Path(script) if isinstance(script, str) else script
+        if script_path.exists():
+            return script_path.read_text(encoding="utf-8")
+        return str(script)
+
+    return str(script)
 
 
 class Option(BaseModel):
@@ -2125,7 +2176,13 @@ class Div(ToolbarItem):
                     else:
                         children_html += child.build_html()
 
-        return f"<div {' '.join(attrs)}>{self.content}{children_html}</div>"
+        # Resolve own script
+        script_tag = ""
+        resolved = _resolve_script_content(self.script)
+        if resolved:
+            script_tag = f"<script>{resolved}</script>"
+
+        return f"<div {' '.join(attrs)}>{self.content}{children_html}{script_tag}</div>"
 
     def collect_scripts(self) -> list[str]:
         """Collect scripts from this div and all nested children (depth-first).
@@ -2138,35 +2195,9 @@ class Div(ToolbarItem):
         scripts: list[str] = []
 
         # This div's script first (parent before children)
-        if self.script:
-            if isinstance(self.script, Path) or (
-                isinstance(self.script, str)
-                and not self.script.strip().startswith(  # pylint: disable=E1101
-                    (
-                        "(",
-                        "{",
-                        "function",
-                        "//",
-                        "/*",
-                        "var ",
-                        "let ",
-                        "const ",
-                        "if ",
-                        "for ",
-                        "while ",
-                    )
-                )
-            ):
-                # Might be a file path - try to read it
-                script_path = Path(self.script) if isinstance(self.script, str) else self.script
-                # pylint: disable=E1101
-                if script_path.exists():
-                    scripts.append(script_path.read_text(encoding="utf-8"))
-                else:
-                    # Treat as inline script
-                    scripts.append(str(self.script))
-            else:
-                scripts.append(str(self.script))
+        resolved = _resolve_script_content(self.script)
+        if resolved:
+            scripts.append(resolved)
 
         # Children's scripts (depth-first)
         if self.children:
@@ -2820,7 +2851,13 @@ class Toolbar(BaseModel):
             f'<div class="pywry-toolbar-content"{content_style}>{"".join(item_htmls)}</div>'
         )
 
-        return f"<div {' '.join(attrs)}{outer_style}>{toggle_html}{content_html}{resize_handle_html}</div>"
+        # Resolve own script
+        script_tag = ""
+        resolved = _resolve_script_content(self.script)
+        if resolved:
+            script_tag = f"<script>{resolved}</script>"
+
+        return f"<div {' '.join(attrs)}{outer_style}>{toggle_html}{content_html}{resize_handle_html}{script_tag}</div>"
 
     def collect_scripts(self) -> list[str]:
         """Collect scripts from toolbar and all nested Div children (depth-first).
@@ -2835,33 +2872,9 @@ class Toolbar(BaseModel):
         scripts: list[str] = []
 
         # Toolbar script first (parent context available to children)
-        if self.script:
-            if isinstance(self.script, Path) or (
-                isinstance(self.script, str)
-                and not self.script.strip().startswith(  # pylint: disable=E1101
-                    (
-                        "(",
-                        "{",
-                        "function",
-                        "//",
-                        "/*",
-                        "var ",
-                        "let ",
-                        "const ",
-                        "if ",
-                        "for ",
-                        "while ",
-                    )
-                )
-            ):
-                script_path = Path(self.script) if isinstance(self.script, str) else self.script
-                # pylint: disable=E1101
-                if script_path.exists():
-                    scripts.append(script_path.read_text(encoding="utf-8"))
-                else:
-                    scripts.append(str(self.script))
-            else:
-                scripts.append(str(self.script))
+        resolved = _resolve_script_content(self.script)
+        if resolved:
+            scripts.append(resolved)
 
         # Children's scripts (depth-first)
         for item in self.items:
