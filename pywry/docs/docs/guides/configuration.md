@@ -108,6 +108,8 @@ export PYWRY_LOG__LEVEL=DEBUG
 | `hot_reload` | `PYWRY_HOT_RELOAD__` | Hot reload behavior |
 | `server` | `PYWRY_SERVER__` | Inline server settings |
 | `deploy` | `PYWRY_DEPLOY__` | Deploy mode settings |
+| `tauri_plugins` | `PYWRY_TAURI_PLUGINS` | Tauri plugins to load (comma-separated) |
+| `extra_capabilities` | `PYWRY_EXTRA_CAPABILITIES` | Extra Tauri permission strings |
 
 ## Programmatic Configuration
 
@@ -192,5 +194,6 @@ pywry init
 ## Next Steps
 
 - **[Configuration Reference](../reference/config.md)** — Complete `PyWrySettings` API
+- **[Tauri Plugins](tauri-plugins.md)** — Enable clipboard, notifications, HTTP & more
 - **[Deploy Mode](deploy-mode.md)** — Production server configuration
 - **[Browser Mode](browser-mode.md)** — Server settings for browser mode

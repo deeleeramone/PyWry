@@ -2,6 +2,7 @@
 
 Tests verify:
 - Dialog and FS plugins are properly registered
+- Dynamic plugin loading from config / env vars works
 - Tauri APIs are available in the webview
 - File save dialog functionality works
 - Plugin capabilities are correctly configured
@@ -20,6 +21,7 @@ import pytest
 
 from pywry import runtime
 from pywry.app import PyWry
+from pywry.config import AVAILABLE_TAURI_PLUGINS, TAURI_PLUGIN_REGISTRY
 from pywry.models import ThemeMode
 
 # Import shared test utilities from tests.conftest
@@ -85,6 +87,77 @@ class TestPluginCapabilities:
         content = capabilities_file.read_text(encoding="utf-8")
         assert "pytauri:default" in content, "pytauri:default permission not found in capabilities"
 
+    def test_capabilities_has_all_plugin_permissions(self):
+        """Capabilities file includes '<plugin>:default' for plugins that register manifests."""
+        capabilities_file = Path(__file__).parent.parent / "pywry" / "capabilities" / "default.toml"
+        content = capabilities_file.read_text(encoding="utf-8")
+        # Plugin names in capabilities use hyphens (e.g. clipboard-manager, not clipboard_manager)
+        # NOTE: persisted-scope and single-instance do NOT register Tauri capability
+        # manifests, so they are intentionally excluded from default.toml.
+        expected = {
+            "autostart:default",
+            "clipboard-manager:default",
+            "deep-link:default",
+            "dialog:default",
+            "fs:default",
+            "global-shortcut:default",
+            "http:default",
+            "notification:default",
+            "opener:default",
+            "os:default",
+            "positioner:default",
+            "process:default",
+            "shell:default",
+            "updater:default",
+            "upload:default",
+            "websocket:default",
+            "window-state:default",
+        }
+        for perm in expected:
+            assert perm in content, f"{perm} not found in capabilities"
+
+        # These must NOT be in the file — they cause Tauri panics
+        assert "persisted-scope:default" not in content
+        assert "single-instance:default" not in content
+
+
+class TestPluginRegistry:
+    """Tests for the Tauri plugin registry constants."""
+
+    def test_registry_has_19_entries(self):
+        """TAURI_PLUGIN_REGISTRY contains exactly 19 plugins."""
+        assert len(TAURI_PLUGIN_REGISTRY) == 19
+
+    def test_available_plugins_matches_registry(self):
+        """AVAILABLE_TAURI_PLUGINS matches registry keys."""
+        assert frozenset(TAURI_PLUGIN_REGISTRY) == AVAILABLE_TAURI_PLUGINS
+
+    def test_registry_values_are_tuples(self):
+        """Each registry value is a (flag_name, module_path) tuple."""
+        for name, (flag, module) in TAURI_PLUGIN_REGISTRY.items():
+            assert flag.startswith("PLUGIN_"), f"{name}: flag {flag!r} doesn't start with PLUGIN_"
+            assert module.startswith("pytauri_plugins."), (
+                f"{name}: module {module!r} has wrong prefix"
+            )
+
+
+class TestRuntimePluginSetters:
+    """Tests for runtime.set_tauri_plugins() and set_extra_capabilities()."""
+
+    def test_set_tauri_plugins_updates_state(self):
+        """set_tauri_plugins() updates the module-level variable."""
+        runtime.set_tauri_plugins(["dialog", "fs", "notification"])
+        assert runtime._TAURI_PLUGINS == "dialog,fs,notification"
+        # Restore default
+        runtime.set_tauri_plugins(["dialog", "fs"])
+
+    def test_set_extra_capabilities_updates_state(self):
+        """set_extra_capabilities() updates the module-level variable."""
+        runtime.set_extra_capabilities(["shell:allow-execute"])
+        assert runtime._EXTRA_CAPABILITIES == "shell:allow-execute"
+        # Restore default
+        runtime.set_extra_capabilities([])
+
 
 class TestPluginImports:
     """Tests for plugin module imports."""
@@ -105,39 +178,202 @@ class TestPluginImports:
 class TestMainModulePluginRegistration:
     """Tests for plugin registration in __main__.py."""
 
-    def test_main_imports_dialog_plugin(self):
-        """__main__.py imports dialog plugin."""
+    def test_main_has_plugin_registry(self):
+        """__main__.py imports _PLUGIN_REGISTRY from config."""
         main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
-        # Check for various import patterns including aliased imports
-        has_dialog_import = (
-            "from pytauri_plugins import dialog" in content
-            or "pytauri_plugins.dialog" in content
-            or "dialog as dialog_plugin" in content
-        )
-        assert has_dialog_import, "dialog plugin import not found in __main__.py"
+        assert "_PLUGIN_REGISTRY" in content, "_PLUGIN_REGISTRY not found in __main__.py"
+        assert "TAURI_PLUGIN_REGISTRY" in content, "import from config not found"
 
-    def test_main_imports_fs_plugin(self):
-        """__main__.py imports fs plugin."""
+    def test_main_has_load_plugins_function(self):
+        """__main__.py defines _load_plugins() for dynamic loading."""
         main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
-        # Check for various import patterns including aliased imports
-        has_fs_import = (
-            "from pytauri_plugins import fs" in content
-            or "pytauri_plugins.fs" in content
-            or "fs as fs_plugin" in content
-        )
-        assert has_fs_import, "fs plugin import not found in __main__.py"
+        assert "def _load_plugins(" in content, "_load_plugins function not found"
 
-    def test_main_registers_plugins(self):
-        """__main__.py registers plugins in builder.build()."""
+    def test_main_reads_env_var(self):
+        """__main__.py reads PYWRY_TAURI_PLUGINS env var."""
         main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
-        assert "plugins=" in content, "plugins= parameter not found in __main__.py"
-        assert "dialog" in content and "init()" in content, (
-            "dialog.init() not found in plugins list"
+        assert "PYWRY_TAURI_PLUGINS" in content, "PYWRY_TAURI_PLUGINS env var not read"
+
+    def test_main_registers_plugins_dynamically(self):
+        """__main__.py passes dynamic plugins list to builder.build()."""
+        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        content = main_file.read_text(encoding="utf-8")
+        assert "plugins=plugins" in content or "plugins = plugins" in content, (
+            "Dynamic plugins list not passed to builder.build()"
         )
-        assert "fs" in content, "fs plugin not found in plugins list"
+
+    def test_main_reads_extra_capabilities_env(self):
+        """__main__.py reads PYWRY_EXTRA_CAPABILITIES env var."""
+        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        content = main_file.read_text(encoding="utf-8")
+        assert "PYWRY_EXTRA_CAPABILITIES" in content, (
+            "PYWRY_EXTRA_CAPABILITIES env var not consumed in __main__.py"
+        )
+
+    def test_main_calls_stage_extra_capabilities(self):
+        """__main__.py calls _stage_extra_capabilities when extra caps are present."""
+        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        content = main_file.read_text(encoding="utf-8")
+        assert "_stage_extra_capabilities(" in content, (
+            "_stage_extra_capabilities not called in main()"
+        )
+
+    def test_main_cleans_up_temp_dir(self):
+        """__main__.py cleans up staged temp dir in a finally block."""
+        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        content = main_file.read_text(encoding="utf-8")
+        assert "shutil.rmtree(tmp_caps_dir" in content, "Temp dir cleanup not found in __main__.py"
+
+
+def _import_stage_extra_capabilities():
+    """Import _stage_extra_capabilities from __main__.py safely.
+
+    Importing pywry.__main__ replaces sys.stdin/stdout/stderr with fresh
+    UTF-8 TextIOWrapper objects (on Windows) that wrap the *same* buffer.
+    This corrupts pytest's capture system.  We swap in decoy BytesIO-backed
+    streams before the import so the originals are never touched, then
+    restore them immediately after.
+    """
+    import io
+    import sys
+
+    orig = sys.stdin, sys.stdout, sys.stderr
+    # Give __main__'s module-level code decoy streams to wrap
+    sys.stdin = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+    sys.stdout = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+    sys.stderr = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+    try:
+        from pywry.__main__ import _stage_extra_capabilities
+    finally:
+        sys.stdin, sys.stdout, sys.stderr = orig
+    return _stage_extra_capabilities
+
+
+class TestStageExtraCapabilities:
+    """Tests for _stage_extra_capabilities() in __main__.py."""
+
+    def test_creates_temp_dir_with_extra_toml(self, tmp_path: Path):
+        """Staging creates a capabilities/extra.toml with requested permissions."""
+        fn = _import_stage_extra_capabilities()
+
+        src_dir = tmp_path / "src"
+        caps_dir = src_dir / "capabilities"
+        caps_dir.mkdir(parents=True)
+        (caps_dir / "default.toml").write_text(
+            'identifier = "default"\npermissions = ["dialog:default"]\n',
+            encoding="utf-8",
+        )
+        (src_dir / "Tauri.toml").write_text("[tauri]\n", encoding="utf-8")
+
+        result = fn(src_dir, ["shell:allow-execute", "http:default"])
+
+        try:
+            extra_toml = result / "capabilities" / "extra.toml"
+            assert extra_toml.exists(), "extra.toml not created"
+            content = extra_toml.read_text(encoding="utf-8")
+            assert 'identifier = "extra"' in content
+            assert '"shell:allow-execute"' in content
+            assert '"http:default"' in content
+        finally:
+            import shutil
+
+            shutil.rmtree(result, ignore_errors=True)
+
+    def test_preserves_original_default_toml(self, tmp_path: Path):
+        """Staging copies default.toml without modifying the original."""
+        fn = _import_stage_extra_capabilities()
+
+        src_dir = tmp_path / "src"
+        caps_dir = src_dir / "capabilities"
+        caps_dir.mkdir(parents=True)
+        original_content = 'identifier = "default"\npermissions = ["dialog:default"]\n'
+        (caps_dir / "default.toml").write_text(original_content, encoding="utf-8")
+        (src_dir / "Tauri.toml").write_text("[tauri]\n", encoding="utf-8")
+
+        result = fn(src_dir, ["notification:default"])
+
+        try:
+            # Original file untouched
+            assert (caps_dir / "default.toml").read_text(encoding="utf-8") == original_content
+            # Copied default.toml in temp dir also intact
+            copied = (result / "capabilities" / "default.toml").read_text(encoding="utf-8")
+            assert copied == original_content
+        finally:
+            import shutil
+
+            shutil.rmtree(result, ignore_errors=True)
+
+    def test_returns_path_object(self, tmp_path: Path):
+        """Staging returns a Path pointing to the temp directory."""
+        fn = _import_stage_extra_capabilities()
+
+        src_dir = tmp_path / "src"
+        caps_dir = src_dir / "capabilities"
+        caps_dir.mkdir(parents=True)
+        (caps_dir / "default.toml").write_text(
+            'identifier = "default"\npermissions = []\n',
+            encoding="utf-8",
+        )
+
+        result = fn(src_dir, ["os:default"])
+
+        try:
+            assert isinstance(result, Path)
+            assert result.is_dir()
+            assert (result / "capabilities").is_dir()
+        finally:
+            import shutil
+
+            shutil.rmtree(result, ignore_errors=True)
+
+    def test_extra_toml_has_wildcard_windows(self, tmp_path: Path):
+        """Extra capability file targets all windows with wildcard."""
+        fn = _import_stage_extra_capabilities()
+
+        src_dir = tmp_path / "src"
+        caps_dir = src_dir / "capabilities"
+        caps_dir.mkdir(parents=True)
+        (caps_dir / "default.toml").write_text(
+            'identifier = "default"\npermissions = []\n',
+            encoding="utf-8",
+        )
+
+        result = fn(src_dir, ["process:default"])
+
+        try:
+            content = (result / "capabilities" / "extra.toml").read_text(encoding="utf-8")
+            assert 'windows = ["*"]' in content
+        finally:
+            import shutil
+
+            shutil.rmtree(result, ignore_errors=True)
+
+    def test_copies_tauri_toml(self, tmp_path: Path):
+        """Staging copies Tauri.toml alongside capabilities."""
+        fn = _import_stage_extra_capabilities()
+
+        src_dir = tmp_path / "src"
+        caps_dir = src_dir / "capabilities"
+        caps_dir.mkdir(parents=True)
+        (caps_dir / "default.toml").write_text(
+            'identifier = "default"\npermissions = []\n',
+            encoding="utf-8",
+        )
+        tauri_content = '[tauri]\nidentifier = "com.pywry"\n'
+        (src_dir / "Tauri.toml").write_text(tauri_content, encoding="utf-8")
+
+        result = fn(src_dir, ["os:default"])
+
+        try:
+            assert (result / "Tauri.toml").exists(), "Tauri.toml not copied"
+            assert (result / "Tauri.toml").read_text(encoding="utf-8") == tauri_content
+        finally:
+            import shutil
+
+            shutil.rmtree(result, ignore_errors=True)
 
 
 # =============================================================================

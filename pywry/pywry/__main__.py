@@ -5,7 +5,7 @@ and receiving commands via stdin JSON IPC.
 """
 
 # pylint: disable=C0301,C0413,C0415,C0103,W0718
-# flake8: noqa: N806
+# flake8: noqa: N806, PLR0915
 
 import sys
 import typing
@@ -136,11 +136,18 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
+import importlib  # noqa: E402
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+
+import pytauri_plugins  # noqa: E402
+
 from anyio import create_task_group  # noqa: E402
 from anyio.from_thread import start_blocking_portal  # noqa: E402
 from pytauri import Commands, Manager, RunEvent, WebviewUrl, WindowEvent  # noqa: E402
 from pytauri.webview import WebviewWindowBuilder  # noqa: E402
-from pytauri_plugins import dialog as dialog_plugin, fs as fs_plugin  # noqa: E402
+
+from pywry.config import TAURI_PLUGIN_REGISTRY as _PLUGIN_REGISTRY  # noqa: E402
 
 
 # Try vendored pytauri_wheel first, fall back to installed package
@@ -151,6 +158,91 @@ try:
     )
 except ImportError:
     from pytauri_wheel.lib import builder_factory, context_factory
+
+
+def _load_plugins(plugin_names: list[str]) -> list[Any]:
+    """Dynamically import and initialise the requested Tauri plugins.
+
+    Parameters
+    ----------
+    plugin_names : list[str]
+        Plugin names to load (e.g. ``["dialog", "fs"]``).
+
+    Returns
+    -------
+    list
+        Initialised plugin objects for ``builder_factory().build(plugins=...)``.
+
+    Raises
+    ------
+    RuntimeError
+        If a plugin is unknown or its feature flag is disabled in the
+        compiled ``pytauri_wheel``.
+    """
+    plugins: list[Any] = []
+    for name in plugin_names:
+        if name not in _PLUGIN_REGISTRY:
+            msg = f"Unknown Tauri plugin '{name}'. Available: {', '.join(sorted(_PLUGIN_REGISTRY))}"
+            raise RuntimeError(msg)
+
+        flag_name, module_path = _PLUGIN_REGISTRY[name]
+
+        # Check the compile-time feature flag
+        flag_value = getattr(pytauri_plugins, flag_name, None)
+        if flag_value is not True:
+            msg = (
+                f"Tauri plugin '{name}' is not available — the "
+                f"'{flag_name}' feature was not compiled into pytauri_wheel. "
+                f"Current value: {flag_value!r}"
+            )
+            raise RuntimeError(msg)
+
+        mod = importlib.import_module(module_path)
+        plugins.append(mod.init())
+        log(f"Loaded Tauri plugin: {name}")
+
+    return plugins
+
+
+def _stage_extra_capabilities(
+    src_dir: Path,
+    extra_caps: list[str],
+) -> Path:
+    """Create a temp copy of *src_dir* with an extra capability TOML.
+
+    Tauri's ``context_factory(src_dir)`` reads every ``.toml`` file under
+    ``<src_dir>/capabilities/``.  The package directory may be read-only
+    (e.g. installed in site-packages), so we copy the entire source tree to
+    a temporary directory and add an ``extra.toml`` capability file there.
+
+    Parameters
+    ----------
+    src_dir : Path
+        Original ``pywry/pywry`` package directory.
+    extra_caps : list[str]
+        Tauri permission strings, e.g. ``["shell:allow-execute"]``.
+
+    Returns
+    -------
+    Path
+        The temporary directory to pass to ``context_factory()``.
+    """
+    tmp_dir = Path(tempfile.mkdtemp(prefix="pywry_caps_"))
+    # Copy Tauri.toml, capabilities/, frontend/ — everything context_factory needs
+    shutil.copytree(src_dir, tmp_dir, dirs_exist_ok=True)
+
+    # Write the extra capability file
+    extra_toml = tmp_dir / "capabilities" / "extra.toml"
+    perms = ", ".join(f'"{p}"' for p in extra_caps)
+    extra_toml.write_text(
+        f'identifier = "extra"\n'
+        f'description = "User-supplied extra capabilities"\n'
+        f'windows = ["*"]\n'
+        f"permissions = [{perms}]\n",
+        encoding="utf-8",
+    )
+    log(f"Staged extra capabilities in {tmp_dir}: {extra_caps}")
+    return tmp_dir
 
 
 # Debug mode controlled by environment variable
@@ -852,6 +944,7 @@ def main() -> int:  # pylint: disable=too-many-statements
     log(f"Starting subprocess... (headless={HEADLESS})")
     src_dir = Path(__file__).parent.absolute()
     ipc = JsonIPC()
+    tmp_caps_dir: Path | None = None
     # Start stdin reader thread
     reader_thread = threading.Thread(target=stdin_reader, args=(ipc,), daemon=True)
     reader_thread.start()
@@ -861,14 +954,28 @@ def main() -> int:  # pylint: disable=too-many-statements
             start_blocking_portal("asyncio") as portal,
             portal.wrap_async_context_manager(portal.call(create_task_group)) as _,
         ):
-            context = context_factory(src_dir)
+            # --- Dynamic plugin initialisation from env var ---
+            plugin_csv = os.environ.get("PYWRY_TAURI_PLUGINS", "dialog,fs")
+            plugin_names = [p.strip() for p in plugin_csv.split(",") if p.strip()]
+            log(f"Requested Tauri plugins: {plugin_names}")
+            plugins = _load_plugins(plugin_names)
+
+            # --- Extra capabilities from env var ---
+            extra_csv = os.environ.get("PYWRY_EXTRA_CAPABILITIES", "")
+            extra_caps = [c.strip() for c in extra_csv.split(",") if c.strip()]
+            ctx_dir = src_dir
+            if extra_caps:
+                tmp_caps_dir = _stage_extra_capabilities(src_dir, extra_caps)
+                ctx_dir = tmp_caps_dir
+
+            context = context_factory(ctx_dir)
             commands = Commands()
             register_commands(commands)
 
             app = builder_factory().build(
                 context=context,
                 invoke_handler=commands.generate_handler(portal),
-                plugins=[dialog_plugin.init(), fs_plugin.init()],
+                plugins=plugins,
             )
 
             def on_run(app_handle: Any, run_event: Any) -> None:
@@ -898,6 +1005,10 @@ def main() -> int:  # pylint: disable=too-many-statements
 
         traceback.print_exc()
         return 1
+    finally:
+        # Clean up staged capabilities temp dir
+        if tmp_caps_dir is not None:
+            shutil.rmtree(tmp_caps_dir, ignore_errors=True)
 
     log("Subprocess exiting")
     return 0
