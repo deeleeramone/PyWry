@@ -116,7 +116,7 @@ class TestSessionTokenGeneration:
         assert parts[0] == "user-123", "First part should be user_id"
         assert parts[1].isdigit(), "Second part should be timestamp"
         assert parts[2] == "0", "Third part should be 0 for no expiry"
-        assert len(parts[3]) == 16, "Signature should be 16 hex characters"
+        assert len(parts[3]) == 64, "Signature should be 64 hex characters (full SHA-256)"
 
     def test_generate_token_with_expiry(self, auth_secret: str) -> None:
         """Test token generation with expiration time."""

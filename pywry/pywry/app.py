@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import uuid
 
@@ -142,6 +143,10 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
         self._aggrid_js: str | None = None
         self._aggrid_css: dict[tuple[str, ThemeMode], str] = {}
 
+        # Auth state
+        self._auth_result: Any = None  # AuthFlowResult | None
+        self._session_manager: Any = None  # SessionManager | None
+
         info(f"PyWry initialized with {mode.value} mode")
 
     def _create_mode(self, mode: WindowMode) -> WindowModeBase:
@@ -235,6 +240,126 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             self._hot_reload_manager.enable_for_window(target_label, watch_content)
 
         debug(f"Hot reload enabled for window {target_label}")
+
+    # ── Auth API ──────────────────────────────────────────────────────
+
+    @property
+    def is_authenticated(self) -> bool:
+        """Check if the app has a successful authentication result."""
+        return self._auth_result is not None and getattr(self._auth_result, "success", False)
+
+    def login(
+        self,
+        provider: Any | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Authenticate via OAuth2.
+
+        In native mode, opens a dedicated auth window pointing at the
+        provider's authorize URL. Blocks until authentication completes.
+
+        In deploy mode, returns the login URL for the frontend.
+
+        Parameters
+        ----------
+        provider : OAuthProvider, optional
+            Override the default provider from settings.
+        **kwargs : Any
+            Additional keyword arguments passed to ``AuthFlowManager.run_native()``.
+
+        Returns
+        -------
+        AuthFlowResult
+            The result of the authentication flow.
+
+        Raises
+        ------
+        AuthenticationError
+            If authentication fails.
+        """
+        from .auth.flow import AuthFlowManager
+        from .auth.providers import OAuthProvider, create_provider_from_settings
+        from .auth.session import SessionManager
+        from .auth.token_store import get_token_store
+
+        # Resolve provider
+        if provider is None:
+            oauth2_settings = self._settings.oauth2
+            if oauth2_settings is None:
+                # Try to instantiate from env vars as a fallback
+                from .config import OAuth2Settings
+
+                try:
+                    oauth2_settings = OAuth2Settings()
+                except Exception:
+                    oauth2_settings = None
+                if oauth2_settings is None or not oauth2_settings.client_id:
+                    from .exceptions import AuthenticationError
+
+                    msg = (
+                        "No OAuth2 settings configured. "
+                        "Set PYWRY_OAUTH2__CLIENT_ID and PYWRY_OAUTH2__PROVIDER, "
+                        "or pass a provider instance."
+                    )
+                    raise AuthenticationError(msg)
+                # Cache the auto-detected settings
+                self._settings.oauth2 = oauth2_settings
+            provider = create_provider_from_settings(oauth2_settings)
+        elif not isinstance(provider, OAuthProvider):
+            # Assume it's settings-like
+            provider = create_provider_from_settings(provider)
+
+        oauth2_settings = self._settings.oauth2
+        use_pkce = getattr(oauth2_settings, "use_pkce", True) if oauth2_settings else True
+        auth_timeout = (
+            getattr(oauth2_settings, "auth_timeout_seconds", 120.0) if oauth2_settings else 120.0
+        )
+        token_backend = (
+            getattr(oauth2_settings, "token_store_backend", "memory")
+            if oauth2_settings
+            else "memory"
+        )
+        refresh_buffer = (
+            getattr(oauth2_settings, "refresh_buffer_seconds", 60) if oauth2_settings else 60
+        )
+
+        # Create token store
+        token_store = get_token_store(backend=token_backend)
+
+        # Create session manager
+        self._session_manager = SessionManager(
+            provider=provider,
+            token_store=token_store,
+            refresh_buffer_seconds=refresh_buffer,
+        )
+
+        # Create flow manager
+        flow_manager = AuthFlowManager(
+            provider=provider,
+            token_store=token_store,
+            session_manager=self._session_manager,
+            use_pkce=use_pkce,
+            auth_timeout=auth_timeout,
+        )
+
+        # Run the flow
+        result = flow_manager.authenticate(app=self, **kwargs)
+
+        self._auth_result = result
+        return result
+
+    def logout(self) -> None:
+        """Log out and clear authentication state.
+
+        Clears stored tokens and cancels any background refresh.
+        """
+        if self._session_manager is not None:
+            from .state.sync_helpers import run_async
+
+            with contextlib.suppress(Exception):
+                run_async(self._session_manager.logout())
+            self._session_manager = None
+        self._auth_result = None
 
     # pylint: disable=too-many-arguments
     def show(

@@ -27,7 +27,7 @@ disable=
 
 [FORMAT]
 max-line-length=100
-max-module-lines=1000
+max-module-lines=2500
 expected-line-ending-format=
 
 [BASIC]

@@ -104,7 +104,7 @@ def generate_session_token(
         secret.encode(),
         payload.encode(),
         hashlib.sha256,
-    ).hexdigest()[:16]
+    ).hexdigest()
 
     return f"{payload}:{signature}"
 
@@ -147,7 +147,7 @@ def validate_session_token(  # pylint: disable=no-else-return
             secret.encode(),
             payload.encode(),
             hashlib.sha256,
-        ).hexdigest()[:16]
+        ).hexdigest()
 
         if not hmac.compare_digest(signature, expected_sig):
             return (False, None, "Invalid signature")
@@ -359,6 +359,7 @@ class AuthMiddleware:
         app: Any,
         session_store: SessionStore,
         config: AuthConfig,
+        public_paths: set[str] | None = None,
     ) -> None:
         """Initialize the middleware.
 
@@ -370,10 +371,13 @@ class AuthMiddleware:
             Session store for validation.
         config : AuthConfig
             Authentication configuration.
+        public_paths : set of str, optional
+            Paths that do not require authentication (e.g., login/callback routes).
         """
         self.app = app
         self.session_store = session_store
         self.config = config
+        self.public_paths = public_paths or set()
 
     async def __call__(
         self,
@@ -383,6 +387,12 @@ class AuthMiddleware:
     ) -> None:
         """Handle ASGI request."""
         if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
+        # Skip auth for public paths (e.g., /auth/login, /auth/callback)
+        path = scope.get("path", "")
+        if any(path.startswith(p) for p in self.public_paths):
             await self.app(scope, receive, send)
             return
 

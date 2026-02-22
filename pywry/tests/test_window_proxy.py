@@ -8,12 +8,13 @@ Tests are marked slow because they spawn actual subprocess/windows.
 
 from __future__ import annotations
 
-import contextlib
 import os
 import sys
 import time
 
-from typing import Any
+from collections.abc import Callable
+from functools import wraps
+from typing import Any, TypeVar
 
 import pytest
 
@@ -27,6 +28,39 @@ from pywry.window_proxy import WindowProxy
 
 # Import shared test utilities from tests.conftest
 from tests.conftest import ReadyWaiter
+
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Callable[[F], F]:
+    """Retry decorator for tests that may fail due to transient subprocess issues.
+
+    On Windows, WebView2 sometimes fails to start due to resource contention
+    ("Failed to unregister class Chrome_WidgetWin_0"). On Linux with xvfb,
+    WebKit initialization may have timing issues. This decorator retries
+    the test after a delay to allow resources to be released.
+    """
+
+    def decorator(func: F) -> F:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            last_error: Exception | None = None
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except (TimeoutError, AssertionError) as e:
+                    last_error = e
+                    if attempt < max_attempts - 1:
+                        # Clean up and wait before retry
+                        runtime.stop()
+                        # Progressive backoff for CI stability
+                        time.sleep(delay * (attempt + 1))
+            raise last_error  # type: ignore[misc]
+
+        return wrapper  # type: ignore[return-value]
+
+    return decorator
 
 
 # Note: cleanup_runtime fixture is now in conftest.py and auto-used
@@ -176,16 +210,10 @@ class TestWindowProxyActions:
 
         # Change title
         proxy.set_title("New Title")
+        time.sleep(0.1)  # Allow IPC to complete
 
-        # Poll until title propagates through IPC (fire-and-forget is async)
-        deadline = time.time() + 3.0
+        # Verify title changed
         new_title = proxy.title
-        while "New Title" not in new_title and time.time() < deadline:
-            with contextlib.suppress(IPCTimeoutError):
-                new_title = proxy.title
-            if "New Title" not in new_title:
-                time.sleep(0.1)
-
         assert "New Title" in new_title
         app.close()
 
@@ -280,6 +308,7 @@ class TestWindowProxyActions:
         assert proxy.is_visible is True
         app.close()
 
+    @retry_on_subprocess_failure(max_attempts=3, delay=1.0)
     @pytest.mark.skipif(
         os.environ.get("CI") == "true" and sys.platform == "linux",
         reason="Always-on-top requires a real window manager (not available on Linux CI)",

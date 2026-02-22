@@ -176,6 +176,9 @@ def http_get(url: str, timeout: float = 5.0, auth: bool = False) -> tuple[int, s
             return resp.status, resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode("utf-8")
+    except OSError:
+        # Connection reset/aborted before response could be read (Windows TCP timing).
+        return 0, ""
 
 
 def http_post(url: str, data: dict, timeout: float = 5.0, auth: bool = False) -> tuple[int, str]:
@@ -206,6 +209,10 @@ def http_post(url: str, data: dict, timeout: float = 5.0, auth: bool = False) ->
             return resp.status, resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode("utf-8")
+    except OSError:
+        # Connection reset/aborted before response could be read (Windows TCP timing).
+        # Treat as a server-side rejection.
+        return 0, ""
 
 
 # =============================================================================

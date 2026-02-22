@@ -8,6 +8,7 @@ and receiving commands via stdin JSON IPC.
 # flake8: noqa: N806
 
 import sys
+import typing
 
 
 # Set process and thread title for Activity Monitor/Task Manager visibility
@@ -29,7 +30,7 @@ if sys.platform == "darwin":
         from ctypes import Structure, byref, c_uint32, cdll
 
         class _ProcessSerialNumber(Structure):
-            _fields_ = [("highLongOfPSN", c_uint32), ("lowLongOfPSN", c_uint32)]
+            _fields_: typing.ClassVar = [("highLongOfPSN", c_uint32), ("lowLongOfPSN", c_uint32)]
 
         _Carbon = cdll.LoadLibrary("/System/Library/Frameworks/Carbon.framework/Carbon")
         _psn = _ProcessSerialNumber()
@@ -42,6 +43,7 @@ if sys.platform == "darwin":
 import io
 import json
 import os
+import signal
 import threading
 
 from contextlib import suppress
@@ -839,6 +841,12 @@ def _handle_close_requested(ipc: JsonIPC, app_handle: Any, label: str, window_ev
 
 def main() -> int:  # pylint: disable=too-many-statements
     """Run the PyWry subprocess."""
+    # Ignore SIGINT in the subprocess.  The parent process handles Ctrl-C
+    # and sends a "quit" IPC command for a clean shutdown.  Without this,
+    # SIGINT raises KeyboardInterrupt inside the Rust/PyO3 on_run callback
+    # which causes a panic in pytauri-core.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
     from .commands import register_commands
 
     log(f"Starting subprocess... (headless={HEADLESS})")

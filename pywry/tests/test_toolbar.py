@@ -3,14 +3,14 @@
 Tests cover:
 - Option model
 - Base ToolbarItem functionality
-- Individual item types (Button, Select, MultiSelect, TextInput, NumberInput, DateInput, SliderInput, RangeInput)
+- Individual item types
 - Toolbar container
 - Event validation
 - HTML generation
 - Helper functions
 """
 
-# pylint: disable=too-many-lines,unused-argument
+# pylint: disable=C0302,unused-argument
 
 from __future__ import annotations
 

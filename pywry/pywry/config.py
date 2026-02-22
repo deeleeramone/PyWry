@@ -11,6 +11,8 @@ Environment variables use PYWRY_ prefix with nested delimiter __.
 Example: PYWRY_CSP__CONNECT_SRC, PYWRY_TIMEOUT__STARTUP
 """
 
+# pylint: disable=too-many-lines
+
 from __future__ import annotations
 
 import os
@@ -99,6 +101,17 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
         else:
             result[key] = value
     return result
+
+
+# Field names that contain sensitive data and must be redacted in output.
+_SENSITIVE_FIELDS: set[str] = {
+    "client_secret",
+    "ssl_keyfile_password",
+    "internal_api_token",
+    "redis_url",
+}
+
+_REDACTED = "********"
 
 
 class SecuritySettings(BaseSettings):
@@ -464,6 +477,139 @@ class DeploySettings(BaseSettings):
             return [s.strip() for s in v.split(",") if s.strip()]
         return v or []
 
+    # OAuth2 integration
+    oauth2_login_path: str = Field(
+        default="/auth/login",
+        description="Path for the OAuth2 login endpoint in deploy mode",
+    )
+    oauth2_callback_path: str = Field(
+        default="/auth/callback",
+        description="Path for the OAuth2 callback endpoint in deploy mode",
+    )
+    auth_public_paths: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["/auth/login", "/auth/callback", "/auth/status"],
+        description="Paths that do not require authentication (pre-auth routes)",
+    )
+
+    # Security: explicit redirect URI and HTTPS enforcement
+    auth_redirect_uri: str = Field(
+        default="",
+        description=(
+            "Explicit OAuth2 redirect URI for deploy mode. "
+            "When set, overrides request-derived Host header to prevent poisoning. "
+            "Example: https://myapp.example.com/auth/callback"
+        ),
+    )
+    force_https: bool = Field(
+        default=False,
+        description=(
+            "Enforce HTTPS for redirect URIs and cookies in deploy mode. "
+            "Should be True in production. When False, allows localhost HTTP for development."
+        ),
+    )
+
+    @field_validator("auth_public_paths", mode="before")
+    @classmethod
+    def parse_public_paths(cls, v: Any) -> list[str]:
+        """Parse comma-separated strings from env vars."""
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v or []
+
+
+class OAuth2Settings(BaseSettings):
+    """OAuth2 authentication configuration.
+
+    Environment prefix: PYWRY_OAUTH2__
+    Example: PYWRY_OAUTH2__CLIENT_ID=your-client-id
+    Example: PYWRY_OAUTH2__PROVIDER=google
+
+    TOML section: [tool.pywry.oauth2]
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="PYWRY_OAUTH2__",
+        extra="ignore",
+    )
+
+    # Provider selection
+    provider: Literal["google", "github", "microsoft", "oidc", "custom"] = Field(
+        default="custom",
+        description="OAuth2 provider type: google, github, microsoft, oidc, or custom",
+    )
+
+    # Client credentials
+    client_id: str = Field(
+        default="",
+        description="OAuth2 client ID from the provider",
+    )
+    client_secret: str = Field(
+        default="",
+        description="OAuth2 client secret (empty for public clients with PKCE)",
+    )
+
+    # Scopes
+    scopes: str = Field(
+        default="openid email profile",
+        description="Space-separated OAuth2 scopes to request",
+    )
+
+    # Endpoint URLs (required for custom/oidc providers)
+    authorize_url: str = Field(
+        default="",
+        description="Authorization endpoint URL (required for custom provider)",
+    )
+    token_url: str = Field(
+        default="",
+        description="Token exchange endpoint URL (required for custom provider)",
+    )
+    userinfo_url: str = Field(
+        default="",
+        description="User info endpoint URL (optional)",
+    )
+    issuer_url: str = Field(
+        default="",
+        description="OIDC issuer URL for auto-discovery (used by oidc provider)",
+    )
+
+    # Provider-specific
+    tenant_id: str = Field(
+        default="common",
+        description="Azure AD tenant ID (for Microsoft provider)",
+    )
+
+    # PKCE
+    use_pkce: bool = Field(
+        default=True,
+        description="Use PKCE (Proof Key for Code Exchange) for public clients",
+    )
+
+    # Token storage
+    token_store_backend: Literal["memory", "keyring", "redis"] = Field(
+        default="memory",
+        description="Token storage backend: memory, keyring, or redis",
+    )
+
+    # Timeouts
+    auth_timeout_seconds: float = Field(
+        default=120.0,
+        ge=10.0,
+        description="Maximum seconds to wait for OAuth2 callback",
+    )
+    refresh_buffer_seconds: int = Field(
+        default=60,
+        ge=10,
+        description="Seconds before token expiry to trigger background refresh",
+    )
+
+    @field_validator("client_id")
+    @classmethod
+    def validate_custom_provider(cls, v: str, info: Any) -> str:  # pylint: disable=unused-argument
+        """Validate that required fields are set for custom providers."""
+        # Validation happens at usage time rather than init time
+        # to allow partial configuration via env vars
+        return v
+
 
 class ServerSettings(BaseSettings):
     """Inline server settings for notebook/web mode.
@@ -758,6 +904,10 @@ class PyWrySettings(BaseSettings):
     server: ServerSettings = Field(default_factory=ServerSettings)
     deploy: DeploySettings = Field(default_factory=DeploySettings)
     mcp: MCPSettings = Field(default_factory=MCPSettings)
+    oauth2: OAuth2Settings | None = Field(
+        default=None,
+        description="OAuth2 authentication settings (None to disable)",
+    )
 
     # Tracks where each value came from (for CLI display)
     _sources: ClassVar[dict[str, str]] = {}
@@ -769,28 +919,44 @@ class PyWrySettings(BaseSettings):
         # Merge TOML config with explicit data (explicit takes precedence)
         merged = _deep_merge(toml_config, data)
 
+        # Auto-detect OAuth2 env vars: if PYWRY_OAUTH2__CLIENT_ID is set
+        # and oauth2 wasn't explicitly provided, instantiate OAuth2Settings
+        # so env-var based configuration works out of the box.
+        if ("oauth2" not in merged or merged["oauth2"] is None) and os.environ.get(
+            "PYWRY_OAUTH2__CLIENT_ID"
+        ):
+            merged["oauth2"] = OAuth2Settings()
+
         super().__init__(**merged)
 
     def to_toml(self) -> str:
         """Export settings as TOML string."""
         lines = ["# PyWry Configuration", "# Generated by: pywry config --toml", ""]
 
-        sections = [
-            ("csp", self.csp),
-            ("theme", self.theme),
-            ("timeout", self.timeout),
-            ("asset", self.asset),
-            ("log", self.log),
-            ("window", self.window),
-            ("hot_reload", self.hot_reload),
-            ("server", self.server),
-            ("deploy", self.deploy),
-            ("mcp", self.mcp),
+        section_names = [
+            "csp",
+            "theme",
+            "timeout",
+            "asset",
+            "log",
+            "window",
+            "hot_reload",
+            "server",
+            "deploy",
+            "mcp",
         ]
 
-        for section_name, section in sections:
+        if self.oauth2 is not None:
+            section_names.append("oauth2")
+
+        all_data = self.model_dump(
+            exclude=dict.fromkeys(section_names, _SENSITIVE_FIELDS),
+        )
+
+        for section_name in section_names:
+            section_data = all_data.get(section_name, {})
             lines.append(f"[{section_name}]")
-            for field_name, field_value in section.model_dump().items():
+            for field_name, field_value in section_data.items():
                 if isinstance(field_value, list):
                     value_str = "[" + ", ".join(f'"{v}"' for v in field_value) + "]"
                 elif isinstance(field_value, bool):
@@ -800,6 +966,13 @@ class PyWrySettings(BaseSettings):
                 else:
                     value_str = str(field_value)
                 lines.append(f"{field_name} = {value_str}")
+            # Append redacted placeholders for any sensitive fields defined
+            # on this section's model class.
+            section_cls = type(getattr(self, section_name))
+            lines.extend(
+                f'{rn} = "{_REDACTED}"'
+                for rn in sorted(_SENSITIVE_FIELDS & section_cls.model_fields.keys())
+            )
             lines.append("")
 
         return "\n".join(lines)
@@ -812,22 +985,28 @@ class PyWrySettings(BaseSettings):
             "",
         ]
 
-        sections = [
-            ("CSP", self.csp),
-            ("THEME", self.theme),
-            ("TIMEOUT", self.timeout),
-            ("ASSET", self.asset),
-            ("LOG", self.log),
-            ("WINDOW", self.window),
-            ("HOT_RELOAD", self.hot_reload),
-            ("SERVER", self.server),
-            ("DEPLOY", self.deploy),
-            ("MCP", self.mcp),
+        env_sections = [
+            ("CSP", "csp"),
+            ("THEME", "theme"),
+            ("TIMEOUT", "timeout"),
+            ("ASSET", "asset"),
+            ("LOG", "log"),
+            ("WINDOW", "window"),
+            ("HOT_RELOAD", "hot_reload"),
+            ("SERVER", "server"),
+            ("DEPLOY", "deploy"),
+            ("MCP", "mcp"),
         ]
 
-        for section_name, section in sections:
-            for field_name, field_value in section.model_dump().items():
-                env_name = f"PYWRY_{section_name}__{field_name.upper()}"
+        # Dump from top-level model to avoid tainted section instances.
+        all_data = self.model_dump(
+            exclude={attr: _SENSITIVE_FIELDS for _, attr in env_sections},
+        )
+
+        for env_prefix, attr_name in env_sections:
+            section_data = all_data.get(attr_name, {})
+            for field_name, field_value in section_data.items():
+                env_name = f"PYWRY_{env_prefix}__{field_name.upper()}"
                 if isinstance(field_value, list):
                     value_str = ",".join(str(v) for v in field_value)
                 elif isinstance(field_value, bool):
@@ -835,6 +1014,10 @@ class PyWrySettings(BaseSettings):
                 else:
                     value_str = str(field_value)
                 lines.append(f'export {env_name}="{value_str}"')
+            section_cls = type(getattr(self, attr_name))
+            for redacted_name in sorted(_SENSITIVE_FIELDS & section_cls.model_fields.keys()):
+                env_name = f"PYWRY_{env_prefix}__{redacted_name.upper()}"
+                lines.append(f'export {env_name}="{_REDACTED}"')
 
         return "\n".join(lines)
 
@@ -842,28 +1025,39 @@ class PyWrySettings(BaseSettings):
         """Format settings as a readable table."""
         lines = ["PyWry Configuration", "=" * 60, ""]
 
-        sections = [
-            ("Security (CSP)", self.csp),
-            ("Theme", self.theme),
-            ("Timeouts", self.timeout),
-            ("Assets", self.asset),
-            ("Logging", self.log),
-            ("Window Defaults", self.window),
-            ("Hot Reload", self.hot_reload),
-            ("Server (Notebook/Web)", self.server),
-            ("Deploy (Scalable)", self.deploy),
-            ("MCP (AI Agents)", self.mcp),
+        show_sections = [
+            ("Security (CSP)", "csp"),
+            ("Theme", "theme"),
+            ("Timeouts", "timeout"),
+            ("Assets", "asset"),
+            ("Logging", "log"),
+            ("Window Defaults", "window"),
+            ("Hot Reload", "hot_reload"),
+            ("Server (Notebook/Web)", "server"),
+            ("Deploy (Scalable)", "deploy"),
+            ("MCP (AI Agents)", "mcp"),
         ]
 
-        for section_name, section in sections:
-            lines.append(f"\n{section_name}")
+        # Dump from top-level model to avoid tainted section instances.
+        all_data = self.model_dump(
+            exclude={attr: _SENSITIVE_FIELDS for _, attr in show_sections},
+        )
+
+        for display_name, attr_name in show_sections:
+            section_data = all_data.get(attr_name, {})
+            lines.append(f"\n{display_name}")
             lines.append("-" * 40)
-            for field_name, field_value in section.model_dump().items():
+            for field_name, field_value in section_data.items():
                 # Truncate long values
                 value_str = str(field_value)
                 if len(value_str) > 50:
                     value_str = value_str[:47] + "..."
                 lines.append(f"  {field_name:20} = {value_str}")
+            section_cls = type(getattr(self, attr_name))
+            lines.extend(
+                f"  {rn:20} = {_REDACTED}"
+                for rn in sorted(_SENSITIVE_FIELDS & section_cls.model_fields.keys())
+            )
 
         return "\n".join(lines)
 

@@ -357,58 +357,41 @@ def format_config_show(settings: PyWrySettings) -> str:
     str
         Formatted configuration string.
     """
+    from .config import _REDACTED, _SENSITIVE_FIELDS
+
     lines = []
     lines.append("PyWry Configuration\n" + "=" * 40 + "\n")
 
-    # Security (CSP)
-    lines.append("[csp]")
-    for field, value in settings.csp.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
+    section_names = [
+        "csp",
+        "theme",
+        "timeout",
+        "asset",
+        "log",
+        "window",
+        "hot_reload",
+        "server",
+        "deploy",
+        "mcp",
+    ]
+    all_data = settings.model_dump(
+        exclude=dict.fromkeys(section_names, _SENSITIVE_FIELDS),
+    )
 
-    # Theme
-    lines.append("\n[theme]")
-    for field, value in settings.theme.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Timeout
-    lines.append("\n[timeout]")
-    for field, value in settings.timeout.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Assets
-    lines.append("\n[asset]")
-    for field, value in settings.asset.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Logging
-    lines.append("\n[log]")
-    for field, value in settings.log.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Window
-    lines.append("\n[window]")
-    for field, value in settings.window.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Hot Reload
-    lines.append("\n[hot_reload]")
-    for field, value in settings.hot_reload.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Server
-    lines.append("\n[server]")
-    for field, value in settings.server.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # Deploy
-    lines.append("\n[deploy]")
-    for field, value in settings.deploy.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
-
-    # MCP
-    lines.append("\n[mcp]")
-    for field, value in settings.mcp.model_dump().items():
-        lines.append(f"  {field} = {value!r}")
+    for section_name in section_names:
+        section_data = all_data.get(section_name, {})
+        if lines[-1] != "":
+            lines.append("")
+        lines.append(f"[{section_name}]")
+        for field_name, field_value in section_data.items():
+            lines.append(f"  {field_name} = {field_value!r}")
+        # Append redacted placeholders for any sensitive fields defined
+        # on this section's model class.
+        section_cls = type(getattr(settings, section_name))
+        lines.extend(
+            f"  {rn} = '{_REDACTED}'"
+            for rn in sorted(_SENSITIVE_FIELDS & section_cls.model_fields.keys())
+        )
 
     return "\n".join(lines)
 
