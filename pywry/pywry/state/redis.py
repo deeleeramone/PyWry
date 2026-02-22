@@ -574,20 +574,27 @@ class RedisSessionStore(SessionStore):
             with contextlib.suppress(json.JSONDecodeError):
                 metadata = json.loads(data["metadata"])
 
+        expires_at = float(data.get("expires_at", 0))
+
+        # Check Python-side expiry as belt-and-suspenders alongside Redis TTL.
+        # Redis expires keys lazily, so under load a key may briefly outlive
+        # its TTL.  Checking the stored timestamp catches that case.
+        if expires_at and expires_at < time.time():
+            return None
+
         return UserSession(
             session_id=session_id,
             user_id=data.get("user_id", ""),
             roles=roles,
             created_at=float(data.get("created_at", 0)),
-            expires_at=float(data.get("expires_at", 0)),
+            expires_at=expires_at,
             metadata=metadata,
         )
 
     async def validate_session(self, session_id: str) -> bool:
         """Validate a session is active and not expired."""
-        r = await self._redis()
-        result = await r.exists(self._session_key(session_id))
-        return cast("bool", result > 0)
+        session = await self.get_session(session_id)
+        return session is not None
 
     async def delete_session(self, session_id: str) -> bool:
         """Delete a session."""

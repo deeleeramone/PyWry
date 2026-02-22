@@ -53,6 +53,8 @@ _running = False
 _registry = None
 _ON_WINDOW_CLOSE = "hide"  # Setting for MULTI_WINDOW close behavior
 _WINDOW_MODE = "new"  # Window mode: "single", "multi", "new"
+_TAURI_PLUGINS = "dialog,fs"  # Comma-separated Tauri plugin names
+_EXTRA_CAPABILITIES = ""  # Comma-separated extra capability permission strings
 
 # Portal state for async callback support
 _exit_stack: ExitStack | None = None
@@ -148,6 +150,34 @@ def set_window_mode(mode: str) -> None:
     """
     global _WINDOW_MODE
     _WINDOW_MODE = mode if mode in ("single", "multi", "new") else "new"
+
+
+def set_tauri_plugins(plugins: list[str]) -> None:
+    """Set the Tauri plugins to initialise in the subprocess.
+
+    Must be called before ``start()``.
+
+    Parameters
+    ----------
+    plugins : list[str]
+        Plugin names (e.g. ``["dialog", "fs", "notification"]``).
+    """
+    global _TAURI_PLUGINS
+    _TAURI_PLUGINS = ",".join(plugins)
+
+
+def set_extra_capabilities(caps: list[str]) -> None:
+    """Set additional Tauri capability permission strings.
+
+    Must be called before ``start()``.
+
+    Parameters
+    ----------
+    caps : list[str]
+        Permission strings (e.g. ``["shell:allow-execute"]``).
+    """
+    global _EXTRA_CAPABILITIES
+    _EXTRA_CAPABILITIES = ",".join(caps)
 
 
 def get_pywry_dir() -> Path:
@@ -797,6 +827,9 @@ def start() -> bool:
     env["PYTHONUTF8"] = "1"  # Force UTF-8
     env["PYWRY_ON_WINDOW_CLOSE"] = _ON_WINDOW_CLOSE  # Pass close behavior to subprocess
     env["PYWRY_WINDOW_MODE"] = _WINDOW_MODE  # Pass window mode to subprocess
+    env["PYWRY_TAURI_PLUGINS"] = _TAURI_PLUGINS  # Tauri plugins to initialise
+    if _EXTRA_CAPABILITIES:
+        env["PYWRY_EXTRA_CAPABILITIES"] = _EXTRA_CAPABILITIES
 
     # On Windows, CREATE_NEW_PROCESS_GROUP prevents the subprocess from
     # receiving CTRL_C_EVENT when the user presses Ctrl+C in the terminal.

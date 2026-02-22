@@ -2,6 +2,7 @@ identifier = "default"
 description = "Capability for PyWry windows"
 windows = ["*"]
 permissions = [
+    # Core Tauri permissions
     "core:default",
     "pytauri:default",
     "core:window:allow-close",
@@ -14,7 +15,26 @@ permissions = [
     "core:window:allow-set-focus",
     "core:webview:default",
     "core:app:default",
-    "notification:default",
+
+    # All bundled pytauri_plugins — permissions are harmless if the
+    # corresponding plugin is not initialised at runtime.
+    # NOTE: only plugins with valid Tauri manifest keys are listed here.
+    # persisted-scope and single-instance do not register capability manifests.
+    "autostart:default",
+    "clipboard-manager:default",
+    "deep-link:default",
     "dialog:default",
     "fs:default",
+    "global-shortcut:default",
+    "http:default",
+    "notification:default",
+    "opener:default",
+    "os:default",
+    "positioner:default",
+    "process:default",
+    "shell:default",
+    "updater:default",
+    "upload:default",
+    "websocket:default",
+    "window-state:default",
 ]

@@ -116,6 +116,25 @@ Content Security Policy configuration.
 
 ---
 
+## Tauri Plugin Constants
+
+::: pywry.config.TAURI_PLUGIN_REGISTRY
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.config.AVAILABLE_TAURI_PLUGINS
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.config.DEFAULT_TAURI_PLUGINS
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+---
+
 ## Settings Functions
 
 ::: pywry.config.get_settings

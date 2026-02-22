@@ -7,6 +7,8 @@ Including CSP (Content Security Policy) configuration and meta tag generation.
 import pytest
 
 from pywry.config import (
+    AVAILABLE_TAURI_PLUGINS,
+    DEFAULT_TAURI_PLUGINS,
     AssetSettings,
     HotReloadSettings,
     PyWrySettings,
@@ -573,3 +575,84 @@ class TestPyWrySettingsWithAsset:
         output = settings.show()
         assert "Assets" in output
         assert "plotly_version" in output
+
+
+# =============================================================================
+# Tauri Plugin Settings Tests
+# =============================================================================
+
+
+class TestTauriPluginSettings:
+    """Tests for tauri_plugins and extra_capabilities config fields."""
+
+    def test_default_plugins(self):
+        """Default tauri_plugins value is ['dialog', 'fs']."""
+        settings = PyWrySettings()
+        assert settings.tauri_plugins == DEFAULT_TAURI_PLUGINS
+
+    def test_custom_plugins_list(self):
+        """Custom plugin list is accepted."""
+        settings = PyWrySettings(tauri_plugins=["dialog", "fs", "notification"])
+        assert "notification" in settings.tauri_plugins
+
+    def test_comma_separated_string(self):
+        """Comma-separated string is parsed into a list."""
+        settings = PyWrySettings(tauri_plugins="dialog,fs,http")
+        assert settings.tauri_plugins == ["dialog", "fs", "http"]
+
+    def test_comma_separated_with_spaces(self):
+        """Comma-separated string with spaces is trimmed."""
+        settings = PyWrySettings(tauri_plugins=" dialog , fs , notification ")
+        assert settings.tauri_plugins == ["dialog", "fs", "notification"]
+
+    def test_unknown_plugin_raises(self):
+        """Unknown plugin name raises ValueError."""
+        with pytest.raises(ValueError, match="Unknown Tauri plugin"):
+            PyWrySettings(tauri_plugins=["dialog", "nonexistent_plugin"])
+
+    def test_all_known_plugins_accepted(self):
+        """All 19 known plugins are individually accepted."""
+        for name in AVAILABLE_TAURI_PLUGINS:
+            settings = PyWrySettings(tauri_plugins=[name])
+            assert settings.tauri_plugins == [name]
+
+    def test_extra_capabilities_default_empty(self):
+        """Default extra_capabilities is an empty list."""
+        settings = PyWrySettings()
+        assert settings.extra_capabilities == []
+
+    def test_extra_capabilities_list(self):
+        """Custom capability list is accepted."""
+        caps = ["shell:allow-execute", "fs:allow-read-file"]
+        settings = PyWrySettings(extra_capabilities=caps)
+        assert settings.extra_capabilities == caps
+
+    def test_extra_capabilities_comma_string(self):
+        """Comma-separated capability string is parsed."""
+        settings = PyWrySettings(extra_capabilities="shell:allow-execute,fs:allow-read-file")
+        assert settings.extra_capabilities == ["shell:allow-execute", "fs:allow-read-file"]
+
+    def test_plugins_in_toml_export(self):
+        """Tauri plugins appear in TOML export."""
+        settings = PyWrySettings(tauri_plugins=["dialog", "fs", "notification"])
+        toml = settings.to_toml()
+        assert "tauri_plugins" in toml
+        assert '"notification"' in toml
+
+    def test_plugins_in_env_export(self):
+        """Tauri plugins appear in env export."""
+        settings = PyWrySettings(tauri_plugins=["dialog", "fs", "http"])
+        env = settings.to_env()
+        assert "PYWRY_TAURI_PLUGINS" in env
+        assert "http" in env
+
+    def test_env_var_override(self, monkeypatch):
+        """PYWRY_TAURI_PLUGINS env var overrides default."""
+        monkeypatch.setenv("PYWRY__TAURI_PLUGINS", "dialog,fs,notification,http")
+        settings = PyWrySettings()
+        assert "notification" in settings.tauri_plugins
+        assert "http" in settings.tauri_plugins
+
+    def test_available_plugins_has_19(self):
+        """Registry contains exactly 19 plugins."""
+        assert len(AVAILABLE_TAURI_PLUGINS) == 19

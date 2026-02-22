@@ -1027,6 +1027,67 @@ app.emit("toolbar:set-values", {"values": {"select-1": "A", "toggle-1": True}}, 
 | `asset` | `PYWRY_ASSET__` | Library versions |
 | `deploy` | `PYWRY_DEPLOY__` | Deploy mode and state backend |
 
+### Tauri Plugins
+
+PyWry bundles 19 Tauri plugins via `pytauri_wheel`. By default, only `dialog` and `fs` are enabled. Developers can enable additional plugins through configuration — **no Rust compilation required**.
+
+#### Enabling Plugins
+
+```python
+# Via PyWrySettings constructor
+from pywry import PyWry
+from pywry.config import PyWrySettings
+
+settings = PyWrySettings(tauri_plugins=["dialog", "fs", "notification", "http"])
+app = PyWry(settings=settings)
+```
+
+```toml
+# Via pywry.toml or pyproject.toml [tool.pywry]
+tauri_plugins = ["dialog", "fs", "notification", "http"]
+extra_capabilities = ["shell:allow-execute"]
+```
+
+```bash
+# Via environment variables
+export PYWRY_TAURI_PLUGINS="dialog,fs,notification,http"
+export PYWRY_EXTRA_CAPABILITIES="shell:allow-execute"
+```
+
+#### Available Plugins
+
+| Plugin Name | JS API | Description |
+|-------------|--------|-------------|
+| `autostart` | - | Launch app on system startup |
+| `clipboard_manager` | `window.__TAURI__.clipboardManager` | Read/write system clipboard |
+| `deep_link` | - | Handle custom URL schemes |
+| `dialog` | `window.__TAURI__.dialog` | Native file/message dialogs |
+| `fs` | `window.__TAURI__.fs` | Filesystem read/write |
+| `global_shortcut` | `window.__TAURI__.globalShortcut` | System-wide keyboard shortcuts |
+| `http` | `window.__TAURI__.http` | HTTP client from webview |
+| `notification` | `window.__TAURI__.notification` | Desktop notifications |
+| `opener` | `window.__TAURI__.opener` | Open URLs/files with default app |
+| `os` | `window.__TAURI__.os` | OS info (platform, arch, etc.) |
+| `persisted_scope` | - | Persist filesystem scopes |
+| `positioner` | `window.__TAURI__.positioner` | Position windows on screen |
+| `process` | `window.__TAURI__.process` | Process management |
+| `shell` | `window.__TAURI__.shell` | Execute system commands |
+| `single_instance` | - | Prevent duplicate app instances |
+| `updater` | `window.__TAURI__.updater` | Auto-update support |
+| `upload` | `window.__TAURI__.upload` | File upload with progress |
+| `websocket` | `window.__TAURI__.websocket` | WebSocket client |
+| `window_state` | - | Persist/restore window size and position |
+
+#### How It Works
+
+1. `PyWrySettings.tauri_plugins` holds the list of plugin names to activate
+2. The parent process passes this list to the subprocess via `PYWRY_TAURI_PLUGINS` env var
+3. In `__main__.py`, `_load_plugins()` dynamically imports each `pytauri_plugins.<name>` module and calls `.init()`
+4. The `capabilities/default.toml` pre-grants `<plugin>:default` permissions for all 19 plugins (unused permissions are harmless)
+5. For fine-grained permission control, use `extra_capabilities` to add specific permission strings (e.g., `shell:allow-execute`)
+
+Each plugin has a `PLUGIN_*` compile-time feature flag in `pytauri_plugins` that is checked before initialization. If a plugin is not compiled into the bundled `pytauri_wheel`, a clear `RuntimeError` is raised.
+
 ### Example pywry.toml
 
 ```toml
