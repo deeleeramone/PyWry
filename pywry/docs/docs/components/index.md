@@ -101,7 +101,7 @@ All interactive components emit events via the `event` parameter:
 
 ```python
 Button(label="Save", event="file:save")
-Select(label="Theme", event="settings:theme", ...)
+Select(label="Theme", event="settings:theme", options=[...])
 ```
 
 Use namespaced events like `category:action` for organization:
