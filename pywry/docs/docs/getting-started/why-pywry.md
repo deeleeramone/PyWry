@@ -70,6 +70,7 @@ Native windows open in under a second. There's no server to spin up, no browser 
 PyWry isn't just for prototyping and single-user applications:
 
 - **Deploy Mode** with Redis backend for horizontal scaling and RBAC
+- **OAuth2** authentication system for both native and deploy modes
 - **Token authentication** and CSRF protection out of the box
 - **CSP headers** and security presets for production environments
 - **TOML-based configuration** with layered precedence (defaults → project → user → env vars)

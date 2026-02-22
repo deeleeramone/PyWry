@@ -167,6 +167,7 @@ nav:
       - JavaScript Bridge: guides/javascript-bridge.md
       - Configuration: guides/configuration.md
       - State, Redis & RBAC: guides/state-and-auth.md
+      - OAuth2 Authentication: guides/oauth2.md
       - Hot Reload: guides/hot-reload.md
     - UI:
       - Toolbar System: guides/toolbars.md
@@ -176,6 +177,7 @@ nav:
     - Integrations:
       - Plotly Charts: guides/plotly.md
       - AgGrid Tables: guides/aggrid.md
+      - Multi-Widget Pages: guides/multi-widget.md
     - Hosting:
       - Browser Mode: guides/browser-mode.md
       - Deploy Mode: guides/deploy-mode.md
@@ -205,6 +207,15 @@ nav:
       - Mixins: reference/state-mixins.md
       - Auth & RBAC: reference/state-auth.md
       - Redis: reference/state-redis.md
+    - OAuth2:
+      - Overview: reference/auth.md
+      - Providers: reference/auth-providers.md
+      - Token Store: reference/auth-token-store.md
+      - Flow Manager: reference/auth-flow.md
+      - Session Manager: reference/auth-session.md
+      - Deploy Routes: reference/auth-deploy-routes.md
+      - Callback Server: reference/auth-callback-server.md
+      - PKCE: reference/auth-pkce.md
     - UI:
       - reference/components/index.md
       - CSS: reference/css.md
