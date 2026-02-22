@@ -117,6 +117,9 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             WindowMode.NEW_WINDOW: "new",
         }
         runtime.set_window_mode(mode_map.get(mode, "new"))
+        # Pass Tauri plugin selection to subprocess
+        runtime.set_tauri_plugins(self._settings.tauri_plugins)
+        runtime.set_extra_capabilities(self._settings.extra_capabilities)
 
         # Initialize the appropriate window mode
         self._mode: WindowModeBase = self._create_mode(mode)

@@ -55,6 +55,16 @@ Low-level PyTauri subprocess management and IPC communication.
       show_root_heading: true
       heading_level: 2
 
+::: pywry.runtime.set_tauri_plugins
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.runtime.set_extra_capabilities
+    options:
+      show_root_heading: true
+      heading_level: 2
+
 ---
 
 ## Command IPC

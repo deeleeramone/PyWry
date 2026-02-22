@@ -29,6 +29,7 @@ One API, three output targets — PyWry automatically selects the right one:
 | **[Configuration](guides/configuration.md)** | TOML files, env vars, layered precedence |
 | **[Hot Reload](guides/hot-reload.md)** | Live CSS/JS updates during development |
 | **[Deploy Mode](guides/deploy-mode.md)** | Redis backend for horizontal scaling |
+| **[Tauri Plugins](guides/tauri-plugins.md)** | 19 bundled plugins — clipboard, notifications, HTTP, and more |
 
 ## Platform Support
 
