@@ -177,6 +177,7 @@ nav:
     - Integrations:
       - Plotly Charts: guides/plotly.md
       - AgGrid Tables: guides/aggrid.md
+      - Multi-Widget Pages: guides/multi-widget.md
     - Hosting:
       - Browser Mode: guides/browser-mode.md
       - Deploy Mode: guides/deploy-mode.md
