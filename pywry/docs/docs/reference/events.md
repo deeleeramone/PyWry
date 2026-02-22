@@ -273,27 +273,68 @@ window.__PYWRY_TOOLBAR__.setValue("component-id", value) // Set value
 
 ### Tauri Access (Native Mode Only)
 
-In native desktop mode, Tauri APIs are available:
+In native desktop mode, a subset of Tauri APIs and the PyTauri IPC bridge are available via `window.__TAURI__`. PyWry does **not** expose the full Tauri plugin ecosystem — only the APIs listed below are bundled and configured.
+
+!!! warning "Do not use `window.__TAURI__.core.invoke()`"
+    PyWry uses PyTauri for all JS → Python IPC. Call `window.__TAURI__.pytauri.pyInvoke()` instead of the standard Tauri `invoke()`. All registered [PyWry commands](#pytauri-commands) go through this path.
+
+#### PyTauri Commands
+
+All JS → Python communication uses `pyInvoke`:
 
 ```javascript
-if (window.__TAURI__) {
-    const { invoke } = window.__TAURI__.core;
-    const result = await invoke("my_command", { arg: "value" });
+if (window.__TAURI__ && window.__TAURI__.pytauri) {
+    // Send a custom event to Python
+    window.__TAURI__.pytauri.pyInvoke('pywry_event', {
+        label: window.__PYWRY_LABEL__ || 'main',
+        event_type: 'app:my-action',
+        data: { key: 'value' }
+    });
+
+    // Return a result to Python
+    window.__TAURI__.pytauri.pyInvoke('pywry_result', {
+        data: { answer: 42 },
+        window_label: window.__PYWRY_LABEL__ || 'main'
+    });
 }
 ```
 
-**Available Tauri Plugins:**
+!!! tip "Prefer `window.pywry.emit()`"
+    You rarely need to call `pyInvoke` directly. The `window.pywry.emit()` bridge wraps it for you and works across all rendering modes.
 
-| Plugin | Namespace | Description |
-|--------|-----------|-------------|
-| Shell | `window.__TAURI__.shell` | Execute commands |
-| Dialog | `window.__TAURI__.dialog` | File dialogs |
-| Filesystem | `window.__TAURI__.fs` | File operations |
-| Clipboard | `window.__TAURI__.clipboard` | Copy/paste |
-| Notification | `window.__TAURI__.notification` | System notifications |
-| OS | `window.__TAURI__.os` | OS information |
-| Path | `window.__TAURI__.path` | Path utilities |
-| Process | `window.__TAURI__.process` | Process control |
-| HTTP | `window.__TAURI__.http` | HTTP client |
-| WebSocket | `window.__TAURI__.websocket` | WebSocket client |
-| Updater | `window.__TAURI__.updater` | App updates |
+#### Available Tauri APIs
+
+| API | Namespace | Used for |
+|-----|-----------|----------|
+| Event system | `window.__TAURI__.event` | Listening for Python → JS events (`listen`, `emit`) |
+| Dialog | `window.__TAURI__.dialog` | Native save-file dialog (`save()`) |
+| Filesystem | `window.__TAURI__.fs` | Writing files to disk (`writeTextFile()`) |
+| PyTauri IPC | `window.__TAURI__.pytauri` | JS → Python calls (`pyInvoke()`) |
+
+**Example — native save dialog:**
+
+```javascript
+if (window.__TAURI__ && window.__TAURI__.dialog && window.__TAURI__.fs) {
+    const filePath = await window.__TAURI__.dialog.save({
+        defaultPath: 'export.csv',
+        title: 'Save File'
+    });
+    if (filePath) {
+        await window.__TAURI__.fs.writeTextFile(filePath, csvContent);
+    }
+}
+```
+
+**Example — listening for Python events:**
+
+```javascript
+if (window.__TAURI__ && window.__TAURI__.event) {
+    window.__TAURI__.event.listen('pywry:event', function(event) {
+        // event.payload contains {type, data}
+        console.log('Received:', event.payload.type, event.payload.data);
+    });
+}
+```
+
+!!! note "Tauri APIs are only available in native desktop mode"
+    Check for `window.__TAURI__` before using any Tauri-specific API. In browser and notebook modes, only the `window.pywry` bridge is available — it abstracts the transport automatically.

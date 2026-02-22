@@ -200,25 +200,33 @@ gridOptions.api.setQuickFilter("search text");
 
 ## Tauri APIs (Native Mode Only)
 
-In native desktop mode, the full [Tauri JavaScript API](https://tauri.app/references/javascript/) is available via `window.__TAURI__`. This gives access to OS-level capabilities that browsers can't provide:
+In native desktop mode, a subset of Tauri APIs are available via `window.__TAURI__`. PyWry bundles the **dialog** and **filesystem** plugins along with the **PyTauri IPC bridge** and the core **event system** — it does *not* expose the full Tauri plugin ecosystem.
+
+!!! warning "PyWry uses `pytauri.pyInvoke()`, not `core.invoke()`"
+    All JS → Python calls go through `window.__TAURI__.pytauri.pyInvoke()`. Do not use `window.__TAURI__.core.invoke()` — it won't reach PyWry's command handlers.
 
 ```javascript
 // Check if running in native mode
 if (window.__TAURI__) {
-    // File dialog
-    const { open } = window.__TAURI__.dialog;
-    const path = await open({
-        multiple: false,
-        filters: [{ name: "CSV", extensions: ["csv"] }],
+    // Native save dialog + write file
+    const filePath = await window.__TAURI__.dialog.save({
+        defaultPath: "export.csv",
+        title: "Save File",
     });
 
-    if (path) {
-        const { readTextFile } = window.__TAURI__.fs;
-        const content = await readTextFile(path);
-        window.pywry.emit("app:file-loaded", { path, content });
+    if (filePath) {
+        await window.__TAURI__.fs.writeTextFile(filePath, csvContent);
+        window.pywry.emit("app:file-saved", { path: filePath });
     }
 }
 ```
+
+| API | Namespace | What's available |
+|-----|-----------|-----------------|
+| Event system | `window.__TAURI__.event` | `listen()`, `emit()` — Python ↔ JS event delivery |
+| Dialog | `window.__TAURI__.dialog` | `save()` — native save-file dialog |
+| Filesystem | `window.__TAURI__.fs` | `writeTextFile()` — write files to disk |
+| PyTauri IPC | `window.__TAURI__.pytauri` | `pyInvoke()` — JS → Python command calls |
 
 !!! note "Tauri APIs are not available in browser or notebook mode"
     Check for `window.__TAURI__` before using any Tauri-specific API. In browser/notebook mode, only the `window.pywry` bridge is available.
