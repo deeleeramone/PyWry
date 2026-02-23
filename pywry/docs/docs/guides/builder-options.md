@@ -1,6 +1,6 @@
 # Builder Options & Initialization Scripts
 
-PyWry's `WindowConfig` controls **builder-level** settings that are applied when the native window is first created. These settings are passed to `WebviewWindowBuilder` in the pytauri subprocess and cannot be changed after the window exists.
+PyWry's `WindowConfig` controls **builder-level** settings that are applied when the native window is first created. These settings are passed to `WebviewWindowBuilder` in the pytauri subprocess.
 
 ## Builder Fields
 
