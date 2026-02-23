@@ -34,6 +34,21 @@ These functions provide quick one-liner display for Plotly figures and DataFrame
 
 ---
 
+## Menu & Tray
+
+App-level convenience methods for native menus and tray icons.
+See the [Native Menus](../guides/menus.md) and [System Tray](../guides/tray.md) guides.
+
+The following methods are on the `PyWry` class (documented above via autodoc):
+
+- `create_menu(menu_id, items)` → `MenuProxy`
+- `create_tray(tray_id, ...)` → `TrayProxy`
+- `remove_tray(tray_id)` — remove a tracked tray icon
+- `set_initialization_script(js)` — set default init script for new windows
+- `default_config` property — mutable `WindowConfig` with builder defaults
+
+---
+
 ## Window Lifecycle
 
 ::: pywry.window_manager.get_lifecycle

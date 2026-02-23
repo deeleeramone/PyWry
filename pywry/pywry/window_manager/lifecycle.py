@@ -80,7 +80,12 @@ class WindowLifecycle:
         self._windows.clear()
 
     def create(
-        self, label: str, title: str = "PyWry", width: int = 800, height: int = 600
+        self,
+        label: str,
+        title: str = "PyWry",
+        width: int = 800,
+        height: int = 600,
+        **builder_opts: Any,
     ) -> WindowResources:
         """Create or register a window via subprocess IPC.
 
@@ -94,6 +99,11 @@ class WindowLifecycle:
             Window width.
         height : int, optional
             Window height.
+        **builder_opts
+            Additional keyword arguments forwarded to
+            ``runtime.create_window()`` and ultimately to
+            ``WebviewWindowBuilder.build()`` (e.g. ``resizable``,
+            ``decorations``, ``transparent``, ``initialization_script``).
 
         Returns
         -------
@@ -136,10 +146,10 @@ class WindowLifecycle:
             else:
                 # Main was closed - recreate it
                 debug("Main window was closed, recreating...")
-                runtime.create_window(label, title, width, height)
+                runtime.create_window(label, title, width, height, **builder_opts)
                 debug("Recreated 'main' window via IPC")
         else:
-            runtime.create_window(label, title, width, height)
+            runtime.create_window(label, title, width, height, **builder_opts)
             debug(f"Created window '{label}' via IPC")
 
         resources = WindowResources(label=label)

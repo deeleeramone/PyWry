@@ -231,8 +231,7 @@ class OAuthProvider(ABC):
             )
         except httpx.HTTPError:
             return False
-        else:
-            return resp.is_success
+        return resp.is_success
 
 
 class GenericOIDCProvider(OAuthProvider):
@@ -696,9 +695,8 @@ class GitHubProvider(OAuthProvider):
             )
         except httpx.HTTPError:
             return False
-        else:
-            # GitHub returns 204 No Content on success
-            return resp.status_code == 204
+        # GitHub returns 204 No Content on success
+        return resp.status_code == 204
 
 
 class MicrosoftProvider(GenericOIDCProvider):

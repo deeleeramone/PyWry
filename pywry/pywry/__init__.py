@@ -30,6 +30,7 @@ from .grid import (
 )
 from .hot_reload import HotReloadManager
 from .inline import block, show_dataframe, show_plotly
+from .menu_proxy import MenuProxy
 from .modal import Modal
 from .models import (
     HtmlContent,
@@ -79,6 +80,19 @@ from .toolbar import (
     Toolbar,
     ToolbarItem,
 )
+from .tray_proxy import TrayProxy
+from .types import (
+    CheckMenuItemConfig,
+    IconMenuItemConfig,
+    MenuConfig,
+    MenuItemConfig,
+    MouseButton,
+    MouseButtonState,
+    PredefinedMenuItemConfig,
+    PredefinedMenuItemKind,
+    SubmenuConfig,
+    TrayIconConfig,
+)
 from .widget import PyWryAgGridWidget, PyWryPlotlyWidget, PyWryWidget
 from .window_manager import BrowserMode, get_lifecycle
 
@@ -91,6 +105,7 @@ __all__ = [
     "BrowserMode",
     "Button",
     "CallbackFunc",
+    "CheckMenuItemConfig",
     "Checkbox",
     "ColDef",
     "ColGroupDef",
@@ -102,11 +117,17 @@ __all__ = [
     "HotReloadManager",
     "HotReloadSettings",
     "HtmlContent",
+    "IconMenuItemConfig",
     "LogSettings",
     "Marquee",
+    "MenuConfig",
+    "MenuItemConfig",
+    "MenuProxy",
     "Modal",
     "ModeBarButton",
     "ModeBarConfig",
+    "MouseButton",
+    "MouseButtonState",
     "MultiSelect",
     "NotebookEnvironment",
     "NumberInput",
@@ -114,6 +135,8 @@ __all__ = [
     "PlotlyConfig",
     "PlotlyIconName",
     "PlotlyStateMixin",
+    "PredefinedMenuItemConfig",
+    "PredefinedMenuItemKind",
     "PyWry",
     "PyWryAgGridWidget",
     "PyWryPlotlyWidget",
@@ -128,6 +151,7 @@ __all__ = [
     "Select",
     "SliderInput",
     "StandardButton",
+    "SubmenuConfig",
     "SvgIcon",
     "TabGroup",
     "TextArea",
@@ -140,6 +164,8 @@ __all__ = [
     "Toolbar",
     "ToolbarItem",
     "ToolbarStateMixin",
+    "TrayIconConfig",
+    "TrayProxy",
     "WidgetType",
     "WindowConfig",
     "WindowMode",

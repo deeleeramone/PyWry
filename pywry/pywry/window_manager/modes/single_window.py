@@ -105,6 +105,7 @@ class SingleWindowMode(WindowModeBase):
                     config.title,
                     config.width,
                     config.height,
+                    **config.builder_kwargs(),
                 ):
                     break
                 # create_window failed - retry

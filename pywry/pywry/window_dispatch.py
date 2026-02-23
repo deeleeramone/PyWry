@@ -208,7 +208,7 @@ PROPERTY_GETTERS: dict[str, Callable[[Window], Any]] = {
 }
 
 
-def get_window_property(window: Window, prop: str) -> Any:
+def get_window_property(window: Window, prop: str, args: dict[str, Any] | None = None) -> Any:
     """Get a specific property from a WebviewWindow.
 
     Parameters
@@ -217,6 +217,8 @@ def get_window_property(window: Window, prop: str) -> Any:
         The WebviewWindow instance.
     prop : str
         Property name to get.
+    args : dict or None
+        Optional arguments for parameterised getters.
 
     Returns
     -------
@@ -229,7 +231,13 @@ def get_window_property(window: Window, prop: str) -> Any:
         If property name is unknown.
     """
     if prop == "monitor_from_point":
-        raise ValueError("monitor_from_point requires x, y parameters")
+        if args is None or "x" not in args or "y" not in args:
+            raise ValueError("monitor_from_point requires x, y parameters")
+        x, y = float(args["x"]), float(args["y"])
+        if hasattr(window, "monitor_from_point"):
+            monitor = window.monitor_from_point(x, y)
+            return _serialize_monitor(monitor) if monitor else None
+        return None
 
     getter = PROPERTY_GETTERS.get(prop)
     if getter is None:
@@ -260,6 +268,8 @@ def _call_visibility_method(window: Window, method: str, args: dict[str, Any]) -
             window.show()
         else:
             window.hide()
+    elif method == "start_dragging" and hasattr(window, "start_dragging"):
+        window.start_dragging()
 
 
 def _call_state_method(window: Window, method: str, args: dict[str, Any]) -> None:
@@ -304,6 +314,7 @@ def _call_property_setter(window: Window, method: str, args: dict[str, Any]) -> 
         "set_always_on_bottom": lambda: window.set_always_on_bottom(
             args.get("always_on_bottom", True)
         ),
+        "set_skip_taskbar": lambda: window.set_skip_taskbar(args.get("skip", True)),
     }
     if method in setters:
         setters[method]()
@@ -409,6 +420,36 @@ def _set_effects(window: Any, args: dict[str, Any]) -> None:
         window.set_effects(effects)
 
 
+def _set_icon(window: Any, args: dict[str, Any]) -> None:
+    """Set window icon from base64-encoded PNG bytes."""
+    import base64
+
+    icon_data = args.get("icon")
+    if icon_data is not None and hasattr(window, "set_icon"):
+        icon_bytes = base64.b64decode(icon_data)
+        window.set_icon(icon_bytes)
+    elif hasattr(window, "set_icon"):
+        window.set_icon(None)
+
+
+def _set_badge_count(window: Any, args: dict[str, Any]) -> None:
+    """Set badge count (dock/taskbar)."""
+    if hasattr(window, "set_badge_count"):
+        window.set_badge_count(args.get("count"))
+
+
+def _set_overlay_icon(window: Any, args: dict[str, Any]) -> None:
+    """Set overlay icon (Windows taskbar) from base64-encoded PNG bytes."""
+    import base64
+
+    icon_data = args.get("icon")
+    if icon_data is not None and hasattr(window, "set_overlay_icon"):
+        icon_bytes = base64.b64decode(icon_data)
+        window.set_overlay_icon(icon_bytes)
+    elif hasattr(window, "set_overlay_icon"):
+        window.set_overlay_icon(None)
+
+
 # Dispatch table for appearance methods
 _APPEARANCE_DISPATCH: dict[str, Any] = {
     "set_background_color": _set_background_color,
@@ -417,6 +458,9 @@ _APPEARANCE_DISPATCH: dict[str, Any] = {
     "set_content_protected": lambda w, a: w.set_content_protected(a.get("protected", True)),
     "set_shadow": lambda w, a: w.set_shadow(a.get("shadow", True)),
     "set_effects": _set_effects,
+    "set_icon": _set_icon,
+    "set_badge_count": _set_badge_count,
+    "set_overlay_icon": _set_overlay_icon,
 }
 
 
@@ -615,7 +659,15 @@ def _call_cookie_method(window: Any, method: str, args: dict[str, Any]) -> Any:
 
 
 # Method categories for dispatch
-VISIBILITY_METHODS = {"show", "hide", "set_focus", "close", "destroy", "set_visible"}
+VISIBILITY_METHODS = {
+    "show",
+    "hide",
+    "set_focus",
+    "close",
+    "destroy",
+    "set_visible",
+    "start_dragging",
+}
 STATE_METHODS = {
     "minimize",
     "unminimize",
@@ -636,6 +688,7 @@ PROPERTY_METHODS = {
     "set_closable",
     "set_always_on_top",
     "set_always_on_bottom",
+    "set_skip_taskbar",
 }
 SIZE_POSITION_METHODS = {
     "set_size",
@@ -651,6 +704,9 @@ APPEARANCE_METHODS = {
     "set_content_protected",
     "set_shadow",
     "set_effects",
+    "set_icon",
+    "set_badge_count",
+    "set_overlay_icon",
 }
 CURSOR_METHODS = {
     "set_cursor_icon",

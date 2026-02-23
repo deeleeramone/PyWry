@@ -875,27 +875,31 @@ class MCPSettings(BaseSettings):
 
 
 # All Tauri plugins supported by the bundled pytauri_wheel.
-# Maps plugin name -> (feature flag constant name, module path).
-TAURI_PLUGIN_REGISTRY: dict[str, tuple[str, str]] = {
-    "autostart": ("PLUGIN_AUTOSTART", "pytauri_plugins.autostart"),
-    "clipboard_manager": ("PLUGIN_CLIPBOARD_MANAGER", "pytauri_plugins.clipboard_manager"),
-    "deep_link": ("PLUGIN_DEEP_LINK", "pytauri_plugins.deep_link"),
-    "dialog": ("PLUGIN_DIALOG", "pytauri_plugins.dialog"),
-    "fs": ("PLUGIN_FS", "pytauri_plugins.fs"),
-    "global_shortcut": ("PLUGIN_GLOBAL_SHORTCUT", "pytauri_plugins.global_shortcut"),
-    "http": ("PLUGIN_HTTP", "pytauri_plugins.http"),
-    "notification": ("PLUGIN_NOTIFICATION", "pytauri_plugins.notification"),
-    "opener": ("PLUGIN_OPENER", "pytauri_plugins.opener"),
-    "os": ("PLUGIN_OS", "pytauri_plugins.os"),
-    "persisted_scope": ("PLUGIN_PERSISTED_SCOPE", "pytauri_plugins.persisted_scope"),
-    "positioner": ("PLUGIN_POSITIONER", "pytauri_plugins.positioner"),
-    "process": ("PLUGIN_PROCESS", "pytauri_plugins.process"),
-    "shell": ("PLUGIN_SHELL", "pytauri_plugins.shell"),
-    "single_instance": ("PLUGIN_SINGLE_INSTANCE", "pytauri_plugins.single_instance"),
-    "updater": ("PLUGIN_UPDATER", "pytauri_plugins.updater"),
-    "upload": ("PLUGIN_UPLOAD", "pytauri_plugins.upload"),
-    "websocket": ("PLUGIN_WEBSOCKET", "pytauri_plugins.websocket"),
-    "window_state": ("PLUGIN_WINDOW_STATE", "pytauri_plugins.window_state"),
+# Maps plugin name -> (feature flag constant name, module path, init method).
+# Init methods:
+#   "init"    → mod.init()                 (most plugins)
+#   "builder" → mod.Builder.build()        (updater, window_state, global_shortcut)
+#   "callback"→ mod.init(callback)          (single_instance)
+TAURI_PLUGIN_REGISTRY: dict[str, tuple[str, str, str]] = {
+    "autostart": ("PLUGIN_AUTOSTART", "pytauri_plugins.autostart", "init"),
+    "clipboard_manager": ("PLUGIN_CLIPBOARD_MANAGER", "pytauri_plugins.clipboard_manager", "init"),
+    "deep_link": ("PLUGIN_DEEP_LINK", "pytauri_plugins.deep_link", "init"),
+    "dialog": ("PLUGIN_DIALOG", "pytauri_plugins.dialog", "init"),
+    "fs": ("PLUGIN_FS", "pytauri_plugins.fs", "init"),
+    "global_shortcut": ("PLUGIN_GLOBAL_SHORTCUT", "pytauri_plugins.global_shortcut", "builder"),
+    "http": ("PLUGIN_HTTP", "pytauri_plugins.http", "init"),
+    "notification": ("PLUGIN_NOTIFICATION", "pytauri_plugins.notification", "init"),
+    "opener": ("PLUGIN_OPENER", "pytauri_plugins.opener", "init"),
+    "os": ("PLUGIN_OS", "pytauri_plugins.os", "init"),
+    "persisted_scope": ("PLUGIN_PERSISTED_SCOPE", "pytauri_plugins.persisted_scope", "init"),
+    "positioner": ("PLUGIN_POSITIONER", "pytauri_plugins.positioner", "init"),
+    "process": ("PLUGIN_PROCESS", "pytauri_plugins.process", "init"),
+    "shell": ("PLUGIN_SHELL", "pytauri_plugins.shell", "init"),
+    "single_instance": ("PLUGIN_SINGLE_INSTANCE", "pytauri_plugins.single_instance", "callback"),
+    "updater": ("PLUGIN_UPDATER", "pytauri_plugins.updater", "builder"),
+    "upload": ("PLUGIN_UPLOAD", "pytauri_plugins.upload", "init"),
+    "websocket": ("PLUGIN_WEBSOCKET", "pytauri_plugins.websocket", "init"),
+    "window_state": ("PLUGIN_WINDOW_STATE", "pytauri_plugins.window_state", "builder"),
 }
 
 #: Names of all known Tauri plugins (for validation).

@@ -122,6 +122,7 @@ class MultiWindowMode(WindowModeBase):
                 title=config.title,
                 width=config.width,
                 height=config.height,
+                **config.builder_kwargs(),
             )
             # MUST pass theme so window background matches content
             # Also pass config for content-request handler

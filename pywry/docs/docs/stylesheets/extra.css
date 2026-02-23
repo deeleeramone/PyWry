@@ -452,6 +452,26 @@
   font-size: .82rem;
   border-radius: 8px;
   border-width: 0 0 0 3px;
+  border-style: solid;
+  box-shadow: 0 2px 6px rgba(0,0,0,.12);
+}
+
+/* ── Dark theme admonition backgrounds ── */
+[data-md-color-scheme="slate"] .md-typeset .admonition,
+[data-md-color-scheme="slate"] .md-typeset details {
+  background-color: #252838;
+  border-right: 1px solid rgba(255,255,255,.06);
+  border-top:   1px solid rgba(255,255,255,.06);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+/* ── Light theme admonition backgrounds ── */
+[data-md-color-scheme="default"] .md-typeset .admonition,
+[data-md-color-scheme="default"] .md-typeset details {
+  background-color: #ffffff;
+  border-right: 1px solid rgba(0,0,0,.08);
+  border-top:   1px solid rgba(0,0,0,.08);
+  border-bottom:1px solid rgba(0,0,0,.08);
 }
 
 .md-typeset .admonition-title,

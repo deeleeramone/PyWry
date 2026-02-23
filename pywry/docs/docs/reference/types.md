@@ -121,3 +121,65 @@ Type definitions for window positions, sizes, effects, cookies, and monitors.
     options:
       show_root_heading: true
       heading_level: 2
+
+---
+
+## Menu Types
+
+See the [Native Menus guide](../guides/menus.md) for usage.
+
+::: pywry.types.PredefinedMenuItemKind
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.types.MenuItemConfig
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.types.CheckMenuItemConfig
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.types.IconMenuItemConfig
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.types.PredefinedMenuItemConfig
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.types.SubmenuConfig
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.types.MenuConfig
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+---
+
+## Tray Types
+
+See the [System Tray guide](../guides/tray.md) for usage.
+
+::: pywry.types.MouseButton
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.types.MouseButtonState
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.types.TrayIconConfig
+    options:
+      show_root_heading: true
+      heading_level: 2

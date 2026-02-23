@@ -55,6 +55,11 @@ _ON_WINDOW_CLOSE = "hide"  # Setting for MULTI_WINDOW close behavior
 _WINDOW_MODE = "new"  # Window mode: "single", "multi", "new"
 _TAURI_PLUGINS = "dialog,fs"  # Comma-separated Tauri plugin names
 _EXTRA_CAPABILITIES = ""  # Comma-separated extra capability permission strings
+_CUSTOM_COMMANDS = ""  # Comma-separated custom command names
+
+# Custom command handlers registered via app.command()
+_custom_command_handlers: dict[str, Any] = {}
+_custom_command_lock = threading.Lock()
 
 # Portal state for async callback support
 _exit_stack: ExitStack | None = None
@@ -180,6 +185,37 @@ def set_extra_capabilities(caps: list[str]) -> None:
     _EXTRA_CAPABILITIES = ",".join(caps)
 
 
+def register_custom_command(
+    name: str,
+    handler: Any,
+) -> None:
+    """Register a custom command handler callable.
+
+    When JS calls ``pyInvoke('name', body)``, the subprocess forwards the
+    request to the parent process.  The parent executes *handler* with the
+    deserialized body dict and returns the result to JS.
+
+    Must be called **before** ``start()``.
+
+    Parameters
+    ----------
+    name : str
+        Command name (must be a valid Python/Tauri identifier).
+    handler : callable
+        A sync or async function ``(data: dict) -> dict``.
+    """
+    global _CUSTOM_COMMANDS
+    with _custom_command_lock:
+        _custom_command_handlers[name] = handler
+        _CUSTOM_COMMANDS = ",".join(_custom_command_handlers.keys())
+
+
+def get_custom_commands() -> dict[str, Any]:
+    """Return a copy of the registered custom command handlers."""
+    with _custom_command_lock:
+        return dict(_custom_command_handlers)
+
+
 def get_pywry_dir() -> Path:
     """Get the pywry directory containing the subprocess entry point."""
     return Path(__file__).parent.absolute()
@@ -212,6 +248,8 @@ def _stdout_reader() -> None:
                     _ready_event.set()
                 elif msg.get("type") == "event":
                     _dispatch_event(msg)
+                elif msg.get("type") == "custom_command":
+                    _handle_custom_command(msg)
                 else:
                     # Check for request_id correlation
                     request_id = msg.get("request_id")
@@ -255,6 +293,65 @@ def _dispatch_event(msg: dict[str, Any]) -> None:
         return
 
     registry.dispatch(label, event_type, data)
+
+
+def _handle_custom_command(msg: dict[str, Any]) -> None:
+    """Execute a custom command handler and send the result back to subprocess.
+
+    The subprocess sent a ``custom_command`` request — look up the registered
+    handler, execute it, and write the response (with matching ``request_id``)
+    to subprocess stdin so the blocked pytauri forwarder can return the value
+    to JavaScript.
+
+    Parameters
+    ----------
+    msg : dict
+        Must contain ``command``, ``data``, and ``request_id``.
+    """
+    command_name = msg.get("command", "")
+    data = msg.get("data", {})
+    request_id = msg.get("request_id", "")
+
+    with _custom_command_lock:
+        handler = _custom_command_handlers.get(command_name)
+
+    if handler is None:
+        response: dict[str, Any] = {
+            "request_id": request_id,
+            "success": False,
+            "error": f"No handler registered for custom command '{command_name}'",
+        }
+    else:
+        try:
+            import asyncio
+            import inspect
+
+            if inspect.iscoroutinefunction(handler):
+                # If handler is async, run it via the portal
+                # _stdout_reader runs in a plain thread, so there is never
+                # a running asyncio loop here — go straight to the portal.
+                try:
+                    portal = _ensure_portal()
+                    result = portal.call(handler, data)
+                except RuntimeError:
+                    # Fallback: create a one-shot event loop
+                    result = asyncio.run(handler(data))
+            else:
+                result = handler(data)
+
+            if not isinstance(result, dict):
+                result = {"result": result}
+            response = {"request_id": request_id, "success": True, **result}
+        except Exception as exc:
+            debug(f"Custom command '{command_name}' failed: {exc}")
+            response = {
+                "request_id": request_id,
+                "success": False,
+                "error": str(exc),
+            }
+
+    # Send response back to subprocess via stdin
+    send_command(response)
 
 
 def _handle_content_request(label: str, data: dict[str, Any] | None = None) -> None:
@@ -391,7 +488,12 @@ def send_command_with_response(cmd: dict[str, Any], timeout: float = 5.0) -> dic
             _pending_responses.pop(request_id, None)
 
 
-def window_get(label: str, property_name: str, timeout: float = 5.0) -> Any:
+def window_get(
+    label: str,
+    property_name: str,
+    args: dict[str, Any] | None = None,
+    timeout: float = 5.0,
+) -> Any:
     """Get a window property via IPC.
 
     Parameters
@@ -400,6 +502,8 @@ def window_get(label: str, property_name: str, timeout: float = 5.0) -> Any:
         Window label.
     property_name : str
         Name of the property to get.
+    args : dict or None
+        Optional arguments for parameterised getters (e.g. ``monitor_from_point``).
     timeout : float
         Maximum time to wait for response.
 
@@ -422,6 +526,7 @@ def window_get(label: str, property_name: str, timeout: float = 5.0) -> Any:
             "action": "window_get",
             "label": label,
             "property": property_name,
+            **({"args": args} if args else {}),
         },
         timeout=timeout,
     )
@@ -516,17 +621,36 @@ def create_window(
     title: str = "PyWry",
     width: int = 800,
     height: int = 600,
+    **builder_opts: Any,
 ) -> bool:
-    """Create a window via IPC. Waits for window to be created."""
-    send_command(
-        {
-            "action": "create",
-            "label": label,
-            "title": title,
-            "width": width,
-            "height": height,
-        }
-    )
+    """Create a window via IPC. Waits for window to be created.
+
+    Parameters
+    ----------
+    label : str
+        Window label (unique identifier).
+    title : str
+        Window title text.
+    width : int
+        Window width in pixels.
+    height : int
+        Window height in pixels.
+    **builder_opts
+        Additional keyword arguments forwarded to
+        ``WebviewWindowBuilder.build()`` in the subprocess (e.g.
+        ``resizable``, ``decorations``, ``transparent``, ``user_agent``,
+        ``initialization_script``, etc.).
+    """
+    cmd: dict[str, Any] = {
+        "action": "create",
+        "label": label,
+        "title": title,
+        "width": width,
+        "height": height,
+    }
+    if builder_opts:
+        cmd["builder_opts"] = builder_opts
+    send_command(cmd)
     # Wait for the window to be created
     response = get_response(timeout=5.0)
     return response is not None and response.get("success", False)
@@ -830,6 +954,8 @@ def start() -> bool:
     env["PYWRY_TAURI_PLUGINS"] = _TAURI_PLUGINS  # Tauri plugins to initialise
     if _EXTRA_CAPABILITIES:
         env["PYWRY_EXTRA_CAPABILITIES"] = _EXTRA_CAPABILITIES
+    if _CUSTOM_COMMANDS:
+        env["PYWRY_CUSTOM_COMMANDS"] = _CUSTOM_COMMANDS  # Developer custom commands
 
     # On Windows, CREATE_NEW_PROCESS_GROUP prevents the subprocess from
     # receiving CTRL_C_EVENT when the user presses Ctrl+C in the terminal.

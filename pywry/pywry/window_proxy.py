@@ -239,6 +239,12 @@ class WindowProxy:
         return result
 
     @property
+    def is_always_on_bottom(self) -> bool:
+        """Check if window is always on bottom."""
+        result: bool = runtime.window_get(self._label, "is_always_on_bottom")
+        return result
+
+    @property
     def is_devtools_open(self) -> bool:
         """Check if DevTools is open."""
         result: bool = runtime.window_get(self._label, "is_devtools_open")
@@ -279,6 +285,10 @@ class WindowProxy:
     def unminimize(self) -> None:
         """Restore from minimized."""
         runtime.window_call(self._label, "unminimize")
+
+    def toggle_maximize(self) -> None:
+        """Toggle between maximized and restored."""
+        runtime.window_call(self._label, "toggle_maximize")
 
     def center(self) -> None:
         """Center window on screen."""
@@ -384,6 +394,12 @@ class WindowProxy:
         """Toggle always-on-top."""
         runtime.window_call(self._label, "set_always_on_top", {"always_on_top": always_on_top})
 
+    def set_always_on_bottom(self, always_on_bottom: bool) -> None:
+        """Toggle always-on-bottom."""
+        runtime.window_call(
+            self._label, "set_always_on_bottom", {"always_on_bottom": always_on_bottom}
+        )
+
     def set_resizable(self, resizable: bool) -> None:
         """Toggle resizable."""
         runtime.window_call(self._label, "set_resizable", {"resizable": resizable})
@@ -435,6 +451,10 @@ class WindowProxy:
         """Toggle cursor grab."""
         runtime.window_call(self._label, "set_cursor_grab", {"grab": grab})
 
+    def set_ignore_cursor_events(self, ignore: bool) -> None:
+        """Toggle ignoring cursor events (click-through)."""
+        runtime.window_call(self._label, "set_ignore_cursor_events", {"ignore": ignore})
+
     def set_icon(self, icon: bytes | None) -> None:
         """Set window icon (PNG bytes or None)."""
         import base64
@@ -456,6 +476,36 @@ class WindowProxy:
     def set_theme(self, theme: Theme | None) -> None:
         """Set window theme."""
         runtime.window_call(self._label, "set_theme", {"theme": theme.value if theme else None})
+
+    def set_content_protected(self, protected: bool) -> None:
+        """Prevent window contents from being captured by screenshots."""
+        runtime.window_call(self._label, "set_content_protected", {"protected": protected})
+
+    def set_traffic_light_position(self, x: float, y: float) -> None:
+        """Set macOS traffic light button position."""
+        runtime.window_call(self._label, "set_traffic_light_position", {"x": x, "y": y})
+
+    def set_size_constraints(
+        self,
+        min_size: SizeType | None = None,
+        max_size: SizeType | None = None,
+    ) -> None:
+        """Set both min and max size constraints in a single call."""
+        from .types import serialize_size
+
+        args: dict[str, Any] = {}
+        if min_size is not None:
+            args["min_size"] = serialize_size(min_size)
+        if max_size is not None:
+            args["max_size"] = serialize_size(max_size)
+        runtime.window_call(self._label, "set_size_constraints", args)
+
+    def monitor_from_point(self, x: float, y: float) -> Monitor | None:
+        """Get the monitor that contains the given point."""
+        from .types import Monitor
+
+        data = runtime.window_get(self._label, "monitor_from_point", {"x": x, "y": y})
+        return Monitor.from_dict(data) if data else None
 
     # ─────────────────────────────────────────────────────────────────────────
     # Webview Operations
@@ -540,6 +590,82 @@ class WindowProxy:
     def delete_cookie(self, name: str) -> None:
         """Delete a cookie by name."""
         runtime.window_call(self._label, "delete_cookie", {"name": name})
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Menu Management
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def set_menu(self, menu: Any) -> None:
+        """Attach a menu to this window.
+
+        Parameters
+        ----------
+        menu : MenuProxy
+            The menu proxy to attach.
+        """
+        from .menu_proxy import MenuProxy
+
+        if isinstance(menu, MenuProxy):
+            menu.set_as_window_menu(self._label)
+        else:
+            runtime.send_command(
+                {
+                    "action": "menu_set",
+                    "menu_id": getattr(menu, "id", str(menu)),
+                    "target": "window",
+                    "label": self._label,
+                }
+            )
+
+    def remove_menu(self) -> None:
+        """Remove the menu bar from this window."""
+        runtime.window_call(self._label, "remove_menu", {})
+
+    def hide_menu(self) -> None:
+        """Hide the menu bar (without removing it)."""
+        runtime.window_call(self._label, "hide_menu", {})
+
+    def show_menu(self) -> None:
+        """Show a previously hidden menu bar."""
+        runtime.window_call(self._label, "show_menu", {})
+
+    def is_menu_visible(self) -> bool:
+        """Check whether the menu bar is visible."""
+        result = runtime.window_call(
+            self._label, "is_menu_visible", expect_response=True, timeout=2.0
+        )
+        return bool(result)
+
+    def popup_menu(
+        self,
+        menu: Any,
+        x: float | None = None,
+        y: float | None = None,
+    ) -> None:
+        """Show a context (popup) menu at the given position.
+
+        Parameters
+        ----------
+        menu : MenuProxy
+            The menu to show.
+        x : float or None
+            X coordinate in logical pixels (``None`` = cursor position).
+        y : float or None
+            Y coordinate in logical pixels (``None`` = cursor position).
+        """
+        from .menu_proxy import MenuProxy
+
+        if isinstance(menu, MenuProxy):
+            menu.popup(self._label, x, y)
+        else:
+            cmd: dict[str, Any] = {
+                "action": "menu_popup",
+                "menu_id": getattr(menu, "id", str(menu)),
+                "label": self._label,
+            }
+            if x is not None and y is not None:
+                cmd["position"] = {"x": x, "y": y}
+            runtime.send_command(cmd)
 
     # ─────────────────────────────────────────────────────────────────────────
     # String Representation

@@ -144,6 +144,7 @@ import pytauri_plugins  # noqa: E402
 
 from anyio import create_task_group  # noqa: E402
 from anyio.from_thread import start_blocking_portal  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
 from pytauri import Commands, Manager, RunEvent, WebviewUrl, WindowEvent  # noqa: E402
 from pytauri.webview import WebviewWindowBuilder  # noqa: E402
 
@@ -160,8 +161,29 @@ except ImportError:
     from pytauri_wheel.lib import builder_factory, context_factory
 
 
+def _default_single_instance_callback(
+    app_handle: Any,
+    argv: list[str],  # pylint: disable=unused-argument
+    cwd: str,  # pylint: disable=unused-argument
+) -> None:
+    """Default single-instance callback - focus the existing main window."""
+    try:
+        window = Manager.get_webview_window(app_handle, "main")
+        if window:
+            window.show()
+            window.set_focus()
+    except Exception as exc:
+        log(f"single_instance callback error: {exc}")
+
+
 def _load_plugins(plugin_names: list[str]) -> list[Any]:
     """Dynamically import and initialise the requested Tauri plugins.
+
+    Handles the three pytauri_plugins initialisation patterns:
+
+    * ``"init"``     - ``mod.init()``              (most plugins)
+    * ``"builder"``  - ``mod.Builder.build()``      (updater, window_state, global_shortcut)
+    * ``"callback"`` - ``mod.init(callback)``        (single_instance)
 
     Parameters
     ----------
@@ -171,7 +193,7 @@ def _load_plugins(plugin_names: list[str]) -> list[Any]:
     Returns
     -------
     list
-        Initialised plugin objects for ``builder_factory().build(plugins=...)``.
+        Initialised ``Plugin`` objects for ``builder_factory().build(plugins=...)``.
 
     Raises
     ------
@@ -185,7 +207,7 @@ def _load_plugins(plugin_names: list[str]) -> list[Any]:
             msg = f"Unknown Tauri plugin '{name}'. Available: {', '.join(sorted(_PLUGIN_REGISTRY))}"
             raise RuntimeError(msg)
 
-        flag_name, module_path = _PLUGIN_REGISTRY[name]
+        flag_name, module_path, init_method = _PLUGIN_REGISTRY[name]
 
         # Check the compile-time feature flag
         flag_value = getattr(pytauri_plugins, flag_name, None)
@@ -198,8 +220,19 @@ def _load_plugins(plugin_names: list[str]) -> list[Any]:
             raise RuntimeError(msg)
 
         mod = importlib.import_module(module_path)
-        plugins.append(mod.init())
-        log(f"Loaded Tauri plugin: {name}")
+
+        if init_method == "builder":
+            # updater, window_state, global_shortcut use Builder.build()
+            plugin = mod.Builder.build()
+        elif init_method == "callback":
+            # single_instance requires a callback(app_handle, argv, cwd)
+            plugin = mod.init(_default_single_instance_callback)
+        else:
+            # Most plugins: simple mod.init()
+            plugin = mod.init()
+
+        plugins.append(plugin)
+        log(f"Loaded Tauri plugin: {name} (via {init_method})")
 
     return plugins
 
@@ -274,14 +307,28 @@ def log_error(msg: str) -> None:
     sys.stderr.flush()
 
 
-class JsonIPC:
+class JsonIPC:  # pylint: disable=too-many-public-methods
     """Handle JSON IPC communication via stdin/stdout."""
 
     def __init__(self) -> None:
         """Initialize the IPC handler."""
         self.windows: dict[str, Any] = {}
+        self.menus: dict[str, Any] = {}  # menu_id -> Menu object
+        self.menu_items: dict[str, Any] = {}  # item_id -> MenuItem-like object
+        self.trays: dict[str, Any] = {}  # tray_id -> TrayIcon object
+        self.tray_menu_items: set[str] = set()  # item IDs owned by trays
         self.app_handle: Any = None
         self.running = True
+
+        # Request/response correlation for custom commands that round-trip
+        # through the parent process.  The pytauri command handler sends a
+        # request with a unique ``request_id`` to stdout, then waits on a
+        # threading.Event.  When ``stdin_reader`` sees a response with a
+        # matching ``request_id``, it fills ``_pending_responses`` and sets
+        # the event so the blocked handler can return the value to JS.
+        self._pending_requests: dict[str, threading.Event] = {}
+        self._pending_responses: dict[str, dict[str, Any]] = {}
+        self._pending_lock = threading.Lock()
 
     def send(self, msg: dict[str, Any]) -> None:
         """Send a JSON message to stdout."""
@@ -306,7 +353,68 @@ class JsonIPC:
         """Send a command result."""
         self.send({"type": "result", "label": label, "success": success})
 
-    def handle_command(self, cmd: dict[str, Any]) -> None:
+    def send_request_and_wait(
+        self,
+        msg: dict[str, Any],
+        timeout: float = 10.0,
+    ) -> dict[str, Any]:
+        """Send a message to the parent and block until it replies.
+
+        A unique ``request_id`` is attached to *msg*.  The parent must echo
+        that ``request_id`` in its response so that ``handle_response`` can
+        correlate it.
+
+        Parameters
+        ----------
+        msg : dict
+            The IPC message (``type``, payload, etc.).
+        timeout : float
+            How long to wait (seconds) before returning an error dict.
+
+        Returns
+        -------
+        dict
+            The parent's response payload, or an ``{error: ...}`` dict on
+            timeout / failure.
+        """
+        import uuid as _uuid
+
+        request_id = _uuid.uuid4().hex
+        msg["request_id"] = request_id
+
+        event = threading.Event()
+        with self._pending_lock:
+            self._pending_requests[request_id] = event
+
+        try:
+            self.send(msg)  # to parent via stdout
+            if event.wait(timeout=timeout):
+                with self._pending_lock:
+                    return self._pending_responses.pop(request_id, {"error": "no response"})
+            return {"error": f"timeout after {timeout}s"}
+        finally:
+            with self._pending_lock:
+                self._pending_requests.pop(request_id, None)
+                self._pending_responses.pop(request_id, None)
+
+    def handle_response(self, msg: dict[str, Any]) -> bool:
+        """Try to correlate *msg* with a pending request.
+
+        Returns ``True`` if *msg* was consumed as a response, ``False`` if it
+        should be handled as a normal command.
+        """
+        request_id = msg.get("request_id")
+        if not request_id:
+            return False
+        with self._pending_lock:
+            event = self._pending_requests.get(request_id)
+            if event is None:
+                return False
+            self._pending_responses[request_id] = msg
+            event.set()
+        return True
+
+    def handle_command(self, cmd: dict[str, Any]) -> None:  # noqa: C901, PLR0912  # pylint: disable=too-many-branches
         """Handle an incoming command."""
         action = cmd.get("action")
         log(f"Received command: {action}")
@@ -331,6 +439,22 @@ class JsonIPC:
             self.window_get_property(cmd)
         elif action == "window_call":
             self.window_call_method(cmd)
+        elif action == "menu_create":
+            self.menu_create(cmd)
+        elif action == "menu_set":
+            self.menu_set(cmd)
+        elif action == "menu_popup":
+            self.menu_popup(cmd)
+        elif action == "menu_update":
+            self.menu_update(cmd)
+        elif action == "menu_remove":
+            self.menu_remove(cmd)
+        elif action == "tray_create":
+            self.tray_create(cmd)
+        elif action == "tray_update":
+            self.tray_update(cmd)
+        elif action == "tray_remove":
+            self.tray_remove(cmd)
         elif action == "quit":
             self.quit()
         else:
@@ -340,6 +464,20 @@ class JsonIPC:
         """Quit the application."""
         log("Quit command received, exiting...")
         self.running = False
+
+        # ── Clean up tray icons BEFORE destroying windows ─────────
+        # Dropping the Python TrayIcon reference triggers pyo3 Rust Drop
+        # which removes the icon from the OS.  Do NOT call
+        # remove_tray_by_id — Rust Drop handles that internally.
+        for tray_id in list(self.trays):
+            try:
+                tray = self.trays.pop(tray_id)
+                tray.set_visible(False)
+                del tray
+            except Exception:
+                pass
+        self.trays.clear()
+
         # Destroy all windows (bypasses CloseRequested handler)
         if self.app_handle:
             for label in list(self.windows.keys()):
@@ -368,6 +506,7 @@ class JsonIPC:
         title = cmd.get("title", "PyWry")
         width = cmd.get("width", 800)
         height = cmd.get("height", 600)
+        builder_opts: dict[str, Any] = cmd.get("builder_opts", {})
 
         if self.app_handle is None:
             self.send_error("App not ready")
@@ -389,13 +528,42 @@ class JsonIPC:
 
         try:
             url = WebviewUrl.App(f"index.html?label={label}")
+
+            # Build kwargs for WebviewWindowBuilder
+            build_kwargs: dict[str, Any] = {
+                "title": title,
+                "inner_size": (float(width), float(height)),
+                "visible": (not HEADLESS) and builder_opts.pop("visible", True),
+            }
+
+            # Forward all supported builder options
+            _BUILDER_KWARG_MAP: dict[str, str] = {
+                "resizable": "resizable",
+                "decorations": "decorations",
+                "always_on_top": "always_on_top",
+                "always_on_bottom": "always_on_bottom",
+                "transparent": "transparent",
+                "fullscreen": "fullscreen",
+                "maximized": "maximized",
+                "focused": "focused",
+                "shadow": "shadow",
+                "skip_taskbar": "skip_taskbar",
+                "content_protected": "content_protected",
+                "user_agent": "user_agent",
+                "incognito": "incognito",
+                "initialization_script": "initialization_script",
+                "drag_and_drop": "drag_and_drop",
+            }
+            for opt_key, builder_key in _BUILDER_KWARG_MAP.items():
+                if opt_key in builder_opts:
+                    build_kwargs[builder_key] = builder_opts[opt_key]
+
+            log(f"Building window '{label}' with kwargs: {list(build_kwargs.keys())}")
             window = WebviewWindowBuilder.build(
                 self.app_handle,
                 label,
                 url,
-                title=title,
-                inner_size=(float(width), float(height)),
-                visible=not HEADLESS,  # Hidden in headless mode for CI
+                **build_kwargs,
             )
             if not HEADLESS:
                 window.center()
@@ -763,7 +931,8 @@ class JsonIPC:
         try:
             from .window_dispatch import get_window_property
 
-            value = get_window_property(window, prop)
+            prop_args = cmd.get("args", {})
+            value = get_window_property(window, prop, prop_args)
             log(f"window_get '{label}'.{prop} = {value!r}")
             self.send(
                 {
@@ -855,6 +1024,527 @@ class JsonIPC:
                     }
                 )
 
+    # ── Menu handlers ─────────────────────────────────────────────────
+
+    def _build_menu_item(self, data: dict[str, Any]) -> Any:
+        """Build a single pytauri menu item from a config dict.
+
+        Returns the pytauri menu item object and also registers it in
+        ``self.menu_items`` keyed by its ``id``.
+        """
+        from pytauri.menu import (
+            CheckMenuItem,
+            IconMenuItem,
+            MenuItem,
+            PredefinedMenuItem,
+            Submenu,
+        )
+
+        kind = data.get("kind", "item")
+        item_id = data.get("id", "")
+
+        if kind == "predefined":
+            kind_name = data.get("kind_name", "separator")
+            factory = getattr(PredefinedMenuItem, kind_name, None)
+            if factory is None:
+                factory = PredefinedMenuItem.separator
+            text = data.get("text")
+            item = factory(self.app_handle, text) if text is not None else factory(self.app_handle)  # type: ignore[call-arg]
+            return item
+
+        if kind == "check":
+            item = CheckMenuItem.with_id(
+                self.app_handle,
+                item_id,
+                data.get("text", ""),
+                data.get("enabled", True),
+                data.get("checked", False),
+                data.get("accelerator"),
+            )
+            self.menu_items[item_id] = item
+            return item
+
+        if kind == "icon":
+            icon_bytes = data.get("icon")
+            native_icon_name = data.get("native_icon")
+            if native_icon_name:
+                from pytauri.menu import NativeIcon
+
+                native_icon = getattr(NativeIcon, native_icon_name, None)
+                if native_icon is not None:
+                    item = IconMenuItem.with_id_and_native_icon(
+                        self.app_handle,
+                        item_id,
+                        data.get("text", ""),
+                        data.get("enabled", True),
+                        native_icon,
+                        data.get("accelerator"),
+                    )
+                    self.menu_items[item_id] = item
+                    return item
+            # RGBA icon bytes
+            icon_image = None
+            if icon_bytes:
+                import base64
+
+                from pytauri.image import Image
+
+                raw = base64.b64decode(icon_bytes)
+                icon_image = Image(raw, data.get("icon_width", 16), data.get("icon_height", 16))
+            item = IconMenuItem.with_id(
+                self.app_handle,
+                item_id,
+                data.get("text", ""),
+                data.get("enabled", True),
+                icon_image,
+                data.get("accelerator"),
+            )
+            self.menu_items[item_id] = item
+            return item
+
+        if kind == "submenu":
+            child_items = [self._build_menu_item(c) for c in data.get("items", [])]
+            submenu = Submenu.with_id_and_items(
+                self.app_handle,
+                item_id,
+                data.get("text", ""),
+                data.get("enabled", True),
+                child_items,
+            )
+            self.menu_items[item_id] = submenu
+            return submenu
+
+        # Default: regular MenuItem
+        item = MenuItem.with_id(
+            self.app_handle,
+            item_id,
+            data.get("text", ""),
+            data.get("enabled", True),
+            data.get("accelerator"),
+        )
+        self.menu_items[item_id] = item
+        return item
+
+    def menu_create(self, cmd: dict[str, Any]) -> None:
+        """Create a native menu."""
+        from pytauri.menu import Menu
+
+        menu_id = cmd.get("menu_id", "")
+        items_data = cmd.get("items", [])
+
+        if self.app_handle is None:
+            self.send_error("App not ready")
+            return
+
+        try:
+            items = [self._build_menu_item(d) for d in items_data]
+            menu = Menu.with_id_and_items(self.app_handle, menu_id, items)
+            self.menus[menu_id] = menu
+            log(f"Created menu '{menu_id}' with {len(items)} items")
+            self.send({"type": "result", "success": True, "menu_id": menu_id})
+        except Exception as e:
+            self.send_error(f"Failed to create menu '{menu_id}': {e}")
+
+    def menu_set(self, cmd: dict[str, Any]) -> None:
+        """Attach a menu to a window or the app."""
+        menu_id = cmd.get("menu_id", "")
+        target = cmd.get("target", "app")
+        label = cmd.get("label", "main")
+
+        menu = self.menus.get(menu_id)
+        if menu is None:
+            self.send_error(f"Menu not found: {menu_id}")
+            return
+
+        try:
+            if target == "app":
+                self.app_handle.set_menu(menu)
+                log(f"Set app menu: {menu_id}")
+            elif target == "window":
+                window = self._get_window(label)
+                if window is None:
+                    self.send_error(f"Window not found: {label}")
+                    return
+                window.set_menu(menu)
+                log(f"Set window '{label}' menu: {menu_id}")
+        except Exception as e:
+            self.send_error(f"menu_set failed: {e}")
+
+    def menu_popup(self, cmd: dict[str, Any]) -> None:
+        """Show a menu as a context popup."""
+        menu_id = cmd.get("menu_id", "")
+        label = cmd.get("label", "main")
+        position = cmd.get("position")
+
+        menu = self.menus.get(menu_id)
+        if menu is None:
+            self.send_error(f"Menu not found: {menu_id}")
+            return
+
+        window = self._get_window(label)
+        if window is None:
+            self.send_error(f"Window not found: {label}")
+            return
+
+        try:
+            from pytauri.menu import ContextMenu
+
+            if position:
+                from pytauri import Position
+
+                pos = Position.Logical((float(position["x"]), float(position["y"])))
+                ContextMenu.popup_at(menu, window, pos)
+            else:
+                ContextMenu.popup(menu, window)
+            log(f"Menu popup '{menu_id}' on window '{label}'")
+        except Exception as e:
+            self.send_error(f"menu_popup failed: {e}")
+
+    def menu_update(self, cmd: dict[str, Any]) -> None:  # noqa: C901, PLR0912  # pylint: disable=too-many-branches,too-many-statements
+        """Mutate an existing menu or menu item."""
+        menu_id = cmd.get("menu_id", "")
+        operation = cmd.get("operation", "")
+
+        menu = self.menus.get(menu_id)
+        if menu is None:
+            self.send_error(f"Menu not found: {menu_id}")
+            return
+
+        try:
+            if operation == "append":
+                item = self._build_menu_item(cmd.get("item_data", {}))
+                menu.append(item)
+            elif operation == "prepend":
+                item = self._build_menu_item(cmd.get("item_data", {}))
+                menu.prepend(item)
+            elif operation == "insert":
+                item = self._build_menu_item(cmd.get("item_data", {}))
+                menu.insert(item, cmd.get("position", 0))
+            elif operation == "remove":
+                item_id = cmd.get("item_id", "")
+                item = self.menu_items.get(item_id)
+                if item:
+                    menu.remove(item)
+                    del self.menu_items[item_id]
+            elif operation == "set_text":
+                item_id = cmd.get("item_id", "")
+                item = self.menu_items.get(item_id)
+                if item and hasattr(item, "set_text"):
+                    item.set_text(cmd.get("text", ""))
+            elif operation == "set_enabled":
+                item_id = cmd.get("item_id", "")
+                item = self.menu_items.get(item_id)
+                if item and hasattr(item, "set_enabled"):
+                    item.set_enabled(cmd.get("enabled", True))
+            elif operation == "set_checked":
+                item_id = cmd.get("item_id", "")
+                item = self.menu_items.get(item_id)
+                if item and hasattr(item, "set_checked"):
+                    item.set_checked(cmd.get("checked", False))
+            elif operation == "set_accelerator":
+                item_id = cmd.get("item_id", "")
+                item = self.menu_items.get(item_id)
+                if item and hasattr(item, "set_accelerator"):
+                    item.set_accelerator(cmd.get("accelerator"))
+            elif operation == "set_icon":
+                item_id = cmd.get("item_id", "")
+                item = self.menu_items.get(item_id)
+                if item and hasattr(item, "set_icon"):
+                    icon_b64 = cmd.get("icon")
+                    if icon_b64:
+                        import base64
+
+                        from pytauri.image import Image
+
+                        raw = base64.b64decode(icon_b64)
+                        w = cmd.get("icon_width", 16)
+                        h = cmd.get("icon_height", 16)
+                        item.set_icon(Image(raw, w, h))
+                    else:
+                        item.set_icon(None)
+            else:
+                self.send_error(f"Unknown menu_update operation: {operation}")
+            log(f"menu_update '{menu_id}' op={operation}")
+        except Exception as e:
+            self.send_error(f"menu_update failed: {e}")
+
+    def menu_remove(self, cmd: dict[str, Any]) -> None:
+        """Remove and destroy a menu."""
+        menu_id = cmd.get("menu_id", "")
+        if menu_id in self.menus:
+            del self.menus[menu_id]
+            log(f"Removed menu '{menu_id}'")
+        else:
+            log(f"menu_remove: menu '{menu_id}' not found")
+
+    # ── Tray handlers ─────────────────────────────────────────────────
+
+    def _apply_tray_icon(self, tray: Any, cmd: dict[str, Any]) -> None:
+        """Apply icon to a tray from *cmd*, falling back to the app icon."""
+        icon_b64 = cmd.get("icon")
+        if icon_b64:
+            import base64
+
+            from pytauri.image import Image
+
+            raw = base64.b64decode(icon_b64)
+            w = cmd.get("icon_width", 32)
+            h = cmd.get("icon_height", 32)
+            tray.set_icon(Image(raw, w, h))
+        else:
+            default_icon = self.app_handle.default_window_icon()
+            if default_icon is not None:
+                tray.set_icon(default_icon)
+
+    def _apply_tray_menu(self, tray: Any, tray_id: str, menu_data: dict[str, Any]) -> None:
+        """Build and attach a menu to a tray icon."""
+        from pytauri.menu import Menu
+
+        items = [self._build_menu_item(d) for d in menu_data.get("items", [])]
+        menu = Menu.with_id_and_items(
+            self.app_handle, menu_data.get("id", f"{tray_id}-menu"), items
+        )
+        tray.set_menu(menu)
+        self.menus[menu_data.get("id", f"{tray_id}-menu")] = menu
+        # Track which menu item IDs belong to this tray so the
+        # global RunEvent.MenuEvent handler can skip them.
+        for item_data in menu_data.get("items", []):
+            iid = item_data.get("id", "")
+            if iid:
+                self.tray_menu_items.add(iid)
+
+    def tray_create(self, cmd: dict[str, Any]) -> None:
+        """Create a system tray icon."""
+        from pytauri.tray import TrayIcon
+
+        tray_id = cmd.get("tray_id", "")
+
+        if self.app_handle is None:
+            self.send_error("App not ready")
+            return
+
+        # If a tray with this ID already exists, drop the Python
+        # reference.  The pyo3 Rust ``Drop`` on ``TrayIcon`` automatically
+        # calls ``remove_tray_by_id`` and removes the OS icon.
+        old = self.trays.pop(tray_id, None)
+        if old is not None:
+            with suppress(Exception):
+                old.set_visible(False)
+            del old  # Rust Drop removes from Tauri registry + OS
+
+        try:
+            tray = TrayIcon.with_id(self.app_handle, tray_id)
+
+            tooltip = cmd.get("tooltip")
+            if tooltip:
+                tray.set_tooltip(tooltip)
+
+            title = cmd.get("title")
+            if title:
+                tray.set_title(title)
+
+            self._apply_tray_icon(tray, cmd)
+
+            menu_data = cmd.get("menu")
+            if menu_data:
+                self._apply_tray_menu(tray, tray_id, menu_data)
+
+            tray.set_show_menu_on_left_click(cmd.get("menu_on_left_click", True))
+
+            # Register tray event handler
+            def _on_tray_event(_tray_icon: Any, event: Any) -> None:
+                self._handle_tray_event(tray_id, event)
+
+            tray.on_tray_icon_event(_on_tray_event)
+
+            # Register menu event handler for this tray
+            def _on_menu_event(_app_handle: Any, menu_event: Any) -> None:
+                item_id = str(menu_event)
+                self.send(
+                    {
+                        "type": "event",
+                        "event_type": "menu:click",
+                        "label": f"__tray__{tray_id}",
+                        "data": {"item_id": item_id, "source": "tray"},
+                    }
+                )
+
+            tray.on_menu_event(_on_menu_event)
+
+            self.trays[tray_id] = tray
+            log(f"Created tray icon '{tray_id}'")
+            resp: dict[str, Any] = {"type": "result", "success": True, "tray_id": tray_id}
+            if cmd.get("request_id"):
+                resp["request_id"] = cmd["request_id"]
+            self.send(resp)
+        except Exception as e:
+            err_resp: dict[str, Any] = {
+                "type": "error",
+                "success": False,
+                "error": f"Failed to create tray '{tray_id}': {e}",
+            }
+            if cmd.get("request_id"):
+                err_resp["request_id"] = cmd["request_id"]
+            log_error(err_resp["error"])
+            self.send(err_resp)
+
+    def tray_update(self, cmd: dict[str, Any]) -> None:
+        """Update a tray icon property."""
+        tray_id = cmd.get("tray_id", "")
+        tray = self.trays.get(tray_id)
+        if tray is None:
+            self.send_error(f"Tray not found: {tray_id}")
+            return
+
+        try:
+            if "tooltip" in cmd:
+                tray.set_tooltip(cmd["tooltip"])
+            if "title" in cmd:
+                tray.set_title(cmd["title"])
+            if "visible" in cmd:
+                tray.set_visible(cmd["visible"])
+            if "menu_on_left_click" in cmd:
+                tray.set_show_menu_on_left_click(cmd["menu_on_left_click"])
+            if "icon" in cmd:
+                import base64
+
+                from pytauri.image import Image
+
+                raw = base64.b64decode(cmd["icon"])
+                w = cmd.get("icon_width", 32)
+                h = cmd.get("icon_height", 32)
+                tray.set_icon(Image(raw, w, h))
+            if "menu" in cmd:
+                from pytauri.menu import Menu
+
+                menu_data = cmd["menu"]
+                items = [self._build_menu_item(d) for d in menu_data.get("items", [])]
+                menu = Menu.with_id_and_items(
+                    self.app_handle, menu_data.get("id", f"{tray_id}-menu"), items
+                )
+                tray.set_menu(menu)
+                self.menus[menu_data.get("id", f"{tray_id}-menu")] = menu
+                # Update tray_menu_items tracking for the replaced menu
+                for item_data in menu_data.get("items", []):
+                    iid = item_data.get("id", "")
+                    if iid:
+                        self.tray_menu_items.add(iid)
+            log(f"tray_update '{tray_id}'")
+        except Exception as e:
+            self.send_error(f"tray_update failed: {e}")
+
+    def tray_remove(self, cmd: dict[str, Any]) -> None:
+        """Remove and destroy a tray icon.
+
+        pytauri's ``TrayIcon`` has no ``remove()`` method.  The OS tray
+        entry is removed when the pyo3 wrapper is deallocated (CPython
+        ref-count → 0), which triggers Rust ``Drop`` → Tauri calls
+        ``remove_tray_by_id`` internally.
+
+        We must **not** call ``remove_tray_by_id`` ourselves — doing so
+        causes a double-removal and Tauri prints an error to stderr.
+        Instead we simply drop the Python reference.
+        """
+        tray_id = cmd.get("tray_id", "")
+        if tray_id not in self.trays:
+            resp: dict[str, Any] = {
+                "type": "result",
+                "success": False,
+                "tray_id": tray_id,
+                "error": f"Tray '{tray_id}' not found",
+            }
+            if cmd.get("request_id"):
+                resp["request_id"] = cmd["request_id"]
+            self.send(resp)
+            return
+
+        # Pop our reference — this is the ONLY Python ref to the
+        # TrayIcon.  ``del tray`` at the end of this block drops the
+        # refcount to 0 → pyo3 Rust Drop → OS icon removed.
+        tray = self.trays.pop(tray_id)
+        with suppress(Exception):
+            tray.set_visible(False)  # instant visual hide
+        del tray  # triggers Rust Drop → OS removal
+
+        log(f"Removed tray '{tray_id}'")
+        resp = {"type": "result", "success": True, "tray_id": tray_id}
+        if cmd.get("request_id"):
+            resp["request_id"] = cmd["request_id"]
+        self.send(resp)
+
+    def _handle_tray_event(self, tray_id: str, event: Any) -> None:
+        """Map a pytauri TrayIconEvent to an IPC event."""
+        from pytauri.tray import TrayIconEvent
+
+        label = f"__tray__{tray_id}"
+        data: dict[str, Any] = {"tray_id": tray_id}
+
+        if isinstance(event, TrayIconEvent.Click):
+            button = str(event.button).rsplit(".", 1)[-1].lower()  # "Left" -> "left"
+            state = str(event.button_state).rsplit(".", 1)[-1].lower()
+            data.update({"button": button, "button_state": state})
+            if hasattr(event, "position"):
+                pos = event.position
+                data["position"] = {"x": pos[0], "y": pos[1]}
+            self.send(
+                {
+                    "type": "event",
+                    "event_type": "tray:click",
+                    "label": label,
+                    "data": data,
+                }
+            )
+        elif isinstance(event, TrayIconEvent.DoubleClick):
+            button = str(event.button).rsplit(".", 1)[-1].lower()
+            data["button"] = button
+            if hasattr(event, "position"):
+                pos = event.position
+                data["position"] = {"x": pos[0], "y": pos[1]}
+            self.send(
+                {
+                    "type": "event",
+                    "event_type": "tray:double-click",
+                    "label": label,
+                    "data": data,
+                }
+            )
+        elif isinstance(event, TrayIconEvent.Enter):
+            if hasattr(event, "position"):
+                pos = event.position
+                data["position"] = {"x": pos[0], "y": pos[1]}
+            self.send(
+                {
+                    "type": "event",
+                    "event_type": "tray:enter",
+                    "label": label,
+                    "data": data,
+                }
+            )
+        elif isinstance(event, TrayIconEvent.Leave):
+            if hasattr(event, "position"):
+                pos = event.position
+                data["position"] = {"x": pos[0], "y": pos[1]}
+            self.send(
+                {
+                    "type": "event",
+                    "event_type": "tray:leave",
+                    "label": label,
+                    "data": data,
+                }
+            )
+        elif isinstance(event, TrayIconEvent.Move):
+            if hasattr(event, "position"):
+                pos = event.position
+                data["position"] = {"x": pos[0], "y": pos[1]}
+            self.send(
+                {
+                    "type": "event",
+                    "event_type": "tray:move",
+                    "label": label,
+                    "data": data,
+                }
+            )
+
 
 def stdin_reader(ipc: JsonIPC) -> None:
     """Read commands from stdin in a separate thread."""
@@ -866,6 +1556,10 @@ def stdin_reader(ipc: JsonIPC) -> None:
                 continue
             try:
                 cmd = json.loads(line)
+                # If this message has a request_id that matches a pending
+                # custom-command round-trip, consume it as a response.
+                if ipc.handle_response(cmd):
+                    continue
                 ipc.handle_command(cmd)
             except json.JSONDecodeError as e:
                 ipc.send_error(f"Invalid JSON: {e}")
@@ -931,7 +1625,59 @@ def _handle_close_requested(ipc: JsonIPC, app_handle: Any, label: str, window_ev
         ipc.send({"type": "event", "event_type": "window:hidden", "label": label, "data": {}})
 
 
-def main() -> int:  # pylint: disable=too-many-statements
+def _register_custom_commands(
+    commands: Any,
+    ipc: JsonIPC,
+    command_names: list[str],
+) -> None:
+    """Register forwarding stubs for developer-defined custom commands.
+
+    Each stub is a pytauri ``@commands.command()`` handler.  When JS calls
+    ``pyInvoke('my_command', body)``, the stub forwards the call to the
+    parent process over stdout IPC, waits for the parent to execute the
+    real handler, and returns the result to JS.
+
+    Parameters
+    ----------
+    commands : Commands
+        The pytauri ``Commands`` instance to register on.
+    ipc : JsonIPC
+        The subprocess IPC handler (used for stdout send / response wait).
+    command_names : list[str]
+        Command names to register (from ``PYWRY_CUSTOM_COMMANDS`` env var).
+    """
+
+    class _AnyBody(BaseModel):
+        """Accept any JSON payload from JS."""
+
+        model_config: typing.ClassVar = {"extra": "allow"}
+
+    for name in command_names:
+
+        def _make_forwarder(_name: str) -> Any:
+            """Create a closure so each command captures its own name."""
+
+            async def _forwarder(body: _AnyBody) -> dict[str, Any]:
+                result = ipc.send_request_and_wait(
+                    {
+                        "type": "custom_command",
+                        "command": _name,
+                        "data": body.model_dump(),
+                    },
+                    timeout=30.0,
+                )
+                return result
+
+            _forwarder.__name__ = _name
+            _forwarder.__qualname__ = _name
+            return _forwarder
+
+        forwarder = _make_forwarder(name)
+        commands.set_command(name, forwarder)
+        log(f"Registered custom command forwarder: {name}")
+
+
+def main() -> int:  # noqa: C901  # pylint: disable=too-many-statements
     """Run the PyWry subprocess."""
     # Ignore SIGINT in the subprocess.  The parent process handles Ctrl-C
     # and sends a "quit" IPC command for a clean shutdown.  Without this,
@@ -972,6 +1718,12 @@ def main() -> int:  # pylint: disable=too-many-statements
             commands = Commands()
             register_commands(commands)
 
+            # --- Register custom developer commands (forwarded to parent) ---
+            custom_csv = os.environ.get("PYWRY_CUSTOM_COMMANDS", "")
+            custom_names = [c.strip() for c in custom_csv.split(",") if c.strip()]
+            if custom_names:
+                _register_custom_commands(commands, ipc, custom_names)
+
             app = builder_factory().build(
                 context=context,
                 invoke_handler=commands.generate_handler(portal),
@@ -995,6 +1747,31 @@ def main() -> int:  # pylint: disable=too-many-statements
                     elif isinstance(window_event, WindowEvent.Destroyed) and label in ipc.windows:
                         del ipc.windows[label]
                         log(f"Window '{label}' destroyed, removed from cache")
+                elif isinstance(run_event, RunEvent.MenuEvent):
+                    # Menu item clicked — forward as menu:click event.
+                    # Tray menu items are already handled by per-tray
+                    # on_menu_event callbacks registered in tray_create;
+                    # skip them here to avoid double-dispatch / spurious
+                    # "Window not found" errors.
+                    item_id = str(run_event._0)
+                    if item_id in ipc.tray_menu_items:
+                        pass  # handled by tray.on_menu_event
+                    else:
+                        # For app/window-level menus, broadcast to all windows
+                        labels = list(ipc.windows.keys()) or ["main"]
+                        for lbl in labels:
+                            ipc.send(
+                                {
+                                    "type": "event",
+                                    "event_type": "menu:click",
+                                    "label": lbl,
+                                    "data": {"item_id": item_id, "source": "app"},
+                                }
+                            )
+                elif isinstance(run_event, RunEvent.TrayIconEvent):
+                    # Tray events are handled per-tray via on_tray_icon_event
+                    # This RunEvent variant is a fallback for unhandled trays
+                    pass
 
             log("Starting app.run()...")
             app.run(on_run)
