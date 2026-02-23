@@ -2789,7 +2789,7 @@ class Toolbar(BaseModel):
                 raise TypeError(f"Invalid toolbar item type: {type(item)}")
         return result
 
-    def build_html(self) -> str:
+    def build_html(self) -> str:  # pylint: disable=too-many-branches
         """Build complete toolbar HTML with collapsible/resizable support."""
         if not self.items:
             return ""
