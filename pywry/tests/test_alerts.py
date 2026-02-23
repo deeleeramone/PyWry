@@ -566,8 +566,39 @@ class TestNativeWindowAlertE2E:
 
     @pytest.fixture(autouse=True, scope="class")
     def _alert_app(self, request, light_app):
-        """Re-use the class-scoped light_app fixture."""
+        """Re-use the class-scoped light_app fixture.
+
+        Pre-warms the subprocess with retry logic so that transient Windows
+        WebView2 startup failures don't cascade into every test in the class.
+        """
+        from pywry import runtime
+
         request.cls.app = light_app
+
+        # Pre-warm: force the subprocess to start with retries.
+        # On Windows CI, WebView2 sometimes fails to initialise on the first
+        # attempt ("Failed to unregister class Chrome_WidgetWin_0").
+        max_attempts = 3
+        last_error: Exception | None = None
+        for attempt in range(max_attempts):
+            try:
+                label = show_and_wait_ready(
+                    light_app,
+                    "<div>Warm-up</div>",
+                    title="Warm-up",
+                )
+                # Close the warm-up window so tests start from a clean slate
+                light_app.close(label)
+                last_error = None
+                break
+            except (TimeoutError, OSError) as exc:
+                last_error = exc
+                runtime.stop()
+                time.sleep(1.0 * (attempt + 1))  # progressive back-off
+
+        if last_error is not None:
+            pytest.fail(f"Subprocess failed to start after {max_attempts} attempts: {last_error}")
+
         yield
 
     @pytest.mark.e2e
