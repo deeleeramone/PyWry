@@ -308,9 +308,20 @@ class NativeWindowHandle:
 
         runtime.show_window(self._label)
 
+    def show(self) -> None:
+        """Show a previously hidden window.
+
+        Alias for :meth:`show_window`.
+        """
+        self.show_window()
+
     # ─────────────────────────────────────────────────────────────────────────
     # Convenience methods delegating to WindowProxy
     # ─────────────────────────────────────────────────────────────────────────
+
+    def set_focus(self) -> None:
+        """Set keyboard focus to this window."""
+        self.proxy.set_focus()
 
     def maximize(self) -> None:
         """Maximize the window."""

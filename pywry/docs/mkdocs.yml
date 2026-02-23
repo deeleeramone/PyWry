@@ -174,6 +174,10 @@ nav:
       - Modals: guides/modals.md
       - Toasts & Alerts: guides/toasts.md
       - Theming & CSS: guides/theming.md
+    - Native:
+      - Builder Options: guides/builder-options.md
+      - Native Menus: guides/menus.md
+      - System Tray: guides/tray.md
     - Integrations:
       - Plotly Charts: guides/plotly.md
       - AgGrid Tables: guides/aggrid.md
@@ -192,6 +196,8 @@ nav:
       - InlineWidget: reference/inline-widget.md
       - Widget: reference/widget.md
       - WindowProxy: reference/window-proxy.md
+      - MenuProxy: reference/menu-proxy.md
+      - TrayProxy: reference/tray-proxy.md
       - Runtime: reference/runtime.md
       - Widget Protocol: reference/widget-protocol.md
       - Window Manager: reference/window-manager.md

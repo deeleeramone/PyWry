@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -31,8 +31,19 @@ class WindowMode(str, Enum):
 
 
 class WindowConfig(BaseModel):
-    """Configuration for window creation."""
+    """Configuration for window creation.
 
+    Fields are split into two groups:
+
+    **Application-level fields** — used by PyWry's template and content pipeline
+    (``theme``, ``enable_plotly``, ``aggrid_theme``, etc.).
+
+    **Builder-level fields** — forwarded to ``WebviewWindowBuilder.build()`` in
+    the subprocess.  Fields marked *(build-only)* can **only** be set at window
+    creation time; they have no post-creation ``set_*`` equivalent.
+    """
+
+    # ── Application-level ─────────────────────────────────────────────────
     title: str = "PyWry"
     width: int = Field(default=1280, ge=200)
     height: int = Field(default=720, ge=150)
@@ -40,9 +51,6 @@ class WindowConfig(BaseModel):
     min_height: int = Field(default=300, ge=100)
     theme: ThemeMode = ThemeMode.DARK
     center: bool = True
-    resizable: bool = True
-    decorations: bool = True
-    always_on_top: bool = False
     devtools: bool = False
     allow_network: bool = True
     enable_plotly: bool = False
@@ -51,6 +59,59 @@ class WindowConfig(BaseModel):
         "plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "simple_white"
     ] = "plotly_dark"
     aggrid_theme: Literal["quartz", "alpine", "balham", "material"] = "alpine"
+
+    # ── Builder-level (forwarded to WebviewWindowBuilder.build()) ─────────
+    resizable: bool = True
+    decorations: bool = True
+    always_on_top: bool = False
+    always_on_bottom: bool = False
+    transparent: bool = False  # (build-only)
+    fullscreen: bool = False
+    maximized: bool = False
+    focused: bool = True
+    visible: bool = True
+    shadow: bool = True
+    skip_taskbar: bool = False
+    content_protected: bool = False
+    user_agent: str | None = None  # (build-only)
+    incognito: bool = False  # (build-only)
+    initialization_script: str | None = None  # (build-only)
+    drag_and_drop: bool = True  # (build-only)
+
+    # Fields that map directly to WebviewWindowBuilder kwargs
+    _BUILDER_FIELDS: ClassVar[set[str]] = {
+        "resizable",
+        "decorations",
+        "always_on_top",
+        "always_on_bottom",
+        "transparent",
+        "fullscreen",
+        "maximized",
+        "focused",
+        "visible",
+        "shadow",
+        "skip_taskbar",
+        "content_protected",
+        "user_agent",
+        "incognito",
+        "initialization_script",
+        "drag_and_drop",
+    }
+
+    def builder_kwargs(self) -> dict[str, Any]:
+        """Return non-default builder kwargs for ``WebviewWindowBuilder.build()``.
+
+        Only includes fields whose values differ from the Pydantic defaults,
+        keeping the IPC payload minimal.  ``title`` and ``inner_size`` are
+        always handled separately by the caller.
+        """
+        defaults = WindowConfig()
+        result: dict[str, Any] = {}
+        for field in self._BUILDER_FIELDS:
+            value = getattr(self, field)
+            if value != getattr(defaults, field):
+                result[field] = value
+        return result
 
     @model_validator(mode="after")
     def validate_dimensions(self) -> WindowConfig:
@@ -103,7 +164,7 @@ class HtmlContent(BaseModel):
 EVENT_NAMESPACE_PATTERN = re.compile(
     r"^[a-zA-Z][a-zA-Z0-9]*:[a-zA-Z][a-zA-Z0-9_-]*(:[a-zA-Z0-9_-]+)?$"
 )
-RESERVED_NAMESPACES = frozenset({"pywry", "plotly", "grid"})
+RESERVED_NAMESPACES = frozenset({"pywry", "plotly", "grid", "menu", "tray", "window"})
 
 
 def validate_event_type(event_type: str) -> bool:

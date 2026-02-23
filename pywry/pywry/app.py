@@ -47,6 +47,7 @@ from .window_manager import (
 if TYPE_CHECKING:
     from .modal import Modal
     from .toolbar import Toolbar
+    from .types import MenuConfig
     from .widget_protocol import BaseWidget
     from .window_manager import WindowLifecycle
 
@@ -149,6 +150,9 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
         # Auth state
         self._auth_result: Any = None  # AuthFlowResult | None
         self._session_manager: Any = None  # SessionManager | None
+
+        # Active tray icons (for lifecycle cleanup)
+        self._trays: dict[str, Any] = {}  # tray_id -> TrayProxy
 
         info(f"PyWry initialized with {mode.value} mode")
 
@@ -364,8 +368,138 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             self._session_manager = None
         self._auth_result = None
 
-    # pylint: disable=too-many-arguments
-    def show(
+    # ── Builder defaults ──────────────────────────────────────────────
+
+    def set_initialization_script(self, js: str) -> None:
+        """Set the default ``initialization_script`` for new windows.
+
+        This JavaScript is injected by ``WebviewWindowBuilder`` **before**
+        the page loads and persists across navigations.  Individual
+        ``show()`` calls can override this via the ``initialization_script``
+        keyword argument.
+
+        Parameters
+        ----------
+        js : str
+            JavaScript source code to inject.
+        """
+        self._default_config.initialization_script = js
+
+    @property
+    def default_config(self) -> WindowConfig:
+        """Return the mutable default ``WindowConfig``.
+
+        Callers may set builder-level fields directly::
+
+            app.default_config.resizable = False
+            app.default_config.transparent = True
+        """
+        return self._default_config
+
+    # ── Menu & Tray ───────────────────────────────────────────────────
+
+    def create_menu(
+        self,
+        menu_id: str,
+        items: list[Any] | None = None,
+    ) -> Any:
+        """Create a native menu.
+
+        Parameters
+        ----------
+        menu_id : str
+            Unique menu identifier.
+        items : list of MenuItemKindConfig, optional
+            Menu items.
+
+        Returns
+        -------
+        MenuProxy
+            Proxy for the created menu.
+        """
+        self._require_native_mode("create_menu()")
+
+        from .menu_proxy import MenuProxy
+
+        return MenuProxy.create(menu_id=menu_id, items=items)
+
+    def create_tray(
+        self,
+        tray_id: str,
+        tooltip: str | None = None,
+        title: str | None = None,
+        icon: bytes | None = None,
+        icon_width: int = 32,
+        icon_height: int = 32,
+        menu: Any = None,
+        menu_on_left_click: bool = True,
+    ) -> Any:
+        """Create a system tray icon.
+
+        Parameters
+        ----------
+        tray_id : str
+            Unique tray icon identifier.
+        tooltip : str or None
+            Hover tooltip text.
+        title : str or None
+            Tray title (macOS menu bar text).
+        icon : bytes or None
+            RGBA icon bytes.
+        icon_width : int
+            Icon width.
+        icon_height : int
+            Icon height.
+        menu : MenuConfig or None
+            Menu to attach.
+        menu_on_left_click : bool
+            Whether left click opens the menu.
+
+        Returns
+        -------
+        TrayProxy
+            Proxy for the created tray icon.
+        """
+        self._require_native_mode("create_tray()")
+
+        from .tray_proxy import TrayProxy
+
+        tray = TrayProxy.create(
+            tray_id=tray_id,
+            tooltip=tooltip,
+            title=title,
+            icon=icon,
+            icon_width=icon_width,
+            icon_height=icon_height,
+            menu=menu,
+            menu_on_left_click=menu_on_left_click,
+        )
+        self._trays[tray_id] = tray
+        return tray
+
+    def remove_tray(self, tray_id: str) -> None:
+        """Remove a system tray icon.
+
+        Works for trays created via :meth:`create_tray` **and** those
+        created directly via ``TrayProxy.from_config()`` or
+        ``TrayProxy.create()``.
+
+        Parameters
+        ----------
+        tray_id : str
+            The tray icon identifier.
+        """
+        from .tray_proxy import TrayProxy
+
+        tray = self._trays.pop(tray_id, None)
+        if tray is None:
+            # Fall back to the class-level registry
+            tray = TrayProxy._all_proxies.get(tray_id)
+        if tray is not None:
+            tray.remove()
+
+    # pylint: disable=too-many-arguments,too-many-branches,too-many-statements
+    def show(  # noqa: C901, PLR0912, PLR0915
         self,
         content: str | HtmlContent,
         title: str | None = None,
@@ -379,6 +513,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
         watch: bool | None = None,
         toolbars: list[dict[str, Any] | Toolbar] | None = None,
         modals: list[dict[str, Any] | Modal] | None = None,
+        initialization_script: str | None = None,
+        menu: MenuConfig | None = None,
     ) -> NativeWindowHandle | BaseWidget:
         """Show content in a window.
 
@@ -412,6 +548,17 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             List of toolbar configs. Each toolbar has 'position' and 'items' keys.
         modals : list[dict], optional
             List of modal configs. Each modal has 'title' and 'items' keys.
+        initialization_script : str or None, optional
+            JavaScript to inject via `WebviewWindowBuilder` *before* the
+            page loads.  Persists across navigations (unlike per-content
+            ``HtmlContent.init_script``).  Overrides the default set via
+            ``set_initialization_script()`` for this call only.
+        menu : MenuConfig or None, optional
+            Native menu bar configuration.  Item handlers are automatically
+            registered **before** the window is created so menus work from
+            the moment the window appears.  Pass a :class:`MenuConfig` with
+            handler-bearing items (e.g.
+            ``MenuItemConfig(id="save", text="Save", handler=on_save)``).
 
         Returns
         -------
@@ -534,20 +681,35 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             widget.display()  # Auto-display in notebook
             return widget
 
-        # Build config - width must be int for native window
+        # Build config - start from _default_config (preserves builder-level
+        # fields like resizable, transparent, user_agent, etc.) and overlay
+        # per-show options.
         native_width = width if isinstance(width, int) else self._default_config.width
-        config = WindowConfig(
-            title=title or self._default_config.title,
-            width=native_width,
-            height=height or self._default_config.height,
-            theme=self._theme,
-            enable_plotly=include_plotly,
-            enable_aggrid=include_aggrid,
-            aggrid_theme=aggrid_theme,
+        config = self._default_config.model_copy(
+            update={
+                "title": title or self._default_config.title,
+                "width": native_width,
+                "height": height or self._default_config.height,
+                "theme": self._theme,
+                "enable_plotly": include_plotly,
+                "enable_aggrid": include_aggrid,
+                "aggrid_theme": aggrid_theme,
+            }
         )
+
+        # Apply per-call initialization_script override if provided
+        if initialization_script is not None:
+            config.initialization_script = initialization_script
 
         # Build HtmlContent from string if needed
         html_content = content if isinstance(content, HtmlContent) else HtmlContent(html=content)
+
+        # Auto-promote: if HtmlContent has init_script but WindowConfig has no
+        # initialization_script, copy it to the builder-level so it persists
+        # across navigations.  The per-content injection still happens via
+        # templates.py on every set_content call.
+        if html_content.init_script and not config.initialization_script:
+            config.initialization_script = html_content.init_script
 
         # Get window label - for SINGLE_WINDOW mode, use the mode's fixed label
         # For other modes, let the mode's show() generate unique label if not provided
@@ -575,7 +737,38 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
 
         # Show in window (pass label for multi-window mode)
         # This creates the window resources entry
+
+        # ── Menu: wire handlers BEFORE the window is created ──────────
+        _menu_proxy = None
+        if menu is not None:
+            # Merge menu item handlers into the callbacks dict so they are
+            # registered on the window label before the window appears.
+            handler_map = menu.collect_handlers()
+            if handler_map:
+                if callbacks is None:
+                    callbacks = {}
+
+                def _menu_dispatcher(
+                    data: dict[str, Any],
+                    event_type: str,
+                    lbl: str,
+                ) -> None:
+                    item_id = data.get("item_id", "")
+                    handler = handler_map.get(item_id)
+                    if handler is not None:
+                        handler(data, event_type, lbl)
+
+                callbacks["menu:click"] = _menu_dispatcher
+
         label_result = self._mode.show(config, html, callbacks, target_label)
+
+        # Create the native menu AFTER the window exists (Tauri needs a
+        # window to attach to) but handlers were already registered above.
+        if menu is not None:
+            from .menu_proxy import MenuProxy as _MenuProxy
+
+            menu_proxy = _MenuProxy.from_config(menu)
+            menu_proxy.set_as_window_menu(label_result)
 
         # Store content for refresh support (after window exists)
         lifecycle = get_lifecycle()
@@ -1077,6 +1270,126 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 success = False
 
         return success
+
+    # ------------------------------------------------------------------
+    # Custom IPC commands (callable from JS via pyInvoke)
+    # ------------------------------------------------------------------
+
+    _NATIVE_MODES = frozenset(
+        {
+            WindowMode.NEW_WINDOW,
+            WindowMode.SINGLE_WINDOW,
+            WindowMode.MULTI_WINDOW,
+        }
+    )
+
+    def _require_native_mode(self, feature: str) -> None:
+        """Raise if the app is not in a native window mode.
+
+        Parameters
+        ----------
+        feature : str
+            Human-readable feature name for the error message
+            (e.g. ``"@app.command()"`` or ``"create_menu()"``).
+
+        Raises
+        ------
+        RuntimeError
+            If the current mode is BROWSER or NOTEBOOK where the Tauri
+            webview (and therefore native menus, trays, and pyInvoke)
+            is not available.
+        """
+        if self._mode_enum not in self._NATIVE_MODES:
+            msg = (
+                f"{feature} requires a native window mode "
+                f"(NEW_WINDOW, SINGLE_WINDOW, or MULTI_WINDOW), "
+                f"but app is in {self._mode_enum.value!r} mode. "
+                f"Native menus, trays, and custom commands use the Tauri "
+                f"webview which is only available in native window modes."
+            )
+            raise RuntimeError(msg)
+
+    def command(
+        self,
+        name: str | None = None,
+    ) -> Any:
+        """Register a custom IPC command callable from JavaScript.
+
+        The decorated function becomes available to the front-end via
+        ``window.__TAURI__.pytauri.pyInvoke('name', body)``.
+
+        Must be called **before** ``show()`` / ``start()`` so the command
+        is registered in the subprocess before the Tauri app builder runs.
+
+        Parameters
+        ----------
+        name : str or None
+            Command name exposed to JS.  Defaults to the function's
+            ``__name__``.
+
+        Returns
+        -------
+        callable
+            Decorator that registers the handler.
+
+        Raises
+        ------
+        TypeError
+            If the handler is not callable.
+        RuntimeError
+            If the app is in a non-native mode (BROWSER, NOTEBOOK) where
+            ``pyInvoke`` is not available, or if the subprocess has already
+            started.
+
+        Examples
+        --------
+        >>> app = PyWry()
+        >>>
+        >>> @app.command()
+        ... def get_user(data: dict) -> dict:
+        ...     return {"name": "Alice", "id": 42}
+        >>>
+        >>> @app.command("fetch_data")
+        ... async def _fetch(data: dict) -> dict:
+        ...     rows = await load_from_db(data["query"])
+        ...     return {"rows": rows}
+        """
+        from . import runtime
+        from .notebook import should_use_inline_rendering as _should_use_inline
+
+        def decorator(func: Any) -> Any:
+            if not callable(func):
+                msg = f"command handler must be callable, got {type(func).__name__}"
+                raise TypeError(msg)
+
+            # Validate window mode — pyInvoke only exists in native windows
+            self._require_native_mode("@app.command()")
+
+            # Warn if running inside a notebook — show() will silently
+            # switch to inline rendering where pyInvoke doesn't exist.
+            if _should_use_inline():
+                warn(
+                    "@app.command() registered in a notebook environment. "
+                    "Custom commands will only work if show() opens a "
+                    "native window (set PYWRY_FORCE_NATIVE=1 to override "
+                    "inline rendering)."
+                )
+
+            # Must register BEFORE subprocess starts
+            if runtime.is_running():
+                msg = (
+                    "@app.command() must be called before show(). "
+                    "The pytauri subprocess is already running and "
+                    "cannot accept new command registrations."
+                )
+                raise RuntimeError(msg)
+
+            cmd_name = name or func.__name__
+            runtime.register_custom_command(cmd_name, func)
+            debug(f"Registered custom command: {cmd_name}")
+            return func
+
+        return decorator
 
     def on_grid(
         self,
@@ -1825,6 +2138,14 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
     def destroy(self) -> None:
         """Destroy all resources and close all windows."""
         info("Destroying PyWry")
+
+        # Remove ALL tray icons — both those tracked by the app
+        # (app.create_tray) and those created directly via
+        # TrayProxy.from_config() / TrayProxy.create().
+        from .tray_proxy import TrayProxy
+
+        TrayProxy.remove_all()
+        self._trays.clear()
 
         # Stop hot reload if active
         if self._hot_reload_manager:

@@ -78,7 +78,7 @@ All 19 plugins bundled in the `pytauri_wheel` binary are listed below. Each plug
 | Plugin name | JS API | Description |
 |:---|:---|:---|
 | `autostart` | — | Launch at OS login |
-| `clipboard_manager` | `clipboard` | Read/write system clipboard |
+| `clipboard_manager` | `clipboardManager` | Read/write system clipboard |
 | `deep_link` | `deepLink` | Handle custom URL schemes |
 | `dialog` | `dialog` | Native open/save/message dialogs |
 | `fs` | `fs` | Filesystem read/write/watch |
@@ -107,28 +107,63 @@ All 19 plugins bundled in the `pytauri_wheel` binary are listed below. Each plug
 Once a plugin is enabled, its JavaScript API is available through the Tauri bridge. Use the [JavaScript Bridge](javascript-bridge.md) to interact:
 
 ```python
+from pywry import PyWry, PyWrySettings
+
 app = PyWry(settings=PyWrySettings(
-    tauri_plugins=["dialog", "fs", "notification", "clipboard_manager"],
+    tauri_plugins=["dialog", "clipboard_manager"],
+    # clipboard has NO default permissions — must grant explicitly
+    extra_capabilities=[
+        "clipboard-manager:allow-write-text",
+        "clipboard-manager:allow-read-text",
+    ],
 ))
 
 html = """
-<button onclick="showNotification()">Notify</button>
+<h2>Tauri Plugin Demo</h2>
+<button onclick="askQuestion()">Ask a question (dialog)</button>
+<button onclick="copyToClipboard()">Copy text to clipboard</button>
+<button onclick="pickFile()">Pick a file</button>
+<p id="result"></p>
 <script>
-async function showNotification() {
-    // Tauri notification plugin API
-    const { sendNotification } = window.__TAURI__.notification;
-    sendNotification({
+const result = document.getElementById("result");
+
+async function askQuestion() {
+    const { ask } = window.__TAURI__.dialog;
+    const yes = await ask("Do you want to continue?", {
         title: "PyWry",
-        body: "Hello from a Tauri plugin!",
+        kind: "warning",
     });
+    result.textContent = yes ? "User chose Yes" : "User chose No";
+}
+
+async function copyToClipboard() {
+    const { writeText, readText } = window.__TAURI__.clipboardManager;
+    await writeText("Hello from PyWry!");
+    const contents = await readText();
+    result.textContent = "Clipboard now contains: " + contents;
+}
+
+async function pickFile() {
+    const { open } = window.__TAURI__.dialog;
+    const path = await open({ multiple: false, directory: false });
+    if (path) {
+        result.textContent = "Selected: " + path;
+    } else {
+        result.textContent = "No file selected.";
+    }
 }
 </script>
 """
 app.show(html)
 ```
 
+Each button triggers a real OS interaction — a native dialog or a clipboard write — with the result displayed in the page.
+
 !!! tip "Plugin documentation"
     For the full JavaScript API of each plugin, see the [Tauri Plugins documentation](https://tauri.app/plugin/).
+
+!!! warning "Notification plugin on Windows"
+    The `notification` plugin only shows OS notifications for **installed** apps. In development mode on Windows it will silently return `null`. Use `dialog` for visible feedback during development.
 
 ---
 
