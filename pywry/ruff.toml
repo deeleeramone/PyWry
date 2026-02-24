@@ -84,6 +84,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 ]
 
 "__init__.py" = [
+    "E402",
     "F401",
     "D104",
 ]
@@ -129,6 +130,10 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 "pywry/commands/__init__.py" = [
     "TRY300",   # Return in try block is intentional
+]
+
+"pywry/_pyinstaller_hook/hook-pywry.py" = [
+    "N999",  # Hyphenated module name required by PyInstaller convention
 ]
 
 [lint.isort]

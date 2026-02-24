@@ -361,3 +361,4 @@ tray = TrayProxy.from_config(TrayIconConfig(
         MenuItemConfig(id="quit", text="Quit", handler=quit_app),
     ]),
 ))
+```

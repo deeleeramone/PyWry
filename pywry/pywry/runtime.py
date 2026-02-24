@@ -944,11 +944,23 @@ def start() -> bool:
     _ready_event.clear()
     _running = True
     pywry_dir = get_pywry_dir()
-    python_exe = sys.executable
-    cmd = [python_exe, "-u", "-m", "pywry"]
+
+    # In frozen executables (PyInstaller/Nuitka), sys.executable is the
+    # developer's bundled app — not a Python interpreter.  We re-launch
+    # the same executable and set PYWRY_IS_SUBPROCESS=1 so freeze_support()
+    # routes it to the Tauri event loop on import.
+    from ._freeze import get_subprocess_command
+
+    cmd = get_subprocess_command()
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
     env["PYTHONUTF8"] = "1"  # Force UTF-8
+    # Tell the frozen child process to enter the Tauri event loop
+    # instead of running the developer's application code.
+    from ._freeze import is_frozen
+
+    if is_frozen():
+        env["PYWRY_IS_SUBPROCESS"] = "1"
     env["PYWRY_ON_WINDOW_CLOSE"] = _ON_WINDOW_CLOSE  # Pass close behavior to subprocess
     env["PYWRY_WINDOW_MODE"] = _WINDOW_MODE  # Pass window mode to subprocess
     env["PYWRY_TAURI_PLUGINS"] = _TAURI_PLUGINS  # Tauri plugins to initialise
