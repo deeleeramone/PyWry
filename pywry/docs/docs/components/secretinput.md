@@ -22,14 +22,17 @@ Action buttons (left-to-right): Edit (pencil) enters edit mode, Copy (clipboard)
 
 ### Edit Mode
 
-Clicking the edit button switches the masked input to a resizable textarea with confirm/cancel buttons. Confirm sends the value; cancel restores the mask.
+Clicking the edit button hides the masked input and replaces it with a resizable textarea — always **empty** (the current secret is never pre-filled). Confirm (✓) and cancel (✗) buttons appear overlaid at the top-right corner of the textarea.
+
+- **Confirm** — `Ctrl+Enter` or click ✓ — transmits the new value (base64-encoded) and restores the mask.
+- **Cancel** — `Escape` or click ✗ — discards the input and restores the previous mask.
 
 <div class="component-preview">
   <span class="pywry-input-group pywry-input-inline">
     <span class="pywry-input-label">API Key:</span>
-    <span class="pywry-secret-wrapper">
-      <textarea class="pywry-input pywry-secret-textarea" placeholder="Enter API key..." style="width: 180px; min-width: 180px; height: 28px; min-height: 28px;">sk-abc123xyz-new-value</textarea>
-      <span class="pywry-secret-actions pywry-secret-edit-actions" style="opacity: 1; pointer-events: auto;">
+    <span class="pywry-secret-wrapper" style="position: relative;">
+      <textarea class="pywry-input pywry-secret-textarea" placeholder="Enter API key..." style="width: 180px; min-width: 180px; height: 28px; min-height: 28px; padding-right: 60px; resize: both;"></textarea>
+      <span class="pywry-secret-actions pywry-secret-edit-actions" style="position: absolute; right: 4px; top: 4px; display: flex; align-items: center; opacity: 1; pointer-events: auto;">
         <button type="button" class="pywry-secret-btn pywry-secret-confirm" data-tooltip="Confirm (Ctrl+Enter)"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
         <button type="button" class="pywry-secret-btn pywry-secret-cancel" data-tooltip="Cancel (Escape)"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </span>
