@@ -186,6 +186,7 @@ nav:
     - Hosting:
       - Browser Mode: guides/browser-mode.md
       - Deploy Mode: guides/deploy-mode.md
+      - Standalone Executable: guides/standalone-executable.md
     - Features: features.md
     - Changelog: changelog.md
 
