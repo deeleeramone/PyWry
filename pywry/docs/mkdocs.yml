@@ -229,27 +229,28 @@ nav:
       - CSS: reference/css.md
       - Modal: reference/modal.md
       - Toolbar Functions: reference/toolbar-functions.md
-      - Button: reference/components/button.md
-      - Checkbox: reference/components/checkbox.md
-      - DateInput: reference/components/dateinput.md
-      - Div: reference/components/div.md
-      - Marquee: reference/components/marquee.md
-      - MultiSelect: reference/components/multiselect.md
-      - NumberInput: reference/components/numberinput.md
-      - Option: reference/components/option.md
-      - RadioGroup: reference/components/radiogroup.md
-      - RangeInput: reference/components/rangeinput.md
-      - SearchInput: reference/components/searchinput.md
-      - SecretInput: reference/components/secretinput.md
-      - Select: reference/components/select.md
-      - SliderInput: reference/components/sliderinput.md
-      - TabGroup: reference/components/tabgroup.md
-      - TextArea: reference/components/textarea.md
-      - TextInput: reference/components/textinput.md
-      - TickerItem: reference/components/tickeritem.md
-      - Toggle: reference/components/toggle.md
-      - Toolbar: reference/components/toolbar.md
-      - ToolbarItem: reference/components/toolbaritem.md
+      - Components:
+        - Button: reference/components/button.md
+        - Checkbox: reference/components/checkbox.md
+        - DateInput: reference/components/dateinput.md
+        - Div: reference/components/div.md
+        - Marquee: reference/components/marquee.md
+        - MultiSelect: reference/components/multiselect.md
+        - NumberInput: reference/components/numberinput.md
+        - Option: reference/components/option.md
+        - RadioGroup: reference/components/radiogroup.md
+        - RangeInput: reference/components/rangeinput.md
+        - SearchInput: reference/components/searchinput.md
+        - SecretInput: reference/components/secretinput.md
+        - Select: reference/components/select.md
+        - SliderInput: reference/components/sliderinput.md
+        - TabGroup: reference/components/tabgroup.md
+        - TextArea: reference/components/textarea.md
+        - TextInput: reference/components/textinput.md
+        - TickerItem: reference/components/tickeritem.md
+        - Toggle: reference/components/toggle.md
+        - Toolbar: reference/components/toolbar.md
+        - ToolbarItem: reference/components/toolbaritem.md
     - Integrations:
       - Plotly: reference/plotly-config.md
       - Grid: reference/grid.md
