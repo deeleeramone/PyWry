@@ -219,6 +219,49 @@
       "version": "3.5.0"
     },
     {
+      "bom-ref": "altgraph==0.17.5",
+      "description": "Python graph (network) package",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata: Download-URL",
+          "type": "distribution",
+          "url": "http://pypi.python.org/pypi/altgraph"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://altgraph.readthedocs.io/en/latest/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Issue tracker",
+          "type": "issue-tracker",
+          "url": "https://github.com/ronaldoussoren/altgraph/issues"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/ronaldoussoren/altgraph"
+        },
+        {
+          "comment": "from packaging metadata: Home-page",
+          "type": "website",
+          "url": "https://altgraph.readthedocs.io"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "altgraph",
+      "purl": "pkg:pypi/altgraph@0.17.5",
+      "type": "library",
+      "version": "0.17.5"
+    },
+    {
       "bom-ref": "annotated-doc==0.0.4",
       "description": "Document parameters, class attributes, return types, and variables inline, with Annotated.",
       "externalReferences": [
@@ -1015,7 +1058,7 @@
       "version": "11.6.0"
     },
     {
-      "bom-ref": "cyclopts==4.5.4",
+      "bom-ref": "cyclopts==4.6.0",
       "description": "Intuitive, easy CLIs based on type hints.",
       "externalReferences": [
         {
@@ -1038,9 +1081,9 @@
         }
       ],
       "name": "cyclopts",
-      "purl": "pkg:pypi/cyclopts@4.5.4",
+      "purl": "pkg:pypi/cyclopts@4.6.0",
       "type": "library",
-      "version": "4.5.4"
+      "version": "4.6.0"
     },
     {
       "bom-ref": "debugpy==1.8.20",
@@ -1515,7 +1558,7 @@
       "version": "2.34.0"
     },
     {
-      "bom-ref": "fastapi==0.129.0",
+      "bom-ref": "fastapi==0.133.0",
       "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production",
       "externalReferences": [
         {
@@ -1553,9 +1596,9 @@
         }
       ],
       "name": "fastapi",
-      "purl": "pkg:pypi/fastapi@0.129.0",
+      "purl": "pkg:pypi/fastapi@0.133.0",
       "type": "library",
-      "version": "0.129.0"
+      "version": "0.133.0"
     },
     {
       "bom-ref": "fastmcp==2.14.5",
@@ -2254,7 +2297,7 @@
       "version": "4.26.0"
     },
     {
-      "bom-ref": "jsonschema-path==0.4.1",
+      "bom-ref": "jsonschema-path==0.4.2",
       "description": "JSONSchema Spec with object-oriented paths",
       "externalReferences": [
         {
@@ -2278,9 +2321,9 @@
         }
       ],
       "name": "jsonschema-path",
-      "purl": "pkg:pypi/jsonschema-path@0.4.1",
+      "purl": "pkg:pypi/jsonschema-path@0.4.2",
       "type": "library",
-      "version": "0.4.1"
+      "version": "0.4.2"
     },
     {
       "bom-ref": "jsonschema-specifications==2025.9.1",
@@ -2791,7 +2834,7 @@
       "version": "1.1.0"
     },
     {
-      "bom-ref": "narwhals==2.16.0",
+      "bom-ref": "narwhals==2.17.0",
       "description": "Extremely lightweight compatibility layer between dataframe libraries",
       "externalReferences": [
         {
@@ -2824,9 +2867,9 @@
         }
       ],
       "name": "narwhals",
-      "purl": "pkg:pypi/narwhals@2.16.0",
+      "purl": "pkg:pypi/narwhals@2.17.0",
       "type": "library",
-      "version": "2.16.0"
+      "version": "2.17.0"
     },
     {
       "bom-ref": "nest-asyncio==1.6.0",
@@ -3864,6 +3907,78 @@
       "version": "0.17.9"
     },
     {
+      "bom-ref": "pyinstaller==6.19.0",
+      "description": "PyInstaller bundles a Python application and all its dependencies into a single package.",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://pyinstaller.org"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Source Code",
+          "type": "other",
+          "url": "https://github.com/pyinstaller/pyinstaller"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Release Notes",
+          "type": "other",
+          "url": "https://pyinstaller.org/en/stable/CHANGES.html"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://pyinstaller.org"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "GPL-2.0-only"
+          }
+        }
+      ],
+      "name": "pyinstaller",
+      "purl": "pkg:pypi/pyinstaller@6.19.0",
+      "type": "library",
+      "version": "6.19.0"
+    },
+    {
+      "bom-ref": "pyinstaller-hooks-contrib==2026.1",
+      "description": "Community maintained hooks for PyInstaller",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata: Download-URL",
+          "type": "distribution",
+          "url": "https://pypi.org/project/pyinstaller-hooks-contrib"
+        },
+        {
+          "comment": "from packaging metadata: Home-page",
+          "type": "website",
+          "url": "https://github.com/pyinstaller/pyinstaller-hooks-contrib"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "GPL-2.0-only"
+          }
+        },
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "name": "License :: OSI Approved :: Apache Software License"
+          }
+        }
+      ],
+      "name": "pyinstaller-hooks-contrib",
+      "purl": "pkg:pypi/pyinstaller-hooks-contrib@2026.1",
+      "type": "library",
+      "version": "2026.1"
+    },
+    {
       "bom-ref": "pylint==4.0.5",
       "description": "python code static checker",
       "externalReferences": [
@@ -4758,6 +4873,39 @@
       "version": "1.3.7"
     },
     {
+      "bom-ref": "setuptools==82.0.0",
+      "description": "Easily download, build, install, upgrade, and uninstall Python packages",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://setuptools.pypa.io/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/pypa/setuptools"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://setuptools.pypa.io/en/stable/history.html"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "setuptools",
+      "purl": "pkg:pypi/setuptools@82.0.0",
+      "type": "library",
+      "version": "82.0.0"
+    },
+    {
       "bom-ref": "shellingham==1.5.4",
       "description": "Tool to Detect Surrounding Shell",
       "externalReferences": [
@@ -5055,7 +5203,7 @@
       "version": "5.14.3"
     },
     {
-      "bom-ref": "typer==0.24.0",
+      "bom-ref": "typer==0.24.1",
       "description": "Typer, build great CLIs. Easy to code. Based on Python type hints.",
       "externalReferences": [
         {
@@ -5093,9 +5241,9 @@
         }
       ],
       "name": "typer",
-      "purl": "pkg:pypi/typer@0.24.0",
+      "purl": "pkg:pypi/typer@0.24.1",
       "type": "library",
-      "version": "0.24.0"
+      "version": "0.24.1"
     },
     {
       "bom-ref": "typing-inspection==0.4.2",
@@ -5588,6 +5736,9 @@
       "ref": "SecretStorage==3.5.0"
     },
     {
+      "ref": "altgraph==0.17.5"
+    },
+    {
       "ref": "annotated-doc==0.0.4"
     },
     {
@@ -5645,9 +5796,11 @@
         "fastmcp==2.14.5",
         "mypy==1.19.1",
         "numpy==2.4.2",
+        "pyinstaller==6.19.0",
         "pytest==9.0.2",
         "redis==7.2.0",
-        "typer==0.24.0",
+        "setuptools==82.0.0",
+        "typer==0.24.1",
         "typing_extensions==4.15.0"
       ],
       "ref": "beartype==0.22.9"
@@ -5742,7 +5895,7 @@
         "rich==14.3.3",
         "typing_extensions==4.15.0"
       ],
-      "ref": "cyclopts==4.5.4"
+      "ref": "cyclopts==4.6.0"
     },
     {
       "ref": "debugpy==1.8.20"
@@ -5836,16 +5989,16 @@
         "typing_extensions==4.15.0",
         "uvicorn==0.41.0"
       ],
-      "ref": "fastapi==0.129.0"
+      "ref": "fastapi==0.133.0"
     },
     {
       "dependsOn": [
         "Authlib==1.6.8",
-        "cyclopts==4.5.4",
+        "cyclopts==4.6.0",
         "exceptiongroup==1.3.1",
         "httpx==0.28.1",
         "jsonref==1.1.0",
-        "jsonschema-path==0.4.1",
+        "jsonschema-path==0.4.2",
         "mcp==1.26.0",
         "openapi-pydantic==0.5.1",
         "packaging==26.0",
@@ -5947,6 +6100,7 @@
         "prompt_toolkit==3.0.52",
         "pytest-asyncio==1.3.0",
         "pytest==9.0.2",
+        "setuptools==82.0.0",
         "stack-data==0.6.3",
         "traitlets==5.14.3",
         "typing_extensions==4.15.0"
@@ -6044,7 +6198,7 @@
         "referencing==0.37.0",
         "requests==2.32.5"
       ],
-      "ref": "jsonschema-path==0.4.1"
+      "ref": "jsonschema-path==0.4.2"
     },
     {
       "dependsOn": [
@@ -6165,7 +6319,7 @@
         "rich==14.3.3",
         "sse-starlette==3.2.0",
         "starlette==0.52.1",
-        "typer==0.24.0",
+        "typer==0.24.1",
         "typing-inspection==0.4.2",
         "typing_extensions==4.15.0",
         "uvicorn==0.41.0",
@@ -6187,6 +6341,7 @@
         "pathspec==1.0.4",
         "pip==26.0",
         "psutil==7.2.2",
+        "setuptools==82.0.0",
         "typing_extensions==4.15.0"
       ],
       "ref": "mypy==1.19.1"
@@ -6200,7 +6355,7 @@
         "pandas==3.0.1",
         "rich==14.3.3"
       ],
-      "ref": "narwhals==2.16.0"
+      "ref": "narwhals==2.17.0"
     },
     {
       "ref": "nest-asyncio==1.6.0"
@@ -6225,7 +6380,8 @@
       "dependsOn": [
         "isort==8.0.0",
         "mypy==1.19.1",
-        "pytest==9.0.2"
+        "pytest==9.0.2",
+        "setuptools==82.0.0"
       ],
       "ref": "packageurl-python==0.17.6"
     },
@@ -6299,7 +6455,7 @@
     {
       "dependsOn": [
         "anywidget==0.9.21",
-        "narwhals==2.16.0",
+        "narwhals==2.17.0",
         "numpy==2.4.2",
         "packaging==26.0",
         "pandas==3.0.1",
@@ -6332,7 +6488,8 @@
         "pylint==4.0.5",
         "pytest==9.0.2",
         "requests==2.32.5",
-        "ruff==0.15.2"
+        "ruff==0.15.2",
+        "setuptools==82.0.0"
       ],
       "ref": "psutil==7.2.2"
     },
@@ -6422,11 +6579,31 @@
         "python-json-logger==4.0.0",
         "redis==7.2.0",
         "rich==14.3.3",
-        "typer==0.24.0",
+        "typer==0.24.1",
         "typing_extensions==4.15.0",
         "tzdata==2025.3"
       ],
       "ref": "pydocket==0.17.9"
+    },
+    {
+      "dependsOn": [
+        "importlib_metadata==8.7.1",
+        "packaging==26.0",
+        "setuptools==82.0.0"
+      ],
+      "ref": "pyinstaller-hooks-contrib==2026.1"
+    },
+    {
+      "dependsOn": [
+        "altgraph==0.17.5",
+        "importlib_metadata==8.7.1",
+        "packaging==26.0",
+        "psutil==7.2.2",
+        "pyinstaller-hooks-contrib==2026.1",
+        "pytest==9.0.2",
+        "setuptools==82.0.0"
+      ],
+      "ref": "pyinstaller==6.19.0"
     },
     {
       "dependsOn": [
@@ -6484,7 +6661,8 @@
         "iniconfig==2.3.0",
         "packaging==26.0",
         "pluggy==1.6.0",
-        "requests==2.32.5"
+        "requests==2.32.5",
+        "setuptools==82.0.0"
       ],
       "ref": "pytest==9.0.2"
     },
@@ -6587,7 +6765,7 @@
         "anywidget==0.9.21",
         "cryptography==46.0.5",
         "fakeredis==2.34.0",
-        "fastapi==0.129.0",
+        "fastapi==0.133.0",
         "fastmcp==2.14.5",
         "httpx==0.28.1",
         "ipykernel==7.2.0",
@@ -6597,6 +6775,7 @@
         "plotly==6.5.2",
         "pydantic-settings==2.13.1",
         "pydantic==2.12.5",
+        "pyinstaller==6.19.0",
         "pylint==4.0.5",
         "pytauri-wheel==0.8.0",
         "pytauri==0.8.0",
@@ -6627,6 +6806,21 @@
       "ref": "setproctitle==1.3.7"
     },
     {
+      "dependsOn": [
+        "importlib_metadata==8.7.1",
+        "jaraco.functools==4.4.0",
+        "more-itertools==10.8.0",
+        "mypy==1.19.1",
+        "packaging==26.0",
+        "pip==26.0",
+        "platformdirs==4.9.2",
+        "pytest-timeout==2.4.0",
+        "pytest==9.0.2",
+        "ruff==0.15.2"
+      ],
+      "ref": "setuptools==82.0.0"
+    },
+    {
       "ref": "shellingham==1.5.4"
     },
     {
@@ -6638,7 +6832,7 @@
     {
       "dependsOn": [
         "anyio==4.12.1",
-        "fastapi==0.129.0",
+        "fastapi==0.133.0",
         "starlette==0.52.1",
         "uvicorn==0.41.0"
       ],
@@ -6698,7 +6892,7 @@
         "rich==14.3.3",
         "shellingham==1.5.4"
       ],
-      "ref": "typer==0.24.0"
+      "ref": "typer==0.24.1"
     },
     {
       "dependsOn": [
@@ -6752,7 +6946,8 @@
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.2",
+        "setuptools==82.0.0"
       ],
       "ref": "wrapt==2.1.1"
     },
@@ -6798,7 +6993,7 @@
       "type": "application",
       "version": "2.0.0"
     },
-    "timestamp": "2026-02-21T05:43:18.514009+00:00",
+    "timestamp": "2026-02-24T21:58:17.777820+00:00",
     "tools": {
       "components": [
         {
@@ -6902,7 +7097,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:9457dd5c-f104-4e19-809d-9299c17dc507",
+  "serialNumber": "urn:uuid:3b14273e-0c61-436d-931a-79f17b63610b",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
