@@ -4,6 +4,18 @@ This package provides a simple API for displaying HTML content in native
 windows with support for Plotly.js, AG Grid, and custom event handling.
 """
 
+# Frozen-executable subprocess interception — MUST run before any other
+# pywry import.  In a frozen distributable (PyInstaller / Nuitka / cx_Freeze),
+# when the parent process spawns itself as the Tauri subprocess, this call
+# enters the Tauri event loop and exits immediately so the developer's
+# application code never runs a second time.  It is a complete no-op in
+# every other situation (normal Python, frozen parent process, etc.).
+from ._freeze import freeze_support
+
+
+freeze_support()
+
+# pylint: disable=wrong-import-position
 # Inline notebook module - import functions directly
 from . import inline
 from .app import PyWry
@@ -174,6 +186,7 @@ __all__ = [
     "block",
     "build_grid_config",
     "detect_notebook_environment",
+    "freeze_support",
     "get_asset_loader",
     "get_lifecycle",
     "get_registry",
