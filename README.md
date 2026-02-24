@@ -4,7 +4,7 @@
 
 </div>
 
-PyWry is a cross-platform rendering engine and desktop UI toolkit for Python. One API, three output targets:
+PyWry is a cross-platform rendering engine and GUI toolkit for Python. One API, three output targets:
 
 - **Native window** — OS webview via [PyTauri](https://pypi.org/project/pytauri/). Not Qt, not Electron.
 - **Jupyter widget** — anywidget or FastAPI + WebSocket, works in JupyterLab and notebook environments.
