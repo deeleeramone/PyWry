@@ -16,7 +16,7 @@ PyInstaller build.  Handles:
 
 from __future__ import annotations
 
-from PyInstaller.utils.hooks import (  # pylint: disable=import-error
+from PyInstaller.utils.hooks import (  # type: ignore[import-untyped]  # pylint: disable=import-error
     collect_data_files,
     collect_dynamic_libs,
     collect_submodules,
