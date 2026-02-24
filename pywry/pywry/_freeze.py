@@ -10,7 +10,9 @@ This module solves that by:
 1. Detecting frozen environments (``sys.frozen`` is set by all major freezers).
 2. Providing ``get_subprocess_command()`` so ``runtime.start()`` spawns the
    frozen executable *itself* with ``PYWRY_IS_SUBPROCESS=1`` in the env.
-3. Providing ``freeze_support()`` which, when called at import time from
+3. Pre-registering the pytauri native extension module to bypass entry-point
+   discovery (which fails when ``.dist-info`` metadata is absent).
+4. Providing ``freeze_support()`` which, when called at import time from
    ``pywry/__init__.py``, intercepts the child process and routes it directly
    to the Tauri event loop — preventing the developer's application code
    from executing a second time in the subprocess.
@@ -30,6 +32,7 @@ optionally call ``freeze_support()`` at the very top of their entry point::
 
 from __future__ import annotations
 
+import importlib
 import os
 import sys
 
@@ -64,6 +67,41 @@ def get_subprocess_command() -> list[str]:
     return [sys.executable, "-u", "-m", "pywry"]
 
 
+def _setup_pytauri_standalone() -> None:
+    """Pre-register the pytauri native extension module.
+
+    In frozen builds, package entry-point metadata (``.dist-info/entry_points.txt``)
+    may not be preserved.  ``pytauri`` discovers its native Rust extension via
+    ``importlib_metadata.entry_points(group="pytauri", name="ext_mod")``, which
+    fails when the metadata is absent.
+
+    This function directly imports the extension module and registers it
+    using pytauri's built-in standalone mechanism (``sys._pytauri_standalone``),
+    bypassing entry-point discovery entirely.
+
+    Must be called **before** any ``import pytauri`` statement.
+    """
+    if getattr(sys, "_pytauri_standalone", False):
+        return  # Already set up
+
+    ext_mod = None
+    for mod_name in (
+        "pywry._vendor.pytauri_wheel.ext_mod",
+        "pytauri_wheel.ext_mod",
+    ):
+        try:
+            ext_mod = importlib.import_module(mod_name)
+            break
+        except ImportError:
+            continue
+
+    if ext_mod is None:
+        return  # Can't find it; let the normal entry-point path try
+
+    sys.modules["__pytauri_ext_mod__"] = ext_mod
+    sys._pytauri_standalone = True  # type: ignore[attr-defined]
+
+
 def freeze_support() -> None:
     """Handle subprocess re-entry in frozen executables.
 
@@ -81,6 +119,11 @@ def freeze_support() -> None:
     """
     if not is_frozen():
         return
+
+    # Pre-register pytauri's native extension to bypass entry-point
+    # discovery, which fails in frozen builds when .dist-info metadata
+    # is not preserved.  This must run BEFORE any ``import pytauri``.
+    _setup_pytauri_standalone()
 
     if os.environ.get("PYWRY_IS_SUBPROCESS") != "1":
         return

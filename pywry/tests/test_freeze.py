@@ -6,11 +6,17 @@ import inspect
 import sys
 import types
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from pywry._freeze import freeze_support, get_subprocess_command, is_frozen
+from pywry._freeze import (
+    _setup_pytauri_standalone,
+    freeze_support,
+    get_subprocess_command,
+    is_frozen,
+)
 
 
 def _make_fake_main_module(return_code: int = 0) -> types.ModuleType:
@@ -147,3 +153,100 @@ class TestRuntimeIntegration:
 
         source = inspect.getsource(runtime.start)
         assert "PYWRY_IS_SUBPROCESS" in source
+
+
+# ── pytauri standalone setup ──────────────────────────────────────────
+
+
+class TestPytauriStandaloneSetup:
+    """Verify that _setup_pytauri_standalone bypasses entry-point discovery."""
+
+    def test_registers_ext_mod_in_sys_modules(self) -> None:
+        """Must place the native module in sys.modules['__pytauri_ext_mod__']."""
+        # Clean up any previous state
+        old_standalone = getattr(sys, "_pytauri_standalone", None)
+        old_mod = sys.modules.pop("__pytauri_ext_mod__", None)
+        try:
+            if hasattr(sys, "_pytauri_standalone"):
+                del sys._pytauri_standalone
+            _setup_pytauri_standalone()
+            assert getattr(sys, "_pytauri_standalone", False) is True
+            assert "__pytauri_ext_mod__" in sys.modules
+        finally:
+            # Restore original state
+            if old_standalone is not None:
+                sys._pytauri_standalone = old_standalone  # type: ignore[attr-defined]
+            elif hasattr(sys, "_pytauri_standalone"):
+                del sys._pytauri_standalone
+            if old_mod is not None:
+                sys.modules["__pytauri_ext_mod__"] = old_mod
+            else:
+                sys.modules.pop("__pytauri_ext_mod__", None)
+
+    def test_idempotent(self) -> None:
+        """Calling _setup_pytauri_standalone twice must not fail."""
+        old_standalone = getattr(sys, "_pytauri_standalone", None)
+        old_mod = sys.modules.pop("__pytauri_ext_mod__", None)
+        try:
+            if hasattr(sys, "_pytauri_standalone"):
+                del sys._pytauri_standalone
+            _setup_pytauri_standalone()
+            _setup_pytauri_standalone()  # second call should be idempotent
+            assert getattr(sys, "_pytauri_standalone", False) is True
+        finally:
+            if old_standalone is not None:
+                sys._pytauri_standalone = old_standalone  # type: ignore[attr-defined]
+            elif hasattr(sys, "_pytauri_standalone"):
+                del sys._pytauri_standalone
+            if old_mod is not None:
+                sys.modules["__pytauri_ext_mod__"] = old_mod
+            else:
+                sys.modules.pop("__pytauri_ext_mod__", None)
+
+    def test_freeze_support_calls_setup_in_frozen_mode(self) -> None:
+        """freeze_support() must call _setup_pytauri_standalone when frozen."""
+        source = inspect.getsource(freeze_support)
+        assert "_setup_pytauri_standalone" in source
+
+
+# ── PyInstaller hook validation ───────────────────────────────────────
+
+
+class TestPyInstallerHook:
+    """Verify that the PyInstaller hook captures all required assets."""
+
+    def test_hook_dirs_returns_valid_path(self) -> None:
+        """get_hook_dirs() must return a list with the hook directory."""
+        from pywry._pyinstaller_hook import get_hook_dirs
+
+        dirs = get_hook_dirs()
+        assert len(dirs) == 1
+        hook_dir = Path(dirs[0])
+        assert hook_dir.is_dir()
+        assert (hook_dir / "hook-pywry.py").is_file()
+
+    def test_hook_collects_data_files(self) -> None:
+        """The hook must collect Tauri.toml, frontend/, capabilities/."""
+        from PyInstaller.utils.hooks import collect_data_files
+
+        datas = collect_data_files("pywry")
+        src_files = {src for src, _ in datas}
+        # Must include Tauri.toml and index.html at minimum
+        assert any("Tauri.toml" in f for f in src_files)
+        assert any("index.html" in f for f in src_files)
+        assert any("default.toml" in f for f in src_files)
+
+    def test_hook_includes_native_ext_mod(self) -> None:
+        """hiddenimports must include pytauri_wheel.ext_mod (the .pyd)."""
+        from PyInstaller.utils.hooks import collect_submodules
+
+        # The hook uses collect_submodules which should find ext_mod
+        submodules = collect_submodules("pytauri_wheel")
+        assert "pytauri_wheel.ext_mod" in submodules
+
+    def test_hook_includes_importlib_metadata(self) -> None:
+        """importlib_metadata must be a hidden import (used by pytauri)."""
+        # Read the hook source and verify importlib_metadata is listed
+        hook_path = Path(__file__).parent.parent / "pywry" / "_pyinstaller_hook" / "hook-pywry.py"
+        source = hook_path.read_text(encoding="utf-8")
+        assert "importlib_metadata" in source
