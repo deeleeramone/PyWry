@@ -43,6 +43,9 @@ dependencies = [
 [project.scripts]
 pywry = "pywry.cli:main"
 
+[project.entry-points."pyinstaller40"]
+hook-dirs = "pywry._pyinstaller_hook:get_hook_dirs"
+
 [project.optional-dependencies]
 dev = [
     "pytauri-wheel>=0.8.0",
@@ -77,6 +80,9 @@ all = [
     "ipykernel>=7.2.0",
     "keyring>=24.0",
 ]
+freeze = [
+    "pyinstaller>=6.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/deeleeramone/PyWry"
@@ -110,5 +116,5 @@ warn_unused_configs = true
 exclude = ["tests/"]
 
 [[tool.mypy.overrides]]
-module = ["plotly.*", "anywidget", "anywidget.*", "ipywidgets", "ipywidgets.*"]
+module = ["plotly.*", "anywidget", "anywidget.*", "ipywidgets", "ipywidgets.*", "pyinstaller", "pyinstaller.*"]
 ignore_missing_imports = true
