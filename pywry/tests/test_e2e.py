@@ -4,10 +4,6 @@
 
 import time
 
-from collections.abc import Callable
-from functools import wraps
-from typing import Any, TypeVar
-
 from pywry.app import PyWry
 from pywry.callbacks import get_registry
 from pywry.models import HtmlContent, ThemeMode, WindowMode
@@ -24,36 +20,6 @@ from tests.conftest import (
 
 # Note: cleanup_runtime fixture is now in conftest.py and auto-used
 # Class-scoped fixtures (dark_app, light_app) prevent subprocess race conditions
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Callable[[F], F]:
-    """Retry decorator for tests that may fail due to transient subprocess issues.
-
-    On Windows, WebView2 sometimes fails to start due to resource contention
-    ("Failed to unregister class Chrome_WidgetWin_0"). On Linux with xvfb,
-    WebKit initialization may have timing issues. This decorator retries
-    the test after a delay to allow resources to be released.
-    """
-
-    def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_error: Exception | None = None
-            for attempt in range(max_attempts):
-                try:
-                    return func(*args, **kwargs)
-                except (TimeoutError, AssertionError) as e:
-                    last_error = e
-                    if attempt < max_attempts - 1:
-                        # Progressive backoff for CI stability
-                        time.sleep(delay * (attempt + 1))
-            raise last_error  # type: ignore[misc]
-
-        return wrapper  # type: ignore[return-value]
-
-    return decorator
 
 
 # pylint: disable=unsubscriptable-object
@@ -216,7 +182,6 @@ class TestDarkThemeCoordination:
     and prevent subprocess race conditions.
     """
 
-    @retry_on_subprocess_failure(max_attempts=3, delay=1.0)
     def test_dark_dataframe(self, dark_app):
         """DARK show_dataframe renders with DARK AG Grid theme."""
         data = [{"x": 1, "y": 10}, {"x": 2, "y": 15}]
@@ -228,7 +193,6 @@ class TestDarkThemeCoordination:
         assert result["hasGrid"], "AG Grid not found!"
         assert result["gridRowCount"] > 0, "No rows rendered!"
 
-    @retry_on_subprocess_failure(max_attempts=3, delay=1.0)
     def test_dark_plotly(self, dark_app):
         """DARK show_plotly renders with DARK template."""
         figure = {"data": [{"x": [1, 2, 3], "y": [10, 15, 13], "type": "scatter"}]}
@@ -248,7 +212,6 @@ class TestLightThemeCoordination:
     and prevent subprocess race conditions.
     """
 
-    @retry_on_subprocess_failure(max_attempts=3, delay=1.0)
     def test_light_dataframe(self, light_app):
         """LIGHT show_dataframe renders with LIGHT AG Grid theme."""
         data = [{"x": 1, "y": 10}, {"x": 2, "y": 15}]
@@ -261,7 +224,6 @@ class TestLightThemeCoordination:
         assert result["hasGrid"], "AG Grid not found!"
         assert result["gridRowCount"] > 0, "No rows rendered!"
 
-    @retry_on_subprocess_failure(max_attempts=3, delay=1.0)
     def test_light_plotly(self, light_app):
         """LIGHT show_plotly renders with LIGHT template."""
         figure = {"data": [{"x": [1, 2, 3], "y": [10, 15, 13], "type": "bar"}]}
