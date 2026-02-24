@@ -14,11 +14,13 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from tests.constants import (
+    DEFAULT_RETRIES,
     DEFAULT_TIMEOUT,
     JS_RESULT_RETRIES,
     REDIS_ALPINE_IMAGE,
     REDIS_IMAGE,
     REDIS_TEST_TTL,
+    RETRY_DELAY,
     SHORT_TIMEOUT,
 )
 
@@ -179,11 +181,13 @@ def show_and_wait_ready(
     app: Any,
     content: Any,
     timeout: float = DEFAULT_TIMEOUT,
+    retries: int = DEFAULT_RETRIES,
     **kwargs: Any,
 ) -> str:
     """Show content and wait for window to be ready.
 
     This registers the ready callback BEFORE calling show() to avoid race conditions.
+    Retries on transient subprocess/timeout failures for CI stability.
 
     Parameters
     ----------
@@ -193,6 +197,8 @@ def show_and_wait_ready(
         HTML content to display.
     timeout : float
         Maximum time to wait for window ready.
+    retries : int
+        Number of retry attempts on transient failures.
     **kwargs
         Additional arguments passed to app.show().
 
@@ -206,59 +212,79 @@ def show_and_wait_ready(
     TimeoutError
         If window doesn't become ready within timeout.
     """
-    waiter = ReadyWaiter(timeout=timeout)
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        waiter = ReadyWaiter(timeout=timeout)
 
-    # Merge callbacks if provided
-    callbacks = kwargs.pop("callbacks", {}) or {}
-    callbacks["pywry:ready"] = waiter.on_ready
+        # Merge callbacks if provided
+        cb = (kwargs.pop("callbacks", {}) or {}).copy()
+        cb["pywry:ready"] = waiter.on_ready
 
-    widget = app.show(content, callbacks=callbacks, **kwargs)
-    label = widget.label if hasattr(widget, "label") else str(widget)
+        widget = app.show(content, callbacks=cb, **kwargs)
+        label = widget.label if hasattr(widget, "label") else str(widget)
 
-    if not waiter.wait():
-        raise TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
+        if waiter.wait():
+            return label
 
-    return label
+        last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
+        if attempt < retries - 1:
+            time.sleep(RETRY_DELAY * (attempt + 1))
+
+    raise last_error  # type: ignore[misc]
 
 
 def show_plotly_and_wait_ready(
     app: Any,
     figure: Any,
     timeout: float = DEFAULT_TIMEOUT,
+    retries: int = DEFAULT_RETRIES,
     **kwargs: Any,
 ) -> str:
     """Show Plotly figure and wait for window to be ready."""
-    waiter = ReadyWaiter(timeout=timeout)
-    callbacks = kwargs.pop("callbacks", {}) or {}
-    callbacks["pywry:ready"] = waiter.on_ready
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        waiter = ReadyWaiter(timeout=timeout)
+        cb = (kwargs.pop("callbacks", {}) or {}).copy()
+        cb["pywry:ready"] = waiter.on_ready
 
-    widget = app.show_plotly(figure, callbacks=callbacks, **kwargs)
-    label = widget.label if hasattr(widget, "label") else str(widget)
+        widget = app.show_plotly(figure, callbacks=cb, **kwargs)
+        label = widget.label if hasattr(widget, "label") else str(widget)
 
-    if not waiter.wait():
-        raise TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
+        if waiter.wait():
+            return label
 
-    return label
+        last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
+        if attempt < retries - 1:
+            time.sleep(RETRY_DELAY * (attempt + 1))
+
+    raise last_error  # type: ignore[misc]
 
 
 def show_dataframe_and_wait_ready(
     app: Any,
     data: Any,
     timeout: float = DEFAULT_TIMEOUT,
+    retries: int = DEFAULT_RETRIES,
     **kwargs: Any,
 ) -> str:
     """Show DataFrame and wait for window to be ready."""
-    waiter = ReadyWaiter(timeout=timeout)
-    callbacks = kwargs.pop("callbacks", {}) or {}
-    callbacks["pywry:ready"] = waiter.on_ready
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        waiter = ReadyWaiter(timeout=timeout)
+        cb = (kwargs.pop("callbacks", {}) or {}).copy()
+        cb["pywry:ready"] = waiter.on_ready
 
-    widget = app.show_dataframe(data, callbacks=callbacks, **kwargs)
-    label = widget.label if hasattr(widget, "label") else str(widget)
+        widget = app.show_dataframe(data, callbacks=cb, **kwargs)
+        label = widget.label if hasattr(widget, "label") else str(widget)
 
-    if not waiter.wait():
-        raise TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
+        if waiter.wait():
+            return label
 
-    return label
+        last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
+        if attempt < retries - 1:
+            time.sleep(RETRY_DELAY * (attempt + 1))
+
+    raise last_error  # type: ignore[misc]
 
 
 def wait_for_result(
