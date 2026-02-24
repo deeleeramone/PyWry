@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:01236cfe-43eb-4178-bea9-19bcc66fa3e8" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:c44a0396-5e15-4adb-b9db-2faa287ae794" version="1">
   <metadata>
-    <timestamp>2026-02-21T05:43:17.641479+00:00</timestamp>
+    <timestamp>2026-02-24T21:58:16.954055+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
@@ -265,6 +265,39 @@
         <reference type="website">
           <url>https://github.com/mitya57/secretstorage</url>
           <comment>from packaging metadata Project-URL: Homepage</comment>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="altgraph==0.17.5">
+      <name>altgraph</name>
+      <version>0.17.5</version>
+      <description>Python graph (network) package</description>
+      <licenses>
+        <license acknowledgement="declared">
+          <id>MIT</id>
+        </license>
+      </licenses>
+      <purl>pkg:pypi/altgraph@0.17.5</purl>
+      <externalReferences>
+        <reference type="distribution">
+          <url>http://pypi.python.org/pypi/altgraph</url>
+          <comment>from packaging metadata: Download-URL</comment>
+        </reference>
+        <reference type="documentation">
+          <url>https://altgraph.readthedocs.io/en/latest/</url>
+          <comment>from packaging metadata Project-URL: Documentation</comment>
+        </reference>
+        <reference type="issue-tracker">
+          <url>https://github.com/ronaldoussoren/altgraph/issues</url>
+          <comment>from packaging metadata Project-URL: Issue tracker</comment>
+        </reference>
+        <reference type="vcs">
+          <url>https://github.com/ronaldoussoren/altgraph</url>
+          <comment>from packaging metadata Project-URL: Repository</comment>
+        </reference>
+        <reference type="website">
+          <url>https://altgraph.readthedocs.io</url>
+          <comment>from packaging metadata: Home-page</comment>
         </reference>
       </externalReferences>
     </component>
@@ -866,16 +899,16 @@
         <property name="cdx:python:package:required-extra">validation</property>
       </properties>
     </component>
-    <component type="library" bom-ref="cyclopts==4.5.4">
+    <component type="library" bom-ref="cyclopts==4.6.0">
       <name>cyclopts</name>
-      <version>4.5.4</version>
+      <version>4.6.0</version>
       <description>Intuitive, easy CLIs based on type hints.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>Apache-2.0</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/cyclopts@4.5.4</purl>
+      <purl>pkg:pypi/cyclopts@4.6.0</purl>
       <externalReferences>
         <reference type="vcs">
           <url>https://github.com/BrianPugh/cyclopts</url>
@@ -1237,16 +1270,16 @@
         <property name="cdx:python:package:required-extra">lua</property>
       </properties>
     </component>
-    <component type="library" bom-ref="fastapi==0.129.0">
+    <component type="library" bom-ref="fastapi==0.133.0">
       <name>fastapi</name>
-      <version>0.129.0</version>
+      <version>0.133.0</version>
       <description>FastAPI framework, high performance, easy to learn, fast to code, ready for production</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/fastapi@0.129.0</purl>
+      <purl>pkg:pypi/fastapi@0.133.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://fastapi.tiangolo.com/</url>
@@ -1791,9 +1824,9 @@
         <property name="cdx:python:package:required-extra">format-nongpl</property>
       </properties>
     </component>
-    <component type="library" bom-ref="jsonschema-path==0.4.1">
+    <component type="library" bom-ref="jsonschema-path==0.4.2">
       <name>jsonschema-path</name>
-      <version>0.4.1</version>
+      <version>0.4.2</version>
       <description>JSONSchema Spec with object-oriented paths</description>
       <licenses>
         <license acknowledgement="declared">
@@ -1803,7 +1836,7 @@
           <name>License :: OSI Approved :: Apache Software License</name>
         </license>
       </licenses>
-      <purl>pkg:pypi/jsonschema-path@0.4.1</purl>
+      <purl>pkg:pypi/jsonschema-path@0.4.2</purl>
       <externalReferences>
         <reference type="vcs">
           <url>https://github.com/p1c2u/jsonschema-path</url>
@@ -2195,16 +2228,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="narwhals==2.16.0">
+    <component type="library" bom-ref="narwhals==2.17.0">
       <name>narwhals</name>
-      <version>2.16.0</version>
+      <version>2.17.0</version>
       <description>Extremely lightweight compatibility layer between dataframe libraries</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/narwhals@2.16.0</purl>
+      <purl>pkg:pypi/narwhals@2.17.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://narwhals-dev.github.io/narwhals/</url>
@@ -2991,6 +3024,59 @@
         </reference>
       </externalReferences>
     </component>
+    <component type="library" bom-ref="pyinstaller==6.19.0">
+      <name>pyinstaller</name>
+      <version>6.19.0</version>
+      <description>PyInstaller bundles a Python application and all its dependencies into a single package.</description>
+      <licenses>
+        <license acknowledgement="declared">
+          <id>GPL-2.0-only</id>
+        </license>
+      </licenses>
+      <purl>pkg:pypi/pyinstaller@6.19.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://pyinstaller.org</url>
+          <comment>from packaging metadata Project-URL: Documentation</comment>
+        </reference>
+        <reference type="other">
+          <url>https://github.com/pyinstaller/pyinstaller</url>
+          <comment>from packaging metadata Project-URL: Source Code</comment>
+        </reference>
+        <reference type="other">
+          <url>https://pyinstaller.org/en/stable/CHANGES.html</url>
+          <comment>from packaging metadata Project-URL: Release Notes</comment>
+        </reference>
+        <reference type="website">
+          <url>https://pyinstaller.org</url>
+          <comment>from packaging metadata Project-URL: Homepage</comment>
+        </reference>
+      </externalReferences>
+    </component>
+    <component type="library" bom-ref="pyinstaller-hooks-contrib==2026.1">
+      <name>pyinstaller-hooks-contrib</name>
+      <version>2026.1</version>
+      <description>Community maintained hooks for PyInstaller</description>
+      <licenses>
+        <license acknowledgement="declared">
+          <id>GPL-2.0-only</id>
+        </license>
+        <license acknowledgement="declared">
+          <name>License :: OSI Approved :: Apache Software License</name>
+        </license>
+      </licenses>
+      <purl>pkg:pypi/pyinstaller-hooks-contrib@2026.1</purl>
+      <externalReferences>
+        <reference type="distribution">
+          <url>https://pypi.org/project/pyinstaller-hooks-contrib</url>
+          <comment>from packaging metadata: Download-URL</comment>
+        </reference>
+        <reference type="website">
+          <url>https://github.com/pyinstaller/pyinstaller-hooks-contrib</url>
+          <comment>from packaging metadata: Home-page</comment>
+        </reference>
+      </externalReferences>
+    </component>
     <component type="library" bom-ref="pylint==4.0.5">
       <name>pylint</name>
       <version>4.0.5</version>
@@ -3664,6 +3750,31 @@
         </reference>
       </externalReferences>
     </component>
+    <component type="library" bom-ref="setuptools==82.0.0">
+      <name>setuptools</name>
+      <version>82.0.0</version>
+      <description>Easily download, build, install, upgrade, and uninstall Python packages</description>
+      <licenses>
+        <license acknowledgement="declared">
+          <id>MIT</id>
+        </license>
+      </licenses>
+      <purl>pkg:pypi/setuptools@82.0.0</purl>
+      <externalReferences>
+        <reference type="documentation">
+          <url>https://setuptools.pypa.io/</url>
+          <comment>from packaging metadata Project-URL: Documentation</comment>
+        </reference>
+        <reference type="other">
+          <url>https://github.com/pypa/setuptools</url>
+          <comment>from packaging metadata Project-URL: Source</comment>
+        </reference>
+        <reference type="release-notes">
+          <url>https://setuptools.pypa.io/en/stable/history.html</url>
+          <comment>from packaging metadata Project-URL: Changelog</comment>
+        </reference>
+      </externalReferences>
+    </component>
     <component type="library" bom-ref="shellingham==1.5.4">
       <name>shellingham</name>
       <version>1.5.4</version>
@@ -3884,16 +3995,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="typer==0.24.0">
+    <component type="library" bom-ref="typer==0.24.1">
       <name>typer</name>
-      <version>0.24.0</version>
+      <version>0.24.1</version>
       <description>Typer, build great CLIs. Easy to code. Based on Python type hints.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/typer@0.24.0</purl>
+      <purl>pkg:pypi/typer@0.24.1</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://typer.tiangolo.com</url>
@@ -4278,6 +4389,7 @@
       <dependency ref="cryptography==46.0.5"/>
       <dependency ref="jeepney==0.9.0"/>
     </dependency>
+    <dependency ref="altgraph==0.17.5"/>
     <dependency ref="annotated-doc==0.0.4"/>
     <dependency ref="annotated-types==0.7.0">
       <dependency ref="typing_extensions==4.15.0"/>
@@ -4313,9 +4425,11 @@
       <dependency ref="fastmcp==2.14.5"/>
       <dependency ref="mypy==1.19.1"/>
       <dependency ref="numpy==2.4.2"/>
+      <dependency ref="pyinstaller==6.19.0"/>
       <dependency ref="pytest==9.0.2"/>
       <dependency ref="redis==7.2.0"/>
-      <dependency ref="typer==0.24.0"/>
+      <dependency ref="setuptools==82.0.0"/>
+      <dependency ref="typer==0.24.1"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="boolean.py==5.0">
@@ -4364,7 +4478,7 @@
       <dependency ref="sortedcontainers==2.4.0"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="cyclopts==4.5.4">
+    <dependency ref="cyclopts==4.6.0">
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="attrs==25.4.0"/>
       <dependency ref="docstring_parser==0.17.0"/>
@@ -4419,7 +4533,7 @@
       <dependency ref="sortedcontainers==2.4.0"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="fastapi==0.129.0">
+    <dependency ref="fastapi==0.133.0">
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="annotated-doc==0.0.4"/>
       <dependency ref="email-validator==2.3.0"/>
@@ -4434,11 +4548,11 @@
     </dependency>
     <dependency ref="fastmcp==2.14.5">
       <dependency ref="Authlib==1.6.8"/>
-      <dependency ref="cyclopts==4.5.4"/>
+      <dependency ref="cyclopts==4.6.0"/>
       <dependency ref="exceptiongroup==1.3.1"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="jsonref==1.1.0"/>
-      <dependency ref="jsonschema-path==0.4.1"/>
+      <dependency ref="jsonschema-path==0.4.2"/>
       <dependency ref="mcp==1.26.0"/>
       <dependency ref="openapi-pydantic==0.5.1"/>
       <dependency ref="packaging==26.0"/>
@@ -4514,6 +4628,7 @@
       <dependency ref="prompt_toolkit==3.0.52"/>
       <dependency ref="pytest-asyncio==1.3.0"/>
       <dependency ref="pytest==9.0.2"/>
+      <dependency ref="setuptools==82.0.0"/>
       <dependency ref="stack-data==0.6.3"/>
       <dependency ref="traitlets==5.14.3"/>
       <dependency ref="typing_extensions==4.15.0"/>
@@ -4572,7 +4687,7 @@
     </dependency>
     <dependency ref="jsonpointer==3.0.0"/>
     <dependency ref="jsonref==1.1.0"/>
-    <dependency ref="jsonschema-path==0.4.1">
+    <dependency ref="jsonschema-path==0.4.2">
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="pathable==0.5.0"/>
       <dependency ref="referencing==0.37.0"/>
@@ -4660,7 +4775,7 @@
       <dependency ref="rich==14.3.3"/>
       <dependency ref="sse-starlette==3.2.0"/>
       <dependency ref="starlette==0.52.1"/>
-      <dependency ref="typer==0.24.0"/>
+      <dependency ref="typer==0.24.1"/>
       <dependency ref="typing-inspection==0.4.2"/>
       <dependency ref="typing_extensions==4.15.0"/>
       <dependency ref="uvicorn==0.41.0"/>
@@ -4675,10 +4790,11 @@
       <dependency ref="pathspec==1.0.4"/>
       <dependency ref="pip==26.0"/>
       <dependency ref="psutil==7.2.2"/>
+      <dependency ref="setuptools==82.0.0"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="mypy_extensions==1.1.0"/>
-    <dependency ref="narwhals==2.16.0">
+    <dependency ref="narwhals==2.17.0">
       <dependency ref="packaging==26.0"/>
       <dependency ref="pandas==3.0.1"/>
       <dependency ref="rich==14.3.3"/>
@@ -4696,6 +4812,7 @@
       <dependency ref="isort==8.0.0"/>
       <dependency ref="mypy==1.19.1"/>
       <dependency ref="pytest==9.0.2"/>
+      <dependency ref="setuptools==82.0.0"/>
     </dependency>
     <dependency ref="packaging==26.0"/>
     <dependency ref="pandas==3.0.1">
@@ -4737,7 +4854,7 @@
     <dependency ref="platformdirs==4.9.2"/>
     <dependency ref="plotly==6.5.2">
       <dependency ref="anywidget==0.9.21"/>
-      <dependency ref="narwhals==2.16.0"/>
+      <dependency ref="narwhals==2.17.0"/>
       <dependency ref="numpy==2.4.2"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="pandas==3.0.1"/>
@@ -4760,6 +4877,7 @@
       <dependency ref="pytest==9.0.2"/>
       <dependency ref="requests==2.32.5"/>
       <dependency ref="ruff==0.15.2"/>
+      <dependency ref="setuptools==82.0.0"/>
     </dependency>
     <dependency ref="psygnal==0.15.1">
       <dependency ref="pydantic==2.12.5"/>
@@ -4818,9 +4936,23 @@
       <dependency ref="python-json-logger==4.0.0"/>
       <dependency ref="redis==7.2.0"/>
       <dependency ref="rich==14.3.3"/>
-      <dependency ref="typer==0.24.0"/>
+      <dependency ref="typer==0.24.1"/>
       <dependency ref="typing_extensions==4.15.0"/>
       <dependency ref="tzdata==2025.3"/>
+    </dependency>
+    <dependency ref="pyinstaller-hooks-contrib==2026.1">
+      <dependency ref="importlib_metadata==8.7.1"/>
+      <dependency ref="packaging==26.0"/>
+      <dependency ref="setuptools==82.0.0"/>
+    </dependency>
+    <dependency ref="pyinstaller==6.19.0">
+      <dependency ref="altgraph==0.17.5"/>
+      <dependency ref="importlib_metadata==8.7.1"/>
+      <dependency ref="packaging==26.0"/>
+      <dependency ref="psutil==7.2.2"/>
+      <dependency ref="pyinstaller-hooks-contrib==2026.1"/>
+      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="setuptools==82.0.0"/>
     </dependency>
     <dependency ref="pylint==4.0.5">
       <dependency ref="astroid==4.0.4"/>
@@ -4859,6 +4991,7 @@
       <dependency ref="packaging==26.0"/>
       <dependency ref="pluggy==1.6.0"/>
       <dependency ref="requests==2.32.5"/>
+      <dependency ref="setuptools==82.0.0"/>
     </dependency>
     <dependency ref="python-dateutil==2.9.0.post0">
       <dependency ref="six==1.17.0"/>
@@ -4919,7 +5052,7 @@
       <dependency ref="anywidget==0.9.21"/>
       <dependency ref="cryptography==46.0.5"/>
       <dependency ref="fakeredis==2.34.0"/>
-      <dependency ref="fastapi==0.129.0"/>
+      <dependency ref="fastapi==0.133.0"/>
       <dependency ref="fastmcp==2.14.5"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="ipykernel==7.2.0"/>
@@ -4929,6 +5062,7 @@
       <dependency ref="plotly==6.5.2"/>
       <dependency ref="pydantic-settings==2.13.1"/>
       <dependency ref="pydantic==2.12.5"/>
+      <dependency ref="pyinstaller==6.19.0"/>
       <dependency ref="pylint==4.0.5"/>
       <dependency ref="pytauri-wheel==0.8.0"/>
       <dependency ref="pytauri==0.8.0"/>
@@ -4949,12 +5083,24 @@
     <dependency ref="setproctitle==1.3.7">
       <dependency ref="pytest==9.0.2"/>
     </dependency>
+    <dependency ref="setuptools==82.0.0">
+      <dependency ref="importlib_metadata==8.7.1"/>
+      <dependency ref="jaraco.functools==4.4.0"/>
+      <dependency ref="more-itertools==10.8.0"/>
+      <dependency ref="mypy==1.19.1"/>
+      <dependency ref="packaging==26.0"/>
+      <dependency ref="pip==26.0"/>
+      <dependency ref="platformdirs==4.9.2"/>
+      <dependency ref="pytest-timeout==2.4.0"/>
+      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="ruff==0.15.2"/>
+    </dependency>
     <dependency ref="shellingham==1.5.4"/>
     <dependency ref="six==1.17.0"/>
     <dependency ref="sortedcontainers==2.4.0"/>
     <dependency ref="sse-starlette==3.2.0">
       <dependency ref="anyio==4.12.1"/>
-      <dependency ref="fastapi==0.129.0"/>
+      <dependency ref="fastapi==0.133.0"/>
       <dependency ref="starlette==0.52.1"/>
       <dependency ref="uvicorn==0.41.0"/>
     </dependency>
@@ -4989,7 +5135,7 @@
       <dependency ref="mypy==1.19.1"/>
       <dependency ref="pytest==9.0.2"/>
     </dependency>
-    <dependency ref="typer==0.24.0">
+    <dependency ref="typer==0.24.1">
       <dependency ref="annotated-doc==0.0.4"/>
       <dependency ref="click==8.3.1"/>
       <dependency ref="rich==14.3.3"/>
@@ -5021,6 +5167,7 @@
     <dependency ref="widgetsnbextension==4.0.15"/>
     <dependency ref="wrapt==2.1.1">
       <dependency ref="pytest==9.0.2"/>
+      <dependency ref="setuptools==82.0.0"/>
     </dependency>
     <dependency ref="zipp==3.23.0">
       <dependency ref="jaraco.functools==4.4.0"/>
