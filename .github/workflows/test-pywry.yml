@@ -103,6 +103,12 @@ jobs:
         if: runner.os == 'Linux'
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Set up Rust (Windows ARM64)
+        if: runner.os == 'Windows' && runner.arch == 'ARM64'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -128,6 +134,7 @@ jobs:
           echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=$opensslDir\lib" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=$opensslDir\include" >> $env:GITHUB_ENV
+          echo "$opensslDir\bin" >> $env:GITHUB_PATH
 
       - name: Setup build environment (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
@@ -143,6 +150,15 @@ jobs:
           echo "LUA_DIR=$luaDir" >> $env:GITHUB_ENV
           echo "LUA_LIB=$luaDir\lib" >> $env:GITHUB_ENV
           echo "LUA_INC=$luaDir\include" >> $env:GITHUB_ENV
+
+      - name: Rebuild cryptography for ARM64 (Windows ARM)
+        if: runner.os == 'Windows' && runner.arch == 'ARM64'
+        shell: pwsh
+        env:
+          CARGO_BUILD_TARGET: aarch64-pc-windows-msvc
+        run: |
+          pip install --no-binary cryptography cryptography
+          python -c "from cryptography.hazmat.bindings._rust import openssl; print('cryptography OK')"
 
       - name: Install dependencies
         run: |
