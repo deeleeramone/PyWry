@@ -157,7 +157,7 @@ jobs:
         env:
           CARGO_BUILD_TARGET: aarch64-pc-windows-msvc
         run: |
-          pip install --no-binary cryptography cryptography
+          pip install --no-cache-dir --no-binary=cryptography --force-reinstall cryptography
           python -c "from cryptography.hazmat.bindings._rust import openssl; print('cryptography OK')"
 
       - name: Install dependencies
