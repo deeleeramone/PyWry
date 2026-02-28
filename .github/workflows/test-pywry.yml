@@ -158,6 +158,11 @@ jobs:
           CARGO_BUILD_TARGET: aarch64-pc-windows-msvc
         run: |
           pip install --no-cache-dir --no-binary=cryptography --force-reinstall cryptography
+          $siteDir = python -c "import site; print(site.getsitepackages()[0])"
+          $bindingsDir = "$siteDir\cryptography\hazmat\bindings"
+          Copy-Item "$env:OPENSSL_DIR\bin\*.dll" "$bindingsDir\"
+          Write-Host "Copied OpenSSL DLLs to $bindingsDir"
+          Get-ChildItem "$bindingsDir\*.dll" | ForEach-Object { Write-Host "  $_" }
           python -c "from cryptography.hazmat.bindings._rust import openssl; print('cryptography OK')"
 
       - name: Install dependencies
