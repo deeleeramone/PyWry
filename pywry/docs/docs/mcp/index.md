@@ -74,9 +74,9 @@ The MCP server bridges AI agents and PyWry's rendering engine:
 ```mermaid
 flowchart LR
     A["AI Agent<br>(Claude, etc.)"] <-->|"MCP Protocol<br>(stdio / SSE)"| B["PyWry MCP Server"]
-    B --> C["Tools<br>25 widget operations"]
+    B --> C["Tools<br>29 widget operations"]
     B --> D["Resources<br>Docs, source, exports"]
-    B --> E["Skills<br>11 guidance prompts"]
+    B --> E["Skills<br>12 guidance prompts"]
     C --> F["PyWry Widgets<br>(native or browser)"]
     D --> B
     E --> B
@@ -104,9 +104,9 @@ In headless mode, `list_widgets` returns URLs like `http://127.0.0.1:PORT/widget
 
 The MCP server exposes three types of capabilities:
 
-### Tools (25)
+### Tools (29)
 
-Operations the agent can call — creating widgets, updating content, managing state. Organized into five groups:
+Operations the agent can call — creating widgets, updating content, managing state. Organized into six groups:
 
 | Group | Tools | Purpose |
 |:---|:---|:---|
@@ -115,6 +115,7 @@ Operations the agent can call — creating widgets, updating content, managing s
 | **Widget manipulation** | `set_content`, `set_style`, `show_toast`, `update_theme`, `inject_css`, `remove_css`, `navigate`, `download`, `update_plotly`, `update_marquee`, `update_ticker_item`, `send_event` | Modify existing widgets |
 | **Widget management** | `list_widgets`, `get_events`, `destroy_widget` | Track and clean up widgets |
 | **Resources & export** | `get_component_docs`, `get_component_source`, `export_widget`, `list_resources` | Documentation and code generation |
+| **Autonomous building** | `plan_widget`, `build_app`, `export_project`, `scaffold_app` | LLM-powered end-to-end app creation |
 
 ### Resources
 
@@ -132,7 +133,7 @@ Read-only data the agent can access via `pywry://` URIs:
 
 ### Prompts (Skills)
 
-11 guidance prompts that teach the agent how to use PyWry effectively:
+12 guidance prompts that teach the agent how to use PyWry effectively:
 
 | Skill | What it teaches |
 |:---|:---|
@@ -147,6 +148,7 @@ Read-only data the agent can access via `pywry://` URIs:
 | `data_visualization` | Plotly charts, AG Grid tables, live data patterns |
 | `forms_and_inputs` | Form building with validation and event collection |
 | `modals` | Modal dialogs — schema, sizes, open/close/reset |
+| `autonomous_building` | End-to-end app generation with `plan_widget`, `build_app`, `export_project`, `scaffold_app` |
 
 ## Next Steps
 

@@ -30,6 +30,7 @@ Skills are **lazy-loaded** from markdown files on disk and cached in memory (LRU
 | `data_visualization` | Medium | Plotly charts, AG Grid tables, Marquee tickers, live data polling and event-driven update patterns |
 | `forms_and_inputs` | Medium | Form building with TextInput, Select, Toggle, etc. — validation patterns, event-based data collection |
 | `modals` | Medium | Modal dialog schemas — sizes, nested components, open/close events, JS API, `reset_on_close` behavior |
+| `autonomous_building` | Medium | End-to-end app generation — `plan_widget`, `build_app`, `export_project`, `scaffold_app` workflows and chaining patterns |
 
 ### The Component Reference
 
@@ -146,13 +147,14 @@ Most of these have dedicated tools (e.g., `set_content`, `inject_css`). The `sen
 
 A typical interaction pattern:
 
-1. **Agent list tools** → sees 25 available tools
+1. **Agent list tools** → sees 29 available tools
 2. **Agent calls `get_skills()`** → receives the skill list with descriptions
 3. **Agent calls `get_skills(skill="component_reference")`** → loads the mandatory component docs
 4. **Agent calls `create_widget`** → builds widget JSON using component reference as guide
 5. **Agent calls `get_events`** → reads user interactions
 6. **Agent calls `set_content` / `set_style`** → updates the widget in response
 7. **Agent calls `export_widget`** → generates Python code the user can save
+8. **Agent calls `build_app`** *(optional)* → fully autonomous end-to-end build from a description
 
 The skills ensure the agent knows the exact JSON structure, event naming conventions, and available properties before making tool calls.
 

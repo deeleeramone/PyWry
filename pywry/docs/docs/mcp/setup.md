@@ -235,8 +235,9 @@ All MCP settings can be configured via environment variables (`PYWRY_MCP__` pref
 | `log_tools` | `PYWRY_MCP__LOG_TOOLS` | `false` | Log tool calls |
 | `log_level` | `PYWRY_MCP__LOG_LEVEL` | `INFO` | Log level |
 | `skills_auto_load` | `PYWRY_MCP__SKILLS_AUTO_LOAD` | `true` | Auto-load skills on connect |
-| `include_tags` | `PYWRY_MCP__INCLUDE_TAGS` | `[]` | Only expose tools with these tags |
-| `exclude_tags` | `PYWRY_MCP__EXCLUDE_TAGS` | `[]` | Exclude tools with these tags |
+
+!!! note "Removed in FastMCP V3"
+    The `include_tags` and `exclude_tags` settings were removed when PyWry migrated to FastMCP V3. Tool filtering is no longer supported via config.
 
 ### Config File
 
@@ -269,12 +270,37 @@ debug = true
 }
 ```
 
+## Installing Skills
+
+PyWry ships bundled skills that can be copied into your MCP client's skills directory:
+
+```bash
+# Preview what will be installed (dry run)
+pywry install-skills --dry-run
+
+# Install to all detected MCP vendor directories
+pywry install-skills
+
+# Install to a specific directory
+pywry install-skills --target custom --custom-dir /path/to/skills
+
+# Overwrite existing skill files
+pywry install-skills --overwrite
+
+# Or via the module
+python -m pywry.mcp install-skills --dry-run
+```
+
+The command copies skill markdown files from PyWry's bundled `pywry/mcp/skills/` directory into the appropriate vendor location for your MCP client (Claude Desktop, Cursor, etc.).
+
+---
+
 ## Verifying the Setup
 
 1. Restart Claude Desktop after editing the config
 2. Open a new conversation
 3. Ask: *"What PyWry tools do you have available?"*
-4. Claude should list 25 tools
+5. Claude should list 29 tools
 
 You can also test manually:
 

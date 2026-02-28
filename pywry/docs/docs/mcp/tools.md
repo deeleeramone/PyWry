@@ -1,6 +1,6 @@
 # Tools Reference
 
-The MCP server exposes **25 tools** organized into five groups.
+The MCP server exposes **29 tools** organized into six groups.
 Every description, parameter name, type, and default below comes directly from the tool schemas in the source code.
 
 !!! warning "Mandatory first step"
@@ -22,7 +22,7 @@ The `component_reference` skill is **mandatory** — it contains the only correc
 |:---|:---|:---|:---|
 | `skill` | `string` | No | Skill to retrieve. If omitted, returns the full list with descriptions. |
 
-**Skill IDs:** `component_reference`, `interactive_buttons`, `native`, `jupyter`, `iframe`, `deploy`, `css_selectors`, `styling`, `data_visualization`, `forms_and_inputs`, `modals`
+**Skill IDs:** `component_reference`, `interactive_buttons`, `native`, `jupyter`, `iframe`, `deploy`, `css_selectors`, `styling`, `data_visualization`, `forms_and_inputs`, `modals`, `autonomous_building`
 
 **System events available via `component_reference`:**
 
@@ -547,6 +547,86 @@ List all available MCP resources with their URIs.
 - `pywry://export/{widget_id}` — Widget export
 - `pywry://docs/events` — Built-in events reference
 - `pywry://docs/quickstart` — Quick start guide
+
+---
+
+## Autonomous Building
+
+LLM-powered tools that use MCP sampling and elicitation to generate complete widget applications from plain-English descriptions. These tools require a sampling-capable client (Claude, etc.).
+
+### plan_widget
+
+Generate a complete `WidgetPlan` from a plain-English description using LLM sampling.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `description` | `string` | **Yes** | Plain-English description of the widget to build |
+
+**Returns:** JSON-serialised `WidgetPlan` including `title`, `description`, `html_content`, `toolbars`, and `callbacks`.
+
+```json title="Example"
+{"description": "A stock price ticker with buy/sell buttons and a P&L counter"}
+```
+
+---
+
+### build_app
+
+End-to-end pipeline: plan → register → export. Produces a running widget and its Python source in one call.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `description` | `string` | **Yes** | — | Plain-English app description |
+| `open_window` | `boolean` | No | `false` | Open the widget window immediately after creation |
+
+**Returns:**
+
+```json
+{
+  "widget_id": "abc123",
+  "title": "Stock Ticker",
+  "python_code": "# Complete runnable script...",
+  "files": {"main.py": "...", "requirements.txt": "..."}
+}
+```
+
+---
+
+### export_project
+
+Package one or more existing widgets into a complete, runnable project directory.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_ids` | `array[string]` | **Yes** | — | IDs of widgets to include |
+| `project_name` | `string` | No | `"pywry_project"` | Output directory / project name |
+| `output_dir` | `string` | No | `null` | Write files to this path. Omit to return file contents as JSON. |
+
+**Returns (in-memory):**
+
+```json
+{"project_name": "my_app", "files": {"main.py": "...", "requirements.txt": "...", "README.md": "...", "widgets/abc123.py": "..."}}
+```
+
+**Returns (written to disk):**
+
+```json
+{"project_name": "my_app", "output_dir": "/path/to/my_app", "files_written": ["main.py", "requirements.txt", "README.md", "widgets/abc123.py"]}
+```
+
+---
+
+### scaffold_app
+
+Interactive multi-turn app builder. Elicits requirements from the user step-by-step (title, description, display mode, libraries, toolbar placement), then delegates to `plan_widget`.
+
+**Parameters:** None — requirements are gathered interactively via MCP elicitation.
+
+**Returns:** JSON-serialised `WidgetPlan` (same as `plan_widget`) plus a `next_steps` hint.
+
+!!! tip "When to use scaffold_app vs build_app"
+    - Use `build_app` when you already have a clear description.
+    - Use `scaffold_app` when you want to guide the user through requirements gathering before committing to a design.
 
 ---
 

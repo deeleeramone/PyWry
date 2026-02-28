@@ -801,16 +801,6 @@ class MCPSettings(BaseSettings):
         description="Enable FastMCP debug mode (verbose logging, detailed errors)",
     )
 
-    # Tool filtering (FastMCP)
-    include_tags: Annotated[list[str], NoDecode] = Field(
-        default_factory=list,
-        description="Only expose tools with these tags (empty = all tools)",
-    )
-    exclude_tags: Annotated[list[str], NoDecode] = Field(
-        default_factory=list,
-        description="Exclude tools with these tags",
-    )
-
     # Rendering mode
     headless: bool = Field(
         default=False,
@@ -864,14 +854,6 @@ class MCPSettings(BaseSettings):
         default=True,
         description="Auto-load skill documents when agents connect",
     )
-
-    @field_validator("include_tags", "exclude_tags", mode="before")
-    @classmethod
-    def parse_comma_separated(cls, v: Any) -> list[str]:
-        """Parse comma-separated strings from env vars."""
-        if isinstance(v, str):
-            return [s.strip() for s in v.split(",") if s.strip()]
-        return v or []
 
 
 # All Tauri plugins supported by the bundled pytauri_wheel.

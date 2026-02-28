@@ -774,13 +774,16 @@ class TestResourcesModule:
         assert any("pywry://docs/events" in uri for uri in uris)
 
     def test_resources_include_skills(self) -> None:
-        """Resources include skill documentation."""
+        """Skills are served via skill:// URIs by SkillsDirectoryProvider (not pywry:// URIs)."""
+        # Skills are now delivered by SkillsDirectoryProvider as skill:// resources.
+        # The pywry.mcp.resources module no longer lists pywry://skill/ URIs.
         from pywry.mcp.resources import get_resources
 
         resources = get_resources()
         uris = [str(r.uri) for r in resources]
 
-        assert any("pywry://skill/" in uri for uri in uris)
+        # Verify no legacy pywry://skill/ URIs remain
+        assert not any("pywry://skill/" in uri for uri in uris)
 
     def test_get_resource_templates(self) -> None:
         """get_resource_templates returns template list."""
@@ -1273,3 +1276,498 @@ class TestHandlerHelpers:
         assert callbacks["counter:decrement"]["action"] == "decrement"
         assert "counter:reset" in callbacks
         assert callbacks["counter:reset"]["action"] == "set"
+
+
+# =============================================================================
+# Test Install Module
+# =============================================================================
+
+
+class TestInstallModule:
+    """Tests for pywry.mcp.install module."""
+
+    def test_list_bundled_skills_returns_list(self) -> None:
+        """list_bundled_skills returns a non-empty list of skill names."""
+        from pywry.mcp.install import list_bundled_skills
+
+        skills = list_bundled_skills()
+        assert isinstance(skills, list)
+        assert len(skills) > 0
+
+    def test_list_bundled_skills_sorted(self) -> None:
+        """list_bundled_skills returns skills in sorted order."""
+        from pywry.mcp.install import list_bundled_skills
+
+        skills = list_bundled_skills()
+        assert skills == sorted(skills)
+
+    def test_list_bundled_skills_has_native(self) -> None:
+        """list_bundled_skills includes the 'native' skill."""
+        from pywry.mcp.install import list_bundled_skills
+
+        assert "native" in list_bundled_skills()
+
+    def test_vendor_dirs_mapping(self) -> None:
+        """VENDOR_DIRS contains expected platform keys."""
+        from pywry.mcp.install import VENDOR_DIRS
+
+        expected_keys = {
+            "claude",
+            "cursor",
+            "vscode",
+            "copilot",
+            "codex",
+            "gemini",
+            "goose",
+            "opencode",
+        }
+        assert expected_keys <= set(VENDOR_DIRS.keys())
+
+    def test_all_targets_sorted(self) -> None:
+        """ALL_TARGETS is sorted."""
+        from pywry.mcp.install import ALL_TARGETS
+
+        assert sorted(ALL_TARGETS) == ALL_TARGETS
+
+    def test_install_skills_dry_run(self, tmp_path: Any) -> None:
+        """install_skills with dry_run=True does not write any files."""
+        from pywry.mcp.install import install_skills
+
+        results = install_skills(
+            targets=[],  # empty → all
+            overwrite=False,
+            custom_dir=tmp_path / "skills",
+            dry_run=True,
+        )
+
+        # Nothing should have been created
+        assert not (tmp_path / "skills").exists()
+        # Results should be present with dry_run status
+        assert "custom" in results
+        for status in results["custom"].values():
+            assert status == "dry_run"
+
+    def test_install_skills_to_custom_dir(self, tmp_path: Any) -> None:
+        """install_skills copies skill directories to the target path."""
+        from pywry.mcp.install import install_skills, list_bundled_skills
+
+        custom_target = tmp_path / "skills"
+        results = install_skills(
+            targets=[],
+            overwrite=False,
+            custom_dir=custom_target,
+        )
+
+        assert "custom" in results
+        for status in results["custom"].values():
+            assert status in ("installed", "skipped", "dry_run") or status.startswith("error:")
+
+        # At least one skill should have been installed
+        installed = [v for v in results["custom"].values() if v == "installed"]
+        assert len(installed) > 0
+
+        # Each installed skill should have its SKILL.md
+        for skill_name in list_bundled_skills():
+            assert (custom_target / skill_name / "SKILL.md").exists()
+
+    def test_install_skills_skip_existing(self, tmp_path: Any) -> None:
+        """install_skills with overwrite=False skips existing skill dirs."""
+        from pywry.mcp.install import install_skills
+
+        custom_target = tmp_path / "skills"
+
+        # First install
+        install_skills(targets=[], custom_dir=custom_target)
+
+        # Modify one skill to detect if it gets overwritten
+        sentinel = custom_target / "native" / "sentinel.txt"
+        sentinel.write_text("original", encoding="utf-8")
+
+        # Second install without overwrite
+        results = install_skills(targets=[], custom_dir=custom_target, overwrite=False)
+        assert results["custom"].get("native") == "skipped"
+        assert sentinel.exists()  # file untouched
+
+    def test_install_skills_overwrite(self, tmp_path: Any) -> None:
+        """install_skills with overwrite=True replaces existing skill dirs."""
+        from pywry.mcp.install import install_skills
+
+        custom_target = tmp_path / "skills"
+
+        # First install
+        install_skills(targets=[], custom_dir=custom_target)
+
+        # Plant a sentinel file that should be removed on overwrite
+        sentinel = custom_target / "native" / "sentinel.txt"
+        sentinel.write_text("original", encoding="utf-8")
+
+        # Second install with overwrite
+        results = install_skills(targets=[], custom_dir=custom_target, overwrite=True)
+        assert results["custom"].get("native") == "installed"
+        assert not sentinel.exists()  # old file gone
+
+    def test_install_skills_unknown_target_raises(self) -> None:
+        """install_skills raises ValueError for unknown vendor targets."""
+        from pywry.mcp.install import install_skills
+
+        with pytest.raises(ValueError, match="Unknown target"):
+            install_skills(targets=["nonexistent_vendor_xyz"])
+
+    def test_install_skills_subset_of_skills(self, tmp_path: Any) -> None:
+        """install_skills installs only the requested skill_names."""
+        from pywry.mcp.install import install_skills
+
+        custom_target = tmp_path / "skills"
+        results = install_skills(
+            targets=[],
+            custom_dir=custom_target,
+            skill_names=["native"],
+        )
+
+        assert results["custom"].get("native") == "installed"
+        assert (custom_target / "native" / "SKILL.md").exists()
+        # Other skills should NOT have been installed
+        from pywry.mcp.install import list_bundled_skills
+
+        other_skills = [s for s in list_bundled_skills() if s != "native"]
+        for skill in other_skills:
+            assert not (custom_target / skill).exists()
+
+    def test_install_skills_all_keyword(self) -> None:
+        """install_skills accepts 'all' to expand to every vendor."""
+        from pywry.mcp.install import ALL_TARGETS, install_skills
+
+        # We can't write to real vendor dirs in tests, so just use dry_run
+        results = install_skills(targets=["all"], dry_run=True)
+        assert set(results.keys()) == set(ALL_TARGETS)
+
+
+# =============================================================================
+# Test Agentic Module
+# =============================================================================
+
+
+class TestAgenticModule:
+    """Tests for pywry.mcp.agentic module."""
+
+    # ------------------------------------------------------------------
+    # Pydantic model validation
+    # ------------------------------------------------------------------
+
+    def test_component_spec_defaults(self) -> None:
+        """ComponentSpec validates with minimal required fields."""
+        from pywry.mcp.agentic import ComponentSpec
+
+        comp = ComponentSpec(type="button", label="Refresh", event="chart:refresh")
+        assert comp.type == "button"
+        assert comp.variant == "neutral"
+        assert comp.options == []
+
+    def test_toolbar_spec(self) -> None:
+        """ToolbarSpec holds position and items."""
+        from pywry.mcp.agentic import ComponentSpec, ToolbarSpec
+
+        tb = ToolbarSpec(
+            position="top",
+            items=[ComponentSpec(type="button", label="Go", event="app:go")],
+        )
+        assert tb.position == "top"
+        assert len(tb.items) == 1
+
+    def test_widget_plan_defaults(self) -> None:
+        """WidgetPlan validates and applies defaults."""
+        from pywry.mcp.agentic import WidgetPlan
+
+        plan = WidgetPlan(
+            title="Test App",
+            description="A test widget",
+            html_content="<p>Hello</p>",
+        )
+        assert plan.width == 900
+        assert plan.height == 600
+        assert plan.include_plotly is False
+        assert plan.include_aggrid is False
+        assert plan.toolbars == []
+        assert plan.callbacks == []
+
+    def test_callback_spec(self) -> None:
+        """CallbackSpec captures event→action mapping."""
+        from pywry.mcp.agentic import CallbackSpec
+
+        cb = CallbackSpec(event="counter:increment", action="increment")
+        assert cb.action == "increment"
+        assert cb.target == ""
+
+    # ------------------------------------------------------------------
+    # _plan_to_create_args helper
+    # ------------------------------------------------------------------
+
+    def test_plan_to_create_args_basic(self) -> None:
+        """_plan_to_create_args returns expected keys."""
+        from pywry.mcp.agentic import ComponentSpec, ToolbarSpec, WidgetPlan, _plan_to_create_args
+
+        plan = WidgetPlan(
+            title="My App",
+            description="Test",
+            html_content="<p>content</p>",
+            toolbars=[
+                ToolbarSpec(
+                    position="top",
+                    items=[ComponentSpec(type="button", label="Click", event="app:click")],
+                )
+            ],
+        )
+        args = _plan_to_create_args(plan)
+        assert args["title"] == "My App"
+        assert args["html"] == "<p>content</p>"
+        assert "toolbars" in args
+        assert len(args["toolbars"]) == 1
+        assert args["toolbars"][0]["position"] == "top"
+        assert args["toolbars"][0]["items"][0]["type"] == "button"
+
+    def test_plan_to_create_args_callbacks(self) -> None:
+        """_plan_to_create_args converts CallbackSpec list to dict."""
+        from pywry.mcp.agentic import CallbackSpec, WidgetPlan, _plan_to_create_args
+
+        plan = WidgetPlan(
+            title="App",
+            description="x",
+            html_content="<p></p>",
+            callbacks=[CallbackSpec(event="btn:click", action="increment")],
+        )
+        args = _plan_to_create_args(plan)
+        assert "callbacks" in args
+        assert args["callbacks"]["btn:click"]["action"] == "increment"
+
+    def test_plan_to_create_args_no_toolbars(self) -> None:
+        """_plan_to_create_args omits toolbars key when plan has none."""
+        from pywry.mcp.agentic import WidgetPlan, _plan_to_create_args
+
+        plan = WidgetPlan(title="A", description="b", html_content="<p></p>")
+        args = _plan_to_create_args(plan)
+        assert "toolbars" not in args
+        assert "callbacks" not in args
+
+    # ------------------------------------------------------------------
+    # _generate_project_files helper
+    # ------------------------------------------------------------------
+
+    def test_generate_project_files_keys(self) -> None:
+        """_generate_project_files always produces main.py, requirements.txt, README.md."""
+        from pywry.mcp.agentic import _generate_project_files
+
+        files = _generate_project_files({}, "my_app")
+        assert "main.py" in files
+        assert "requirements.txt" in files
+        assert "README.md" in files
+
+    def test_generate_project_files_requirements_content(self) -> None:
+        """requirements.txt contains pywry dependency."""
+        from pywry.mcp.agentic import _generate_project_files
+
+        files = _generate_project_files({}, "my_app")
+        assert "pywry" in files["requirements.txt"]
+
+    def test_generate_project_files_readme_title(self) -> None:
+        """README.md uses the project name as its heading."""
+        from pywry.mcp.agentic import _generate_project_files
+
+        files = _generate_project_files({}, "cool_project")
+        assert "# cool_project" in files["README.md"]
+
+    # ------------------------------------------------------------------
+    # export_project — integration with state (mocked ctx)
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_export_project_missing_widget(self) -> None:
+        """export_project returns error when widget_id not in state."""
+        import json
+
+        from unittest.mock import AsyncMock
+
+        from pywry.mcp.agentic import export_project
+
+        ctx = MagicMock()
+        ctx.report_progress = AsyncMock()
+
+        result = await export_project(
+            widget_ids=["does-not-exist"],
+            ctx=ctx,
+        )
+        data = json.loads(result)
+        assert "error" in data
+        assert "does-not-exist" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_export_project_generates_files(self) -> None:
+        """export_project creates project files for a known widget."""
+        import json
+
+        from unittest.mock import AsyncMock
+
+        from pywry.mcp.agentic import export_project
+        from pywry.mcp.state import store_widget_config
+
+        # Seed a widget config
+        store_widget_config(
+            "test-export-001",
+            {
+                "title": "Test Widget",
+                "html": "<p>Hello</p>",
+                "width": 800,
+                "height": 500,
+                "include_plotly": False,
+                "include_aggrid": False,
+                "toolbars": [],
+            },
+        )
+
+        ctx = MagicMock()
+        ctx.report_progress = AsyncMock()
+
+        result = await export_project(
+            widget_ids=["test-export-001"],
+            ctx=ctx,
+            project_name="test_proj",
+        )
+        data = json.loads(result)
+        assert "files" in data
+        assert "main.py" in data["files"]
+        assert "requirements.txt" in data["files"]
+        assert "README.md" in data["files"]
+
+    @pytest.mark.asyncio
+    async def test_export_project_writes_to_disk(self, tmp_path: Any) -> None:
+        """export_project writes files when output_dir is provided."""
+        import json
+
+        from unittest.mock import AsyncMock
+
+        from pywry.mcp.agentic import export_project
+        from pywry.mcp.state import store_widget_config
+
+        store_widget_config(
+            "test-export-002",
+            {
+                "title": "Disk Widget",
+                "html": "<p>Hi</p>",
+                "width": 800,
+                "height": 500,
+                "include_plotly": False,
+                "include_aggrid": False,
+                "toolbars": [],
+            },
+        )
+
+        ctx = MagicMock()
+        ctx.report_progress = AsyncMock()
+
+        result = await export_project(
+            widget_ids=["test-export-002"],
+            ctx=ctx,
+            project_name="disk_proj",
+            output_dir=str(tmp_path),
+        )
+        data = json.loads(result)
+        assert "files_written" in data
+        proj_root = tmp_path / "disk_proj"
+        assert (proj_root / "main.py").exists()
+        assert (proj_root / "requirements.txt").exists()
+        assert (proj_root / "README.md").exists()
+
+    # ------------------------------------------------------------------
+    # build_app — sampling mocked
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_build_app_returns_widget_id_and_code(self) -> None:
+        """build_app returns widget_id and python_code when sampling succeeds."""
+        import json
+
+        from unittest.mock import AsyncMock
+
+        from pywry.mcp.agentic import WidgetPlan, build_app
+
+        # Build a minimal valid plan the mock will return
+        mock_plan = WidgetPlan(
+            title="Counter",
+            description="A simple counter widget",
+            html_content="<div id='counter'>0</div>",
+        )
+
+        mock_sample_result = MagicMock()
+        mock_sample_result.result = mock_plan
+
+        ctx = MagicMock()
+        ctx.report_progress = AsyncMock()
+        ctx.sample = AsyncMock(return_value=mock_sample_result)
+
+        result = await build_app(
+            description="A simple counter",
+            ctx=ctx,
+        )
+        data = json.loads(result)
+        assert "widget_id" in data
+        assert "python_code" in data
+        assert "Counter" in data["title"]
+        assert len(data["widget_id"]) > 0
+        # python_code must contain at least the title
+        assert "Counter" in data["python_code"]
+
+    # ------------------------------------------------------------------
+    # plan_widget — sampling mocked
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_plan_widget_returns_valid_json(self) -> None:
+        """plan_widget returns a JSON-serialized WidgetPlan."""
+        import json
+
+        from unittest.mock import AsyncMock
+
+        from pywry.mcp.agentic import WidgetPlan, plan_widget
+
+        mock_plan = WidgetPlan(
+            title="Price Dashboard",
+            description="Crypto price display",
+            html_content="<div>BTC: $100k</div>",
+        )
+        mock_result = MagicMock()
+        mock_result.result = mock_plan
+
+        ctx = MagicMock()
+        ctx.report_progress = AsyncMock()
+        ctx.sample = AsyncMock(return_value=mock_result)
+
+        result = await plan_widget("crypto price dashboard", ctx)
+        data = json.loads(result)
+        # Must contain WidgetPlan fields
+        assert data["title"] == "Price Dashboard"
+        assert "html_content" in data
+        assert "toolbars" in data
+
+    # ------------------------------------------------------------------
+    # Skills metadata includes the new skill
+    # ------------------------------------------------------------------
+
+    def test_autonomous_building_in_skill_metadata(self) -> None:
+        """SKILL_METADATA includes autonomous_building."""
+        from pywry.mcp.skills import SKILL_METADATA
+
+        assert "autonomous_building" in SKILL_METADATA
+
+    def test_autonomous_building_skill_file_exists(self) -> None:
+        """autonomous_building/SKILL.md exists on disk."""
+        from pywry.mcp.skills import SKILLS_DIR
+
+        assert (SKILLS_DIR / "autonomous_building" / "SKILL.md").exists()
+
+    def test_load_autonomous_building_skill(self) -> None:
+        """load_skill('autonomous_building') returns non-empty content."""
+        from pywry.mcp.skills import load_skill
+
+        content = load_skill("autonomous_building")
+        assert content is not None
+        assert len(content) > 100
+        assert "build_app" in content

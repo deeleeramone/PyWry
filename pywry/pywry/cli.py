@@ -125,6 +125,70 @@ def main() -> int:
         help="Run in native mode (desktop windows)",
     )
 
+    # install-skills command
+    install_skills_parser = subparsers.add_parser(
+        "install-skills",
+        help="Install bundled PyWry skills into AI vendor skill directories",
+    )
+    install_skills_parser.add_argument(
+        "--target",
+        "-t",
+        nargs="+",
+        default=[],
+        metavar="VENDOR",
+        help=(
+            "Vendor(s) to install into: claude, cursor, vscode, copilot, codex, "
+            "gemini, goose, opencode, or 'all' (default: all)"
+        ),
+    )
+    install_skills_parser.add_argument(
+        "--skills",
+        nargs="+",
+        default=None,
+        metavar="SKILL",
+        help="Specific skill names to install (default: all bundled skills)",
+    )
+    install_skills_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        default=False,
+        help="Overwrite existing skill directories (default: skip existing)",
+    )
+    install_skills_parser.add_argument(
+        "--custom-dir",
+        default=None,
+        dest="custom_dir",
+        metavar="PATH",
+        help="Also install into this custom directory path",
+    )
+    install_skills_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        dest="dry_run",
+        help="Show what would be installed without writing any files",
+    )
+    install_skills_parser.add_argument(
+        "--list",
+        action="store_true",
+        default=False,
+        help="List all bundled skill names and exit",
+    )
+    install_skills_parser.add_argument(
+        "--list-targets",
+        action="store_true",
+        default=False,
+        dest="list_targets",
+        help="List all supported vendor targets and exit",
+    )
+    install_skills_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        default=False,
+        help="Print per-skill status in results",
+    )
+
     args = parser.parse_args()
 
     if args.command == "config":
@@ -133,6 +197,8 @@ def main() -> int:
         return handle_init(args)
     if args.command == "mcp":
         return handle_mcp(args)
+    if args.command == "install-skills":
+        return handle_install_skills(args)
     parser.print_help()
     return 0
 
@@ -394,6 +460,67 @@ def format_config_show(settings: PyWrySettings) -> str:
         )
 
     return "\n".join(lines)
+
+
+def handle_install_skills(args: argparse.Namespace) -> int:
+    """Handle the install-skills command.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command line arguments.
+
+    Returns
+    -------
+    int
+        Exit code.
+    """
+    try:
+        from .mcp.install import (
+            ALL_TARGETS,
+            install_skills,
+            list_bundled_skills,
+            print_install_results,
+        )
+    except ImportError as exc:
+        print(
+            f"Error: MCP module not available. Install with: pip install pywry[mcp]\n{exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.list:
+        print("Bundled PyWry skills:")
+        for name in list_bundled_skills():
+            print(f"  {name}")
+        return 0
+
+    if args.list_targets:
+        print("Supported vendor targets:")
+        for name in ALL_TARGETS:
+            print(f"  {name}")
+        return 0
+
+    targets: list[str] = args.target if args.target else ["all"]
+    skill_names: list[str] | None = args.skills if args.skills else None
+    custom_dir = getattr(args, "custom_dir", None)
+
+    try:
+        results = install_skills(
+            targets=targets,
+            overwrite=args.overwrite,
+            skill_names=skill_names,
+            custom_dir=custom_dir,
+            dry_run=args.dry_run,
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    prefix = "[DRY RUN] " if args.dry_run else ""
+    print(f"{prefix}PyWry skill install results:")
+    print_install_results(results, verbose=args.verbose)
+    return 0
 
 
 if __name__ == "__main__":
