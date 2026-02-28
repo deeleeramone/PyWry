@@ -128,7 +128,6 @@ jobs:
           echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=$opensslDir\lib" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=$opensslDir\include" >> $env:GITHUB_ENV
-          echo "$opensslDir\bin" >> $env:GITHUB_PATH
 
       - name: Setup build environment (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
@@ -178,6 +177,7 @@ jobs:
         env:
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
+          PYTHONUTF8: "1"
         run: |
           python -m pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
 
@@ -186,6 +186,7 @@ jobs:
         env:
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
+          PYTHONUTF8: "1"
         run: |
           python -m pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py --ignore=tests/test_inline_ssl.py -m "not redis and not container"
 
