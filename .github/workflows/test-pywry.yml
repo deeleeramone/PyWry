@@ -103,6 +103,12 @@ jobs:
         if: runner.os == 'Linux'
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Set up Rust (Windows ARM64)
+        if: runner.os == 'Windows' && runner.arch == 'ARM64'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -114,8 +120,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:/vcpkg/installed
-          key: vcpkg-arm64-windows-openssl-lua-${{ hashFiles('.github/workflows/test-pywry.yml') }}
+          key: vcpkg-arm64-windows-openssl-lua-static-${{ hashFiles('.github/workflows/test-pywry.yml') }}
           restore-keys: |
+            vcpkg-arm64-windows-openssl-lua-static-
             vcpkg-arm64-windows-openssl-lua-
 
       - name: Install OpenSSL via vcpkg (Windows ARM)
@@ -123,11 +130,12 @@ jobs:
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
-          & "$env:VCPKG_ROOT\vcpkg" install openssl:arm64-windows
-          $opensslDir = "$env:VCPKG_ROOT\installed\arm64-windows"
+          & "$env:VCPKG_ROOT\vcpkg" install openssl:arm64-windows-static
+          $opensslDir = "$env:VCPKG_ROOT\installed\arm64-windows-static"
           echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=$opensslDir\lib" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=$opensslDir\include" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
 
       - name: Setup build environment (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
