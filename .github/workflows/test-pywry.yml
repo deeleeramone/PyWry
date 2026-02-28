@@ -103,12 +103,6 @@ jobs:
         if: runner.os == 'Linux'
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Set up Rust (Windows ARM64)
-        if: runner.os == 'Windows' && runner.arch == 'ARM64'
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-pc-windows-msvc
-
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -150,20 +144,6 @@ jobs:
           echo "LUA_DIR=$luaDir" >> $env:GITHUB_ENV
           echo "LUA_LIB=$luaDir\lib" >> $env:GITHUB_ENV
           echo "LUA_INC=$luaDir\include" >> $env:GITHUB_ENV
-
-      - name: Rebuild cryptography for ARM64 (Windows ARM)
-        if: runner.os == 'Windows' && runner.arch == 'ARM64'
-        shell: pwsh
-        env:
-          CARGO_BUILD_TARGET: aarch64-pc-windows-msvc
-        run: |
-          pip install --no-cache-dir --no-binary=cryptography --force-reinstall cryptography
-          $bindingsDir = python -c "import pathlib, cryptography; print(pathlib.Path(cryptography.__file__).parent / 'hazmat' / 'bindings')"
-          Write-Host "cryptography bindings at: $bindingsDir"
-          Copy-Item "$env:OPENSSL_DIR\bin\*.dll" "$bindingsDir\"
-          Write-Host "Copied OpenSSL DLLs to $bindingsDir"
-          Get-ChildItem "$bindingsDir" | ForEach-Object { Write-Host "  $($_.Name)" }
-          python -c "from cryptography.hazmat.bindings._rust import openssl; print('cryptography OK')"
 
       - name: Install dependencies
         run: |

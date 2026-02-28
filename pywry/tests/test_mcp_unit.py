@@ -1446,7 +1446,24 @@ class TestInstallModule:
 # Test Agentic Module
 # =============================================================================
 
+# cryptography ships no usable win_arm64 wheel; _rust.pyd fails to load on
+# Windows ARM64 CI runners, making ``from fastmcp import Context`` (and
+# therefore ``pywry.mcp.agentic``) un-importable.  Same limitation that
+# requires test_inline_ssl.py to be --ignored on that runner.
+try:
+    from cryptography.hazmat.bindings._rust import openssl as _openssl  # noqa: F401
 
+    _has_crypto = True
+except (ImportError, OSError):
+    _has_crypto = False
+
+_skip_no_crypto = pytest.mark.skipif(
+    not _has_crypto,
+    reason="cryptography._rust unavailable (Windows ARM64)",
+)
+
+
+@_skip_no_crypto
 class TestAgenticModule:
     """Tests for pywry.mcp.agentic module."""
 
