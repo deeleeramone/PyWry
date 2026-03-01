@@ -417,6 +417,86 @@ Toolbar events that don't have a `callbacks` entry are still captured and queued
 
 ---
 
+## Autonomous Building
+
+The agentic tools use LLM sampling to generate complete widget apps from plain-English descriptions.
+They require a sampling-capable client (Claude, etc.) and produce structured `WidgetPlan` output.
+
+### Quick build — one call
+
+**Prompt:** *Build a task tracker with add/remove buttons and a progress bar.*
+
+```json title="build_app"
+{
+  "description": "A task tracker with add/remove buttons and a progress bar",
+  "open_window": false
+}
+```
+
+Returns a `widget_id`, complete `python_code`, and a `files` map ready to save to disk.
+
+### Plan first, then inspect
+
+**Step 1 — plan:**
+
+```json title="plan_widget"
+{
+  "description": "A crypto price dashboard showing BTC, ETH, and SOL with 24h change indicators"
+}
+```
+
+Returns a `WidgetPlan` JSON the agent can inspect or modify before building.
+
+**Step 2 — build from the plan:**
+
+```json title="build_app"
+{
+  "description": "A crypto price dashboard showing BTC, ETH, and SOL with 24h change indicators"
+}
+```
+
+### Export an existing widget as a project
+
+After working interactively with a widget:
+
+```json title="export_project"
+{
+  "widget_ids": ["w-abc123"],
+  "project_name": "my_dashboard",
+  "output_dir": "/Users/me/projects/my_dashboard"
+}
+```
+
+Writes `main.py`, `requirements.txt`, `README.md`, and `widgets/w_abc123.py` to disk.
+
+### Interactive scaffolding
+
+Use `scaffold_app` to guide the user through requirements step-by-step via prompts:
+
+```
+scaffold_app()
+```
+
+The agent will elicit:
+
+1. App title
+2. Description
+3. Display mode (native / inline)
+4. Libraries needed (Plotly, AG-Grid, neither)
+5. Toolbar placement
+
+Then automatically delegates to `plan_widget` with the gathered requirements.
+
+!!! tip "Which tool to use"
+    | Situation | Tool |
+    |:---|:---|
+    | Clear description in hand | `build_app` |
+    | Want to inspect the plan first | `plan_widget` → `build_app` |
+    | Want to save to disk | `export_project` |
+    | User isn't sure what they want | `scaffold_app` |
+
+---
+
 ## Tips for Effective Prompts
 
 | Do | Don't |

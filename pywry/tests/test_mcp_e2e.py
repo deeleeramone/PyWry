@@ -149,13 +149,14 @@ class TestMCPServerLifecycle:
 
     @pytest.mark.asyncio
     async def test_list_prompts(self, mcp_client):
-        """Server advertises registered prompts (skills)."""
-        prompts = await mcp_client.list_prompts()
-        prompt_names = {p.name for p in prompts}
+        """Server advertises skills as MCP resources via skill:// URI scheme."""
+        resources = await mcp_client.list_resources()
+        uris = {str(r.uri) for r in resources}
 
-        assert any("native" in n for n in prompt_names), f"No native prompt in {prompt_names}"
-        assert any("component_reference" in n for n in prompt_names), (
-            f"No component_reference prompt in {prompt_names}"
+        # Skills are now served as skill:// resources via SkillsDirectoryProvider
+        assert any("skill://native" in u for u in uris), f"No native skill resource in {uris}"
+        assert any("component_reference" in u for u in uris), (
+            f"No component_reference skill resource in {uris}"
         )
 
 
@@ -549,12 +550,12 @@ class TestMCPEventFlow:
 
 
 # =============================================================================
-# Skills (Prompts) Tests - Through MCP Protocol
+# Skills (Resources) Tests - Through MCP Protocol
 # =============================================================================
 
 
 class TestMCPSkills:
-    """Test skills are accessible as MCP prompts."""
+    """Test skills are accessible as MCP resources via skill:// URI scheme."""
 
     @pytest.mark.asyncio
     async def test_get_skills_tool(self, mcp_client):
@@ -577,24 +578,22 @@ class TestMCPSkills:
         assert len(data["guidance"]) > 200
 
     @pytest.mark.asyncio
-    async def test_prompt_native(self, mcp_client):
-        """Prompt for 'native' skill returns guidance via MCP protocol."""
-        result = await mcp_client.get_prompt("skill:native")
+    async def test_skill_resource_native(self, mcp_client):
+        """Native skill is accessible as a skill:// resource via SkillsDirectoryProvider."""
+        result = await mcp_client.read_resource("skill://native/SKILL.md")
 
-        assert result.messages is not None
-        assert len(result.messages) >= 1
-        # The content should contain native mode guidance
-        content = result.messages[0].content
-        text = content.text if hasattr(content, "text") else str(content)
+        assert result is not None
+        text = result[0].text if hasattr(result[0], "text") else str(result[0])
         assert len(text) > 200
 
     @pytest.mark.asyncio
-    async def test_prompt_component_reference(self, mcp_client):
-        """Prompt for 'component_reference' skill returns via MCP protocol."""
-        result = await mcp_client.get_prompt("skill:component_reference")
+    async def test_skill_resource_component_reference(self, mcp_client):
+        """component_reference skill is accessible as a skill:// resource."""
+        result = await mcp_client.read_resource("skill://component_reference/SKILL.md")
 
-        assert result.messages is not None
-        assert len(result.messages) >= 1
+        assert result is not None
+        text = result[0].text if hasattr(result[0], "text") else str(result[0])
+        assert len(text) >= 1
 
 
 # =============================================================================
@@ -626,8 +625,8 @@ class TestMCPResources:
 
     @pytest.mark.asyncio
     async def test_read_skill_resource(self, mcp_client):
-        """Read skill guidance via MCP resource protocol."""
-        content = await mcp_client.read_resource("pywry://skill/native")
+        """Read skill guidance via MCP resource protocol (skill:// URI scheme)."""
+        content = await mcp_client.read_resource("skill://native/SKILL.md")
 
         assert content is not None
         text = content[0].text
@@ -862,7 +861,7 @@ class TestMCPRealSkillsAndResources:
         from pywry.mcp.skills import SKILL_METADATA, SKILLS_DIR
 
         for skill_id in SKILL_METADATA:
-            skill_file = Path(SKILLS_DIR) / f"{skill_id}.md"
+            skill_file = Path(SKILLS_DIR) / skill_id / "SKILL.md"
             assert skill_file.exists(), f"Skill file missing: {skill_file}"
 
     def test_component_source_from_real_toolbar_module(self):

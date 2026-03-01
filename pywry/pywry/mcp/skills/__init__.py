@@ -34,6 +34,10 @@ SKILL_METADATA: dict[str, dict[str, str]] = {
         "name": "Interactive Buttons Pattern",
         "description": "CRITICAL: How to make buttons work automatically with auto-wired callbacks",
     },
+    "autonomous_building": {
+        "name": "Autonomous Application Building",
+        "description": "Build complete PyWry apps from a description using plan_widget, build_app, export_project, and scaffold_app tools",
+    },
     "native": {
         "name": "Native Window Mode",
         "description": "Desktop application via PyWry/WRY (Rust WebView) - NOT a browser, NOT Jupyter",
@@ -87,7 +91,7 @@ def load_skill(skill_name: str) -> str | None:
     str or None
         Skill guidance markdown or None if not found.
     """
-    skill_file = SKILLS_DIR / f"{skill_name}.md"
+    skill_file = SKILLS_DIR / skill_name / "SKILL.md"
     if skill_file.exists():
         return skill_file.read_text(encoding="utf-8")
     return None

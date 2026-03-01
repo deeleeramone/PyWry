@@ -103,6 +103,12 @@ jobs:
         if: runner.os == 'Linux'
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Set up Rust (Windows ARM64)
+        if: runner.os == 'Windows' && runner.arch == 'ARM64'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -114,21 +120,20 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:/vcpkg/installed
-          key: vcpkg-arm64-windows-openssl-lua-${{ hashFiles('.github/workflows/test-pywry.yml') }}
+          key: vcpkg-arm64-windows-openssl-static-md-lua-${{ hashFiles('.github/workflows/test-pywry.yml') }}
           restore-keys: |
-            vcpkg-arm64-windows-openssl-lua-
+            vcpkg-arm64-windows-openssl-static-md-lua-
 
       - name: Install OpenSSL via vcpkg (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
-          & "$env:VCPKG_ROOT\vcpkg" install openssl:arm64-windows
-          $opensslDir = "$env:VCPKG_ROOT\installed\arm64-windows"
+          & "$env:VCPKG_ROOT\vcpkg" install openssl:arm64-windows-static-md
+          $opensslDir = "$env:VCPKG_ROOT\installed\arm64-windows-static-md"
           echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
           echo "OPENSSL_LIB_DIR=$opensslDir\lib" >> $env:GITHUB_ENV
           echo "OPENSSL_INCLUDE_DIR=$opensslDir\include" >> $env:GITHUB_ENV
-          echo "$opensslDir\bin" >> $env:GITHUB_PATH
 
       - name: Setup build environment (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
@@ -144,6 +149,13 @@ jobs:
           echo "LUA_DIR=$luaDir" >> $env:GITHUB_ENV
           echo "LUA_LIB=$luaDir\lib" >> $env:GITHUB_ENV
           echo "LUA_INC=$luaDir\include" >> $env:GITHUB_ENV
+
+      - name: Build cryptography from source (Windows ARM)
+        if: runner.os == 'Windows' && runner.arch == 'ARM64'
+        shell: pwsh
+        run: |
+          pip install --no-cache-dir --no-binary=cryptography cryptography
+          python -c "from cryptography.hazmat.bindings._rust import openssl; print('cryptography OK')"
 
       - name: Install dependencies
         run: |
@@ -178,6 +190,7 @@ jobs:
         env:
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
+          PYTHONUTF8: "1"
         run: |
           python -m pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
 
@@ -186,6 +199,7 @@ jobs:
         env:
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
+          PYTHONUTF8: "1"
         run: |
           python -m pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py --ignore=tests/test_inline_ssl.py -m "not redis and not container"
 

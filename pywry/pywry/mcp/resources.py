@@ -12,7 +12,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from pywry.mcp.docs import BUILTIN_EVENTS, COMPONENT_DOCS
-from pywry.mcp.skills import get_skill, list_skills
+from pywry.mcp.skills import get_skill
 from pywry.mcp.state import get_widget_config, list_widget_ids
 
 
@@ -256,19 +256,6 @@ def get_resources() -> list[Resource]:
                 description="Getting started with PyWry widgets",
                 mimeType="text/markdown",
             ),
-        ]
-    )
-
-    # Skills documentation resources
-    resources.extend(
-        [
-            Resource(
-                uri=f"pywry://skill/{skill_info['id']}",  # type: ignore[arg-type]
-                name=f"Skill: {skill_info['name']}",
-                description=skill_info["description"],
-                mimeType="text/markdown",
-            )
-            for skill_info in list_skills()
         ]
     )
 

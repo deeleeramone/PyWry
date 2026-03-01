@@ -11,11 +11,16 @@ sequenceDiagram
     participant Sub as __main__.py (subprocess)
     participant Tauri as Tauri Engine
 
-    App->>RT: set_tauri_plugins(["dialog", "fs", "notification"])
-    RT->>Sub: env PYWRY_TAURI_PLUGINS="dialog,fs,notification"
-    Sub->>Sub: _load_plugins() — check flags, import modules
-    Sub->>Tauri: builder.build(plugins=[dialog.init(), fs.init(), notification.init()])
-    Tauri->>Tauri: Register plugins + grant capabilities
+    App->>RT: set_tauri_plugins([...])
+    Note over App,RT: ["dialog", "fs", "notification"]
+    RT->>Sub: PYWRY_TAURI_PLUGINS env var
+    Note over RT,Sub: "dialog,fs,notification"
+    Sub->>Sub: _load_plugins()
+    Note right of Sub: Check flags & import modules
+    Sub->>Tauri: builder.build(plugins=[...])
+    Note over Sub,Tauri: dialog.init(), fs.init(), notification.init()
+    Tauri->>Tauri: Register plugins
+    Note right of Tauri: Grant capabilities
 ```
 
 1. You list the plugins you want in config (Python, TOML, or env var).

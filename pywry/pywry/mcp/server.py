@@ -18,7 +18,6 @@ Usage:
 """
 
 # pylint: disable=C0415
-# flake8: noqa: PLR0915
 
 from __future__ import annotations
 
@@ -148,8 +147,12 @@ def _register_tools(mcp: FastMCP) -> None:
         mcp.tool()(fn)
 
 
-def _register_prompts(mcp: FastMCP) -> None:
-    """Register all prompts on the FastMCP server.
+def _register_skills_provider(mcp: FastMCP) -> None:
+    """Register the SkillsDirectoryProvider for PyWry skills.
+
+    Uses FastMCP's built-in SkillsDirectoryProvider to serve all skills
+    in the skills/ subdirectory as MCP resources under the skill:// URI scheme.
+    Each skill subdirectory containing a SKILL.md file is exposed automatically.
 
     Parameters
     ----------
@@ -157,27 +160,12 @@ def _register_prompts(mcp: FastMCP) -> None:
         The FastMCP server instance.
 
     """
-    from .skills import get_skill, list_skills
+    from pathlib import Path
 
-    # Register each skill as a prompt
-    for skill_info in list_skills():
-        skill_id = skill_info["id"]
-        skill_desc = skill_info["description"]
+    from fastmcp.server.providers.skills import SkillsDirectoryProvider
 
-        def make_prompt_handler(key: str, desc: str) -> Callable[[], str]:
-            def prompt_handler() -> str:
-                skill = get_skill(key)
-                if skill:
-                    return skill["guidance"]
-                return f"Skill not found: {key}"
-
-            # FastMCP uses __name__ and __doc__ for prompt metadata
-            prompt_handler.__name__ = f"skill_{key}"
-            prompt_handler.__doc__ = desc
-            return prompt_handler
-
-        # Register using the @mcp.prompt() decorator pattern
-        mcp.prompt(name=f"skill:{skill_id}")(make_prompt_handler(skill_id, skill_desc))
+    skills_dir = Path(__file__).parent / "skills"
+    mcp.add_provider(SkillsDirectoryProvider(roots=skills_dir, supporting_files="resources"))
 
 
 def _register_component_docs(mcp: FastMCP) -> None:
@@ -220,25 +208,6 @@ def _register_source_resources(mcp: FastMCP) -> None:
         return read_source_code("components") or "No sources found"
 
 
-def _register_skill_resources(mcp: FastMCP) -> None:
-    """Register skill documentation resources."""
-    from .resources import read_skill_doc
-    from .skills import list_skills
-
-    for skill_info in list_skills():
-        skill_id = skill_info["id"]
-        skill_desc = skill_info["description"]
-
-        def make_handler(key: str, description: str) -> Callable[[], str]:
-            def handler() -> str:
-                return read_skill_doc(key) or f"Skill not found: {key}"
-
-            handler.__doc__ = description
-            return handler
-
-        mcp.resource(f"pywry://skill/{skill_id}")(make_handler(skill_id, skill_desc))
-
-
 def _register_static_resources(mcp: FastMCP) -> None:
     """Register static documentation resources."""
     from .resources import (
@@ -263,6 +232,37 @@ def _register_static_resources(mcp: FastMCP) -> None:
         return export_widget_code(widget_id) or f"Widget not found: {widget_id}"
 
 
+def _register_agentic_tools(mcp: FastMCP) -> None:
+    """Register agentic tools that use FastMCP Context for sampling / elicitation / progress.
+
+    These tools go beyond the schema-driven dispatch layer by accepting a ``Context``
+    parameter so they can:
+
+    * Call ``ctx.sample()`` with structured Pydantic models for validated LLM output.
+    * Call ``ctx.elicit()`` to interactively gather requirements from the user.
+    * Call ``ctx.report_progress()`` to stream build progress to the client.
+
+    Tools registered here:
+
+    * ``plan_widget``    — LLM-plans a widget spec from a plain-English description.
+    * ``build_app``      — End-to-end autonomous builder (plan → create → export code).
+    * ``export_project`` — Packages existing widgets into a runnable Python project.
+    * ``scaffold_app``   — Multi-turn elicitation → plan → returns WidgetPlan JSON.
+
+    Parameters
+    ----------
+    mcp : FastMCP
+        The FastMCP server instance.
+
+    """
+    from .agentic import build_app, export_project, plan_widget, scaffold_app
+
+    mcp.tool()(plan_widget)
+    mcp.tool()(build_app)
+    mcp.tool()(export_project)
+    mcp.tool()(scaffold_app)
+
+
 def _register_resources(mcp: FastMCP) -> None:
     """Register all resources on the FastMCP server.
 
@@ -274,7 +274,6 @@ def _register_resources(mcp: FastMCP) -> None:
     """
     _register_component_docs(mcp)
     _register_source_resources(mcp)
-    _register_skill_resources(mcp)
     _register_static_resources(mcp)
 
 
@@ -329,18 +328,13 @@ def create_server(settings: MCPSettings | None = None) -> FastMCP:
     if settings.instructions:
         fastmcp_kwargs["instructions"] = settings.instructions
 
-    # Add tag filtering if configured
-    if settings.include_tags:
-        fastmcp_kwargs["include_tags"] = settings.include_tags
-    if settings.exclude_tags:
-        fastmcp_kwargs["exclude_tags"] = settings.exclude_tags
-
     mcp = FastMCP(**fastmcp_kwargs)
 
     # Register all handlers
     _register_tools(mcp)
-    _register_prompts(mcp)
     _register_resources(mcp)
+    _register_skills_provider(mcp)
+    _register_agentic_tools(mcp)
 
     return mcp
 
@@ -436,18 +430,6 @@ def run_server(
         print("[PyWry] Native window mode (desktop)", file=sys.stderr)
 
     mcp = create_server(settings)
-
-    # Configure FastMCP global settings for path customization
-    try:
-        import fastmcp.settings as fastmcp_settings
-
-        fastmcp_settings.sse_path = settings.sse_path  # type: ignore
-        fastmcp_settings.message_path = settings.message_path  # type: ignore
-        fastmcp_settings.streamable_http_path = settings.streamable_http_path  # type: ignore
-        fastmcp_settings.json_response = settings.json_response  # type: ignore
-        fastmcp_settings.stateless_http = settings.stateless_http  # type: ignore
-    except (ImportError, AttributeError):
-        pass  # Older fastmcp version, use defaults
 
     # Build run kwargs for transport settings
     run_kwargs: dict[str, Any] = {
