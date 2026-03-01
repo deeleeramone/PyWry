@@ -5,11 +5,15 @@ on:
     branches: [main, master, develop]
     paths:
       - 'pywry/**'
+      - '!pywry/docs/**'
+      - '!pywry/**/*.md'
       - '.github/workflows/test-pywry.yml'
   pull_request:
     branches: [main, master, develop]
     paths:
       - 'pywry/**'
+      - '!pywry/docs/**'
+      - '!pywry/**/*.md'
       - '.github/workflows/test-pywry.yml'
   workflow_dispatch:
 
