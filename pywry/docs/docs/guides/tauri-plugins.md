@@ -5,12 +5,18 @@ PyWry's native window mode runs on [Tauri](https://tauri.app) via the [PyTauri](
 ## How It Works
 
 ```mermaid
-flowchart LR
-    A["PyWry (Python)"] -->|"set_tauri_plugins()"| B["runtime.py"]
-    B -->|"env PYWRY_TAURI_PLUGINS"| C["__main__.py\n(subprocess)"]
-    C -->|"_load_plugins()\ncheck flags, import modules"| C
-    C -->|"builder.build(plugins=[…])"| D["Tauri Engine"]
-    D -->|"Register plugins\n+ grant capabilities"| D
+flowchart TD
+    A["1. PyWry (Python)"]
+    B["2. runtime.py"]
+    C["3. __main__.py (subprocess)"]
+    D["4. _load_plugins()"]
+    E["5. Tauri Engine"]
+
+    A -- "set_tauri_plugins()" --> B
+    B -- "env PYWRY_TAURI_PLUGINS" --> C
+    C -- "check flags, import modules" --> D
+    D -- "builder.build(plugins)" --> E
+    E -- "register plugins + grant capabilities" --> E
 ```
 
 1. You list the plugins you want in config (Python, TOML, or env var).
