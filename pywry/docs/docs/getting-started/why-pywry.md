@@ -1,42 +1,15 @@
 # Why PyWry
 
-PyWry is a rendering engine for building lightweight, cross-platform interfaces using web technologies (HTML, CSS, JavaScript) with Python. It is open source, Apache-licensed, and free for both commercial and personal use. In this document, we'll explain why companies and developers choose PyWry.
+PyWry is an open-source rendering engine for building lightweight, cross-platform interfaces using Python. It solves a specific problem: **how to build beautiful, modern data applications in Python without being forced into an opinionated web framework or a heavy native GUI toolkit.**
 
-We can split up the benefits of PyWry into two questions: First, why should you use web technologies to build your Python interfaces? Then, why should you choose PyWry as the framework to do so?
+PyWry renders standard HTML, CSS, and JavaScript inside battle-tested OS webviews (WebView2 on Windows, WebKit on macOS/Linux). Your team can use web skills they already have — no proprietary widget toolkit to learn. If it works in a browser, it works in PyWry.
 
-## Why choose web technologies
-
-Modern applications are powered by web technologies - HTML, CSS, JavaScript, and WebAssembly. They are the dominant way to build user interfaces — both for consumer applications and mission-critical business tools. This is true for apps that run in a browser **and** for desktop applications that aren't accessed from a browser.
-
-Most application framework SDKs make you choose between native or web-based. PyWry provides a unified Python API that services both. It runs directly inside any Python IDE, making it fast and easy to develop reusable components and layouts that are Pydantic objects.
-
-PyWry is a full-stack rendering solution for Python that allows you to declaratively build interactive elements that automatically wire frontend <-> backend communication. No JavaScript required.
-
-### Versatility
-
-Web technologies are versatile. Your PyWry interface can include anything a web page can, or any custom HTML/CSS/JS you need. It bundles AgGrid and Plotly in the distributed wheel with pre-wired events and sensible defaults that allow you to render tables and charts with minimal effort - without any CDN delivery or other external libraries.
-
-
-### Reliability
-
-Web rendering engines are among the most battle-tested software in the world. The OS webviews that PyWry uses (WebView2 on Windows, WebKit on macOS/Linux) ship with billions of devices and are maintained by Microsoft and Apple respectively.
-
-### Interoperability
-
-PyWry interfaces are built with standard web APIs. That means you can use any JavaScript library, any CSS framework, and any HTML pattern. If it works in a browser, it works in PyWry.
-
-### Ubiquity
-
-Web developers are everywhere. If your team needs to customize the frontend, they can use skills they already have. No proprietary widget toolkit to learn.
-
-
-## Why choose PyWry
-
-There are many ways to render web content from Python — Electron-based apps, Dash, Streamlit, NiceGUI, Gradio, Flet, Jupyter widgets, or plain FastAPI servers. So why should you choose PyWry?
+There are many ways to render web content from Python — Electron, Dash, Streamlit, NiceGUI, Gradio, Flet, or plain FastAPI. So why choose PyWry?
 
 ### The "Goldilocks" Framework
 
 Python developers often find themselves choosing between uncomfortable extremes:
+
 - **Native GUI Toolkits (PyQt/Tkinter)**: Steep learning curves, custom styling systems, and they don't look modern without massive effort.
 - **Web-to-Desktop (Electron)**: Forces Python developers into the JavaScript/Node.js ecosystem and ships with hundreds of megabytes of Chromium bloat.
 - **Data Dashboards (Streamlit/Gradio)**: Excellent for rapid deployment in a browser, but highly opinionated, difficult to deeply customize, and hard to package as a true desktop executable.
@@ -49,17 +22,13 @@ PyWry's most potent feature is its **"Build Once, Render Anywhere"** pipeline. M
 
 You can instantly render a Plotly chart or AgGrid table directly inside a **Jupyter Notebook** cell. When you're ready to share your work, you use the exact same code to deploy a browser-based FastAPI application. When you want to hand an internal tool to a business user, you use `pywry[freeze]` to compile that *same code* into a standalone `.exe` or `.app`—dropping the notebook or server entirely.
 
-### Unrestricted Web Technologies
-
-Unlike frameworks like Flet (which draws its own UI using the Flutter canvas), PyWry uses standard HTML, CSS, and JS rendered inside a local OS webview. This means you aren't restricted to a custom widget ecosystem. If you want to use Tailwind CSS, arbitrary JS libraries, or your company's internal React design system, PyWry acts as an invisible bridge.
-
 ### Lightweight Native Windows
 
-PyWry uses the **OS-native webview** (WebView2, WebKit) instead of bundling a full browser engine. A PyWry app adds a few megabytes of overhead. An Electron app ships 150 MB+ of Chromium, and can't be used as a web application. Dash, Streamlit, and Panel require a running web server; they don't create native OS windows.
+PyWry uses the **OS-native webview** (WebView2, WebKit) via [PyTauri](https://github.com/pytauri/pytauri) instead of bundling a full browser engine like Electron. This results in apps that add only a few megabytes of overhead and open in under a second. There's no server to spin up and no browser to launch.
 
 ### One API, three targets
 
-Write your interface once. PyWry automatically renders it in the right place:
+Write your interface once. PyWry automatically renders it in the right place without changing your code:
 
 | Environment | Rendering Path |
 |---|---|
@@ -67,40 +36,28 @@ Write your interface once. PyWry automatically renders it in the right place:
 | Jupyter / VS Code / Colab | anywidget or inline IFrame |
 | Headless / SSH / Deploy | Browser tab via FastAPI + WebSocket |
 
-You don't change your code. PyWry detects the environment and picks the right backend.
 
 ### Built for data workflows
 
-PyWry isn't a general-purpose web framework. It's built specifically for Python data workflows:
+PyWry comes with built-in integrations tailored for data workflows:
 
-- **Plotly charts** with pre-wired event callbacks (click, select, hover, zoom)
-- **AG Grid tables** with automatic DataFrame conversion and grid events
-- **Toolbar system** with 18 Pydantic input components across 7 layout positions
-- **Two-way events** between Python and JavaScript, with no boilerplate
+- **Plotly charts** with pre-wired event callbacks (click, select, hover, zoom).
+- **AG Grid tables** with automatic DataFrame conversion and grid events.
+- **Toolbar system** with 18 declarative Pydantic input components across 7 layout positions to easily add headers, sidebars, and overlays.
+- **Two-way events** between Python and JavaScript, with no boilerplate.
 
-The Toolbar system lets you build nested structures that wrap around your main content. You can easily add headers, footers, collapsible sidebars, marquees, and overlays - with no custom HTML or JS.
-
-### Fast startup
-
-Native windows open in under a second. There's no server to spin up, no browser to launch, no bundle to compile. For notebook widgets, rendering is near-instant through anywidget.
 
 ### Production-ready
 
-PyWry isn't just for prototyping and single-user applications:
+PyWry scales from prototyping to multi-user deployments:
 
-- **Deploy Mode** with Redis backend for horizontal scaling and RBAC
-- **OAuth2** authentication system for both native and deploy modes
-- **Token authentication** and CSRF protection out of the box
-- **CSP headers** and security presets for production environments
-- **TOML-based configuration** with layered precedence (defaults → project → user → env vars)
+- **Deploy Mode** with an optional Redis backend for horizontal scaling.
+- **OAuth2** authentication system for both native and deploy modes with enterprise RBAC.
+- **Security built-in**: Token authentication, CSRF protection, and CSP headers out of the box.
 
 ### Cross-platform
 
 PyWry runs on Windows, macOS, and Linux. The same code produces native windows on all three platforms, notebook widgets in any Jupyter environment, and browser-based interfaces anywhere Python runs.
-
-### Mature foundation
-
-PyWry is built on [Tauri](https://tauri.app/) via [PyTauri](https://github.com/pytauri/pytauri) — a mature Rust framework used by thousands of production applications. The webview layer, event system, and window management are battle-tested Rust code, not Python wrappers around fragile subprocess calls. 
 
 
 ## Why not something else
