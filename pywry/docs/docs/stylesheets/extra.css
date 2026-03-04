@@ -504,36 +504,67 @@
   margin: .8em 0;
   border-collapse: collapse;
   width: 100%;
-  border: 1px solid var(--pywry-table-border);
+  border: 1px solid var(--pywry-table-border) !important;
   border-radius: 6px;
   overflow: hidden;
 }
 
 .md-typeset table th,
 .md-typeset table td {
-  padding: .6em .85em;
-  border: 1px solid var(--pywry-table-border);
+  padding: .6em .85em !important;
+  border: 1px solid var(--pywry-table-border) !important;
 }
 
-.md-typeset table th {
+/* ── Dark scheme tables ── */
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th,
+[data-md-color-scheme="slate"] .md-typeset table th {
   font-weight: 600;
   text-transform: uppercase;
   font-size: .72rem;
   letter-spacing: .04em;
-  background: var(--pywry-table-header-bg);
-  color: var(--pywry-table-header-fg);
+  background-color: #282c3e !important;
+  color: #c8c8d4 !important;
 }
 
-.md-typeset table td {
-  background: var(--pywry-table-row-bg);
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) td,
+[data-md-color-scheme="slate"] .md-typeset table td {
+  background-color: #1e2130 !important;
 }
 
-.md-typeset table tbody tr:nth-child(even) td {
-  background: var(--pywry-table-row-alt-bg);
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tbody tr:nth-child(even) td,
+[data-md-color-scheme="slate"] .md-typeset table tbody tr:nth-child(even) td {
+  background-color: #232636 !important;
 }
 
-.md-typeset table tbody tr:hover td {
-  background: var(--pywry-table-row-hover-bg);
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tbody tr:hover td,
+[data-md-color-scheme="slate"] .md-typeset table tbody tr:hover td {
+  background-color: rgba(71,200,219,.12) !important;
+}
+
+/* ── Light scheme tables ── */
+[data-md-color-scheme="default"] .md-typeset table:not([class]) th,
+[data-md-color-scheme="default"] .md-typeset table th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: .72rem;
+  letter-spacing: .04em;
+  background-color: #e2e4ec !important;
+  color: #1e293b !important;
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) td,
+[data-md-color-scheme="default"] .md-typeset table td {
+  background-color: #ffffff !important;
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) tbody tr:nth-child(even) td,
+[data-md-color-scheme="default"] .md-typeset table tbody tr:nth-child(even) td {
+  background-color: #f4f5f9 !important;
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) tbody tr:hover td,
+[data-md-color-scheme="default"] .md-typeset table tbody tr:hover td {
+  background-color: rgba(8,145,178,.08) !important;
 }
 
 /* =================================================================
