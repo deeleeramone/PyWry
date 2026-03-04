@@ -6,9 +6,11 @@
 
 PyWry is a cross-platform rendering engine and GUI toolkit for Python. One API, three output targets:
 
-- **Native window** — OS webview via [PyTauri](https://pypi.org/project/pytauri/). Not Qt, not Electron.
+- **Native window** — OS webview via [PyTauri](https://pypi.org/project/pytauri/). Not Qt, not Electron. Use unrestricted HTML/CSS/JS.
 - **Jupyter widget** — anywidget or FastAPI + WebSocket, works in JupyterLab and notebook environments.
 - **Browser tab** — FastAPI server with Redis state backend for horizontal scaling and RBAC.
+
+**Build Once, Render Anywhere:** Prototype interactive data apps in a Jupyter Notebook, easily deploy them as web apps, and seamlessly compile them into secure, lightweight standalone desktop executables via `pywry[freeze]`.
 
 ## Installation
 

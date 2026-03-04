@@ -32,9 +32,28 @@ Web developers are everywhere. If your team needs to customize the frontend, the
 
 ## Why choose PyWry
 
-There are many ways to render web content from Python — Electron-based apps, Dash, Streamlit, Panel, Gradio, Jupyter widgets, or plain FastAPI servers. So why should you choose PyWry?
+There are many ways to render web content from Python — Electron-based apps, Dash, Streamlit, NiceGUI, Gradio, Flet, Jupyter widgets, or plain FastAPI servers. So why should you choose PyWry?
 
-### Lightweight
+### The "Goldilocks" Framework
+
+Python developers often find themselves choosing between uncomfortable extremes:
+- **Native GUI Toolkits (PyQt/Tkinter)**: Steep learning curves, custom styling systems, and they don't look modern without massive effort.
+- **Web-to-Desktop (Electron)**: Forces Python developers into the JavaScript/Node.js ecosystem and ships with hundreds of megabytes of Chromium bloat.
+- **Data Dashboards (Streamlit/Gradio)**: Excellent for rapid deployment in a browser, but highly opinionated, difficult to deeply customize, and hard to package as a true desktop executable.
+
+PyWry targets the sweet spot: **Write your logic in Python, build your UI with modern web technologies, and deploy it anywhere**—including as a native, lightweight executable.
+
+### The Jupyter → Web → Desktop Pipeline
+
+PyWry's most potent feature is its **"Build Once, Render Anywhere"** pipeline. Most frameworks support Web + Desktop, but PyWry is uniquely optimized for data science and full-stack environments.
+
+You can instantly render a Plotly chart or AgGrid table directly inside a **Jupyter Notebook** cell. When you're ready to share your work, you use the exact same code to deploy a browser-based FastAPI application. When you want to hand an internal tool to a business user, you use `pywry[freeze]` to compile that *same code* into a standalone `.exe` or `.app`—dropping the notebook or server entirely.
+
+### Unrestricted Web Technologies
+
+Unlike frameworks like Flet (which draws its own UI using the Flutter canvas), PyWry uses standard HTML, CSS, and JS rendered inside a local OS webview. This means you aren't restricted to a custom widget ecosystem. If you want to use Tailwind CSS, arbitrary JS libraries, or your company's internal React design system, PyWry acts as an invisible bridge.
+
+### Lightweight Native Windows
 
 PyWry uses the **OS-native webview** (WebView2, WebKit) instead of bundling a full browser engine. A PyWry app adds a few megabytes of overhead. An Electron app ships 150 MB+ of Chromium, and can't be used as a web application. Dash, Streamlit, and Panel require a running web server; they don't create native OS windows.
 
@@ -88,13 +107,14 @@ PyWry is built on [Tauri](https://tauri.app/) via [PyTauri](https://github.com/p
 
 | Alternative | Trade-off |
 |---|---|
-| **Electron** | 150 MB+ runtime, requires Node.js, no Python integration |
-| **Dash / Streamlit / Panel** | Server + browser required, no native windows, callback-heavy |
-| **Gradio** | ML-focused, limited layout control, server-only |
-| **PyQt / Tkinter / wxPython** | Proprietary widget toolkits, no web tech, steep learning curve |
-| **Plain FastAPI + HTML** | No native windows, no notebook support, manual WebSocket wiring |
+| **NiceGUI** | Server + browser required natively; highly capable but lacks the single-codebase Jupyter → Desktop executable pipeline of PyWry. |
+| **Electron** | 150 MB+ runtime per app, requires Node.js/JavaScript context, difficult integration for native Python execution. |
+| **Dash / Streamlit / Gradio** | Opinionated UIs, browser-only deployment, not easily packagable into offline standalone executables. |
+| **Flet (Flutter/Python)** | Cannot use standard web libraries (React, Tailwind, AG Grid) as it relies entirely on Flutter's custom canvas rendering. |
+| **PyQt / Tkinter / wxPython** | Proprietary widget toolkits, requires learning custom desktop layout engines, lacks web interactivity features. |
+| **Plain FastAPI + HTML** | No native OS windows, no notebook support, requires manual WebSocket and event wiring. |
 
-PyWry sits in a unique position: native-quality desktop rendering **and** notebook support **and** browser deployment, all from one Python API, with no bundled browser engine.
+PyWry sits in a unique position: native-quality lightweight desktop rendering, interactive Jupyter notebook support, and browser deployment, all from one Python API.
 
 ## Next steps
 
