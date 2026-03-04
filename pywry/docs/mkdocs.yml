@@ -118,7 +118,7 @@ plugins:
               - "^__init__$"    # But include __init__
             # Docstrings
             docstring_style: numpy
-            docstring_section_style: spacy
+            docstring_section_style: table
             show_docstring_description: true
             show_docstring_parameters: true   # Show parameter descriptions
             show_docstring_returns: true      # Show return descriptions

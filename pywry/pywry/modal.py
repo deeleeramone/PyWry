@@ -128,35 +128,51 @@ class Modal(BaseModel):
 
     Attributes
     ----------
-        component_id: Unique identifier for this modal (auto-generated if not provided)
-        title: Modal header title
-        items: List of input items (Button, Select, TextInput, Div, etc.)
-        size: Preset size ("sm", "md", "lg", "xl", "full")
-        width: Custom width override (e.g., "600px")
-        max_height: Maximum height before scrolling (default: "80vh")
-        overlay_opacity: Background overlay opacity 0.0-1.0 (default: 0.5)
-        close_on_escape: Close when Escape key pressed (default: True)
-        close_on_overlay_click: Close when clicking outside modal (default: True)
-        reset_on_close: Reset form inputs when closed (default: True)
-        on_close_event: Custom event name to emit when modal closes
-        open_on_load: Whether modal starts open (default: False)
-        style: Inline CSS for the modal container
-        script: JS file path or inline string to inject
-        class_name: Custom CSS class for the modal container
+    component_id : str
+        Unique identifier for this modal (auto-generated if not provided).
+    title : str
+        Modal header title.
+    items : list
+        List of input items (Button, Select, TextInput, Div, etc.).
+    size : str
+        Preset size (``"sm"``, ``"md"``, ``"lg"``, ``"xl"``, ``"full"``).
+    width : str
+        Custom width override (e.g., ``"600px"``).
+    max_height : str
+        Maximum height before scrolling (default: ``"80vh"``).
+    overlay_opacity : float
+        Background overlay opacity 0.0–1.0 (default: 0.5).
+    close_on_escape : bool
+        Close when Escape key pressed (default: True).
+    close_on_overlay_click : bool
+        Close when clicking outside modal (default: True).
+    reset_on_close : bool
+        Reset form inputs when closed (default: True).
+    on_close_event : str
+        Custom event name to emit when modal closes.
+    open_on_load : bool
+        Whether modal starts open (default: False).
+    style : str
+        Inline CSS for the modal container.
+    script : str
+        JS file path or inline string to inject.
+    class_name : str
+        Custom CSS class for the modal container.
 
-    Example:
-        Modal(
-            title="User Settings",
-            size="md",
-            class_name="settings-modal",
-            items=[
-                TextInput(label="Username", event="user:name"),
-                Toggle(label="Notifications", event="user:notifications"),
-                Button(label="Save", event="user:save", variant="primary"),
-            ],
-            reset_on_close=False,  # Preserve values between opens
-            on_close_event="settings:closed",
-        )
+    Examples
+    --------
+    >>> Modal(
+    ...     title="User Settings",
+    ...     size="md",
+    ...     class_name="settings-modal",
+    ...     items=[
+    ...         TextInput(label="Username", event="user:name"),
+    ...         Toggle(label="Notifications", event="user:notifications"),
+    ...         Button(label="Save", event="user:save", variant="primary"),
+    ...     ],
+    ...     reset_on_close=False,
+    ...     on_close_event="settings:closed",
+    ... )
     """
 
     model_config = ConfigDict(
