@@ -515,6 +515,8 @@ class TestThreadIsolation:
         assert [m.text_content() for m in msgs_a] == ["only in A"]
         assert [m.text_content() for m in msgs_b] == ["only in B"]
 
+    @pytest.mark.redis
+    @pytest.mark.container
     @pytest.mark.asyncio
     async def test_thread_a_messages_invisible_to_thread_b_redis(self, redis_store) -> None:
         wid = _make_widget_id()
@@ -639,6 +641,8 @@ class TestXSSPrevention:
         assert len(retrieved) == 1
         assert retrieved[0].text_content() == payload
 
+    @pytest.mark.redis
+    @pytest.mark.container
     @pytest.mark.asyncio
     async def test_xss_payload_round_trips_redis_store(self, redis_store) -> None:
         """Same round-trip guarantee holds for RedisChatStore."""
@@ -731,6 +735,8 @@ class TestMessageLimitEnforcement:
             chat_module.MAX_MESSAGES_PER_THREAD = original_limit
             mem_module.MAX_MESSAGES_PER_THREAD = original_limit  # type: ignore[attr-defined]
 
+    @pytest.mark.redis
+    @pytest.mark.container
     @pytest.mark.asyncio
     async def test_eviction_redis_store(self, redis_store) -> None:
         """RedisChatStore evicts oldest messages when the cap is reached."""
