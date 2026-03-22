@@ -211,17 +211,13 @@ jobs:
         if: runner.os == 'macOS' && runner.arch == 'X64'
         env:
           PYWRY_HEADLESS: "1"
-          DOCKER_HOST: ${{ steps.docker-macos.outputs.sock }}
         run: |
-          echo "DOCKER_HOST=$DOCKER_HOST"
           python -m pytest -c pytest.ini tests/ -v --tb=short
 
       - name: Run tests (macOS ARM)
         if: runner.os == 'macOS' && runner.arch == 'ARM64'
         env:
           PYWRY_HEADLESS: "1"
-          DOCKER_HOST: ${{ steps.docker-macos.outputs.sock }}
         run: |
-          echo "DOCKER_HOST=$DOCKER_HOST"
           python -m pytest -c pytest.ini tests/ -v --tb=short
 
