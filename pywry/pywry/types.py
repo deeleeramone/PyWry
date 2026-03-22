@@ -20,7 +20,15 @@ Color = tuple[int, int, int, int]
 
 @dataclass(frozen=True)
 class PhysicalSize:
-    """Physical size in pixels."""
+    """Physical size in device pixels.
+
+    Attributes
+    ----------
+    width : int
+        Width in physical pixels.
+    height : int
+        Height in physical pixels.
+    """
 
     width: int
     height: int
@@ -37,7 +45,15 @@ class PhysicalSize:
 
 @dataclass(frozen=True)
 class LogicalSize:
-    """Logical size (scaled by DPI factor)."""
+    """Logical size scaled by the window DPI factor.
+
+    Attributes
+    ----------
+    width : float
+        Width in logical units.
+    height : float
+        Height in logical units.
+    """
 
     width: float
     height: float
@@ -54,7 +70,15 @@ class LogicalSize:
 
 @dataclass(frozen=True)
 class PhysicalPosition:
-    """Physical position in pixels."""
+    """Physical position in device pixels.
+
+    Attributes
+    ----------
+    x : int
+        Horizontal position in physical pixels.
+    y : int
+        Vertical position in physical pixels.
+    """
 
     x: int
     y: int
@@ -71,7 +95,15 @@ class PhysicalPosition:
 
 @dataclass(frozen=True)
 class LogicalPosition:
-    """Logical position (scaled by DPI factor)."""
+    """Logical position scaled by the window DPI factor.
+
+    Attributes
+    ----------
+    x : float
+        Horizontal position in logical units.
+    y : float
+        Vertical position in logical units.
+    """
 
     x: float
     y: float
@@ -213,7 +245,19 @@ class SameSite(Enum):
 
 
 class Effects(TypedDict, total=False):
-    """Visual effects configuration."""
+    """Visual effects configuration passed to the window layer.
+
+    Attributes
+    ----------
+    effects : Sequence[Effect]
+        Ordered list of platform-specific visual effects to apply.
+    state : EffectState
+        Active state for the effect where supported by the platform.
+    radius : float
+        Optional blur or rounding radius used by some effects.
+    color : Color
+        Optional RGBA color tint represented as a 4-tuple of integers.
+    """
 
     effects: Sequence[Effect]
     state: EffectState
@@ -222,7 +266,15 @@ class Effects(TypedDict, total=False):
 
 
 class ProgressBarState(TypedDict, total=False):
-    """Progress bar state configuration."""
+    """Progress bar state configuration for taskbar integration.
+
+    Attributes
+    ----------
+    status : ProgressBarStatus
+        High-level progress state shown by the operating system.
+    progress : int
+        Progress percentage from 0 to 100.
+    """
 
     status: ProgressBarStatus
     progress: int  # 0-100
@@ -230,7 +282,27 @@ class ProgressBarState(TypedDict, total=False):
 
 @dataclass
 class Cookie:
-    """HTTP Cookie representation."""
+    """HTTP cookie representation used by the IPC bridge.
+
+    Attributes
+    ----------
+    name : str
+        Cookie name.
+    value : str
+        Cookie value.
+    domain : str
+        Domain scope for the cookie.
+    path : str
+        Path scope for the cookie.
+    secure : bool
+        Whether the cookie is restricted to secure transports.
+    http_only : bool
+        Whether the cookie is hidden from client-side scripts.
+    same_site : SameSite
+        SameSite policy applied to cross-site requests.
+    expires : float | None
+        Expiration timestamp as seconds since the Unix epoch, if set.
+    """
 
     name: str
     value: str
@@ -271,7 +343,19 @@ class Cookie:
 
 @dataclass
 class Monitor:
-    """Display monitor information."""
+    """Display monitor information returned by the window layer.
+
+    Attributes
+    ----------
+    name : str | None
+        Human-readable monitor name when available.
+    size : PhysicalSize
+        Physical pixel dimensions of the monitor.
+    position : PhysicalPosition
+        Top-left monitor position in virtual desktop coordinates.
+    scale_factor : float
+        DPI scale factor applied by the operating system.
+    """
 
     name: str | None
     size: PhysicalSize
@@ -299,21 +383,54 @@ class Monitor:
 
 
 def serialize_size(size: SizeType) -> dict[str, Any]:
-    """Serialize a size value for IPC."""
+    """Serialize a logical or physical size for IPC transport.
+
+    Parameters
+    ----------
+    size : SizeType
+        Size instance to serialize.
+
+    Returns
+    -------
+    dict[str, Any]
+        Dictionary tagged with ``type`` and the width and height values.
+    """
     if isinstance(size, PhysicalSize):
         return {"type": "Physical", **size.to_dict()}
     return {"type": "Logical", **size.to_dict()}
 
 
 def serialize_position(position: PositionType) -> dict[str, Any]:
-    """Serialize a position value for IPC."""
+    """Serialize a logical or physical position for IPC transport.
+
+    Parameters
+    ----------
+    position : PositionType
+        Position instance to serialize.
+
+    Returns
+    -------
+    dict[str, Any]
+        Dictionary tagged with ``type`` and the position coordinates.
+    """
     if isinstance(position, PhysicalPosition):
         return {"type": "Physical", **position.to_dict()}
     return {"type": "Logical", **position.to_dict()}
 
 
 def serialize_effects(effects: Effects) -> dict[str, Any]:
-    """Serialize effects configuration for IPC."""
+    """Serialize visual effects configuration for IPC transport.
+
+    Parameters
+    ----------
+    effects : Effects
+        Visual effects mapping to serialize.
+
+    Returns
+    -------
+    dict[str, Any]
+        JSON-serializable representation of the configured effects.
+    """
     result: dict[str, Any] = {}
     if "effects" in effects:
         result["effects"] = [e.value for e in effects["effects"]]
@@ -327,7 +444,18 @@ def serialize_effects(effects: Effects) -> dict[str, Any]:
 
 
 def serialize_progress_bar(state: ProgressBarState) -> dict[str, Any]:
-    """Serialize progress bar state for IPC."""
+    """Serialize taskbar progress state for IPC transport.
+
+    Parameters
+    ----------
+    state : ProgressBarState
+        Progress bar mapping to serialize.
+
+    Returns
+    -------
+    dict[str, Any]
+        JSON-serializable representation of the taskbar progress state.
+    """
     result: dict[str, Any] = {}
     if "status" in state:
         result["status"] = state["status"].value

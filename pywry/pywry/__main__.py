@@ -682,6 +682,12 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
                             initToolbarHandlers(document, window.pywry);
                         }}
 
+                        // Re-initialize chat handlers if present
+                        if (typeof initChatHandlers === 'function' && window.pywry) {{
+                            console.log('[PyWry] Re-initializing chat handlers after content injection');
+                            initChatHandlers(document, window.pywry);
+                        }}
+
                         // Notify Python that content is ready
                         if (window.pywry && window.pywry.sendEvent) {{
                             window.pywry.sendEvent('content:ready', {{ timestamp: Date.now() }});

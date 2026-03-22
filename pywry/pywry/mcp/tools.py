@@ -830,4 +830,251 @@ Returns URIs for:
 - Quick start guide (pywry://docs/quickstart)""",
             inputSchema={"type": "object", "properties": {}},
         ),
+        # =====================================================================
+        # Chat
+        # =====================================================================
+        Tool(
+            name="create_chat_widget",
+            description="""Create a chat widget with conversational UI.
+
+Returns a widget with message area, input bar, optional thread sidebar,
+slash commands, and settings panel. Supports streaming responses and
+stop-generation.
+
+**Example**:
+```json
+{
+  "title": "AI Chat",
+  "system_prompt": "You are a helpful assistant.",
+  "model": "gpt-4",
+  "streaming": true,
+  "provider": "openai",
+  "show_sidebar": true
+}
+```""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "default": "Chat"},
+                    "height": {"type": "integer", "default": 600},
+                    "system_prompt": {
+                        "type": "string",
+                        "description": "System prompt for the LLM",
+                    },
+                    "model": {
+                        "type": "string",
+                        "default": "gpt-4",
+                        "description": "Model name for the provider",
+                    },
+                    "temperature": {
+                        "type": "number",
+                        "default": 0.7,
+                        "minimum": 0,
+                        "maximum": 2,
+                    },
+                    "max_tokens": {
+                        "type": "integer",
+                        "default": 4096,
+                        "description": "Max tokens per response",
+                    },
+                    "streaming": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Enable streaming responses",
+                    },
+                    "persist": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Persist threads in ChatStore",
+                    },
+                    "provider": {
+                        "type": "string",
+                        "enum": ["openai", "anthropic", "callback"],
+                        "description": "LLM provider name",
+                    },
+                    "show_sidebar": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Show thread sidebar",
+                    },
+                    "slash_commands": {
+                        "type": "array",
+                        "description": "Custom slash commands",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "description": {"type": "string"},
+                            },
+                            "required": ["name"],
+                        },
+                    },
+                    "toolbars": {
+                        "type": "array",
+                        "description": "Additional toolbars around the chat area",
+                        "items": TOOLBAR_SCHEMA,
+                    },
+                },
+            },
+        ),
+        Tool(
+            name="chat_send_message",
+            description="""Send a user message to a chat widget and get the assistant response.
+
+The message is appended to the thread history and the configured LLM
+provider is invoked. If streaming is enabled, chunks are emitted as
+progress notifications.
+
+To stop a running generation, use `chat_stop_generation`.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "text": {
+                        "type": "string",
+                        "description": "User message text",
+                    },
+                    "thread_id": {
+                        "type": "string",
+                        "description": "Thread ID (uses active thread if omitted)",
+                    },
+                },
+                "required": ["widget_id", "text"],
+            },
+        ),
+        Tool(
+            name="chat_stop_generation",
+            description="""Stop an in-flight LLM generation.
+
+Sets the cancel event on the active GenerationHandle, causing the
+provider to stop producing tokens. Returns the partial content generated
+so far. Idempotent — safe to call multiple times.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "thread_id": {
+                        "type": "string",
+                        "description": "Thread to stop generation in",
+                    },
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="chat_manage_thread",
+            description="""Create, switch, delete, or rename a chat thread.
+
+Actions:
+- `create`: Create a new thread (returns thread_id)
+- `switch`: Switch to an existing thread (loads history)
+- `delete`: Delete a thread and its messages
+- `rename`: Rename a thread
+- `list`: List all threads for the widget""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "action": {
+                        "type": "string",
+                        "enum": ["create", "switch", "delete", "rename", "list"],
+                    },
+                    "thread_id": {
+                        "type": "string",
+                        "description": "Thread ID (required for switch/delete/rename)",
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Thread title (for create/rename)",
+                    },
+                },
+                "required": ["widget_id", "action"],
+            },
+        ),
+        Tool(
+            name="chat_register_command",
+            description="""Register a slash command in a chat widget at runtime.
+
+The command name is auto-prefixed with `/` if missing.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "name": {
+                        "type": "string",
+                        "description": "Command name (e.g., 'help' or '/help')",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description shown in command palette",
+                    },
+                },
+                "required": ["widget_id", "name"],
+            },
+        ),
+        Tool(
+            name="chat_get_history",
+            description="""Retrieve conversation history for a thread.
+
+Supports cursor-based pagination via `before_id`.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "thread_id": {
+                        "type": "string",
+                        "description": "Thread ID (uses active thread if omitted)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Max messages to return",
+                    },
+                    "before_id": {
+                        "type": "string",
+                        "description": "Cursor: return messages before this ID",
+                    },
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="chat_update_settings",
+            description="""Update chat settings for a widget (model, temperature, system prompt, etc.).
+
+Changes are applied immediately and pushed to the frontend.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "model": {"type": "string"},
+                    "temperature": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 2,
+                    },
+                    "max_tokens": {"type": "integer"},
+                    "system_prompt": {"type": "string"},
+                    "streaming": {"type": "boolean"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="chat_set_typing",
+            description="Show or hide the typing indicator in a chat widget.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "typing": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Whether to show the typing indicator",
+                    },
+                    "thread_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
     ]

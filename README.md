@@ -126,8 +126,11 @@ The output in `dist/MyApp/` is fully self-contained. Target machines need no Pyt
 
 - [Getting Started](https://deeleeramone.github.io/PyWry/getting-started/) — installation, quick start, rendering paths
 - [Concepts](https://deeleeramone.github.io/PyWry/getting-started/) — events, configuration, state, hot reload, RBAC
+- [Chat Guide](https://deeleeramone.github.io/PyWry/guides/chat/) — ChatManager setup, streaming, slash commands, settings, attachments
+- [Chat Artifacts](https://deeleeramone.github.io/PyWry/guides/chat-artifacts/) — tables, charts, code blocks, provider-backed assistants
 - [Components](https://deeleeramone.github.io/PyWry/components/) — live previews for all toolbar components
 - [API Reference](https://deeleeramone.github.io/PyWry/reference/) — auto-generated docs for every class and function
+- [Chat API](https://deeleeramone.github.io/PyWry/reference/chat/) — core models, ChatManager, and provider adapters
 - [MCP Server](https://deeleeramone.github.io/PyWry/mcp/) — AI agent integration
 
 ## License

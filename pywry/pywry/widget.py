@@ -12,7 +12,7 @@ import uuid
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
-from .state_mixins import EmittingWidget, GridStateMixin, PlotlyStateMixin
+from .state_mixins import ChatStateMixin, EmittingWidget, GridStateMixin, PlotlyStateMixin
 
 
 if TYPE_CHECKING:
@@ -46,7 +46,20 @@ def _get_toolbar_handlers_js() -> str:
 
 @lru_cache(maxsize=1)
 def _get_plotly_widget_esm() -> str:
-    """Build the Plotly widget ESM by combining Plotly.js with the widget code."""
+    """Build the Plotly widget ESM by combining bundled assets and widget code.
+
+    Returns
+    -------
+    str
+        Full ECMAScript module source used by the Plotly anywidget frontend.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the widget source file cannot be found.
+    RuntimeError
+        If the bundled Plotly assets are unavailable.
+    """
     from .assets import (
         get_plotly_js,
         get_plotly_templates_js,
@@ -149,7 +162,13 @@ if (typeof window !== 'undefined' && !window.PYWRY_PLOTLY_TEMPLATES) {{
 
 @lru_cache(maxsize=1)
 def _get_aggrid_css_all() -> str:
-    """Load all AG Grid CSS themes at once for the widget, plus pywry base CSS."""
+    """Load the combined CSS required by the AG Grid notebook widget.
+
+    Returns
+    -------
+    str
+        Concatenated PyWry base CSS and all bundled AG Grid theme CSS.
+    """
     from .assets import get_aggrid_css, get_pywry_css
     from .models import ThemeMode
 
@@ -169,7 +188,18 @@ def _get_aggrid_css_all() -> str:
 
 @lru_cache(maxsize=1)
 def _get_aggrid_widget_esm() -> str:
-    """Build the AG Grid widget ESM by combining AG Grid with widget code."""
+    """Build the AG Grid widget ESM by combining bundled assets and widget code.
+
+    Returns
+    -------
+    str
+        Full ECMAScript module source used by the AG Grid anywidget frontend.
+
+    Raises
+    ------
+    RuntimeError
+        If the bundled AG Grid assets are unavailable.
+    """
     from .assets import (
         get_aggrid_defaults_js,
         get_aggrid_js,
@@ -1298,6 +1328,17 @@ if HAS_ANYWIDGET:
         """Widget for inline notebook rendering using anywidget (no Plotly).
 
         Implements BaseWidget protocol for unified API.
+
+        Attributes
+        ----------
+        content : traitlets.Unicode
+            HTML content rendered by the widget frontend.
+        theme : traitlets.Unicode
+            Active widget theme, usually ``"light"`` or ``"dark"``.
+        width : traitlets.Unicode
+            CSS width applied to the widget wrapper.
+        height : traitlets.Unicode
+            CSS height applied to the widget wrapper.
         """
 
         _esm = _get_widget_esm()
@@ -1350,7 +1391,13 @@ if HAS_ANYWIDGET:
             return self._label
 
         def _handle_js_event(self, change: dict[str, Any]) -> None:
-            """Handle events from JavaScript."""
+            """Handle events received from the JavaScript frontend.
+
+            Parameters
+            ----------
+            change : dict[str, Any]
+                Traitlets change record containing the serialized event payload.
+            """
             if not change["new"]:
                 return
             try:
@@ -1397,6 +1444,11 @@ if HAS_ANYWIDGET:
                 Event name that JS listeners can subscribe to.
             data : dict
                 JSON-serializable payload to send to JavaScript.
+
+            Notes
+            -----
+            The event is pushed through the ``_py_event`` synchronized trait so the
+            anywidget frontend receives it immediately.
             """
             event = json.dumps({"type": event_type, "data": data or {}, "ts": uuid.uuid4().hex})
             self._py_event = event
@@ -1417,7 +1469,7 @@ if HAS_ANYWIDGET:
             self.update(content)
 
         def display(self) -> None:
-            """Display the widget in the current output context."""
+            """Display the widget in the current notebook output context."""
             from IPython.display import display as ipy_display
 
             ipy_display(self)
@@ -1519,6 +1571,13 @@ if HAS_ANYWIDGET:
         with the widget rendering code at runtime.
 
         Implements BaseWidget protocol for unified API.
+
+        Attributes
+        ----------
+        figure_json : traitlets.Unicode
+            Serialized Plotly figure JSON sent to the frontend.
+        chart_id : traitlets.Unicode
+            Stable chart identifier used for scoped Plotly events.
         """
 
         # Build ESM at init by combining Plotly.js with widget code
@@ -1569,7 +1628,20 @@ if HAS_ANYWIDGET:
             self.observe(self._handle_js_event, names=["_js_event"])
 
         def emit(self, event_type: str, data: dict[str, Any] | None = None) -> None:
-            """Send an event from Python to JavaScript."""
+            """Send an event from Python to JavaScript.
+
+            Parameters
+            ----------
+            event_type : str
+                Event name that JS listeners can subscribe to.
+            data : dict[str, Any] | None, optional
+                JSON-serializable payload to send to JavaScript.
+
+            Notes
+            -----
+            The Plotly widget injects ``chartId`` automatically so event handling
+            remains scoped to the intended chart instance.
+            """
             # Include chart_id for scoped event handling
             payload = data.copy() if data else {}
             payload.setdefault("chartId", self.chart_id)
@@ -1579,6 +1651,15 @@ if HAS_ANYWIDGET:
         """Widget for inline notebook rendering with AG Grid bundled.
 
         Implements BaseWidget protocol for unified API.
+
+        Attributes
+        ----------
+        aggrid_theme : traitlets.Unicode
+            Active AG Grid theme name.
+        grid_config : traitlets.Unicode
+            Serialized AG Grid configuration JSON.
+        grid_id : traitlets.Unicode
+            Stable grid identifier used for scoped frontend events.
         """
 
         _esm = _get_aggrid_widget_esm()
@@ -1646,8 +1727,13 @@ if HAS_ANYWIDGET:
             ----------
             event_type : str
                 Event name that JS listeners can subscribe to.
-            data : dict
+            data : dict[str, Any] | None
                 JSON-serializable payload to send to JavaScript.
+
+            Notes
+            -----
+            The AG Grid widget injects ``gridId`` automatically so frontend event
+            handlers can target the correct grid instance.
             """
             # Include grid_id for scoped event handling
             payload = data.copy() if data else {}
@@ -1655,7 +1741,11 @@ if HAS_ANYWIDGET:
             super().emit(event_type, payload)
 
         def _register_csv_export_handler(self) -> None:
-            """Register automatic CSV export handler for context menu exports."""
+            """Register the automatic CSV export handler for grid exports.
+
+            The handler converts AG Grid CSV export responses into a
+            ``pywry:download`` event so the frontend can trigger a save dialog.
+            """
 
             def handle_export(data: dict[str, Any], _event_type: str, _label: str) -> None:
                 csv_content = data.get("csvContent", "")
@@ -1715,15 +1805,29 @@ if HAS_ANYWIDGET:
             return []
 
         def display(self) -> None:
-            """Display the widget in the current output context."""
+            """Display the widget in the current notebook output context."""
             from IPython.display import display as ipy_display
 
             ipy_display(self)
 
+    class PyWryChatWidget(PyWryWidget, ChatStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
+        """Widget for inline notebook rendering with chat UI.
+
+        This class extends :class:`PyWryWidget` with chat-specific state mixins so
+        notebook renders can emit the same chat protocol events as native windows.
+        """
+
+        content = traitlets.Unicode("").tag(sync=True)
+        theme = traitlets.Unicode("dark").tag(sync=True)
+
 else:
 
     class PyWryWidget(EmittingWidget):  # type: ignore[no-redef]
-        """Fallback when anywidget is not available."""
+        """Fallback widget used when ``anywidget`` is not installed.
+
+        The fallback preserves the public API shape of the notebook widgets so
+        imports remain valid, but interactive behavior is unavailable.
+        """
 
         def __init__(self, **kwargs: Any) -> None:
             """Initialize fallback widget."""
@@ -1737,10 +1841,34 @@ else:
             return self._label
 
         def on(self, event_type: str, callback: Callable[..., Any]) -> None:
-            """Register an event handler (no-op in fallback)."""
+            """Register an event handler.
+
+            Parameters
+            ----------
+            event_type : str
+                Event name to subscribe to.
+            callback : Callable[..., Any]
+                Callback that would handle the event in a real anywidget runtime.
+
+            Notes
+            -----
+            This is a no-op in fallback mode.
+            """
 
         def emit(self, event_type: str, data: dict[str, Any] | None = None) -> None:
-            """Send an event (no-op in fallback)."""
+            """Send an event.
+
+            Parameters
+            ----------
+            event_type : str
+                Event name that would be emitted to the frontend.
+            data : dict[str, Any] | None, optional
+                Payload that would be delivered with the event.
+
+            Notes
+            -----
+            This is a no-op in fallback mode.
+            """
 
         def set_content(self, content: str) -> None:
             """Set content."""
@@ -1770,3 +1898,6 @@ else:
             self, data: Any = None, columns: list[dict[str, Any]] | None = None
         ) -> None:
             """Update grid (no-op in fallback)."""
+
+    class PyWryChatWidget(PyWryWidget):  # type: ignore[no-redef]
+        """Fallback Chat widget when anywidget is not available."""

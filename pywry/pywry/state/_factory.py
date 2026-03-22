@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .base import (
+        ChatStore,
         ConnectionRouter,
         EventBus,
         SessionStore,
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
 # pylint: disable=wrong-import-position
 from .memory import (
+    MemoryChatStore,
     MemoryConnectionRouter,
     MemoryEventBus,
     MemorySessionStore,
@@ -70,6 +72,11 @@ def get_state_backend() -> StateBackend:
     -------
     StateBackend
         The configured backend (MEMORY or REDIS).
+
+    Notes
+    -----
+    The backend is selected from the ``PYWRY_DEPLOY__STATE_BACKEND`` environment
+    variable and defaults to in-memory storage.
     """
     backend = os.environ.get("PYWRY_DEPLOY__STATE_BACKEND", "memory").lower()
     if backend == "redis":
@@ -90,6 +97,11 @@ def is_deploy_mode() -> bool:
     -------
     bool
         True if running in deploy mode.
+
+    Notes
+    -----
+    Deploy mode may be enabled explicitly or inferred from a Redis-backed state
+    configuration.
     """
     # Check for explicit deploy mode flag
     deploy_mode = os.environ.get("PYWRY_DEPLOY_MODE", "").lower()
@@ -110,6 +122,11 @@ def _get_deploy_settings() -> DeploySettings:
     """Get deploy settings from configuration.
 
     Imports lazily to avoid circular imports.
+
+    Returns
+    -------
+    DeploySettings
+        Resolved deploy settings instance.
     """
     from pywry.config import DeploySettings
 
@@ -130,6 +147,11 @@ def get_widget_store() -> WidgetStore:
     -------
     WidgetStore
         The widget store instance.
+
+    Notes
+    -----
+    The returned store is cached per process and re-created only after calling
+    ``clear_state_caches()``.
     """
     backend = get_state_backend()
 
@@ -157,6 +179,11 @@ def get_event_bus() -> EventBus:
     -------
     EventBus
         The event bus instance.
+
+    Notes
+    -----
+    The returned bus is cached per process and may be backed by Redis Pub/Sub in
+    deploy mode.
     """
     backend = get_state_backend()
 
@@ -183,6 +210,10 @@ def get_connection_router() -> ConnectionRouter:
     -------
     ConnectionRouter
         The connection router instance.
+
+    Notes
+    -----
+    The returned router is cached per process and uses the configured backend.
     """
     backend = get_state_backend()
 
@@ -210,6 +241,11 @@ def get_session_store() -> SessionStore:
     -------
     SessionStore
         The session store instance.
+
+    Notes
+    -----
+    Session storage is primarily relevant in deploy-mode RBAC and multi-tenant
+    scenarios, but a memory implementation is always available.
     """
     backend = get_state_backend()
 
@@ -227,12 +263,50 @@ def get_session_store() -> SessionStore:
     return MemorySessionStore()
 
 
+@lru_cache(maxsize=1)
+def get_chat_store() -> ChatStore:
+    """Get the configured chat store instance.
+
+    Uses Redis in deploy mode if configured, otherwise memory.
+
+    Returns
+    -------
+    ChatStore
+        The chat store instance.
+
+    Notes
+    -----
+    Chat storage is cached per process and uses the same backend selection logic
+    as the rest of the state subsystem.
+    """
+    backend = get_state_backend()
+
+    if backend == StateBackend.REDIS:
+        from .redis import RedisChatStore
+
+        settings = _get_deploy_settings()
+        return RedisChatStore(
+            redis_url=settings.redis_url,
+            prefix=settings.redis_prefix,
+            chat_ttl=settings.widget_ttl,
+            pool_size=settings.redis_pool_size,
+        )
+
+    return MemoryChatStore()
+
+
 def clear_state_caches() -> None:
     """Clear all cached state store instances.
 
     Call this to force re-creation of stores (e.g., after config change).
+
+    Notes
+    -----
+    This does not delete persisted backend data; it only clears in-process factory
+    caches so subsequent accessor calls build fresh instances.
     """
     get_widget_store.cache_clear()
     get_event_bus.cache_clear()
     get_connection_router.cache_clear()
     get_session_store.cache_clear()
+    get_chat_store.cache_clear()

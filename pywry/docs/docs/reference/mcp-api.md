@@ -27,6 +27,30 @@ MCP (Model Context Protocol) server for exposing PyWry widgets to AI agents.
 
 ---
 
+## Agentic Tools
+
+::: pywry.mcp.agentic.plan_widget
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.mcp.agentic.build_app
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.mcp.agentic.export_project
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.mcp.agentic.scaffold_app
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+---
+
 ## Prompts
 
 ::: pywry.mcp.prompts.get_prompts

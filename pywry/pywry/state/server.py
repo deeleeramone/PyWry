@@ -55,10 +55,21 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         True if running in horizontally scaled deploy mode.
     worker_id : str
         Unique identifier for this worker process.
+
+    Notes
+    -----
+    This manager bridges local in-process WebSocket state with the configured
+    distributed backend so the rest of PyWry can use one state API.
     """
 
     def __init__(self) -> None:
-        """Initialize the state manager."""
+        """Initialize the state manager.
+
+        Notes
+        -----
+        Backend stores are initialized lazily to avoid circular imports and to
+        defer environment-dependent setup until the manager is first used.
+        """
         self._initialized = False
         self._lock = threading.Lock()
         self._async_lock: asyncio.Lock | None = None
@@ -96,16 +107,34 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
 
     @property
     def deploy_mode(self) -> bool:
-        """Check if running in deploy mode."""
+        """Check if running in deploy mode.
+
+        Returns
+        -------
+        bool
+            True when distributed state and routing features are enabled.
+        """
         return is_deploy_mode()
 
     @property
     def worker_id(self) -> str:
-        """Get this worker's unique ID."""
+        """Get this worker's unique ID.
+
+        Returns
+        -------
+        str
+            Stable identifier for this process instance.
+        """
         return get_worker_id()
 
     def _ensure_initialized(self) -> None:
-        """Ensure state stores are initialized."""
+        """Ensure state stores are initialized.
+
+        Notes
+        -----
+        Store accessors are invoked once per process and cached after the first
+        successful initialization.
+        """
         if self._initialized:
             return
 
@@ -122,7 +151,14 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
             self._initialized = True
 
     async def _get_async_lock(self) -> asyncio.Lock:
-        """Get or create the async lock."""
+        """Get or create the async lock.
+
+        Returns
+        -------
+        asyncio.Lock
+            Shared async lock for manager operations that need coroutine-level
+            synchronization.
+        """
         if self._async_lock is None:
             self._async_lock = asyncio.Lock()
         return self._async_lock
@@ -325,22 +361,45 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         Note: In deploy mode, this only returns widgets that were
         created by this worker and may not reflect the full state.
         Use async methods for accurate state in deploy mode.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            Process-local widget mapping.
         """
         return self._local_widgets
 
     @property
     def widget_tokens(self) -> dict[str, str]:
-        """Get local widget tokens dict."""
+        """Get local widget tokens.
+
+        Returns
+        -------
+        dict[str, str]
+            Process-local map of widget IDs to authentication tokens.
+        """
         return self._local_widget_tokens
 
     @property
     def connections(self) -> dict[str, Any]:
-        """Get local connections dict."""
+        """Get local WebSocket connections.
+
+        Returns
+        -------
+        dict[str, Any]
+            Process-local map of widget IDs to WebSocket objects.
+        """
         return self._local_connections
 
     @property
     def event_queues(self) -> dict[str, asyncio.Queue[Any]]:
-        """Get local event queues dict."""
+        """Get local event queues.
+
+        Returns
+        -------
+        dict[str, asyncio.Queue[Any]]
+            Process-local map of widget IDs to outbound event queues.
+        """
         return self._local_event_queues
 
     # --- Connection Management ---
@@ -387,6 +446,11 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         ----------
         widget_id : str
             The widget ID.
+
+        Notes
+        -----
+        Local connection state is cleared before any distributed router entry is
+        removed.
         """
         self._ensure_initialized()
 
@@ -447,6 +511,11 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
             The event type to handle.
         callback : callable
             The callback function.
+
+        Notes
+        -----
+        Callback registrations are always stored locally because Python callables
+        are not serializable across workers.
         """
         self._ensure_initialized()
 
@@ -526,6 +595,11 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
             The event type.
         data : dict
             Event data.
+
+        Notes
+        -----
+        In local mode the event is enqueued directly; in deploy mode it is
+        wrapped in an EventMessage and published to the widget channel.
         """
         self._ensure_initialized()
 
@@ -565,6 +639,11 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         -------
         bool
             True if event was queued for sending.
+
+        Notes
+        -----
+        When the widget is not connected locally and deploy mode is active, the
+        event is published so the owning worker can deliver it.
         """
         event_queue = self._local_event_queues.get(widget_id)
         if event_queue:
@@ -640,7 +719,13 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
     # --- Cleanup ---
 
     async def cleanup(self) -> None:
-        """Clean up all state and connections."""
+        """Clean up all state and connections.
+
+        Notes
+        -----
+        This clears only process-local state and unregisters active local
+        connections; persisted backend data remains in its configured store.
+        """
         self._ensure_initialized()
 
         # Close all local connections
@@ -666,6 +751,10 @@ def get_server_state() -> ServerStateManager:
     -------
     ServerStateManager
         The singleton state manager instance.
+
+    Notes
+    -----
+    The returned manager is process-local and lazily initialized.
     """
     if _StateHolder.instance is None:
         _StateHolder.instance = ServerStateManager()
@@ -673,5 +762,10 @@ def get_server_state() -> ServerStateManager:
 
 
 def reset_server_state() -> None:
-    """Reset the server state manager (for testing)."""
+    """Reset the server state manager.
+
+    Notes
+    -----
+    Primarily intended for tests that need a fresh singleton manager.
+    """
     _StateHolder.instance = ServerStateManager()

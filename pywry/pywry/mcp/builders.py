@@ -338,3 +338,70 @@ def build_toolbars(toolbars_data: list[dict[str, Any]]) -> list[Any]:
             )
         )
     return toolbars
+
+
+# =============================================================================
+# Chat Builders
+# =============================================================================
+
+
+def build_chat_config(cfg: dict[str, Any]) -> Any:
+    """Build a ChatConfig from a config dict.
+
+    Parameters
+    ----------
+    cfg : dict[str, Any]
+        Chat configuration dictionary.
+
+    Returns
+    -------
+    ChatConfig
+        Built chat configuration.
+    """
+    from pywry.chat import ChatConfig, SlashCommand
+
+    cmds_data = cfg.get("slash_commands")
+    kwargs: dict[str, Any] = {
+        "system_prompt": cfg.get("system_prompt", ""),
+        "model": cfg.get("model", "gpt-4"),
+        "temperature": cfg.get("temperature", 0.7),
+        "max_tokens": cfg.get("max_tokens", 4096),
+        "streaming": cfg.get("streaming", True),
+        "persist": cfg.get("persist", False),
+        "provider": cfg.get("provider"),
+    }
+    if cmds_data:
+        kwargs["slash_commands"] = [
+            SlashCommand(
+                name=c["name"],
+                description=c.get("description", ""),
+            )
+            for c in cmds_data
+        ]
+
+    return ChatConfig(**kwargs)
+
+
+def build_chat_widget_config(cfg: dict[str, Any]) -> Any:
+    """Build a ChatWidgetConfig from a config dict.
+
+    Parameters
+    ----------
+    cfg : dict[str, Any]
+        Widget configuration dictionary.
+
+    Returns
+    -------
+    ChatWidgetConfig
+        Built chat widget configuration.
+    """
+    from pywry.chat import ChatWidgetConfig
+
+    chat_config = build_chat_config(cfg)
+
+    return ChatWidgetConfig(
+        title=cfg.get("title", "Chat"),
+        height=cfg.get("height", 700),
+        chat_config=chat_config,
+        show_sidebar=cfg.get("show_sidebar", True),
+    )

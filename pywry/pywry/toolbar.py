@@ -2842,7 +2842,7 @@ class Toolbar(BaseModel):
         outer_style = ""
         content_style = ""
         if self.style:
-            if self.position == "inside":
+            if self.position in ("inside", "left", "right"):
                 outer_style = f' style="{self.style}"'
             else:
                 content_style = f' style="{self.style}"'

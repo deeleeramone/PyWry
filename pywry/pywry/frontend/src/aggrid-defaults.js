@@ -3,6 +3,9 @@
 // Registry of all grid instances by ID
 window.__PYWRY_GRIDS__ = window.__PYWRY_GRIDS__ || {};
 
+// Unified component registry — any component can register with getData()
+window.__PYWRY_COMPONENTS__ = window.__PYWRY_COMPONENTS__ || {};
+
 /**
  * Show a temporary notification toast.
  * Theme-aware, uses AG Grid CSS custom properties.
@@ -632,6 +635,13 @@ window.PYWRY_AGGRID_REGISTER_LISTENERS = function(gridApi, gridDiv, gridId) {
     window.__PYWRY_GRIDS__[id] = {
         api: gridApi,
         div: gridDiv
+    };
+
+    // Register in unified component registry
+    window.__PYWRY_COMPONENTS__[id] = {
+        getData: function () {
+            try { return gridApi.getDataAsCsv(); } catch (e) { return ''; }
+        }
     };
 
     if (!window.__PYWRY_GRID_API__) {

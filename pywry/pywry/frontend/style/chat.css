@@ -1,0 +1,1663 @@
+/**
+ * PyWry Chat Component Styles — VS Code Copilot Chat layout
+ *
+ * Structure:
+ *   .pywry-chat                 — outer container (column flex, full width)
+ *     .pywry-chat-header        — full-width header with conv picker + actions
+ *     .pywry-chat-messages      — scrollable message area
+ *     .pywry-chat-typing        — typing indicator
+ *     .pywry-chat-input-bar     — full-width input textarea + send button
+ *
+ * Settings is a dropdown menu anchored to the gear icon in the header.
+ * Conversation threads are managed via the header dropdown with editable
+ * titles, visible IDs, and rename/delete actions.
+ *
+ * Uses existing CSS custom properties from pywry.css for theming.
+ */
+
+/* =========================================================================
+   Container
+   ========================================================================= */
+.pywry-chat {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    font-family: var(--pywry-font-family);
+    font-size: var(--pywry-font-size);
+    color: var(--pywry-text-primary);
+    background: var(--pywry-bg-primary);
+    position: relative;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.pywry-chat *, .pywry-chat *::before, .pywry-chat *::after {
+    box-sizing: border-box;
+}
+
+/* Thin styled scrollbars for all scrollable areas inside chat */
+.pywry-chat {
+    scrollbar-width: thin;
+    scrollbar-color: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.4)) transparent;
+}
+.pywry-chat ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.pywry-chat ::-webkit-scrollbar-track {
+    background: transparent;
+}
+.pywry-chat ::-webkit-scrollbar-thumb {
+    background: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.4));
+    border-radius: 3px;
+}
+.pywry-chat ::-webkit-scrollbar-thumb:hover {
+    background: var(--pywry-scrollbar-thumb-hover, rgba(155, 155, 155, 0.7));
+}
+
+/* Override toolbar-content when chat is nested inside */
+.pywry-toolbar-content:has(.pywry-chat) {
+    padding: 0 !important;
+    gap: 0 !important;
+    align-items: stretch !important;
+    width: 100% !important;
+}
+/* Pad only the messages area away from the collapse toggle arrow.
+   The toggle is position:absolute — left:0 for right toolbars,
+   right:0 for left toolbars, centered-bottom for top, centered-top for bottom.
+   Header and input bar stay full-width edge-to-edge. */
+.pywry-toolbar-right[data-collapsible="true"] .pywry-chat-messages {
+    padding-left: 24px;
+}
+.pywry-toolbar-left[data-collapsible="true"] .pywry-chat-messages {
+    padding-right: 24px;
+}
+.pywry-toolbar-bottom[data-collapsible="true"] .pywry-chat-messages {
+    padding-top: 24px;
+}
+.pywry-toolbar-top[data-collapsible="true"] .pywry-chat-messages {
+    padding-bottom: 24px;
+}
+.pywry-div:has(> .pywry-chat) {
+    width: 100% !important;
+    height: 100%;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    padding: 0;
+    gap: 0;
+    min-width: 0;
+}
+
+/* =========================================================================
+   Header Bar — full width, edge-to-edge
+   ========================================================================= */
+.pywry-chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 36px;
+    min-height: 36px;
+    padding: 0 var(--pywry-spacing-lg);
+    border-bottom: 1px solid var(--pywry-border-color);
+    background: var(--pywry-bg-secondary);
+    gap: 0;
+    flex-shrink: 0;
+    width: 100%;
+}
+
+.pywry-chat-header-left {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    overflow: visible;
+}
+
+.pywry-chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.pywry-chat-header-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: none;
+    border-radius: var(--pywry-radius, 4px);
+    color: var(--pywry-text-secondary);
+    cursor: pointer;
+    padding: 0;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.pywry-chat-header-btn:hover {
+    background: var(--pywry-bg-hover);
+    color: var(--pywry-text-primary);
+}
+
+/* =========================================================================
+   Conversation Picker (dropdown in header)
+   ========================================================================= */
+.pywry-chat-conv-picker {
+    position: relative;
+    min-width: 0;
+    flex: 1;
+}
+
+.pywry-chat-conv-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: var(--pywry-text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--pywry-radius, 4px);
+    max-width: 100%;
+    min-width: 0;
+    transition: background 120ms ease;
+}
+
+.pywry-chat-conv-btn:hover {
+    background: var(--pywry-bg-hover);
+}
+
+.pywry-chat-conv-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.pywry-chat-chevron {
+    flex-shrink: 0;
+    transition: transform 150ms ease;
+}
+
+.pywry-chat-conv-picker.open .pywry-chat-chevron {
+    transform: rotate(180deg);
+}
+
+.pywry-chat-conv-dropdown {
+    display: none;
+    position: fixed;
+    min-width: 240px;
+    max-width: 360px;
+    max-height: 340px;
+    overflow-y: auto;
+    background: var(--pywry-bg-secondary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg, 6px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    z-index: 10000;
+    padding: 4px;
+}
+
+.pywry-chat-conv-picker.open .pywry-chat-conv-dropdown {
+    display: block;
+}
+
+/* =========================================================================
+   Thread items inside dropdown — with editable titles and visible IDs
+   ========================================================================= */
+.pywry-chat-thread-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.pywry-chat-thread-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: var(--pywry-radius, 4px);
+    cursor: pointer;
+    transition: background 80ms ease;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.pywry-chat-thread-item:hover {
+    background: var(--pywry-bg-hover);
+}
+
+.pywry-chat-thread-item.active {
+    background: var(--pywry-bg-hover);
+    font-weight: 600;
+}
+
+.pywry-chat-thread-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.pywry-chat-thread-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pywry-chat-thread-title-input {
+    width: 100%;
+    background: var(--pywry-bg-primary);
+    border: 1px solid var(--pywry-border-focus, var(--pywry-accent, #0078d4));
+    border-radius: var(--pywry-radius, 4px);
+    color: var(--pywry-text-primary);
+    font-size: 13px;
+    padding: 1px 4px;
+    outline: none;
+    font-family: var(--pywry-font-family);
+}
+
+.pywry-chat-thread-id {
+    font-size: 10px;
+    color: var(--pywry-text-muted);
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    user-select: all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: copy;
+}
+
+.pywry-chat-thread-id:hover {
+    color: var(--pywry-text-secondary);
+}
+
+.pywry-chat-thread-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 80ms ease;
+}
+
+.pywry-chat-thread-item:hover .pywry-chat-thread-actions {
+    opacity: 1;
+}
+
+.pywry-chat-thread-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: none;
+    border: none;
+    color: var(--pywry-text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: var(--pywry-radius, 4px);
+    padding: 0;
+    transition: background 80ms ease, color 80ms ease;
+}
+
+.pywry-chat-thread-actions button:hover {
+    background: var(--pywry-bg-hover);
+    color: var(--pywry-text-primary);
+}
+
+/* =========================================================================
+   Message Area
+   ========================================================================= */
+.pywry-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 12px;
+    width: 100%;
+}
+
+/* =========================================================================
+   Messages — full-width, no bubbles (VS Code style)
+   ========================================================================= */
+.pywry-chat-msg {
+    padding: 8px 0;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.pywry-chat-msg + .pywry-chat-msg {
+    border-top: 1px solid var(--pywry-border-color);
+}
+
+/* Role label */
+.pywry-chat-msg-role {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--pywry-text-secondary);
+    text-transform: capitalize;
+}
+
+.pywry-chat-msg-role-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.pywry-chat-msg-user .pywry-chat-msg-role-icon {
+    background: var(--pywry-accent, #0078d4);
+    color: #fff;
+}
+
+.pywry-chat-msg-assistant .pywry-chat-msg-role-icon {
+    background: var(--pywry-text-muted);
+    color: var(--pywry-bg-primary);
+}
+
+.pywry-chat-msg-system {
+    color: var(--pywry-text-muted);
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
+    padding: 4px 0;
+}
+
+/* Message content */
+.pywry-chat-msg-content {
+    font-size: 13px;
+    color: var(--pywry-text-primary);
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.pywry-chat-msg-content p {
+    margin: 0 0 8px 0;
+}
+
+.pywry-chat-msg-content p:last-child {
+    margin-bottom: 0;
+}
+
+.pywry-chat-msg-content code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    background: rgba(128, 128, 128, 0.15);
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+.pywry-chat-msg-content pre {
+    margin: 8px 0;
+    padding: 12px;
+    background: var(--pywry-bg-secondary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg, 6px);
+    overflow-x: auto;
+}
+
+.pywry-chat-msg-content pre code {
+    background: none;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* ---- Syntax Highlighting — VS Code Dark+ inspired ---- */
+.pywry-hl-kw  { color: #569cd6; }                /* keywords — blue */
+.pywry-hl-str { color: #ce9178; }                 /* strings — orange */
+.pywry-hl-cmt { color: #6a9955; font-style: italic; } /* comments — green italic */
+.pywry-hl-num { color: #b5cea8; }                 /* numbers — light green */
+.pywry-hl-fn  { color: #dcdcaa; }                 /* functions — yellow */
+.pywry-hl-type { color: #4ec9b0; }                /* types/builtins — teal */
+.pywry-hl-dec { color: #d7ba7d; }                 /* decorators/attrs — gold */
+.pywry-hl-op  { color: #d4d4d4; }                 /* operators */
+.pywry-hl-punc { color: #808080; }                /* punctuation — gray */
+.pywry-hl-prop { color: #9cdcfe; }                /* property/key — light blue */
+
+/* Light theme overrides */
+html.light .pywry-hl-kw,
+.pywry-theme-light .pywry-hl-kw  { color: #0000ff; }
+html.light .pywry-hl-str,
+.pywry-theme-light .pywry-hl-str { color: #a31515; }
+html.light .pywry-hl-cmt,
+.pywry-theme-light .pywry-hl-cmt { color: #008000; }
+html.light .pywry-hl-num,
+.pywry-theme-light .pywry-hl-num { color: #098658; }
+html.light .pywry-hl-fn,
+.pywry-theme-light .pywry-hl-fn  { color: #795e26; }
+html.light .pywry-hl-type,
+.pywry-theme-light .pywry-hl-type { color: #267f99; }
+html.light .pywry-hl-dec,
+.pywry-theme-light .pywry-hl-dec { color: #af00db; }
+html.light .pywry-hl-prop,
+.pywry-theme-light .pywry-hl-prop { color: #001080; }
+
+.pywry-chat-msg-content a {
+    color: var(--pywry-text-accent, var(--pywry-accent, #4fc1ff));
+    text-decoration: none;
+}
+
+.pywry-chat-msg-content a:hover {
+    text-decoration: underline;
+}
+
+.pywry-chat-stopped {
+    display: inline-block;
+    margin-left: 6px;
+    color: var(--pywry-text-muted);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.pywry-chat-expand {
+    display: inline-block;
+    background: none;
+    border: none;
+    color: var(--pywry-text-accent, var(--pywry-accent, #4fc1ff));
+    cursor: pointer;
+    padding: 2px 0;
+    font-size: 12px;
+}
+
+.pywry-chat-expand:hover {
+    text-decoration: underline;
+}
+
+/* =========================================================================
+   Typing Indicator
+   ========================================================================= */
+.pywry-chat-typing {
+    display: none;
+    padding: 4px 8px 8px;
+    color: var(--pywry-text-muted);
+    font-size: 12px;
+}
+
+.pywry-chat-typing::after {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin-left: 4px;
+    background: var(--pywry-text-muted);
+    border-radius: 50%;
+    animation: pywry-chat-dot-pulse 1.4s infinite;
+}
+
+@keyframes pywry-chat-dot-pulse {
+    0%, 80%, 100% { opacity: 0.3; }
+    40% { opacity: 1; }
+}
+
+/* =========================================================================
+   Thinking Block — collapsible inline streaming block
+   ========================================================================= */
+.pywry-chat-thinking {
+    margin: 4px 0 8px;
+    border: 1px solid var(--pywry-border-color);
+    border-radius: 6px;
+    background: var(--pywry-bg-secondary);
+    font-size: 12px;
+    overflow: hidden;
+}
+
+.pywry-chat-thinking[open] {
+    border-color: color-mix(in srgb, var(--pywry-accent, #0078d4) 30%, var(--pywry-border-color));
+}
+
+.pywry-chat-thinking-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: var(--pywry-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    user-select: none;
+    list-style: none;          /* remove default marker */
+}
+
+.pywry-chat-thinking-summary::-webkit-details-marker { display: none; }
+
+.pywry-chat-thinking-summary::before {
+    content: '▶';
+    font-size: 9px;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.pywry-chat-thinking[open] > .pywry-chat-thinking-summary::before {
+    transform: rotate(90deg);
+}
+
+.pywry-chat-thinking-icon {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.pywry-chat-thinking-count {
+    font-weight: 400;
+    color: var(--pywry-text-muted);
+}
+
+.pywry-chat-thinking-spinner {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin-left: 2px;
+    background: var(--pywry-text-muted);
+    border-radius: 50%;
+    animation: pywry-chat-dot-pulse 1.4s infinite;
+}
+
+.pywry-chat-thinking-content {
+    padding: 0 10px 8px;
+    margin: 0;
+    color: var(--pywry-text-muted);
+    font-family: var(--pywry-font-mono, 'Cascadia Code', 'Fira Code', 'Consolas', monospace);
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+    border-top: 1px solid var(--pywry-border-color);
+}
+
+/* =========================================================================
+   Todo List — collapsible task list above input bar
+   ========================================================================= */
+.pywry-chat-todo {
+    display: none;
+    flex-shrink: 0;
+    width: 100%;
+    border-top: 1px solid var(--pywry-border-color);
+    background: var(--pywry-bg-secondary);
+}
+
+.pywry-chat-todo-details {
+    margin: 0;
+}
+
+.pywry-chat-todo-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 10px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    font-size: 11px;
+    color: var(--pywry-text-secondary);
+    gap: 8px;
+}
+
+.pywry-chat-todo-summary::-webkit-details-marker { display: none; }
+
+.pywry-chat-todo-summary::before {
+    content: '▶';
+    font-size: 8px;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+    color: var(--pywry-text-muted);
+}
+
+.pywry-chat-todo-details[open] > .pywry-chat-todo-summary::before {
+    transform: rotate(90deg);
+}
+
+.pywry-chat-todo-label {
+    flex: 1;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pywry-chat-todo-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.pywry-chat-todo-progress {
+    width: 48px;
+    height: 3px;
+    background: var(--pywry-bg-tertiary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.pywry-chat-todo-progress-fill {
+    height: 100%;
+    background: var(--pywry-accent, #0078d4);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.pywry-chat-todo-clear {
+    background: none;
+    border: none;
+    color: var(--pywry-text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.pywry-chat-todo-summary:hover .pywry-chat-todo-clear {
+    opacity: 1;
+}
+
+.pywry-chat-todo-clear:hover {
+    color: var(--pywry-text-primary);
+}
+
+.pywry-chat-todo-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 10px 6px;
+}
+
+.pywry-chat-todo-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 2px 0;
+    font-size: 11px;
+    color: var(--pywry-text-secondary);
+    line-height: 1.4;
+}
+
+.pywry-chat-todo-item-done {
+    color: var(--pywry-text-muted);
+    text-decoration: line-through;
+}
+
+.pywry-chat-todo-item-active {
+    color: var(--pywry-text-primary);
+}
+
+.pywry-chat-todo-icon {
+    flex-shrink: 0;
+    font-size: 8px;
+    width: 14px;
+    text-align: center;
+    line-height: 1.8;
+    color: var(--pywry-text-muted);
+}
+
+.pywry-chat-todo-done {
+    color: #3fb950;
+}
+
+.pywry-chat-todo-active {
+    color: var(--pywry-accent, #0078d4);
+    font-size: 7px;
+    animation: pywry-chat-dot-pulse 1.4s infinite;
+}
+
+/* =========================================================================
+   Input Required — question prompt + accent input bar
+   ========================================================================= */
+.pywry-chat-input-prompt {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pywry-spacing-lg);
+    padding: var(--pywry-spacing-lg) 12px;
+    margin: var(--pywry-spacing-sm) 0;
+    background: var(--pywry-bg-tertiary);
+    border-left: 2px solid var(--pywry-accent);
+    border-radius: 0 var(--pywry-radius) var(--pywry-radius) 0;
+    font-size: var(--pywry-font-size);
+    color: var(--pywry-text-primary);
+    line-height: 1.5;
+}
+
+.pywry-chat-input-prompt-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: var(--pywry-accent);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: var(--pywry-font-weight-medium);
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.pywry-chat-input-required {
+    border-top-color: var(--pywry-accent) !important;
+}
+
+.pywry-chat-input-required textarea {
+    border-color: var(--pywry-accent, #0078d4) !important;
+}
+
+/* Inline controls (buttons / radio) rendered in chat area */
+.pywry-chat-ir-controls {
+    padding: var(--pywry-spacing-md) 12px var(--pywry-spacing-lg);
+}
+
+/* Button row */
+.pywry-chat-ir-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--pywry-spacing-md);
+}
+
+.pywry-chat-ir-btn {
+    padding: var(--pywry-spacing-xs) var(--pywry-spacing-sm);
+    font-size: var(--pywry-font-size);
+    font-family: var(--pywry-font-family);
+    font-weight: var(--pywry-font-weight-medium);
+    border: none;
+    border-radius: var(--pywry-radius);
+    background: var(--pywry-btn-secondary-bg);
+    color: var(--pywry-btn-secondary-text);
+    cursor: pointer;
+    transition: background var(--pywry-transition-fast);
+    line-height: 1.4;
+}
+
+.pywry-chat-ir-btn:hover {
+    background: var(--pywry-btn-secondary-hover);
+}
+
+.pywry-chat-ir-btn:active {
+    opacity: 0.85;
+}
+
+/* Radio group */
+.pywry-chat-ir-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pywry-spacing-xs);
+}
+
+.pywry-chat-ir-radio-item {
+    display: flex;
+    align-items: center;
+    gap: var(--pywry-spacing-lg);
+    padding: var(--pywry-spacing-sm) var(--pywry-spacing-lg);
+    border-radius: var(--pywry-radius);
+    cursor: pointer;
+    font-size: var(--pywry-font-size);
+    color: var(--pywry-text-primary);
+    transition: background var(--pywry-transition-fast);
+}
+
+.pywry-chat-ir-radio-item:hover {
+    background: var(--pywry-bg-hover);
+}
+
+.pywry-chat-ir-radio-input {
+    accent-color: var(--pywry-accent);
+    margin: 0;
+    cursor: pointer;
+}
+
+.pywry-chat-ir-radio-label {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.pywry-chat-ir-radio-submit {
+    align-self: flex-start;
+    margin-top: var(--pywry-spacing-sm);
+}
+
+/* =========================================================================
+   New Messages Badge
+   ========================================================================= */
+.pywry-chat-new-msg-badge {
+    display: none;
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--pywry-accent, #0078d4);
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.pywry-chat-new-msg-badge:hover {
+    opacity: 0.9;
+}
+
+/* =========================================================================
+   Input Bar — full width, edge-to-edge
+   ========================================================================= */
+.pywry-chat-input-bar {
+    padding: var(--pywry-spacing-lg);
+    background: var(--pywry-bg-primary);
+    position: relative;
+    flex-shrink: 0;
+    width: 100%;
+}
+
+.pywry-chat-input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    background: var(--pywry-bg-secondary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg);
+    padding: 4px 4px 4px 12px;
+    width: 100%;
+    transition: border-color var(--pywry-transition-fast);
+}
+
+.pywry-chat-input-row:focus-within {
+    border-color: var(--pywry-accent);
+}
+
+#pywry-chat-input {
+    flex: 1;
+    min-height: 24px;
+    max-height: 200px;
+    padding: 4px 0;
+    border: none;
+    background: transparent;
+    color: var(--pywry-text-primary);
+    font-family: var(--pywry-font-family);
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    line-height: 1.4;
+    width: 100%;
+    overflow-y: hidden;
+}
+
+#pywry-chat-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#pywry-chat-input::placeholder {
+    color: var(--pywry-text-muted);
+}
+
+.pywry-chat-send-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: var(--pywry-radius, 4px);
+    background: var(--pywry-accent, #0078d4);
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 120ms ease;
+    padding: 0;
+}
+
+.pywry-chat-send-btn:hover {
+    background: var(--pywry-accent-hover, #106ebe);
+}
+
+.pywry-chat-send-btn.pywry-chat-stop {
+    background: #d13438;
+}
+
+.pywry-chat-send-btn.pywry-chat-stop:hover {
+    background: #a4262c;
+}
+
+/* =========================================================================
+   Slash Command Palette
+   ========================================================================= */
+.pywry-chat-cmd-palette {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--pywry-bg-secondary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg, 6px);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+    z-index: 20;
+    padding: 4px;
+}
+
+.pywry-chat-cmd-item {
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: var(--pywry-radius, 4px);
+    transition: background 80ms ease;
+    font-size: 13px;
+}
+
+.pywry-chat-cmd-item:hover,
+.pywry-chat-cmd-item.active {
+    background: var(--pywry-bg-hover);
+}
+
+.pywry-chat-cmd-item strong {
+    color: var(--pywry-text-accent, var(--pywry-accent, #4fc1ff));
+    margin-right: 6px;
+}
+
+.pywry-chat-cmd-item span {
+    color: var(--pywry-text-secondary);
+}
+
+/* =========================================================================
+   Settings Dropdown Menu — anchored to gear icon in header
+   ========================================================================= */
+.pywry-chat-settings-menu {
+    position: relative;
+}
+
+.pywry-chat-settings-dropdown {
+    display: none;
+    position: fixed;
+    min-width: 220px;
+    max-width: 300px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: var(--pywry-bg-secondary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg, 6px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    z-index: 10000;
+    padding: 4px;
+}
+
+.pywry-chat-settings-menu.open .pywry-chat-settings-dropdown {
+    display: block;
+}
+
+.pywry-chat-settings-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-radius: var(--pywry-radius, 4px);
+    font-size: 13px;
+    color: var(--pywry-text-primary);
+    cursor: pointer;
+    transition: background 80ms ease;
+    gap: 8px;
+}
+
+.pywry-chat-settings-item:hover {
+    background: var(--pywry-bg-hover);
+}
+
+.pywry-chat-settings-item-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pywry-chat-settings-item select {
+    background: var(--pywry-bg-primary);
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius, 4px);
+    color: var(--pywry-text-primary);
+    font-size: 12px;
+    padding: 2px 4px;
+    outline: none;
+    max-width: 120px;
+}
+
+.pywry-chat-settings-item select:focus {
+    border-color: var(--pywry-border-focus, var(--pywry-accent, #0078d4));
+}
+
+.pywry-chat-settings-item input[type="range"] {
+    width: 80px;
+    vertical-align: middle;
+}
+
+.pywry-chat-settings-range-val {
+    min-width: 24px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--pywry-text-muted);
+}
+
+.pywry-chat-settings-item input[type="checkbox"] {
+    accent-color: var(--pywry-accent, #0078d4);
+}
+
+.pywry-chat-settings-sep {
+    height: 1px;
+    background: var(--pywry-border-color);
+    margin: 4px 8px;
+}
+
+.pywry-chat-settings-empty {
+    padding: 12px 8px;
+    text-align: center;
+    color: var(--pywry-text-muted);
+    font-size: 12px;
+}
+
+/* =========================================================================
+   Streaming cursor animation
+   ========================================================================= */
+.pywry-chat-msg-assistant .pywry-chat-msg-content.streaming::after {
+    content: '▊';
+    display: inline;
+    animation: pywry-chat-cursor-blink 0.7s step-end infinite;
+    color: var(--pywry-text-secondary);
+}
+
+@keyframes pywry-chat-cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* =========================================================================
+   Formatting timeout warning
+   ========================================================================= */
+.pywry-chat-fmt-warn {
+    display: block;
+    color: var(--pywry-text-muted);
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+/* Hidden code block overflow */
+.pywry-chat-code-hidden {
+    white-space: pre;
+}
+
+/* =========================================================================
+   Protocol: Tool Calls — collapsible <details> (VS Code style)
+   ========================================================================= */
+.pywry-chat-tool-call {
+    margin: 4px 0 8px;
+    border: 1px solid var(--pywry-border-color);
+    border-radius: 6px;
+    background: var(--pywry-bg-secondary);
+    font-size: 12px;
+    overflow: hidden;
+}
+
+.pywry-chat-tool-call[open] {
+    border-color: color-mix(in srgb, var(--pywry-accent, #0078d4) 30%, var(--pywry-border-color));
+}
+
+.pywry-chat-tool-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: var(--pywry-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    user-select: none;
+    list-style: none;
+}
+
+.pywry-chat-tool-summary::-webkit-details-marker { display: none; }
+
+.pywry-chat-tool-summary::before {
+    content: '\25B6';
+    font-size: 9px;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.pywry-chat-tool-call[open] > .pywry-chat-tool-summary::before {
+    transform: rotate(90deg);
+}
+
+.pywry-chat-tool-icon {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.pywry-chat-tool-label {
+    color: var(--pywry-text-secondary);
+}
+
+.pywry-chat-tool-name {
+    font-family: var(--pywry-font-mono, 'Cascadia Code', 'Fira Code', 'Consolas', monospace);
+    color: var(--pywry-text-accent, var(--pywry-accent, #4fc1ff));
+}
+
+.pywry-chat-tool-spinner {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin-left: 2px;
+    background: var(--pywry-text-muted);
+    border-radius: 50%;
+    animation: pywry-chat-dot-pulse 1.4s infinite;
+}
+
+.pywry-chat-tool-args {
+    margin: 0;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.15);
+    font-size: 11px;
+    overflow-x: auto;
+    border-top: 1px solid var(--pywry-border-color);
+}
+
+.pywry-chat-tool-args code {
+    font-family: var(--pywry-font-mono, 'Cascadia Code', 'Fira Code', 'Consolas', monospace);
+    font-size: 11px;
+    background: none;
+    padding: 0;
+}
+
+.pywry-chat-tool-result {
+    margin: 0;
+    padding: 6px 10px;
+    border-top: 1px solid var(--pywry-border-color);
+    font-size: 12px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.pywry-chat-tool-result pre {
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.pywry-chat-tool-result pre code {
+    font-family: var(--pywry-font-mono, 'Cascadia Code', 'Fira Code', 'Consolas', monospace);
+    font-size: 11px;
+    background: none;
+    padding: 0;
+    color: var(--pywry-text-muted);
+}
+
+.pywry-chat-tool-error {
+    border-color: color-mix(in srgb, #d13438 40%, var(--pywry-border-color));
+}
+
+.pywry-chat-tool-error .pywry-chat-tool-icon {
+    color: #d13438;
+}
+
+.pywry-chat-tool-error-text {
+    color: #d13438;
+}
+
+/* =========================================================================
+   Protocol: Citations
+   ========================================================================= */
+.pywry-chat-citation {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 4px 0;
+    padding: 6px 8px;
+    background: var(--pywry-bg-secondary);
+    border-radius: var(--pywry-radius, 4px);
+    font-size: 12px;
+}
+
+.pywry-chat-citation-icon {
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.pywry-chat-citation a {
+    color: var(--pywry-text-accent, var(--pywry-accent, #4fc1ff));
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.pywry-chat-citation a:hover {
+    text-decoration: underline;
+}
+
+.pywry-chat-citation-snippet {
+    display: block;
+    color: var(--pywry-text-muted);
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+/* =========================================================================
+   Protocol: Artifacts
+   ========================================================================= */
+.pywry-chat-artifact {
+    margin: 6px 0;
+    border: 1px solid var(--pywry-border-color);
+    border-radius: var(--pywry-radius-lg, 6px);
+    overflow: hidden;
+}
+
+.pywry-chat-artifact-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--pywry-bg-secondary);
+    border-bottom: 1px solid var(--pywry-border-color);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pywry-text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+.pywry-chat-artifact-header:hover {
+    background: var(--pywry-bg-tertiary);
+}
+
+.pywry-chat-artifact-chevron {
+    font-size: 10px;
+    color: var(--pywry-text-tertiary, var(--pywry-text-secondary));
+    transition: transform 0.15s ease;
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.pywry-chat-artifact-icon {
+    font-size: 14px;
+}
+
+.pywry-chat-artifact-title {
+    flex: 1;
+}
+
+/* Collapsed state — hide the body */
+.pywry-chat-artifact-collapsed .pywry-chat-artifact-body {
+    display: none;
+}
+.pywry-chat-artifact-collapsed .pywry-chat-artifact-header {
+    border-bottom: none;
+}
+
+.pywry-chat-artifact-content {
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--pywry-bg-primary);
+    font-size: 12px;
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* -- Code artifact — tertiary background --------------------------------- */
+.pywry-chat-artifact-code .pywry-chat-artifact-content {
+    background: var(--pywry-bg-tertiary);
+}
+
+.pywry-chat-artifact-content code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    background: none;
+    padding: 0;
+    line-height: 1.4;
+}
+
+/* -- Syntax highlighting (VS Code Dark+ inspired) ------------------------ */
+.pywry-chat-artifact-content .pywry-hl-keyword {
+    color: var(--pywry-hl-keyword, #569cd6);
+}
+.pywry-chat-artifact-content .pywry-hl-builtin {
+    color: var(--pywry-hl-builtin, #4ec9b0);
+}
+.pywry-chat-artifact-content .pywry-hl-string {
+    color: var(--pywry-hl-string, #ce9178);
+}
+.pywry-chat-artifact-content .pywry-hl-comment {
+    color: var(--pywry-hl-comment, #6a9955);
+    font-style: italic;
+}
+.pywry-chat-artifact-content .pywry-hl-number {
+    color: var(--pywry-hl-number, #b5cea8);
+}
+.pywry-chat-artifact-content .pywry-hl-constant {
+    color: var(--pywry-hl-constant, #569cd6);
+}
+.pywry-chat-artifact-content .pywry-hl-function {
+    color: var(--pywry-hl-function, #dcdcaa);
+}
+.pywry-chat-artifact-content .pywry-hl-decorator {
+    color: var(--pywry-hl-decorator, #d7ba7d);
+}
+.pywry-chat-artifact-content .pywry-hl-operator {
+    color: var(--pywry-hl-operator, #d4d4d4);
+}
+.pywry-chat-artifact-content .pywry-hl-punctuation {
+    color: var(--pywry-hl-punctuation, #d4d4d4);
+}
+.pywry-chat-artifact-content .pywry-hl-type {
+    color: var(--pywry-hl-type, #4ec9b0);
+}
+.pywry-chat-artifact-content .pywry-hl-parameter {
+    color: var(--pywry-hl-parameter, #9cdcfe);
+}
+.pywry-chat-artifact-content .pywry-hl-key {
+    color: var(--pywry-hl-key, #9cdcfe);
+}
+
+/* -- Markdown artifact --------------------------------------------------- */
+.pywry-chat-artifact-md {
+    padding: 10px 12px;
+    line-height: 1.5;
+    font-size: 13px;
+    color: var(--pywry-text-primary);
+}
+.pywry-chat-artifact-md p { margin: 0 0 8px; }
+.pywry-chat-artifact-md p:last-child { margin-bottom: 0; }
+.pywry-chat-artifact-md pre {
+    background: var(--pywry-bg-secondary);
+    padding: 8px 10px;
+    border-radius: var(--pywry-radius, 4px);
+    overflow-x: auto;
+}
+
+/* -- HTML (iframe) artifact ---------------------------------------------- */
+.pywry-chat-artifact-iframe {
+    display: block;
+    width: 100%;
+    border: none;
+    background: #fff;
+}
+
+/* -- Image artifact ------------------------------------------------------ */
+.pywry-chat-artifact-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--pywry-radius, 4px);
+    margin: 6px 0;
+}
+
+/* -- JSON artifact ------------------------------------------------------- */
+.pywry-chat-artifact-json {
+    max-height: 400px;
+}
+
+/* -- Table (AG Grid) artifact -------------------------------------------- */
+.pywry-chat-artifact-table .pywry-chat-artifact-body {
+    padding: 8px;
+}
+.pywry-chat-artifact-table .pywry-grid {
+    border-radius: var(--pywry-radius, 4px);
+    overflow: hidden;
+}
+
+/* -- Markdown inline table (native HTML) --------------------------------- */
+.pywry-chat-md-table {
+    width: 100%;
+    margin: 8px 0;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.pywry-chat-md-table th,
+.pywry-chat-md-table td {
+    padding: 6px 12px;
+    text-align: left;
+    border: 1px solid var(--pywry-border-color);
+}
+.pywry-chat-md-table th {
+    background: var(--pywry-bg-tertiary);
+    font-weight: 600;
+    color: var(--pywry-text-primary);
+}
+.pywry-chat-md-table td {
+    color: var(--pywry-text-secondary);
+}
+.pywry-chat-md-table tr:hover td {
+    background: var(--pywry-bg-tertiary);
+}
+
+/* -- Plotly artifact ------------------------------------------------------ */
+.pywry-chat-artifact-plotly .pywry-plotly {
+    border-radius: 0;
+}
+
+/* =========================================================================
+   Fullscreen (full-width) Toggle
+   ========================================================================= */
+
+/* When fullscreen is active, the toolbar expands to fill the wrapper
+   and the main content area hides.  Uses :has() to reach up from the
+   .pywry-chat-fullscreen class to the layout wrapper. */
+
+/* Left/right wrappers — hide the content sibling, expand toolbar */
+.pywry-wrapper-left:has(.pywry-chat-fullscreen) > .pywry-content,
+.pywry-wrapper-left:has(.pywry-chat-fullscreen) > .pywry-wrapper-top,
+.pywry-wrapper-left:has(.pywry-chat-fullscreen) > .pywry-wrapper-inside {
+    display: none !important;
+}
+.pywry-wrapper-left:has(.pywry-chat-fullscreen) > .pywry-toolbar {
+    flex: 1 1 0% !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+}
+
+/* Top/bottom wrappers — same logic */
+.pywry-wrapper-top:has(.pywry-chat-fullscreen) > .pywry-content,
+.pywry-wrapper-top:has(.pywry-chat-fullscreen) > .pywry-wrapper-inside {
+    display: none !important;
+}
+.pywry-wrapper-top:has(.pywry-chat-fullscreen) > .pywry-toolbar {
+    flex: 1 1 0% !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+}
+
+/* Inside overlay — expand to fill parent */
+.pywry-wrapper-inside:has(.pywry-chat-fullscreen) > .pywry-toolbar-inside {
+    position: static !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+.pywry-wrapper-inside:has(.pywry-chat-fullscreen) > .pywry-content {
+    display: none !important;
+}
+
+/* Hide the sidebar collapse/toggle button when chat is in fullscreen mode.
+   The toggle sits on the toolbar element (parent of the chat container). */
+.pywry-toolbar:has(.pywry-chat-fullscreen) > .pywry-toolbar-toggle {
+    display: none !important;
+}
+
+/* =========================================================================
+   Context / Attachments
+   ========================================================================= */
+
+/* Attach button (📎) — left of the textarea */
+.pywry-chat-attach-btn {
+    background: none;
+    border: none;
+    color: var(--pywry-fg, #cccccc);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+.pywry-chat-attach-btn:hover {
+    opacity: 1;
+    background: var(--pywry-hover, rgba(255, 255, 255, 0.1));
+}
+
+/* Attachments bar — pills showing staged files/widgets */
+.pywry-chat-attachments-bar {
+    display: none;              /* shown via JS when attachments exist */
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 8px 0 8px;
+}
+
+.pywry-chat-attachment-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--pywry-input-bg, #3c3c3c);
+    border: 1px solid var(--pywry-border, #474747);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 12px;
+    color: var(--pywry-fg, #cccccc);
+    max-width: 200px;
+}
+
+.pywry-chat-attachment-pill-icon {
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.pywry-chat-attachment-pill-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pywry-chat-attachment-pill-remove {
+    background: none;
+    border: none;
+    color: var(--pywry-fg, #cccccc);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+.pywry-chat-attachment-pill-remove:hover {
+    opacity: 1;
+    color: var(--pywry-error, #f48771);
+}
+
+/* Drop overlay (shown during drag-over) */
+.pywry-chat-drop-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 120, 212, 0.15);
+    border: 2px dashed var(--pywry-accent, #0078d4);
+    border-radius: 4px;
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.pywry-chat-drop-overlay-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--pywry-accent, #0078d4);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* @mention popup (autocomplete above input) */
+.pywry-chat-mention-popup {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 8px;
+    right: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    background: var(--pywry-dropdown-bg, #252526);
+    border: 1px solid var(--pywry-border, #474747);
+    border-radius: 6px;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 50;
+    padding: 4px 0;
+}
+
+.pywry-chat-mention-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--pywry-fg, #cccccc);
+}
+.pywry-chat-mention-item:hover {
+    background: var(--pywry-hover, rgba(255, 255, 255, 0.1));
+}
+
+.pywry-chat-mention-icon {
+    color: var(--pywry-accent, #0078d4);
+    font-weight: 600;
+}
+
+/* Attachment badges on sent user messages */
+.pywry-chat-msg-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.pywry-chat-msg-attach-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--pywry-fg-muted, #969696);
+    background: var(--pywry-input-bg, #3c3c3c);
+    border-radius: 10px;
+    padding: 1px 8px;
+}
+
+/* Light theme overrides */
+html.light .pywry-chat-drop-overlay,
+.pywry-theme-light .pywry-chat-drop-overlay {
+    background: rgba(0, 120, 212, 0.08);
+}
+html.light .pywry-chat-mention-popup,
+.pywry-theme-light .pywry-chat-mention-popup {
+    background: var(--pywry-dropdown-bg, #ffffff);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.12);
+}

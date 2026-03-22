@@ -5,6 +5,11 @@ if (!window.__PYWRY_CHARTS__) {
     window.__PYWRY_CHARTS__ = {};
 }
 
+// Unified component registry — any component can register with getData()
+if (!window.__PYWRY_COMPONENTS__) {
+    window.__PYWRY_COMPONENTS__ = {};
+}
+
 /**
  * Register a Plotly chart instance with PyWry.
  * @param {string} chartId - The unique ID for this chart.
@@ -13,6 +18,18 @@ if (!window.__PYWRY_CHARTS__) {
  */
 function registerPyWryChart(chartId, plotDiv, bridge) {
     window.__PYWRY_CHARTS__[chartId] = plotDiv;
+
+    // Register in unified component registry
+    window.__PYWRY_COMPONENTS__[chartId] = {
+        getData: function () {
+            try {
+                var traces = plotDiv.data.map(function (t) {
+                    return { name: t.name || '', x: t.x, y: t.y, type: t.type };
+                });
+                return JSON.stringify(traces, null, 2);
+            } catch (e) { return ''; }
+        }
+    };
 
     const pywry = bridge || window.pywry;
     if (!pywry) {

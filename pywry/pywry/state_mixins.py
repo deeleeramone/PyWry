@@ -1,6 +1,6 @@
 """Shared mixins for unified state management across rendering paths.
 
-These mixins provide a consistent API for widget interactions (Grid, Plotly, Toolbar)
+These mixins provide a consistent API for widget interactions (Grid, Plotly, Toolbar, Chat)
 regardless of whether the widget is running in a PyTauri window, an inline IFrame,
 or a Jupyter widget (anywidget).
 
@@ -320,6 +320,113 @@ class PlotlyStateMixin(EmittingWidget):  # pylint: disable=abstract-method
     ) -> None:
         """Set visibility for specific traces."""
         self.update_traces({"visible": visible}, indices, chart_id)
+
+
+class ChatStateMixin(EmittingWidget):  # pylint: disable=abstract-method
+    """Mixin for Chat widget state management."""
+
+    def send_chat_message(
+        self,
+        text: str,
+        thread_id: str | None = None,
+        message_id: str | None = None,
+        model: str | None = None,
+    ) -> None:
+        """Send a complete assistant message to the frontend.
+
+        Parameters
+        ----------
+        text : str
+            The message text.
+        thread_id : str, optional
+            Target thread ID.
+        message_id : str, optional
+            Explicit message ID (auto-generated if omitted).
+        model : str, optional
+            Model name to display.
+        """
+        payload: dict[str, Any] = {"text": text}
+        if thread_id:
+            payload["threadId"] = thread_id
+        if message_id:
+            payload["messageId"] = message_id
+        if model:
+            payload["model"] = model
+        self.emit("chat:assistant-message", payload)
+
+    def stream_chat_chunk(
+        self,
+        chunk: str,
+        message_id: str,
+        done: bool = False,
+        thread_id: str | None = None,
+    ) -> None:
+        """Stream a token chunk to the frontend.
+
+        Parameters
+        ----------
+        chunk : str
+            The text chunk to append.
+        message_id : str
+            The message being streamed.
+        done : bool
+            Whether this is the final chunk.
+        thread_id : str, optional
+            Target thread ID.
+        """
+        payload: dict[str, Any] = {
+            "chunk": chunk,
+            "messageId": message_id,
+            "done": done,
+        }
+        if thread_id:
+            payload["threadId"] = thread_id
+        self.emit("chat:stream-chunk", payload)
+
+    def set_chat_typing(self, typing: bool = True, thread_id: str | None = None) -> None:
+        """Show or hide the typing indicator."""
+        payload: dict[str, Any] = {"typing": typing}
+        if thread_id:
+            payload["threadId"] = thread_id
+        self.emit("chat:typing-indicator", payload)
+
+    def switch_chat_thread(self, thread_id: str) -> None:
+        """Switch the frontend to a different thread."""
+        self.emit("chat:switch-thread", {"threadId": thread_id})
+
+    def update_chat_thread_list(self, threads: list[dict[str, Any]]) -> None:
+        """Refresh the thread sidebar list.
+
+        Parameters
+        ----------
+        threads : list[dict]
+            Thread data dicts with at minimum 'thread_id' and 'title' keys.
+        """
+        self.emit("chat:update-thread-list", {"threads": threads})
+
+    def clear_chat(self, thread_id: str | None = None) -> None:
+        """Clear messages from the chat display."""
+        payload: dict[str, Any] = {}
+        if thread_id:
+            payload["threadId"] = thread_id
+        self.emit("chat:clear", payload)
+
+    def register_chat_command(
+        self, name: str, description: str = "", handler_event: str = ""
+    ) -> None:
+        """Register a slash command on the frontend."""
+        self.emit(
+            "chat:register-command",
+            {"name": name, "description": description, "handlerEvent": handler_event},
+        )
+
+    def update_chat_settings(self, settings: dict[str, Any]) -> None:
+        """Push updated settings to the frontend panel."""
+        self.emit("chat:update-settings", settings)
+
+    def request_chat_state(self) -> None:
+        """Request the current chat state from the frontend."""
+        self.emit("chat:request-state", {})
 
 
 class ToolbarStateMixin(EmittingWidget):  # pylint: disable=abstract-method

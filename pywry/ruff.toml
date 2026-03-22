@@ -98,6 +98,10 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "PLR0912",
 ]
 
+"examples/**/*.py" = [
+    "S311",   # pseudo-random for UI animation/demo delays, not security
+]
+
 "pywry/config.py" = [
     "N815",
     "S110",  # try-except-pass in TOML parsing

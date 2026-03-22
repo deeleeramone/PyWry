@@ -61,14 +61,22 @@ def _clear_deploy_env_vars():
 
 
 @pytest.fixture(autouse=True)
-def clean_state():
+def clean_state(request):
     """Clean up server state before and after each test."""
     # Clear deploy mode env vars FIRST to ensure local mode
     _clear_deploy_env_vars()
     clear_state_caches()
 
-    # Stop any existing server
-    stop_server()
+    # Classes that manage their own class-scoped server skip the per-test restart.
+    is_class_scoped = (
+        hasattr(request, "cls")
+        and request.cls is not None
+        and getattr(request.cls, "_inline_class_scoped", False)
+    )
+
+    # Stop any existing server (skipped for class-scoped classes)
+    if not is_class_scoped:
+        stop_server()
     _state.widgets.clear()
     _state.connections.clear()
     _state.local_widgets.clear()
@@ -82,7 +90,8 @@ def clean_state():
     _clear_deploy_env_vars()
     clear_state_caches()
 
-    stop_server()
+    if not is_class_scoped:
+        stop_server()
     _state.widgets.clear()
     _state.connections.clear()
     _state.local_widgets.clear()
@@ -1037,6 +1046,28 @@ class TestSecretInputE2E:
     4. Reveal/copy events use proper request/response pattern
     """
 
+    _inline_class_scoped = True
+
+    @pytest.fixture(scope="class", autouse=True)
+    def _class_server(self, request):
+        """Start the inline server once for the entire class."""
+        import socket
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("0.0.0.0", 0))
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            port = s.getsockname()[1]
+        request.cls._class_port = port
+        _start_server(port=port, host="0.0.0.0")
+        assert wait_for_server("127.0.0.1", port), "Server failed to start for TestSecretInputE2E"
+        yield
+        stop_server()
+
+    @pytest.fixture
+    def server_port(self):
+        """Return the shared class-level port (same for all tests in this class)."""
+        return self._class_port  # type: ignore[attr-defined]
+
     def test_secret_never_in_html(self, server_port):
         """Secret values should never appear in rendered HTML."""
         from pywry.toolbar import SecretInput, Toolbar
@@ -1640,6 +1671,30 @@ class TestSecretInputMaskAndEditE2E:
     4. value_exists flag behavior
     5. Edit confirmation transmits value
     """
+
+    _inline_class_scoped = True
+
+    @pytest.fixture(scope="class", autouse=True)
+    def _class_server(self, request):
+        """Start the inline server once for the entire class."""
+        import socket
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("0.0.0.0", 0))
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            port = s.getsockname()[1]
+        request.cls._class_port = port
+        _start_server(port=port, host="0.0.0.0")
+        assert wait_for_server("127.0.0.1", port), (
+            "Server failed to start for TestSecretInputMaskAndEditE2E"
+        )
+        yield
+        stop_server()
+
+    @pytest.fixture
+    def server_port(self):
+        """Return the shared class-level port (same for all tests in this class)."""
+        return self._class_port  # type: ignore[attr-defined]
 
     def test_mask_displayed_in_html_when_value_exists(self, server_port):
         """HTML should show mask when a value is configured."""

@@ -141,7 +141,7 @@ class Modal(BaseModel):
     max_height : str
         Maximum height before scrolling (default: ``"80vh"``).
     overlay_opacity : float
-        Background overlay opacity 0.0–1.0 (default: 0.5).
+        Background overlay opacity 0.0-1.0 (default: 0.5).
     close_on_escape : bool
         Close when Escape key pressed (default: True).
     close_on_overlay_click : bool

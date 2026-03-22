@@ -171,6 +171,8 @@ nav:
       - Hot Reload: guides/hot-reload.md
     - UI:
       - Toolbar System: guides/toolbars.md
+      - Chat: guides/chat.md
+      - Chat Artifacts & Providers: guides/chat-artifacts.md
       - Modals: guides/modals.md
       - Toasts & Alerts: guides/toasts.md
       - Theming & CSS: guides/theming.md
@@ -210,6 +212,10 @@ nav:
       - Config: reference/config.md
       - Types: reference/types.md
       - Exceptions: reference/exceptions.md
+    - Chat:
+      - Chat Core: reference/chat.md
+      - Chat Manager: reference/chat-manager.md
+      - Chat Providers: reference/chat-providers.md
     - State:
       - State: reference/state.md
       - Mixins: reference/state-mixins.md
@@ -254,7 +260,6 @@ nav:
     - Integrations:
       - Plotly: reference/plotly-config.md
       - Grid: reference/grid.md
-      - MCP Guide: reference/mcp.md
       - MCP API: reference/mcp-api.md
     - Utilities:
       - Callbacks: reference/callbacks.md

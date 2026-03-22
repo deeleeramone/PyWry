@@ -19,7 +19,7 @@ import uuid
 
 from typing import TYPE_CHECKING, Any, cast
 
-from .base import ConnectionRouter, EventBus, SessionStore, WidgetStore
+from .base import ChatStore, ConnectionRouter, EventBus, SessionStore, WidgetStore
 from .types import ConnectionInfo, EventMessage, UserSession, WidgetData
 
 
@@ -694,6 +694,196 @@ class RedisSessionStore(SessionStore):
 
     async def close(self) -> None:
         """Close any resources (no-op for connection-per-call pattern)."""
+
+
+class RedisChatStore(ChatStore):
+    """Redis-backed chat store for multi-worker deployments.
+
+    Uses Redis hashes for thread metadata and lists for message storage.
+    """
+
+    def __init__(
+        self,
+        redis_url: str = "redis://localhost:6379/0",
+        prefix: str = "pywry",
+        chat_ttl: int = 86400,  # 24 hours
+        pool_size: int = 10,
+        *,
+        redis_client: Redis | None = None,
+    ) -> None:
+        """Initialize the Redis chat store.
+
+        Parameters
+        ----------
+        redis_url : str
+            Redis connection URL.
+        prefix : str
+            Key prefix for all Redis keys.
+        chat_ttl : int
+            Chat data TTL in seconds.
+        pool_size : int
+            Connection pool size.
+        redis_client : Redis, optional
+            Pre-configured Redis client (for testing with fakeredis).
+        """
+        _check_redis()
+        self._redis_url = redis_url
+        self._prefix = prefix
+        self._chat_ttl = chat_ttl
+        self._pool_size = pool_size
+        self._client = redis_client
+
+    def _thread_key(self, widget_id: str, thread_id: str) -> str:
+        """Redis key for a thread's metadata hash."""
+        return f"{self._prefix}:chat:{widget_id}:thread:{thread_id}"
+
+    def _threads_set_key(self, widget_id: str) -> str:
+        """Redis key for set of thread IDs per widget."""
+        return f"{self._prefix}:chat:{widget_id}:threads"
+
+    def _messages_key(self, widget_id: str, thread_id: str) -> str:
+        """Redis key for a thread's message list."""
+        return f"{self._prefix}:chat:{widget_id}:{thread_id}:messages"
+
+    async def _redis(self) -> Any:
+        """Get a Redis connection."""
+        if self._client is not None:
+            return self._client
+        return RedisClient.from_url(
+            self._redis_url,
+            decode_responses=True,
+        )
+
+    async def save_thread(self, widget_id: str, thread: Any) -> None:
+        """Save or update a chat thread."""
+        r = await self._redis()
+        key = self._thread_key(widget_id, thread.thread_id)
+
+        data = {
+            "thread_id": thread.thread_id,
+            "title": thread.title,
+            "created_at": str(thread.created_at),
+            "updated_at": str(thread.updated_at),
+            "status": thread.status,
+            "metadata": json.dumps(thread.metadata),
+        }
+
+        async with r.pipeline() as pipe:
+            await pipe.hset(key, mapping=data)
+            await pipe.expire(key, self._chat_ttl)
+            await pipe.sadd(self._threads_set_key(widget_id), thread.thread_id)
+            await pipe.execute()
+
+    async def get_thread(self, widget_id: str, thread_id: str) -> Any:
+        """Get a thread by ID."""
+        from pywry.chat import ChatThread
+
+        r = await self._redis()
+        data = await r.hgetall(self._thread_key(widget_id, thread_id))
+        if not data:
+            return None
+
+        metadata: dict[str, Any] = {}
+        if "metadata" in data:
+            with contextlib.suppress(json.JSONDecodeError):
+                metadata = json.loads(data["metadata"])
+
+        return ChatThread(
+            thread_id=data.get("thread_id", thread_id),
+            title=data.get("title", "New Chat"),
+            created_at=float(data.get("created_at", 0)),
+            updated_at=float(data.get("updated_at", 0)),
+            status=data.get("status", "active"),
+            metadata=metadata,
+            # Messages are stored separately in a list, not loaded here
+            messages=[],
+        )
+
+    async def list_threads(self, widget_id: str) -> list[Any]:
+        """List all threads for a widget."""
+        r = await self._redis()
+        thread_ids = await r.smembers(self._threads_set_key(widget_id))
+        threads = []
+        for tid in thread_ids:
+            thread = await self.get_thread(widget_id, tid)
+            if thread is not None:
+                threads.append(thread)
+        return threads
+
+    async def delete_thread(self, widget_id: str, thread_id: str) -> bool:
+        """Delete a thread and its messages."""
+        r = await self._redis()
+        key = self._thread_key(widget_id, thread_id)
+        msgs_key = self._messages_key(widget_id, thread_id)
+
+        existed = await r.exists(key)
+        async with r.pipeline() as pipe:
+            await pipe.delete(key)
+            await pipe.delete(msgs_key)
+            await pipe.srem(self._threads_set_key(widget_id), thread_id)
+            await pipe.execute()
+        return bool(existed)
+
+    async def append_message(self, widget_id: str, thread_id: str, message: Any) -> None:
+        """Append a message to a thread."""
+        from pywry.chat import MAX_MESSAGES_PER_THREAD
+
+        r = await self._redis()
+        msgs_key = self._messages_key(widget_id, thread_id)
+
+        msg_json = message.model_dump_json()
+        async with r.pipeline() as pipe:
+            await pipe.rpush(msgs_key, msg_json)
+            # Trim to keep only the latest MAX_MESSAGES_PER_THREAD
+            await pipe.ltrim(msgs_key, -MAX_MESSAGES_PER_THREAD, -1)
+            await pipe.expire(msgs_key, self._chat_ttl)
+            await pipe.execute()
+
+        # Update thread's updated_at
+        thread_key = self._thread_key(widget_id, thread_id)
+        await r.hset(thread_key, "updated_at", str(time.time()))
+        await r.expire(thread_key, self._chat_ttl)
+
+    async def get_messages(
+        self,
+        widget_id: str,
+        thread_id: str,
+        limit: int = 50,
+        before_id: str | None = None,
+    ) -> list[Any]:
+        """Get messages with cursor-based pagination."""
+        from pywry.chat import ChatMessage
+
+        r = await self._redis()
+        msgs_key = self._messages_key(widget_id, thread_id)
+
+        # Get all raw messages
+        raw_msgs = await r.lrange(msgs_key, 0, -1)
+        messages: list[ChatMessage] = []
+        for raw in raw_msgs:
+            with contextlib.suppress(Exception):
+                messages.append(ChatMessage.model_validate_json(raw))
+
+        if before_id is not None:
+            idx = next(
+                (i for i, m in enumerate(messages) if m.message_id == before_id),
+                None,
+            )
+            if idx is not None:
+                messages = messages[:idx]
+
+        return messages[-limit:]
+
+    async def clear_messages(self, widget_id: str, thread_id: str) -> None:
+        """Clear all messages from a thread."""
+        r = await self._redis()
+        await r.delete(self._messages_key(widget_id, thread_id))
+
+        thread_key = self._thread_key(widget_id, thread_id)
+        await r.hset(thread_key, "updated_at", str(time.time()))
+
+    async def close(self) -> None:
+        """Close any resources."""
 
 
 # Factory function for creating Redis stores

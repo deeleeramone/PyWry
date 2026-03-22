@@ -1697,18 +1697,33 @@ class TestToolbarContentWrapper:
 
     def test_style_on_content_wrapper_for_non_inside_positions(self) -> None:
         """Test style goes on content wrapper for top/bottom/left/right positions."""
-        for position in ["top", "bottom", "left", "right"]:
+        for position in ["top", "bottom"]:
             toolbar = Toolbar(
                 position=position,  # type: ignore[arg-type]
                 style="justify-content: center;",
                 items=[Button(label="Test", event="toolbar:click")],
             )
             html = toolbar.build_html()
-            # Style should be on the content wrapper
+            # Style should be on the content wrapper for top/bottom
             assert 'class="pywry-toolbar-content" style="justify-content: center;"' in html
             # Outer div should NOT have style attribute
             assert f'class="pywry-toolbar pywry-toolbar-{position}"' in html
             assert f'pywry-toolbar-{position}" style=' not in html
+
+    def test_style_on_outer_div_for_left_right_positions(self) -> None:
+        """Test style goes on outer div for left/right (width must be on outer for resize)."""
+        for position in ["left", "right"]:
+            toolbar = Toolbar(
+                position=position,  # type: ignore[arg-type]
+                style="width: 380px;",
+                items=[Button(label="Test", event="toolbar:click")],
+            )
+            html = toolbar.build_html()
+            # Style should be on the outer div for left/right positions
+            assert 'style="width: 380px;"' in html
+            assert f'pywry-toolbar-{position}"' in html
+            # Content wrapper should NOT have style
+            assert 'class="pywry-toolbar-content">' in html
 
     def test_style_on_outer_div_for_inside_position(self) -> None:
         """Test style goes on outer div for inside position (for absolute positioning)."""

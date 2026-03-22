@@ -22,7 +22,15 @@ T = TypeVar("T")
 
 # Module-level fallback loop for pre-server operations
 class _FallbackLoopHolder:
-    """Holder for fallback event loop to avoid global statement."""
+    """Holder for the fallback event loop.
+
+    Attributes
+    ----------
+    loop : asyncio.AbstractEventLoop | None
+        Background loop used when no server loop is active.
+    thread : threading.Thread | None
+        Thread running the fallback loop.
+    """
 
     loop: asyncio.AbstractEventLoop | None = None
     thread: threading.Thread | None = None
@@ -38,6 +46,11 @@ def _get_or_create_fallback_loop() -> asyncio.AbstractEventLoop:
     This loop runs in a background thread and persists across multiple
     run_async calls, avoiding the issue of Redis connections becoming
     invalid when asyncio.run() closes its loop.
+
+    Returns
+    -------
+    asyncio.AbstractEventLoop
+        Background event loop suitable for thread-safe coroutine submission.
     """
     with _fallback_lock:
         if _fallback_holder.loop is not None and _fallback_holder.loop.is_running():
@@ -67,7 +80,13 @@ def _get_or_create_fallback_loop() -> asyncio.AbstractEventLoop:
 
 
 def _get_server_loop() -> asyncio.AbstractEventLoop | None:
-    """Get the server's event loop if running."""
+    """Get the server's event loop if running.
+
+    Returns
+    -------
+    asyncio.AbstractEventLoop | None
+        Active server loop, or None when the server has not started.
+    """
     # Import here to avoid circular import
     try:
         from typing import cast
@@ -190,6 +209,11 @@ def run_async_fire_and_forget(coro: Coroutine[Any, Any, Any]) -> None:
     ----------
     coro : Coroutine
         The coroutine to run.
+
+    Notes
+    -----
+    The coroutine is submitted to the running server loop when available,
+    otherwise to the shared fallback loop.
     """
     loop = _get_server_loop()
 

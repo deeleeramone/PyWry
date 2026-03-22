@@ -40,9 +40,12 @@ Complete API documentation for PyWry.
 
 | Module | Description |
 |--------|-------------|
+| [pywry.chat](chat.md) | Core chat models, config, and HTML builder |
+| [pywry.chat_manager](chat-manager.md) | High-level chat orchestration, artifacts, and UI state |
+| [pywry.chat_providers](chat-providers.md) | OpenAI, Anthropic, callback, and magentic adapters |
 | [pywry.plotly_config](plotly-config.md) | Plotly configuration |
 | [pywry.grid](grid.md) | AG Grid configuration |
-| [MCP Server](mcp.md) | Model Context Protocol for AI agents |
+| [MCP Server](../mcp/index.md) | Model Context Protocol for AI agents |
 
 ## Utilities
 

@@ -74,6 +74,7 @@ def _load_toml_config() -> dict[str, Any]:
         return {}
 
     merged: dict[str, Any] = {}
+    toml_decode_error = getattr(tomllib, "TOMLDecodeError", ValueError)
 
     for config_file in _find_config_files():
         try:
@@ -86,7 +87,7 @@ def _load_toml_config() -> dict[str, Any]:
 
             # Deep merge
             merged = _deep_merge(merged, data)
-        except Exception:
+        except (OSError, TypeError, ValueError, toml_decode_error):
             pass  # Silently ignore invalid config files
 
     return merged
@@ -114,11 +115,42 @@ _SENSITIVE_FIELDS: set[str] = {
 _REDACTED = "********"
 
 
+def _section_model_field_names(section: Any) -> set[str]:
+    """Get the declared model field names for a settings section.
+
+    Parameters
+    ----------
+    section : Any
+        Settings section instance.
+
+    Returns
+    -------
+    set[str]
+        Declared field names for the section's model class.
+    """
+    return set(getattr(type(section), "model_fields", {}).keys()) if section is not None else set()
+
+
 class SecuritySettings(BaseSettings):
     """Content Security Policy settings.
 
     Environment prefix: PYWRY_CSP__
     Example: PYWRY_CSP__CONNECT_SRC="'self' https://api.example.com"
+
+    Attributes
+    ----------
+    default_src : str
+        Default source directive used for unspecified content types.
+    connect_src : str
+        Allowed origins for fetch, XHR, WebSocket, and EventSource connections.
+    script_src : str
+        Allowed script sources.
+    style_src : str
+        Allowed stylesheet sources.
+    img_src : str
+        Allowed image sources.
+    font_src : str
+        Allowed font sources.
     """
 
     model_config = SettingsConfigDict(
@@ -210,6 +242,13 @@ class ThemeSettings(BaseSettings):
     Environment prefix: PYWRY_THEME__
     Example: PYWRY_THEME__MODE=dark
     Example: PYWRY_THEME__CSS_FILE=/path/to/custom.css
+
+    Attributes
+    ----------
+    mode : Literal["system", "dark", "light"]
+        Theme selection mode.
+    css_file : str | None
+        Optional path to an external CSS file loaded for custom styling.
     """
 
     model_config = SettingsConfigDict(
@@ -232,6 +271,19 @@ class TimeoutSettings(BaseSettings):
 
     Environment prefix: PYWRY_TIMEOUT__
     Example: PYWRY_TIMEOUT__STARTUP=15.0
+
+    Attributes
+    ----------
+    startup : float
+        Timeout for subprocess startup.
+    response : float
+        Timeout for general IPC responses.
+    create_window : float
+        Timeout for window creation commands.
+    set_content : float
+        Timeout for content update commands.
+    shutdown : float
+        Timeout for graceful shutdown.
     """
 
     model_config = SettingsConfigDict(
@@ -253,6 +305,19 @@ class AssetSettings(BaseSettings):
 
     Environment prefix: PYWRY_ASSET__
     Example: PYWRY_ASSET__PLOTLY_VERSION="3.4.0"
+
+    Attributes
+    ----------
+    plotly_version : str
+        Bundled Plotly.js version identifier.
+    aggrid_version : str
+        Bundled AG Grid version identifier.
+    path : str
+        Optional custom asset directory.
+    css_files : list[str]
+        Default CSS files to load with rendered content.
+    script_files : list[str]
+        Default JavaScript files to load with rendered content.
     """
 
     model_config = SettingsConfigDict(
@@ -285,6 +350,13 @@ class LogSettings(BaseSettings):
 
     Environment prefix: PYWRY_LOG__
     Example: PYWRY_LOG__LEVEL=DEBUG
+
+    Attributes
+    ----------
+    level : Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        Logging level used by PyWry.
+    format : str
+        Python logging format string.
     """
 
     model_config = SettingsConfigDict(
@@ -304,6 +376,41 @@ class WindowSettings(BaseSettings):
 
     Environment prefix: PYWRY_WINDOW__
     Example: PYWRY_WINDOW__TITLE="My App"
+
+    Attributes
+    ----------
+    title : str
+        Default window title.
+    width : int
+        Default window width in pixels.
+    height : int
+        Default window height in pixels.
+    min_width : int
+        Default minimum window width.
+    min_height : int
+        Default minimum window height.
+    center : bool
+        Whether windows are centered by default.
+    resizable : bool
+        Whether windows are resizable.
+    decorations : bool
+        Whether native window decorations are shown.
+    always_on_top : bool
+        Whether windows stay above other windows.
+    devtools : bool
+        Whether developer tools open automatically.
+    allow_network : bool
+        Whether rendered content may make network requests.
+    on_window_close : Literal["hide", "close"]
+        Default behavior when the user closes a window.
+    enable_plotly : bool
+        Whether Plotly assets are enabled by default.
+    enable_aggrid : bool
+        Whether AG Grid assets are enabled by default.
+    plotly_theme : Literal["plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "simple_white"]
+        Default Plotly theme.
+    aggrid_theme : Literal["quartz", "alpine", "balham", "material"]
+        Default AG Grid theme.
     """
 
     model_config = SettingsConfigDict(
@@ -350,6 +457,21 @@ class HotReloadSettings(BaseSettings):
 
     Environment prefix: PYWRY_HOT_RELOAD__
     Example: PYWRY_HOT_RELOAD__ENABLED=true
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether hot reload is enabled.
+    debounce_ms : int
+        Debounce interval applied to file change events.
+    css_reload : Literal["inject", "refresh"]
+        Strategy used when CSS files change.
+    script_reload : Literal["refresh"]
+        Strategy used when JavaScript files change.
+    preserve_scroll : bool
+        Whether scroll position is preserved across reloads.
+    watch_directories : list[str]
+        Additional directories to watch for file changes.
     """
 
     model_config = SettingsConfigDict(
@@ -384,6 +506,29 @@ class DeploySettings(BaseSettings):
     Environment prefix: PYWRY_DEPLOY__
     Example: PYWRY_DEPLOY__STATE_BACKEND=redis
     Example: PYWRY_DEPLOY__REDIS_URL=redis://redis:6379/0
+
+    Attributes
+    ----------
+    state_backend : Literal["memory", "redis"]
+        State storage backend used for deploy mode.
+    redis_url : str
+        Redis connection URL.
+    redis_prefix : str
+        Key prefix applied to Redis entries.
+    redis_pool_size : int
+        Redis connection pool size per store.
+    redis_socket_timeout : float
+        Socket read timeout for Redis operations.
+    redis_connect_timeout : float
+        Connection timeout for Redis operations.
+    redis_retry_on_timeout : bool
+        Whether Redis operations retry on timeout.
+    worker_id : str | None
+        Optional stable worker identifier.
+    public_base_url : str
+        Public base URL used when generating deploy-mode links.
+    internal_api_token : str | None
+        Shared secret used for trusted inter-worker requests.
     """
 
     model_config = SettingsConfigDict(
@@ -902,6 +1047,35 @@ class PyWrySettings(BaseSettings):
     3. ./pywry.toml (project-level)
     4. ~/.config/pywry/config.toml (user-level, overrides project)
     5. Environment variables (highest priority)
+
+    Attributes
+    ----------
+    csp : SecuritySettings
+        Content Security Policy settings.
+    theme : ThemeSettings
+        Theme and custom styling settings.
+    timeout : TimeoutSettings
+        Runtime timeout settings.
+    asset : AssetSettings
+        Bundled asset and library version settings.
+    log : LogSettings
+        Logging configuration.
+    window : WindowSettings
+        Default window creation settings.
+    hot_reload : HotReloadSettings
+        Hot-reload configuration.
+    server : ServerSettings
+        Notebook and browser-mode server settings.
+    deploy : DeploySettings
+        Horizontal-scaling and deploy-mode settings.
+    mcp : MCPSettings
+        MCP integration settings.
+    oauth2 : OAuth2Settings | None
+        OAuth2 authentication settings, or ``None`` when disabled.
+    tauri_plugins : list[str]
+        Enabled Tauri plugins.
+    extra_capabilities : list[str]
+        Extra Tauri capability permission strings.
     """
 
     model_config = SettingsConfigDict(
@@ -997,7 +1171,13 @@ class PyWrySettings(BaseSettings):
         super().__init__(**merged)
 
     def to_toml(self) -> str:
-        """Export settings as TOML string."""
+        """Export settings as a TOML document.
+
+        Returns
+        -------
+        str
+            TOML representation of the current settings with sensitive values redacted.
+        """
         lines = ["# PyWry Configuration", "# Generated by: pywry config --toml", ""]
 
         # Top-level list fields
@@ -1043,17 +1223,22 @@ class PyWrySettings(BaseSettings):
                 lines.append(f"{field_name} = {value_str}")
             # Append redacted placeholders for any sensitive fields defined
             # on this section's model class.
-            section_cls = type(getattr(self, section_name))
+            section_field_names = _section_model_field_names(getattr(self, section_name, None))
             lines.extend(
-                f'{rn} = "{_REDACTED}"'
-                for rn in sorted(_SENSITIVE_FIELDS & section_cls.model_fields.keys())
+                f'{rn} = "{_REDACTED}"' for rn in sorted(_SENSITIVE_FIELDS & section_field_names)
             )
             lines.append("")
 
         return "\n".join(lines)
 
     def to_env(self) -> str:
-        """Export settings as shell environment variables."""
+        """Export settings as shell environment variable assignments.
+
+        Returns
+        -------
+        str
+            Shell-compatible environment variable lines with sensitive values redacted.
+        """
         lines = [
             "# PyWry Environment Variables",
             "# Generated by: pywry config --env",
@@ -1095,15 +1280,21 @@ class PyWrySettings(BaseSettings):
                 else:
                     value_str = str(field_value)
                 lines.append(f'export {env_name}="{value_str}"')
-            section_cls = type(getattr(self, attr_name))
-            for redacted_name in sorted(_SENSITIVE_FIELDS & section_cls.model_fields.keys()):
+            section_field_names = _section_model_field_names(getattr(self, attr_name, None))
+            for redacted_name in sorted(_SENSITIVE_FIELDS & section_field_names):
                 env_name = f"PYWRY_{env_prefix}__{redacted_name.upper()}"
                 lines.append(f'export {env_name}="{_REDACTED}"')
 
         return "\n".join(lines)
 
     def show(self) -> str:
-        """Format settings as a readable table."""
+        """Format settings as a human-readable table.
+
+        Returns
+        -------
+        str
+            Multi-line text table summarizing the current settings.
+        """
         lines = ["PyWry Configuration", "=" * 60, ""]
 
         show_sections = [
@@ -1134,10 +1325,9 @@ class PyWrySettings(BaseSettings):
                 if len(value_str) > 50:
                     value_str = value_str[:47] + "..."
                 lines.append(f"  {field_name:20} = {value_str}")
-            section_cls = type(getattr(self, attr_name))
+            section_field_names = _section_model_field_names(getattr(self, attr_name, None))
             lines.extend(
-                f"  {rn:20} = {_REDACTED}"
-                for rn in sorted(_SENSITIVE_FIELDS & section_cls.model_fields.keys())
+                f"  {rn:20} = {_REDACTED}" for rn in sorted(_SENSITIVE_FIELDS & section_field_names)
             )
 
         return "\n".join(lines)

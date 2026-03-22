@@ -23,9 +23,15 @@ pip install pywry
 | Extra | When to use |
 |-------|-------------|
 | `pip install 'pywry[notebook]'` | Jupyter / anywidget integration |
-| `pip install 'pywry[mcp]'` | MCP server for AI agents |
+| `pip install 'pywry[auth]'` | OAuth2 and keyring-backed auth support |
 | `pip install 'pywry[freeze]'` | PyInstaller hook for standalone executables |
+| `pip install 'pywry[mcp]'` | Model Context Protocol server support |
+| `pip install 'pywry[openai]'` | `OpenAIProvider` integration |
+| `pip install 'pywry[anthropic]'` | `AnthropicProvider` integration |
+| `pip install 'pywry[magentic]'` | `MagenticProvider` integration |
 | `pip install 'pywry[all]'` | Everything above |
+
+The chat UI itself is included in the base package. The provider extras only install optional third-party SDKs.
 
 **Linux only** — install system webview dependencies first:
 

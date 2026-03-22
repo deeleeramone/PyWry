@@ -48,6 +48,35 @@ handle = app.show_dataframe(df)
 app.block()
 ```
 
+## Chat Assistant
+
+```python
+from pywry import HtmlContent, PyWry
+from pywry.chat_manager import ChatManager
+
+
+def handler(messages, ctx):
+    return f"Echo: {messages[-1]['text']}"
+
+
+app = PyWry()
+chat = ChatManager(
+    handler=handler,
+    welcome_message="Welcome to **PyWry Chat**.",
+)
+
+widget = app.show(
+    HtmlContent(html="<h1>Assistant Demo</h1>"),
+    toolbars=[chat.toolbar(position="right")],
+    callbacks=chat.callbacks(),
+)
+
+chat.bind(widget)
+app.block()
+```
+
+See the full walkthrough in [Chat](../guides/chat.md) and the richer artifact examples in [Chat Artifacts And Providers](../guides/chat-artifacts.md).
+
 ---
 
 ## Dashboard Examples

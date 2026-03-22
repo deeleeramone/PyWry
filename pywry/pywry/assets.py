@@ -281,6 +281,8 @@ def clear_cache() -> None:
     get_toast_notifications_js.cache_clear()
     get_toast_css.cache_clear()
     get_modal_handlers_js.cache_clear()
+    get_chat_handlers_js.cache_clear()
+    get_chat_css.cache_clear()
 
 
 @lru_cache(maxsize=1)
@@ -337,4 +339,26 @@ def get_modal_handlers_js() -> str:
         debug("Loading modal handlers JS from src")
         return js_file.read_text(encoding="utf-8")
     debug("Modal handlers JS not found")
+    return ""
+
+
+@lru_cache(maxsize=1)
+def get_chat_handlers_js() -> str:
+    """Get the PyWry Chat handlers JavaScript."""
+    js_file = SRC_DIR / "chat-handlers.js"
+    if js_file.exists():
+        debug("Loading chat handlers JS from src")
+        return js_file.read_text(encoding="utf-8")
+    debug("Chat handlers JS not found")
+    return ""
+
+
+@lru_cache(maxsize=1)
+def get_chat_css() -> str:
+    """Get the PyWry Chat CSS styles."""
+    css_file = STYLE_DIR / "chat.css"
+    if css_file.exists():
+        debug("Loading chat CSS from style")
+        return css_file.read_text(encoding="utf-8")
+    debug("Chat CSS not found")
     return ""

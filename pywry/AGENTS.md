@@ -1591,7 +1591,7 @@ git clone https://github.com/OpenBB-finance/OpenBB.git
 cd pywry
 python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -e ".[dev]"
+uv sync --all-extras --group dev
 ```
 
 ### Testing

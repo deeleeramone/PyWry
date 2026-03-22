@@ -21,7 +21,41 @@ if TYPE_CHECKING:
 
 @dataclass
 class WindowResources:
-    """Tracks resources associated with a window."""
+    """Tracks resources associated with a window.
+
+    Attributes
+    ----------
+    label : str
+        Window label used to address the native webview.
+    created_at : datetime
+        Timestamp when lifecycle tracking was created for the window.
+    html_content : str | None
+        Most recent HTML content sent to the window.
+    scripts_injected : list[str]
+        Script payloads injected into the window lifecycle.
+    libraries_loaded : list[str]
+        External libraries recorded as loaded for the window.
+    custom_data : dict[str, Any]
+        Arbitrary caller-managed metadata associated with the window.
+    is_destroyed : bool
+        Indicates the window has been torn down and should not be reused.
+    last_content : HtmlContent | None
+        Last HtmlContent object retained for hot-refresh restoration.
+    last_config : WindowConfig | None
+        Last WindowConfig retained for hot-refresh restoration.
+    watched_css : list[Path]
+        CSS files watched for hot-reload updates.
+    watched_scripts : list[Path]
+        Script files watched for hot-reload updates.
+    css_asset_ids : dict[Path, str]
+        Asset identifiers assigned to watched CSS files.
+    content_set_at : datetime | None
+        Timestamp of the last content IPC update.
+    on_close : list[Callable[[str, str], None]]
+        Close callbacks invoked with ``(label, close_reason)``.
+    close_reason : str | None
+        Last recorded reason the window was closed.
+    """
 
     label: str
     created_at: datetime = field(default_factory=datetime.now)
@@ -52,13 +86,24 @@ class WindowLifecycle:
     """Manages window lifecycle with aggressive cleanup.
 
     Uses subprocess IPC to communicate with pytauri process.
+
+    Notes
+    -----
+    This class is implemented as a singleton so all PyWry entry points share
+    the same view of tracked window resources.
     """
 
     _instance: WindowLifecycle | None = None
     _initialized: bool = False
 
     def __new__(cls) -> WindowLifecycle:
-        """Create or return the singleton instance."""
+        """Create or return the singleton instance.
+
+        Returns
+        -------
+        WindowLifecycle
+            Shared lifecycle manager instance.
+        """
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
@@ -157,11 +202,33 @@ class WindowLifecycle:
         return resources
 
     def get(self, label: str) -> WindowResources | None:
-        """Get resources for a window."""
+        """Get resources for a window.
+
+        Parameters
+        ----------
+        label : str
+            Window label to look up.
+
+        Returns
+        -------
+        WindowResources | None
+            Tracked resources for the window, or None when unknown.
+        """
         return self._windows.get(label)
 
     def exists(self, label: str) -> bool:
-        """Check if a window exists."""
+        """Check if a window exists and is not destroyed.
+
+        Parameters
+        ----------
+        label : str
+            Window label to test.
+
+        Returns
+        -------
+        bool
+            True when the window is tracked and still active.
+        """
         resources = self._windows.get(label)
         return resources is not None and not resources.is_destroyed
 
@@ -191,7 +258,13 @@ class WindowLifecycle:
         return resources
 
     def get_active_windows(self) -> list[str]:
-        """Get labels of all tracked active windows."""
+        """Get labels of all tracked active windows.
+
+        Returns
+        -------
+        list[str]
+            Labels for windows that have not been destroyed.
+        """
         return [label for label, res in self._windows.items() if not res.is_destroyed]
 
     def set_content(

@@ -15,6 +15,8 @@ from .assets import (
     get_aggrid_css,
     get_aggrid_defaults_js,
     get_aggrid_js,
+    get_chat_css,
+    get_chat_handlers_js,
     get_plotly_defaults_js,
     get_plotly_js,
     get_plotly_templates_js,
@@ -134,6 +136,11 @@ def build_base_styles(settings: PyWrySettings | None = None) -> str:
     toast_css = get_toast_css()
     if toast_css:
         result += f"\n<style>{toast_css}</style>"
+
+    # Load chat.css for chat widgets
+    chat_css = get_chat_css()
+    if chat_css:
+        result += f"\n<style>{chat_css}</style>"
 
     # Load custom CSS file if specified
     if settings and settings.theme and settings.theme.css_file:
@@ -323,15 +330,16 @@ def build_aggrid_script(config: WindowConfig) -> str:
 
     parts = []
 
-    if aggrid_css:
-        parts.append(f"<style>{aggrid_css}</style>")
-    else:
+    if not aggrid_js:
+        raise RuntimeError("AG Grid JS not found in bundled assets")
+    if not aggrid_css:
         raise RuntimeError(f"AG Grid CSS not found for theme {config.aggrid_theme}")
 
-    if aggrid_js:
-        parts.append(f"<script>{aggrid_js}</script>")
-    else:
-        raise RuntimeError("AG Grid JS not found in bundled assets")
+    # JS first — AG Grid v35 embeds a base CSS block with light-theme
+    # defaults inside the JS bundle.  Loading the theme CSS *after* the JS
+    # ensures the dark-theme variables win via source-order specificity.
+    parts.append(f"<script>{aggrid_js}</script>")
+    parts.append(f"<style>{aggrid_css}</style>")
 
     # Include our AG Grid defaults (context menu, column defaults, etc.)
     if aggrid_defaults_js:
@@ -729,6 +737,25 @@ def build_html(
 
     if toolbars:
         user_html = wrap_content_with_toolbars(user_html, toolbars)
+
+    # Include chat handlers JS when chat DOM elements are present.
+    # Detection runs AFTER toolbar wrapping so chat embedded inside
+    # a Toolbar Div is found correctly.
+    # Follows the same init pattern as toolbar: define function, expose globally,
+    # call with (document, window.pywry) on DOMContentLoaded.
+    if "pywry-chat" in user_html:
+        chat_js = get_chat_handlers_js()
+        if chat_js:
+            chat_init = (
+                f"\n<script>{chat_js}\n"
+                "window.initChatHandlers = initChatHandlers;\n"
+                "(function(){if(document.readyState==='loading'){"
+                "document.addEventListener('DOMContentLoaded',function(){"
+                "initChatHandlers(document,window.pywry);});}else{"
+                "initChatHandlers(document,window.pywry);}})();\n"
+                "</script>"
+            )
+            components["custom_scripts"] += chat_init
 
     is_complete_doc = user_html.lower().startswith("<!doctype") or user_html.lower().startswith(
         "<html"

@@ -273,6 +273,16 @@ class NativeWindowHandle:
         """
         self._app.emit(event_type, data, self._label)
 
+    def emit_fire(self, event_type: str, data: dict[str, Any]) -> None:
+        """Fire-and-forget event emit — does not block on IPC response.
+
+        Suitable for high-frequency streaming where blocking per-event
+        would destroy throughput.
+        """
+        from . import runtime
+
+        runtime.emit_event_fire(self._label, event_type, data)
+
     def update(self, html: str) -> None:
         """Update the window's HTML content.
 

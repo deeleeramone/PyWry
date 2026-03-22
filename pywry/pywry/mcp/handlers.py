@@ -646,6 +646,393 @@ def _handle_list_resources(_ctx: HandlerContext) -> HandlerResult:
 
 
 # =============================================================================
+# Chat Handlers
+# =============================================================================
+
+# Active generation handles: {widget_id: {thread_id: GenerationHandle}}
+_active_generations: dict[str, dict[str, Any]] = {}
+
+# Chat configs: {widget_id: ChatWidgetConfig}
+_chat_configs: dict[str, Any] = {}
+
+# Chat threads: {widget_id: {thread_id: ChatThread}}
+_chat_thread_store: dict[str, dict[str, Any]] = {}
+
+# Chat message history: {widget_id: {thread_id: [messages]}}
+_chat_message_store: dict[str, dict[str, list[dict[str, Any]]]] = {}
+
+
+def _handle_create_chat_widget(ctx: HandlerContext) -> HandlerResult:
+    from ..chat import ChatThread, _default_slash_commands, build_chat_html
+    from .builders import build_chat_widget_config, build_toolbars as _build_toolbars
+
+    app = get_app()
+    args = ctx.args
+
+    widget_config = build_chat_widget_config(args)
+    _chat_configs[args.get("widget_id", "")] = widget_config
+
+    chat_html = build_chat_html(
+        show_sidebar=widget_config.show_sidebar,
+        show_settings=widget_config.show_settings,
+    )
+
+    # Build optional surrounding toolbars
+    toolbars_data = args.get("toolbars", [])
+    toolbars = _build_toolbars(toolbars_data) if toolbars_data else None
+
+    widget = app.show(
+        chat_html,
+        title=widget_config.title,
+        height=widget_config.height,
+        toolbars=toolbars,
+    )
+
+    widget_id = getattr(widget, "widget_id", None) or uuid.uuid4().hex
+    callback = ctx.make_callback(widget_id)
+    ctx.events[widget_id] = []
+
+    register_widget(widget_id, widget)
+    _chat_configs[widget_id] = widget_config
+
+    # Create default thread
+    thread_id = "thread_" + uuid.uuid4().hex[:8]
+    default_thread = ChatThread(thread_id=thread_id, title="New Chat")
+    _chat_thread_store.setdefault(widget_id, {})[thread_id] = default_thread
+    _chat_message_store.setdefault(widget_id, {})[thread_id] = []
+
+    # Register default slash commands
+    for cmd in _default_slash_commands():
+        widget.emit(
+            "chat:register-command",
+            {
+                "name": cmd.name,
+                "description": cmd.description,
+            },
+        )
+
+    # Register custom slash commands
+    if widget_config.chat_config.slash_commands:
+        for cmd in widget_config.chat_config.slash_commands:
+            widget.emit(
+                "chat:register-command",
+                {
+                    "name": cmd.name,
+                    "description": cmd.description,
+                },
+            )
+
+    # Push initial settings
+    widget.emit(
+        "chat:update-settings",
+        {
+            "model": widget_config.chat_config.model,
+            "temperature": widget_config.chat_config.temperature,
+            "system_prompt": widget_config.chat_config.system_prompt,
+        },
+    )
+
+    # Push initial thread list
+    widget.emit(
+        "chat:update-thread-list",
+        {
+            "threads": [{"thread_id": thread_id, "title": "New Chat"}],
+        },
+    )
+    widget.emit("chat:switch-thread", {"threadId": thread_id})
+
+    # Register chat event callbacks
+    widget.on("chat:user-message", callback)
+    widget.on("chat:slash-command", callback)
+    widget.on("chat:thread-create", callback)
+    widget.on("chat:thread-switch", callback)
+    widget.on("chat:thread-delete", callback)
+    widget.on("chat:settings-change", callback)
+    widget.on("chat:request-history", callback)
+    widget.on("chat:stop-generation", callback)
+    widget.on("chat:request-state", callback)
+
+    if ctx.headless:
+        from ..inline import _state as inline_state
+
+        if widget_id in inline_state.widgets:
+            inline_state.widgets[widget_id]["persistent"] = True
+
+        return {
+            "widget_id": widget_id,
+            "thread_id": thread_id,
+            "path": f"/widget/{widget_id}",
+            "created": True,
+        }
+
+    return {
+        "widget_id": widget_id,
+        "thread_id": thread_id,
+        "mode": "native",
+        "message": "Chat window opened",
+        "created": True,
+    }
+
+
+def _handle_chat_send_message(ctx: HandlerContext) -> HandlerResult:
+    widget_id = ctx.args["widget_id"]
+    widget, error = _get_widget_or_error(widget_id)
+    if error:
+        return error
+    assert widget is not None
+
+    text = ctx.args["text"]
+    thread_id = ctx.args.get("thread_id")
+    config = _chat_configs.get(widget_id)
+    if not config:
+        return {"error": f"No chat config for widget {widget_id}"}
+
+    message_id = "msg_" + uuid.uuid4().hex[:8]
+
+    # Emit the user message to frontend
+    widget.emit(
+        "chat:assistant-message",
+        {
+            "messageId": message_id,
+            "text": f"Received: {text}",
+            "threadId": thread_id,
+        },
+    )
+
+    # Store message in history
+    if thread_id:
+        store = _chat_message_store.setdefault(widget_id, {})
+        store.setdefault(thread_id, []).append(
+            {
+                "message_id": message_id,
+                "role": "user",
+                "text": text,
+            }
+        )
+
+    return {
+        "widget_id": widget_id,
+        "message_id": message_id,
+        "thread_id": thread_id,
+        "sent": True,
+    }
+
+
+def _handle_chat_stop_generation(ctx: HandlerContext) -> HandlerResult:
+    widget_id = ctx.args["widget_id"]
+    thread_id = ctx.args.get("thread_id")
+
+    widget_gens = _active_generations.get(widget_id, {})
+    handle = widget_gens.get(thread_id) if thread_id else None
+
+    if handle and not handle.cancel_event.is_set():
+        handle.cancel()
+        partial = handle.partial_content
+
+        widget, _ = _get_widget_or_error(widget_id)
+        if widget:
+            widget.emit(
+                "chat:generation-stopped",
+                {
+                    "messageId": handle.message_id,
+                    "threadId": thread_id,
+                    "partialContent": partial,
+                },
+            )
+
+        return {
+            "widget_id": widget_id,
+            "thread_id": thread_id,
+            "message_id": handle.message_id,
+            "stopped": True,
+            "partial_content": partial,
+        }
+
+    return {
+        "widget_id": widget_id,
+        "thread_id": thread_id,
+        "stopped": False,
+        "message": "No active generation to stop",
+    }
+
+
+def _handle_chat_manage_thread(ctx: HandlerContext) -> HandlerResult:
+
+    widget_id = ctx.args["widget_id"]
+    action = ctx.args["action"]
+    thread_id = ctx.args.get("thread_id")
+    title = ctx.args.get("title", "New Chat")
+
+    widget, error = _get_widget_or_error(widget_id)
+    if error:
+        return error
+    assert widget is not None
+
+    handlers = {
+        "create": _thread_create,
+        "switch": _thread_switch,
+        "delete": _thread_delete,
+        "rename": _thread_rename,
+        "list": _thread_list,
+    }
+    handler = handlers.get(action)
+    if handler is None:
+        return {"error": f"Unknown thread action: {action}"}
+    return handler(widget, widget_id, thread_id, title)
+
+
+def _thread_create(
+    widget: Any, widget_id: str, _thread_id: str | None, title: str
+) -> HandlerResult:
+    """Create a new chat thread."""
+    from ..chat import ChatThread
+
+    new_id = "thread_" + uuid.uuid4().hex[:8]
+    new_thread = ChatThread(thread_id=new_id, title=title)
+    _chat_thread_store.setdefault(widget_id, {})[new_id] = new_thread
+    _chat_message_store.setdefault(widget_id, {})[new_id] = []
+    widget.emit(
+        "chat:update-thread-list",
+        {
+            "threads": [{"thread_id": new_id, "title": title}],
+        },
+    )
+    widget.emit("chat:switch-thread", {"threadId": new_id})
+    return {"widget_id": widget_id, "thread_id": new_id, "action": "create", "title": title}
+
+
+def _thread_switch(
+    widget: Any, widget_id: str, thread_id: str | None, _title: str
+) -> HandlerResult:
+    """Switch to an existing thread."""
+    if not thread_id:
+        return {"error": "thread_id required for switch"}
+    widget.emit("chat:switch-thread", {"threadId": thread_id})
+    return {"widget_id": widget_id, "thread_id": thread_id, "action": "switch"}
+
+
+def _thread_delete(
+    _widget: Any, widget_id: str, thread_id: str | None, _title: str
+) -> HandlerResult:
+    """Delete a thread."""
+    if not thread_id:
+        return {"error": "thread_id required for delete"}
+    _chat_thread_store.get(widget_id, {}).pop(thread_id, None)
+    _chat_message_store.get(widget_id, {}).pop(thread_id, None)
+    return {"widget_id": widget_id, "thread_id": thread_id, "action": "delete", "deleted": True}
+
+
+def _thread_rename(
+    _widget: Any, widget_id: str, thread_id: str | None, title: str
+) -> HandlerResult:
+    """Rename a thread."""
+    if not thread_id:
+        return {"error": "thread_id required for rename"}
+    thread_obj = _chat_thread_store.get(widget_id, {}).get(thread_id)
+    if thread_obj and hasattr(thread_obj, "title"):
+        thread_obj.title = title
+    return {"widget_id": widget_id, "thread_id": thread_id, "action": "rename", "title": title}
+
+
+def _thread_list(
+    _widget: Any, widget_id: str, _thread_id: str | None, _title: str
+) -> HandlerResult:
+    """List all threads."""
+    threads = [
+        {"thread_id": tid, "title": getattr(t, "title", "Untitled")}
+        for tid, t in _chat_thread_store.get(widget_id, {}).items()
+    ]
+    return {"widget_id": widget_id, "action": "list", "threads": threads}
+
+
+def _handle_chat_register_command(ctx: HandlerContext) -> HandlerResult:
+    widget_id = ctx.args["widget_id"]
+    name = ctx.args["name"]
+    description = ctx.args.get("description", "")
+
+    widget, error = _get_widget_or_error(widget_id)
+    if error:
+        return error
+    assert widget is not None
+
+    if not name.startswith("/"):
+        name = "/" + name
+
+    widget.emit(
+        "chat:register-command",
+        {
+            "name": name,
+            "description": description,
+        },
+    )
+
+    return {"widget_id": widget_id, "name": name, "description": description, "registered": True}
+
+
+def _handle_chat_get_history(ctx: HandlerContext) -> HandlerResult:
+    widget_id = ctx.args["widget_id"]
+    thread_id = ctx.args.get("thread_id")
+    limit = ctx.args.get("limit", 50)
+    before_id = ctx.args.get("before_id")
+
+    all_messages = _chat_message_store.get(widget_id, {}).get(thread_id or "", [])
+
+    # Filter: only messages before `before_id` if specified
+    if before_id:
+        filtered = []
+        for msg in all_messages:
+            if msg.get("message_id") == before_id:
+                break
+            filtered.append(msg)
+        all_messages = filtered
+
+    # Apply limit (take last N messages)
+    messages = all_messages[-limit:] if limit else all_messages
+    has_more = len(all_messages) > len(messages)
+
+    return {
+        "widget_id": widget_id,
+        "thread_id": thread_id,
+        "messages": messages,
+        "has_more": has_more,
+        "cursor": messages[0]["message_id"] if messages and has_more else None,
+    }
+
+
+def _handle_chat_update_settings(ctx: HandlerContext) -> HandlerResult:
+    widget_id = ctx.args["widget_id"]
+    widget, error = _get_widget_or_error(widget_id)
+    if error:
+        return error
+    assert widget is not None
+
+    settings: dict[str, Any] = {}
+    for key in ("model", "temperature", "max_tokens", "system_prompt", "streaming"):
+        if key in ctx.args:
+            settings[key] = ctx.args[key]
+
+    if settings:
+        widget.emit("chat:update-settings", settings)
+
+    return {"widget_id": widget_id, "settings": settings, "applied": True}
+
+
+def _handle_chat_set_typing(ctx: HandlerContext) -> HandlerResult:
+    widget_id = ctx.args["widget_id"]
+    widget, error = _get_widget_or_error(widget_id)
+    if error:
+        return error
+    assert widget is not None
+
+    typing = ctx.args.get("typing", True)
+    thread_id = ctx.args.get("thread_id")
+
+    widget.emit("chat:typing-indicator", {"typing": typing, "threadId": thread_id})
+
+    return {"widget_id": widget_id, "typing": typing, "thread_id": thread_id}
+
+
+# =============================================================================
 # Handler Dispatch Table
 # =============================================================================
 _HANDLERS: dict[str, Callable[[HandlerContext], HandlerResult]] = {
@@ -679,6 +1066,15 @@ _HANDLERS: dict[str, Callable[[HandlerContext], HandlerResult]] = {
     "get_component_source": _handle_get_component_source,
     "export_widget": _handle_export_widget,
     "list_resources": _handle_list_resources,
+    # Chat
+    "create_chat_widget": _handle_create_chat_widget,
+    "chat_send_message": _handle_chat_send_message,
+    "chat_stop_generation": _handle_chat_stop_generation,
+    "chat_manage_thread": _handle_chat_manage_thread,
+    "chat_register_command": _handle_chat_register_command,
+    "chat_get_history": _handle_chat_get_history,
+    "chat_update_settings": _handle_chat_update_settings,
+    "chat_set_typing": _handle_chat_set_typing,
 }
 
 

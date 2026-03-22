@@ -898,6 +898,30 @@ def emit_event(label: str, event: str, payload: dict[str, Any] | None = None) ->
     return response is not None and response.get("success", False)
 
 
+def emit_event_fire(label: str, event: str, payload: dict[str, Any] | None = None) -> None:
+    """Fire-and-forget event emit — does not block on a response.
+
+    Suitable for high-frequency streaming events where blocking for
+    each acknowledgment would destroy throughput.  Uncollected responses
+    are drained lazily to prevent queue buildup.
+    """
+    # Drain any stale uncorrelated responses so the queue doesn't grow unbounded
+    while True:
+        try:
+            _responses.get_nowait()
+        except Empty:
+            break
+
+    send_command(
+        {
+            "action": "emit",
+            "label": label,
+            "event": event,
+            "payload": payload or {},
+        }
+    )
+
+
 def eval_js(label: str, script: str) -> bool:
     """Evaluate arbitrary JavaScript in a window.
 

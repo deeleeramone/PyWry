@@ -2743,6 +2743,53 @@ html.pywry-native .ag-theme-material:not(.ag-theme-material-dark) {
     --ag-row-hover-color: rgba(255, 255, 255, 0.04) !important;
 }
 
+/* AG Grid internal scrollbars — match PyWry scrollbar style */
+.ag-body-viewport,
+.ag-body-horizontal-scroll-viewport,
+.ag-header-viewport,
+.ag-sticky-top-viewport,
+.ag-center-cols-viewport {
+    scrollbar-width: thin;
+    scrollbar-color: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5))
+                     var(--pywry-bg-secondary, #212124);
+}
+.ag-body-viewport::-webkit-scrollbar,
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar,
+.ag-header-viewport::-webkit-scrollbar,
+.ag-sticky-top-viewport::-webkit-scrollbar,
+.ag-center-cols-viewport::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+.ag-body-viewport::-webkit-scrollbar-track,
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-track,
+.ag-header-viewport::-webkit-scrollbar-track,
+.ag-sticky-top-viewport::-webkit-scrollbar-track,
+.ag-center-cols-viewport::-webkit-scrollbar-track {
+    background: var(--pywry-bg-secondary, #212124);
+    border-radius: 5px;
+}
+.ag-body-viewport::-webkit-scrollbar-thumb,
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb,
+.ag-header-viewport::-webkit-scrollbar-thumb,
+.ag-sticky-top-viewport::-webkit-scrollbar-thumb,
+.ag-center-cols-viewport::-webkit-scrollbar-thumb {
+    background: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5));
+    border-radius: 5px;
+}
+.ag-body-viewport::-webkit-scrollbar-thumb:hover,
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb:hover,
+.ag-header-viewport::-webkit-scrollbar-thumb:hover,
+.ag-sticky-top-viewport::-webkit-scrollbar-thumb:hover,
+.ag-center-cols-viewport::-webkit-scrollbar-thumb:hover {
+    background: var(--pywry-scrollbar-thumb-hover, rgba(175, 175, 175, 0.7));
+}
+.ag-body-viewport::-webkit-scrollbar-corner,
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-corner,
+.ag-center-cols-viewport::-webkit-scrollbar-corner {
+    background: var(--pywry-bg-secondary, #212124);
+}
+
 /* Light theme - darker tints */
 .pywry-theme-light .ag-root-wrapper,
 html.light .ag-root-wrapper {

@@ -54,6 +54,23 @@ class OAuthProvider(ABC):
         The provider's userinfo endpoint (optional for non-OIDC).
     revocation_url : str
         The provider's token revocation endpoint (RFC 7009).
+
+    Attributes
+    ----------
+    client_id : str
+        OAuth2 client identifier registered with the provider.
+    client_secret : str
+        Client secret or empty string for public clients.
+    scopes : list[str]
+        Scopes requested during the authorization flow.
+    authorize_url : str
+        Provider authorization endpoint.
+    token_url : str
+        Provider token endpoint.
+    userinfo_url : str
+        Provider userinfo endpoint, if supported.
+    revocation_url : str
+        Provider token revocation endpoint, if supported.
     """
 
     def __init__(
@@ -66,7 +83,25 @@ class OAuthProvider(ABC):
         userinfo_url: str = "",
         revocation_url: str = "",
     ) -> None:
-        """Initialize OAuth provider."""
+        """Initialize an OAuth provider.
+
+        Parameters
+        ----------
+        client_id : str
+            OAuth2 client identifier.
+        client_secret : str, optional
+            OAuth2 client secret for confidential clients.
+        scopes : list[str] | None, optional
+            Requested scopes for authorization.
+        authorize_url : str, optional
+            Authorization endpoint.
+        token_url : str, optional
+            Token endpoint.
+        userinfo_url : str, optional
+            Userinfo endpoint.
+        revocation_url : str, optional
+            Token revocation endpoint.
+        """
         self.client_id = client_id
         self.client_secret = client_secret
         self.scopes = scopes or []
@@ -77,13 +112,24 @@ class OAuthProvider(ABC):
         self._http_client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
-        """Get or create the shared HTTP client."""
+        """Get or create the shared HTTP client.
+
+        Returns
+        -------
+        httpx.AsyncClient
+            Shared async client used for outbound OAuth requests.
+        """
         if self._http_client is None or self._http_client.is_closed:
             self._http_client = httpx.AsyncClient(timeout=30.0)
         return self._http_client
 
     async def close(self) -> None:
-        """Close the shared HTTP client. Call from app shutdown lifecycle."""
+        """Close the shared HTTP client.
+
+        Notes
+        -----
+        Call this from application shutdown hooks to release open sockets.
+        """
         if self._http_client is not None and not self._http_client.is_closed:
             await self._http_client.aclose()
             self._http_client = None
@@ -191,6 +237,11 @@ class OAuthProvider(ABC):
         -------
         dict[str, Any]
             User profile data from the provider.
+
+        Raises
+        ------
+        httpx.HTTPError
+            Raised when the userinfo endpoint returns an error response.
         """
         if not self.userinfo_url:
             return {}
@@ -250,6 +301,13 @@ class GenericOIDCProvider(OAuthProvider):
         The OIDC issuer URL (used for auto-discovery).
     scopes : list[str], optional
         Requested scopes (defaults to ``["openid", "email", "profile"]``).
+
+    Attributes
+    ----------
+    issuer_url : str
+        Base issuer URL used for OIDC discovery and issuer validation.
+    require_id_token_validation : bool
+        Controls whether ID tokens are validated after token exchange.
     """
 
     def __init__(
@@ -265,7 +323,29 @@ class GenericOIDCProvider(OAuthProvider):
         *,
         require_id_token_validation: bool = True,
     ) -> None:
-        """Initialize OIDC provider."""
+        """Initialize a generic OIDC provider.
+
+        Parameters
+        ----------
+        client_id : str
+            OAuth2 client identifier.
+        client_secret : str, optional
+            OAuth2 client secret.
+        issuer_url : str, optional
+            OIDC issuer URL used for discovery.
+        scopes : list[str] | None, optional
+            Requested scopes.
+        authorize_url : str, optional
+            Explicit authorization endpoint override.
+        token_url : str, optional
+            Explicit token endpoint override.
+        userinfo_url : str, optional
+            Explicit userinfo endpoint override.
+        revocation_url : str, optional
+            Explicit revocation endpoint override.
+        require_id_token_validation : bool, optional
+            Whether exchanged ID tokens must be validated.
+        """
         super().__init__(
             client_id=client_id,
             client_secret=client_secret,
@@ -282,7 +362,13 @@ class GenericOIDCProvider(OAuthProvider):
         self._jwks_data: dict[str, Any] | None = None
 
     async def _discover(self) -> None:
-        """Auto-discover OIDC endpoints from the well-known configuration."""
+        """Auto-discover OIDC endpoints from the well-known configuration.
+
+        Raises
+        ------
+        AuthenticationError
+            Raised when the discovered issuer does not match the configured issuer.
+        """
         if self._discovered or not self.issuer_url:
             return
         url = f"{self.issuer_url.rstrip('/')}/.well-known/openid-configuration"
@@ -311,7 +397,20 @@ class GenericOIDCProvider(OAuthProvider):
             logger.warning("OIDC discovery failed for %s: %s", self.issuer_url, exc)
 
     async def _fetch_jwks(self) -> dict[str, Any]:
-        """Fetch the JWKS key set from the provider."""
+        """Fetch the JWKS key set from the provider.
+
+        Returns
+        -------
+        dict[str, Any]
+            JSON Web Key Set document returned by the provider.
+
+        Raises
+        ------
+        TokenError
+            Raised when discovery did not provide a JWKS URI.
+        httpx.HTTPError
+            Raised when the JWKS request fails.
+        """
         if self._jwks_data is not None:
             return self._jwks_data
         if not self._jwks_uri:
@@ -352,7 +451,7 @@ class GenericOIDCProvider(OAuthProvider):
         if not _HAS_AUTHLIB:
             msg = (
                 "authlib is required for OIDC ID token validation. "
-                "Install with: pip install authlib"
+                "Install with: pip install 'pywry[auth]'"
             )
             raise TokenError(msg, provider=self.__class__.__name__)
 
@@ -402,6 +501,17 @@ class GenericOIDCProvider(OAuthProvider):
             The PKCE code verifier if PKCE was used.
         nonce : str, optional
             The nonce sent in the authorize request (for ID token validation).
+
+        Returns
+        -------
+        OAuthTokenSet
+            Token set returned by the OIDC provider.
+
+        Raises
+        ------
+        TokenError
+            Raised when discovery fails, the token endpoint is unavailable, or the
+            token exchange response is invalid.
         """
         await self._discover()
         if not self.token_url:
@@ -453,7 +563,23 @@ class GenericOIDCProvider(OAuthProvider):
         )
 
     async def refresh_tokens(self, refresh_token: str) -> OAuthTokenSet:
-        """Refresh tokens via OIDC token endpoint."""
+        """Refresh tokens via the OIDC token endpoint.
+
+        Parameters
+        ----------
+        refresh_token : str
+            Refresh token previously issued by the provider.
+
+        Returns
+        -------
+        OAuthTokenSet
+            Refreshed token set from the provider.
+
+        Raises
+        ------
+        TokenRefreshError
+            Raised when discovery or the refresh request fails.
+        """
         await self._discover()
         if not self.token_url:
             msg = "Token URL not configured and discovery failed"
@@ -500,6 +626,16 @@ class GenericOIDCProvider(OAuthProvider):
 
         Triggers endpoint auto-discovery before delegating to the
         base implementation.
+
+        Parameters
+        ----------
+        token : str
+            Access or refresh token to revoke.
+
+        Returns
+        -------
+        bool
+            True when the provider accepted the revocation request.
         """
         await self._discover()
         return await super().revoke_token(token)
@@ -516,6 +652,11 @@ class GoogleProvider(GenericOIDCProvider):
         Google OAuth2 client secret.
     scopes : list[str], optional
         Requested scopes (defaults to openid, email, profile).
+
+    Notes
+    -----
+    Google authorization requests default to offline access and consent prompts
+    so refresh tokens are returned consistently.
     """
 
     def __init__(
@@ -524,7 +665,17 @@ class GoogleProvider(GenericOIDCProvider):
         client_secret: str = "",
         scopes: list[str] | None = None,
     ) -> None:
-        """Initialize Google provider."""
+        """Initialize the Google OAuth provider.
+
+        Parameters
+        ----------
+        client_id : str
+            Google OAuth client ID.
+        client_secret : str, optional
+            Google OAuth client secret.
+        scopes : list[str] | None, optional
+            Requested scopes.
+        """
         super().__init__(
             client_id=client_id,
             client_secret=client_secret,
@@ -542,7 +693,24 @@ class GoogleProvider(GenericOIDCProvider):
         pkce: PKCEChallenge | None = None,
         extra_params: dict[str, str] | None = None,
     ) -> str:
-        """Build Google authorization URL with access_type=offline."""
+        """Build a Google authorization URL with offline access defaults.
+
+        Parameters
+        ----------
+        redirect_uri : str
+            Callback URL registered with the provider.
+        state : str
+            CSRF state token.
+        pkce : PKCEChallenge | None, optional
+            PKCE challenge for public clients.
+        extra_params : dict[str, str] | None, optional
+            Additional query parameters to merge into the request.
+
+        Returns
+        -------
+        str
+            Fully qualified Google authorization URL.
+        """
         params = {"access_type": "offline", "prompt": "consent"}
         if extra_params:
             params.update(extra_params)
@@ -563,6 +731,11 @@ class GitHubProvider(OAuthProvider):
         GitHub OAuth2 client secret.
     scopes : list[str], optional
         Requested scopes (defaults to ``["read:user", "user:email"]``).
+
+    Notes
+    -----
+    GitHub is not OIDC-based here, so token exchange and revocation use
+    provider-specific endpoints and payloads.
     """
 
     def __init__(
@@ -571,7 +744,17 @@ class GitHubProvider(OAuthProvider):
         client_secret: str = "",
         scopes: list[str] | None = None,
     ) -> None:
-        """Initialize GitHub provider."""
+        """Initialize the GitHub OAuth provider.
+
+        Parameters
+        ----------
+        client_id : str
+            GitHub OAuth application client ID.
+        client_secret : str, optional
+            GitHub OAuth application client secret.
+        scopes : list[str] | None, optional
+            Requested scopes.
+        """
         super().__init__(
             client_id=client_id,
             client_secret=client_secret,
@@ -588,7 +771,29 @@ class GitHubProvider(OAuthProvider):
         pkce_verifier: str | None = None,
         nonce: str | None = None,
     ) -> OAuthTokenSet:
-        """Exchange authorization code for a GitHub access token."""
+        """Exchange an authorization code for a GitHub access token.
+
+        Parameters
+        ----------
+        code : str
+            Authorization code returned by GitHub.
+        redirect_uri : str
+            Redirect URI used during authorization.
+        pkce_verifier : str | None, optional
+            Present for interface compatibility; GitHub ignores it here.
+        nonce : str | None, optional
+            Present for interface compatibility; GitHub does not use it.
+
+        Returns
+        -------
+        OAuthTokenSet
+            Token set derived from GitHub's token response.
+
+        Raises
+        ------
+        TokenError
+            Raised when the exchange request fails or GitHub returns an error payload.
+        """
         data: dict[str, str] = {
             "client_id": self.client_id,
             "client_secret": self.client_secret,
@@ -628,7 +833,23 @@ class GitHubProvider(OAuthProvider):
         )
 
     async def refresh_tokens(self, refresh_token: str) -> OAuthTokenSet:
-        """Refresh GitHub tokens (GitHub uses token rotation)."""
+        """Refresh GitHub tokens using GitHub's refresh-token flow.
+
+        Parameters
+        ----------
+        refresh_token : str
+            Refresh token issued by GitHub.
+
+        Returns
+        -------
+        OAuthTokenSet
+            Refreshed token set from GitHub.
+
+        Raises
+        ------
+        TokenRefreshError
+            Raised when the refresh request fails or GitHub returns an error payload.
+        """
         data: dict[str, str] = {
             "client_id": self.client_id,
             "client_secret": self.client_secret,
@@ -712,6 +933,11 @@ class MicrosoftProvider(GenericOIDCProvider):
         Azure AD tenant ID (default "common" for multi-tenant).
     scopes : list[str], optional
         Requested scopes.
+
+    Attributes
+    ----------
+    tenant_id : str
+        Azure AD tenant identifier used to build authorize and token endpoints.
     """
 
     def __init__(
@@ -721,7 +947,19 @@ class MicrosoftProvider(GenericOIDCProvider):
         tenant_id: str = "common",
         scopes: list[str] | None = None,
     ) -> None:
-        """Initialize Microsoft provider."""
+        """Initialize the Microsoft OAuth provider.
+
+        Parameters
+        ----------
+        client_id : str
+            Azure AD application client ID.
+        client_secret : str, optional
+            Azure AD client secret.
+        tenant_id : str, optional
+            Azure AD tenant identifier.
+        scopes : list[str] | None, optional
+            Requested scopes.
+        """
         base = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0"
         super().__init__(
             client_id=client_id,
@@ -752,6 +990,12 @@ def create_provider_from_settings(settings: Any) -> OAuthProvider:
     ------
     AuthenticationError
         If the provider type is unknown or settings are invalid.
+
+    Notes
+    -----
+    The ``settings`` object is accessed via ``getattr`` so callers may supply
+    configuration objects with compatible attribute names rather than a single
+    concrete settings type.
     """
     provider_type = getattr(settings, "provider", "custom")
     client_id = getattr(settings, "client_id", "")

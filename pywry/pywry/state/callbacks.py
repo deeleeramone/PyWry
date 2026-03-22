@@ -33,7 +33,25 @@ AsyncCallbackFunc = Callable[[dict[str, Any], str, str], Any]
 
 @dataclass
 class CallbackRegistration:
-    """Tracks a callback registration."""
+    """Tracks a callback registration.
+
+    Attributes
+    ----------
+    widget_id : str
+        Widget that owns the callback.
+    event_type : str
+        Event type that triggers the callback.
+    callback : CallbackFunc | AsyncCallbackFunc
+        Registered Python callable.
+    is_async : bool
+        Indicates whether the callback is awaitable.
+    created_at : float
+        Unix timestamp when the callback was registered.
+    invoke_count : int
+        Number of successful invocation attempts.
+    last_invoked : float | None
+        Unix timestamp of the most recent invocation.
+    """
 
     widget_id: str
     event_type: str
@@ -49,6 +67,13 @@ class CallbackRegistry:
 
     Callbacks cannot be serialized to Redis, so they remain local to each worker.
     The registry tracks which callbacks are registered per widget and event type.
+
+    Attributes
+    ----------
+    _callbacks : dict[str, dict[str, CallbackRegistration]]
+        Nested mapping of widget IDs to event registrations.
+    _lock : asyncio.Lock
+        Synchronizes callback registration and lookup.
     """
 
     def __init__(self) -> None:
@@ -73,6 +98,11 @@ class CallbackRegistry:
             The event type (e.g., "click", "cellValueChanged").
         callback : CallbackFunc
             The callback function to execute.
+
+        Notes
+        -----
+        Async callbacks are detected automatically and stored with their
+        execution mode for later invocation.
         """
         async with self._lock:
             if widget_id not in self._callbacks:
@@ -162,6 +192,11 @@ class CallbackRegistry:
         -------
         tuple[bool, Any]
             (success, result) - success is True if callback was found and executed.
+
+        Notes
+        -----
+        Synchronous callbacks are dispatched through the default executor so the
+        event loop remains responsive.
         """
         registration = await self.get(widget_id, event_type)
         if registration is None:
@@ -305,6 +340,11 @@ def get_callback_registry() -> CallbackRegistry:
     -------
     CallbackRegistry
         The singleton callback registry.
+
+    Notes
+    -----
+    The registry is process-local because Python callback objects cannot be
+    serialized across workers.
     """
     if _RegistryHolder.instance is None:
         _RegistryHolder.instance = CallbackRegistry()
@@ -312,5 +352,10 @@ def get_callback_registry() -> CallbackRegistry:
 
 
 def reset_callback_registry() -> None:
-    """Reset the global callback registry (for testing)."""
+    """Reset the global callback registry.
+
+    Notes
+    -----
+    Primarily intended for tests that need a clean process-local registry.
+    """
     _RegistryHolder.instance = CallbackRegistry()

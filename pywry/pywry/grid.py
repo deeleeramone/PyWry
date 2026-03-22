@@ -47,6 +47,16 @@ def _serialize_value(  # noqa: PLR0911
 ) -> Any:
     """Convert a single value to JSON-serializable format.
 
+    Parameters
+    ----------
+    value : Any
+        Scalar value to normalize for JSON serialization.
+
+    Returns
+    -------
+    Any
+        JSON-serializable representation of the value.
+
     Handles:
     - pandas Timestamp → ISO 8601 string
     - datetime.datetime → ISO 8601 string
@@ -103,7 +113,18 @@ def _serialize_value(  # noqa: PLR0911
 
 
 def _serialize_row(row: dict[str, Any]) -> dict[str, Any]:
-    """Convert a row dict to JSON-serializable format."""
+    """Convert a row mapping to JSON-serializable form.
+
+    Parameters
+    ----------
+    row : dict[str, Any]
+        Row mapping to serialize.
+
+    Returns
+    -------
+    dict[str, Any]
+        Serialized row with each value normalized for JSON transport.
+    """
     return {k: _serialize_value(v) for k, v in row.items()}
 
 
@@ -127,7 +148,11 @@ PinnedPosition = Literal["left", "right"]
 
 
 class AGGridModel(BaseModel):
-    """Base model for AG Grid objects with camelCase serialization."""
+    """Base model for AG Grid objects with camelCase serialization.
+
+    The AG Grid Python models accept snake_case field names for ergonomics,
+    then serialize to the camelCase keys expected by the JavaScript API.
+    """
 
     model_config = ConfigDict(
         populate_by_name=True,  # Accept both snake_case and camelCase
@@ -160,6 +185,69 @@ class ColDef(AGGridModel):
     Example:
         ColDef(field="name", header_name="Full Name", min_width=100)
         # Serializes to: {"field": "name", "headerName": "Full Name", "minWidth": 100}
+
+    Attributes
+    ----------
+    field : str | None
+        Data field backing the column.
+    col_id : str | None
+        Stable AG Grid column identifier.
+    header_name : str | None
+        Display name shown in the grid header.
+    header_tooltip : str | None
+        Tooltip shown when hovering the column header.
+    hide : bool | None
+        Whether the column starts hidden.
+    pinned : PinnedPosition | None
+        Pin position used to keep the column fixed on the left or right.
+    width : int | None
+        Explicit column width in pixels.
+    min_width : int | None
+        Minimum column width in pixels.
+    max_width : int | None
+        Maximum column width in pixels.
+    flex : int | None
+        Flex grow factor when columns share available width.
+    sortable : bool | None
+        Whether the column supports sorting.
+    filter : bool | str | None
+        Filter toggle or AG Grid filter type name.
+    resizable : bool | None
+        Whether the user can resize the column.
+    editable : bool | None
+        Whether the cell values are editable.
+    cell_data_type : CellDataType | None
+        AG Grid data type hint for client-side behaviors.
+    value_getter : str | None
+        JavaScript expression or callback name for derived values.
+    value_formatter : str | None
+        JavaScript formatter expression or callback name.
+    value_setter : str | None
+        JavaScript expression or callback name used for edits.
+    cell_renderer : str | None
+        AG Grid cell renderer name or callback identifier.
+    cell_class : str | list[str] | None
+        CSS class or classes applied to rendered cells.
+    cell_style : dict[str, str] | None
+        Inline style mapping applied to rendered cells.
+    auto_height : bool | None
+        Whether row height grows to fit wrapped content.
+    wrap_text : bool | None
+        Whether cell text is allowed to wrap.
+    row_group : bool | None
+        Whether the column participates in active row grouping.
+    enable_row_group : bool | None
+        Whether the column may be dragged into the row group panel.
+    agg_func : str | None
+        Aggregation function name for grouped rows.
+    span_rows : bool | str | None
+        Row-span configuration for repeated values.
+    lock_position : bool | str | None
+        Prevents the user from moving the column.
+    lock_pinned : bool | None
+        Prevents changes to the pinned state.
+    lock_visible : bool | None
+        Prevents the user from hiding the column.
     """
 
     # Identity
@@ -221,6 +309,19 @@ class ColGroupDef(AGGridModel):
     """AG Grid Column Group Definition.
 
     See: https://www.ag-grid.com/javascript-data-grid/column-groups/
+
+    Attributes
+    ----------
+    header_name : str
+        Display label for the group header.
+    children : list[ColDef | ColGroupDef]
+        Child columns or nested groups contained by this group.
+    group_id : str | None
+        Stable AG Grid identifier for the group.
+    marry_children : bool | None
+        Whether child columns must stay together during reordering.
+    open_by_default : bool | None
+        Whether the group should be expanded initially.
     """
 
     header_name: str = Field(alias="headerName")
@@ -240,6 +341,27 @@ class DefaultColDef(AGGridModel):
     """Default column definition applied to all columns.
 
     These defaults make the grid useful out-of-the-box.
+
+    Attributes
+    ----------
+    sortable : bool
+        Whether columns are sortable by default.
+    filter : bool
+        Whether columns expose filtering by default.
+    resizable : bool
+        Whether columns are resizable by default.
+    floating_filter : bool
+        Whether a floating filter row is shown beneath headers.
+    min_width : int
+        Minimum width applied to columns that do not override it.
+    flex : int
+        Flex share used when distributing available width.
+    enable_row_group : bool
+        Whether columns can be used for row grouping.
+    enable_pivot : bool
+        Whether columns can be used for pivoting.
+    enable_value : bool
+        Whether columns can be aggregated as values.
     """
 
     # Interaction - enabled by default
@@ -268,6 +390,19 @@ class RowSelection(AGGridModel):
     - 'enableDeselection': Ctrl+click to deselect only
     - 'enableSelection': Click to select only
     - True: Click to select, Ctrl+click to deselect (default)
+
+    Attributes
+    ----------
+    mode : RowSelectionMode
+        Single-row or multi-row selection mode.
+    checkboxes : bool
+        Whether row selection checkboxes are shown.
+    header_checkbox : bool
+        Whether the header includes a select-all checkbox.
+    enable_click_selection : bool | str
+        Click behavior used for selecting and deselecting rows.
+    hide_disabled_checkboxes : bool
+        Whether disabled checkboxes should be hidden instead of shown inactive.
     """
 
     mode: RowSelectionMode = "multiRow"
@@ -285,6 +420,53 @@ class GridOptions(AGGridModel):
     Includes sensible defaults that make the grid powerful out-of-the-box.
 
     See: https://www.ag-grid.com/javascript-data-grid/grid-options/
+
+    Attributes
+    ----------
+    column_defs : list[dict[str, Any]]
+        Serialized column definitions passed to AG Grid.
+    default_col_def : dict[str, Any] | None
+        Default column definition shared by all columns.
+    row_data : list[dict[str, Any]] | None
+        Client-side row data when using the client-side row model.
+    row_model_type : RowModelType
+        AG Grid row model used to render and fetch data.
+    row_selection : dict[str, Any] | bool | None
+        Row selection configuration passed directly to AG Grid.
+    cell_selection : bool | None
+        Whether cell-level selection is enabled.
+    dom_layout : DomLayoutType
+        Layout mode controlling grid sizing behavior.
+    pagination : bool | None
+        Whether pagination is enabled.
+    pagination_page_size : int
+        Number of rows shown per page when pagination is active.
+    pagination_page_size_selector : list[int] | bool
+        Allowed page-size choices shown by AG Grid.
+    group_display_type : str
+        Group rendering strategy used for grouped rows.
+    row_group_panel_show : str
+        Visibility mode for the row grouping panel.
+    group_default_expanded : int
+        Initial expansion depth for grouped rows.
+    cache_block_size : int
+        Block size used by infinite and server-side row models.
+    max_concurrent_datasource_requests : int
+        Maximum concurrent requests made by AG Grid data sources.
+    infinite_initial_row_count : int
+        Placeholder row count shown before infinite data arrives.
+    single_click_edit : bool | None
+        Whether editing starts on a single click.
+    undo_redo_cell_editing : bool
+        Whether undo and redo are enabled for cell edits.
+    undo_redo_cell_editing_limit : int
+        Maximum number of undo history entries retained.
+    copy_headers_to_clipboard : bool
+        Whether copied ranges include column headers.
+    animate_rows : bool
+        Whether row changes animate in the grid.
+    enable_cell_span : bool
+        Whether AG Grid cell spanning is enabled.
     """
 
     # === Column Definitions ===
@@ -369,6 +551,19 @@ class PyWryGridContext(BaseModel):
 
     This contains metadata that PyWry needs but AG Grid doesn't care about.
     Kept separate from GridOptions to maintain clean API boundaries.
+
+    Attributes
+    ----------
+    grid_id : str
+        Stable identifier used for IPC and DOM scoping.
+    theme_class : str
+        CSS class applied to the grid wrapper for theme selection.
+    total_rows : int
+        Total number of rows in the original dataset.
+    truncated_rows : int
+        Number of rows omitted when client-side safety truncation is applied.
+    original_data : list[dict[str, Any]]
+        Full normalized row data retained for PyWry-specific operations.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -386,6 +581,13 @@ class GridConfig(BaseModel):
     This is what rendering functions receive. It cleanly separates:
     - options: What AG Grid needs (follows their API)
     - context: What PyWry needs (grid_id, theme, etc.)
+
+    Attributes
+    ----------
+    options : GridOptions
+        AG Grid options passed to the frontend grid instance.
+    context : PyWryGridContext
+        PyWry-specific metadata used for rendering and IPC.
     """
 
     options: GridOptions
@@ -393,7 +595,23 @@ class GridConfig(BaseModel):
 
 
 class GridData(BaseModel):
-    """Normalized grid data from various input formats."""
+    """Normalized grid data derived from arbitrary Python inputs.
+
+    Attributes
+    ----------
+    row_data : list[dict[str, Any]]
+        Normalized row records ready for JSON serialization.
+    columns : list[str]
+        Flat column names extracted from the input data.
+    total_rows : int
+        Total number of normalized rows.
+    column_groups : list[dict[str, Any]] | None
+        Nested column-group structure derived from MultiIndex columns.
+    index_columns : list[str]
+        Column names created by flattening MultiIndex row indexes.
+    column_types : dict[str, str]
+        Detected AG Grid cell-data-type hints keyed by column name.
+    """
 
     row_data: list[dict[str, Any]]
     columns: list[str]
@@ -416,6 +634,16 @@ def _detect_column_types(data: Any) -> dict[str, str]:
     - int/float → 'number'
     - object/string with numeric strings → 'text' (force string to prevent number conversion)
     - object/string → None (let AG Grid infer)
+
+    Parameters
+    ----------
+    data : Any
+        DataFrame-like object exposing ``dtypes`` and column access.
+
+    Returns
+    -------
+    dict[str, str]
+        Mapping of column names to AG Grid cell data type names.
     """
     if not hasattr(data, "dtypes"):
         return {}
@@ -465,8 +693,8 @@ def _flatten_multiindex_columns(data: Any) -> tuple[Any, list[dict[str, Any]] | 
 
     Returns
     -------
-    tuple
-        (flattened DataFrame, column_groups structure for AG Grid)
+    tuple[Any, list[dict[str, Any]] | None]
+        Flattened tabular object and optional AG Grid column-group structure.
     """
     from collections import defaultdict  # pylint: disable=import-outside-toplevel
 
@@ -528,8 +756,8 @@ def _flatten_multiindex_rows(data: Any) -> tuple[Any, list[str]]:
 
     Returns
     -------
-    tuple
-        (DataFrame with reset index, list of index column names)
+    tuple[Any, list[str]]
+        Tabular object with index levels reset into columns and the index column names.
     """
     if not hasattr(data, "index") or not hasattr(data.index, "nlevels"):
         return data, []
@@ -572,6 +800,17 @@ def normalize_data(data: Any) -> GridData:
     For pandas MultiIndex:
     - MultiIndex columns → column_groups for AG Grid ColGroupDef
     - MultiIndex rows → flattened to regular columns (can use for row spanning)
+
+    Parameters
+    ----------
+    data : Any
+        Supported tabular input such as a DataFrame, list of row dictionaries,
+        dict of columns, or single row mapping.
+
+    Returns
+    -------
+    GridData
+        Normalized grid payload with rows, columns, and metadata.
     """
     row_data: list[dict[str, Any]] = []
     columns: list[str] = []
@@ -654,6 +893,18 @@ def _infer_column_types_from_values(
     - int/float values → 'number'
     - bool values → 'boolean'
     - strings that look like numbers with leading zeros → 'text'
+
+    Parameters
+    ----------
+    row_data : list[dict[str, Any]]
+        Sampled row records.
+    columns : list[str]
+        Columns to inspect.
+
+    Returns
+    -------
+    dict[str, str]
+        Mapping of column names to inferred AG Grid cell data type names.
     """
     if not row_data or not columns:
         return {}
@@ -691,6 +942,13 @@ def _build_datetime_col_def(col_def: dict[str, Any], col_type: str) -> None:
 
     For dateTimeString columns, enables the time component in the date filter
     so users can filter by both date and time using the native datetime picker.
+
+    Parameters
+    ----------
+    col_def : dict[str, Any]
+        Mutable column definition being configured.
+    col_type : str
+        Detected AG Grid cell data type.
     """
     if col_type == "dateTimeString":
         col_def["filterParams"] = {"includeBlanksInEquals": True}
@@ -701,6 +959,13 @@ def _build_number_col_def(col_def: dict[str, Any], col_type: str) -> None:
 
     The dataTypeDefinitions.number.valueFormatter in JavaScript handles all formatting.
     We only intervene for temporal columns to prevent unwanted formatting.
+
+    Parameters
+    ----------
+    col_def : dict[str, Any]
+        Mutable column definition being configured.
+    col_type : str
+        Detected AG Grid cell data type.
     """
     if col_type != "number":
         return
@@ -740,6 +1005,11 @@ def build_column_defs(  # noqa: C901, PLR0912  # pylint: disable=too-many-branch
         If True, index columns get spanRows=True for automatic row spanning.
     column_types : dict[str, str] | None
         Detected column types from pandas dtypes (e.g., {'timestamp': 'dateString'}).
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Serialized AG Grid column definitions ready for the frontend.
     """
     index_set = set(index_columns or [])
     types = column_types or {}
@@ -889,6 +1159,12 @@ def build_grid_config(  # pylint: disable=too-many-arguments
     -------
     GridConfig
         Complete configuration with options and context.
+
+    Notes
+    -----
+    This function is the main high-level entry point for PyWry AG Grid setup.
+    It normalizes input data, builds column definitions, applies safety limits,
+    and prepares both AG Grid options and PyWry-specific rendering context.
     """
     # Generate unique grid ID
     gid = grid_id or f"grid-{uuid.uuid4().hex[:8]}"
@@ -984,6 +1260,16 @@ def to_js_grid_config(config: GridConfig) -> dict[str, Any]:
     """Convert GridConfig to JSON-serializable dict for JS.
 
     Used by anywidget backend which passes config as JSON.
+
+    Parameters
+    ----------
+    config : GridConfig
+        Combined grid configuration to serialize.
+
+    Returns
+    -------
+    dict[str, Any]
+        JSON-serializable AG Grid configuration for the browser.
     """
     result = config.options.to_dict()
 
@@ -999,7 +1285,18 @@ def to_js_grid_config(config: GridConfig) -> dict[str, Any]:
 
 
 def build_grid_html(config: GridConfig) -> str:
-    """Generate the HTML/JS snippet for the AG Grid."""
+    """Generate the standalone HTML and JavaScript snippet for AG Grid.
+
+    Parameters
+    ----------
+    config : GridConfig
+        Combined grid configuration to embed.
+
+    Returns
+    -------
+    str
+        HTML snippet that bootstraps an AG Grid instance when inserted into a page.
+    """
     options_dict = config.options.to_dict()
 
     # Add PyWry metadata for IPC

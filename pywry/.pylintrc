@@ -12,6 +12,7 @@ recursive=yes
 disable=
     too-few-public-methods,
     logging-fstring-interpolation,
+    logging-too-many-args,
     duplicate-code,
     too-many-positional-arguments,
     too-many-locals,
@@ -24,6 +25,8 @@ disable=
     global-variable-not-assigned,
     protected-access,
     cyclic-import,
+    fixme,
+    reimported,
 
 [FORMAT]
 max-line-length=100
@@ -45,8 +48,8 @@ good-names=i,j,k,ex,_,id,js,css,fn,e,f,w,h,x,y
 bad-names=foo,bar,baz,toto,tutu,tata
 
 [DESIGN]
-max-args=10
-max-attributes=15
+max-args=25
+max-attributes=35
 max-bool-expr=5
 max-branches=12
 max-locals=20

@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class ThemeMode(str, Enum):
-    """Window theme mode."""
+    """Window theme preference used by PyWry templates and windows."""
 
     LIGHT = "light"
     DARK = "dark"
@@ -21,7 +21,7 @@ class ThemeMode(str, Enum):
 
 
 class WindowMode(str, Enum):
-    """Window management mode."""
+    """Window management mode used when creating or reusing windows."""
 
     NEW_WINDOW = "new_window"
     SINGLE_WINDOW = "single_window"
@@ -128,7 +128,25 @@ class WindowConfig(BaseModel):
 
 
 class HtmlContent(BaseModel):
-    """HTML content to display in a window."""
+    """HTML content bundle rendered inside a PyWry window.
+
+    Attributes
+    ----------
+    html : str
+        HTML markup to load into the window.
+    json_data : dict[str, Any] | None
+        Optional JSON payload injected into the page bootstrap.
+    init_script : str | None
+        JavaScript executed after the page is initialized.
+    css_files : list[Path | str] | None
+        External CSS files to load alongside the HTML.
+    script_files : list[Path | str] | None
+        External JavaScript files to load alongside the HTML.
+    inline_css : str | None
+        Inline CSS appended to the generated document.
+    watch : bool
+        Whether the content should participate in hot-reload file watching.
+    """
 
     html: str
     json_data: dict[str, Any] | None = None
@@ -186,7 +204,19 @@ def validate_event_type(event_type: str) -> bool:
 
 
 class GenericEvent(BaseModel):
-    """Generic event for custom event handling."""
+    """Generic event envelope for custom event handling.
+
+    Attributes
+    ----------
+    event_type : str
+        Event name in ``namespace:event-name`` format.
+    data : Any
+        Arbitrary event payload forwarded from the frontend.
+    window_label : str
+        Window identifier that emitted the event.
+    timestamp : datetime
+        Event creation time.
+    """
 
     event_type: str
     data: Any = None
@@ -222,14 +252,34 @@ class GenericEvent(BaseModel):
 
 
 class ResultEvent(BaseModel):
-    """Result sent from JavaScript via window.pywry.result()."""
+    """Result sent from JavaScript via ``window.pywry.result()``.
+
+    Attributes
+    ----------
+    data : Any
+        Arbitrary result payload returned by the page.
+    window_label : str
+        Window identifier that produced the result.
+    """
 
     data: Any
     window_label: str
 
 
 class PlotlyClickEvent(BaseModel):
-    """Plotly click event data."""
+    """Plotly click event payload.
+
+    Attributes
+    ----------
+    point_indices : list[int]
+        Indices of points included in the click interaction.
+    curve_number : int
+        Trace index for the clicked point.
+    point_data : dict[str, Any]
+        Raw Plotly point payload for the clicked datum.
+    window_label : str
+        Window identifier that emitted the event.
+    """
 
     point_indices: list[int] = Field(default_factory=list)
     curve_number: int = 0
@@ -238,7 +288,17 @@ class PlotlyClickEvent(BaseModel):
 
 
 class PlotlySelectEvent(BaseModel):
-    """Plotly selection event data."""
+    """Plotly selection event payload.
+
+    Attributes
+    ----------
+    points : list[dict[str, Any]]
+        Plotly point payloads included in the current selection.
+    range : dict[str, Any] | None
+        Selected axis range when Plotly reports it.
+    window_label : str
+        Window identifier that emitted the event.
+    """
 
     points: list[dict[str, Any]] = Field(default_factory=list)
     range: dict[str, Any] | None = None
@@ -246,7 +306,19 @@ class PlotlySelectEvent(BaseModel):
 
 
 class PlotlyHoverEvent(BaseModel):
-    """Plotly hover event data."""
+    """Plotly hover event payload.
+
+    Attributes
+    ----------
+    point_indices : list[int]
+        Indices of points under the cursor.
+    curve_number : int
+        Trace index for the hovered point.
+    point_data : dict[str, Any]
+        Raw Plotly point payload for the hover target.
+    window_label : str
+        Window identifier that emitted the event.
+    """
 
     point_indices: list[int] = Field(default_factory=list)
     curve_number: int = 0
@@ -255,14 +327,32 @@ class PlotlyHoverEvent(BaseModel):
 
 
 class PlotlyRelayoutEvent(BaseModel):
-    """Plotly relayout event data (zoom, pan, etc.)."""
+    """Plotly relayout event payload for zoom, pan, and layout changes.
+
+    Attributes
+    ----------
+    relayout_data : dict[str, Any]
+        Raw Plotly relayout payload.
+    window_label : str
+        Window identifier that emitted the event.
+    """
 
     relayout_data: dict[str, Any] = Field(default_factory=dict)
     window_label: str = ""
 
 
 class GridSelectionEvent(BaseModel):
-    """AG Grid selection event data."""
+    """AG Grid selection event payload.
+
+    Attributes
+    ----------
+    selected_rows : list[dict[str, Any]]
+        Full row objects currently selected in the grid.
+    selected_row_ids : list[str]
+        Stable identifiers for the selected rows.
+    window_label : str
+        Window identifier that emitted the event.
+    """
 
     selected_rows: list[dict[str, Any]] = Field(default_factory=list)
     selected_row_ids: list[str] = Field(default_factory=list)
@@ -270,7 +360,23 @@ class GridSelectionEvent(BaseModel):
 
 
 class GridCellEvent(BaseModel):
-    """AG Grid cell edit event data."""
+    """AG Grid cell event payload.
+
+    Attributes
+    ----------
+    row_id : str
+        Stable identifier for the edited row.
+    row_index : int
+        Visible row index in the current grid view.
+    column : str
+        Column field associated with the event.
+    old_value : Any
+        Previous cell value before the edit.
+    new_value : Any
+        New cell value after the edit.
+    window_label : str
+        Window identifier that emitted the event.
+    """
 
     row_id: str = ""
     row_index: int = 0
@@ -281,7 +387,19 @@ class GridCellEvent(BaseModel):
 
 
 class GridRowClickEvent(BaseModel):
-    """AG Grid row click event data."""
+    """AG Grid row click event payload.
+
+    Attributes
+    ----------
+    row_data : dict[str, Any]
+        Full row object for the clicked row.
+    row_id : str
+        Stable identifier for the clicked row.
+    row_index : int
+        Visible row index in the current grid view.
+    window_label : str
+        Window identifier that emitted the event.
+    """
 
     row_data: dict[str, Any] = Field(default_factory=dict)
     row_id: str = ""
@@ -290,14 +408,32 @@ class GridRowClickEvent(BaseModel):
 
 
 class ResultPayload(BaseModel):
-    """Payload for pywry_result command."""
+    """Payload for the ``pywry_result`` command.
+
+    Attributes
+    ----------
+    data : Any
+        Result payload supplied by the frontend.
+    window_label : str
+        Window identifier associated with the result.
+    """
 
     data: Any
     window_label: str
 
 
 class GenericEventPayload(BaseModel):
-    """Payload for pywry_event command."""
+    """Payload for the ``pywry_event`` command.
+
+    Attributes
+    ----------
+    event_type : str
+        Event name in ``namespace:event-name`` format.
+    data : Any
+        Arbitrary event payload.
+    window_label : str
+        Window identifier associated with the event.
+    """
 
     event_type: str
     data: Any = None
@@ -331,13 +467,25 @@ class GenericEventPayload(BaseModel):
 
 
 class FilePathPayload(BaseModel):
-    """Payload for open_file command."""
+    """Payload for the ``open_file`` command.
+
+    Attributes
+    ----------
+    path : str
+        File path requested by the frontend.
+    """
 
     path: str
 
 
 class WindowClosedPayload(BaseModel):
-    """Payload for window closed notification."""
+    """Payload for a window closed notification.
+
+    Attributes
+    ----------
+    window_label : str
+        Identifier of the window that was closed.
+    """
 
     window_label: str
 

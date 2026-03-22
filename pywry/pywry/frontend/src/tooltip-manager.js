@@ -9,6 +9,7 @@
     var tooltip = null;
     var currentTarget = null;
     var hideTimeout = null;
+    var suppressUntil = 0;
 
     function createTooltip() {
         if (tooltip) return tooltip;
@@ -84,6 +85,7 @@
     }
 
     function handleMouseOver(e) {
+        if (Date.now() < suppressUntil) return;
         var target = e.target.closest('[data-tooltip]');
         if (!target) return;
         if (target === currentTarget) return;
@@ -111,8 +113,12 @@
     document.addEventListener('mouseover', handleMouseOver, false);
     document.addEventListener('mouseout', handleMouseOut, false);
 
-    // Also hide on scroll
+    // Hide on scroll and on any click/tap
     document.addEventListener('scroll', hideTooltip, true);
+    document.addEventListener('mousedown', function () {
+        hideTooltip();
+        suppressUntil = Date.now() + 300;
+    }, true);
 
     console.log('PyWry tooltip manager initialized');
 })();

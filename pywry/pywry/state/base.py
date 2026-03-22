@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from pywry.chat import ChatMessage, ChatThread
+
     from .types import ConnectionInfo, EventMessage, UserSession, WidgetData
 
 
@@ -24,6 +26,11 @@ class WidgetStore(ABC):
 
     Handles storage and retrieval of widget HTML content and metadata.
     Implementations must be thread-safe and support async operations.
+
+    Notes
+    -----
+    The widget store is the canonical source of widget HTML, metadata, and
+    authentication tokens for both single-process and deploy-mode backends.
     """
 
     @abstractmethod
@@ -196,6 +203,11 @@ class EventBus(ABC):
 
     Handles cross-worker event delivery for callback dispatch
     and real-time updates.
+
+    Notes
+    -----
+    EventBus implementations are expected to provide best-effort fan-out for
+    widget and worker channels without assuming in-process execution.
     """
 
     @abstractmethod
@@ -245,6 +257,11 @@ class ConnectionRouter(ABC):
 
     Tracks which worker owns which WebSocket connection,
     enabling cross-worker message routing.
+
+    Notes
+    -----
+    Routers are used to decide where outbound callback and state events must be
+    forwarded when multiple workers are serving widgets concurrently.
     """
 
     @abstractmethod
@@ -355,6 +372,11 @@ class SessionStore(ABC):
     """Abstract session storage interface for RBAC support.
 
     Handles user sessions and access control for multi-tenant deployments.
+
+    Notes
+    -----
+    Session stores back RBAC checks, session expiry, and multi-session user
+    tracking for deploy-mode hosting.
     """
 
     @abstractmethod
@@ -495,5 +517,142 @@ class SessionStore(ABC):
         -------
         bool
             True if the session has the required permission.
+        """
+        ...
+
+
+class ChatStore(ABC):
+    """Abstract chat storage interface.
+
+    Handles storage and retrieval of chat threads and messages.
+    Implementations must be thread-safe and support async operations.
+
+    Notes
+    -----
+    Chat stores are scoped by widget ID so separate widgets can safely reuse the
+    same backend without thread or message leakage.
+    """
+
+    @abstractmethod
+    async def save_thread(self, widget_id: str, thread: ChatThread) -> None:
+        """Save or update a chat thread.
+
+        Parameters
+        ----------
+        widget_id : str
+            The widget that owns this thread.
+        thread : ChatThread
+            The thread to save.
+        """
+        ...
+
+    @abstractmethod
+    async def get_thread(self, widget_id: str, thread_id: str) -> ChatThread | None:
+        """Get a thread by ID.
+
+        Parameters
+        ----------
+        widget_id : str
+            The widget that owns this thread.
+        thread_id : str
+            The thread ID.
+
+        Returns
+        -------
+        ChatThread or None
+            The thread if found, None otherwise.
+        """
+        ...
+
+    @abstractmethod
+    async def list_threads(self, widget_id: str) -> list[ChatThread]:
+        """List all threads for a widget.
+
+        Parameters
+        ----------
+        widget_id : str
+            The widget ID.
+
+        Returns
+        -------
+        list[ChatThread]
+            All threads for this widget.
+        """
+        ...
+
+    @abstractmethod
+    async def delete_thread(self, widget_id: str, thread_id: str) -> bool:
+        """Delete a thread.
+
+        Parameters
+        ----------
+        widget_id : str
+            The widget ID.
+        thread_id : str
+            The thread to delete.
+
+        Returns
+        -------
+        bool
+            True if deleted, False if not found.
+        """
+        ...
+
+    @abstractmethod
+    async def append_message(self, widget_id: str, thread_id: str, message: ChatMessage) -> None:
+        """Append a message to a thread.
+
+        Implementations should enforce MAX_MESSAGES_PER_THREAD and
+        evict oldest messages when exceeded.
+
+        Parameters
+        ----------
+        widget_id : str
+            The widget ID.
+        thread_id : str
+            The thread ID.
+        message : ChatMessage
+            The message to append.
+        """
+        ...
+
+    @abstractmethod
+    async def get_messages(
+        self,
+        widget_id: str,
+        thread_id: str,
+        limit: int = 50,
+        before_id: str | None = None,
+    ) -> list[ChatMessage]:
+        """Get messages from a thread with cursor-based pagination.
+
+        Parameters
+        ----------
+        widget_id : str
+            The widget ID.
+        thread_id : str
+            The thread ID.
+        limit : int
+            Maximum number of messages to return.
+        before_id : str or None
+            Return messages before this message ID (for pagination).
+
+        Returns
+        -------
+        list[ChatMessage]
+            Messages in chronological order.
+        """
+        ...
+
+    @abstractmethod
+    async def clear_messages(self, widget_id: str, thread_id: str) -> None:
+        """Clear all messages from a thread.
+
+        Parameters
+        ----------
+        widget_id : str
+            The widget ID.
+        thread_id : str
+            The thread ID.
         """
         ...

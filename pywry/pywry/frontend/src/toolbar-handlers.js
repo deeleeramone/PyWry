@@ -12,6 +12,7 @@ function initTooltipManager(container) {
     var currentTarget = null;
     var hideTimeout = null;
     var showTimeout = null;
+    var suppressUntil = 0;
     var tooltipRoot = container;
     // Handle document vs Element - document doesn't have .closest()
     var widgetEl;
@@ -96,6 +97,7 @@ function initTooltipManager(container) {
     }
 
     function handleMouseOver(e) {
+        if (Date.now() < suppressUntil) return;
         var target = e.target.closest('[data-tooltip]');
         if (!target) return;
         if (target === currentTarget) return;
@@ -124,6 +126,10 @@ function initTooltipManager(container) {
     container.addEventListener('mouseover', handleMouseOver, false);
     container.addEventListener('mouseout', handleMouseOut, false);
     container.addEventListener('scroll', hideTooltip, true);
+    container.addEventListener('mousedown', function() {
+        hideTooltip();
+        suppressUntil = Date.now() + 300;
+    }, true);
 }
 
 function initToolbarHandlers(container, pywry) {
