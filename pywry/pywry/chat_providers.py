@@ -188,20 +188,20 @@ class OpenAIProvider(ChatProvider):
 
         resp = await self._client.chat.completions.create(
             model=config.model,
-            messages=self._build_messages(messages, config),  # type: ignore[arg-type]
+            messages=self._build_messages(messages, config),
             temperature=config.temperature,
             max_tokens=config.max_tokens,
             stream=False,
         )
-        choice = resp.choices[0]  # type: ignore[union-attr]
+        choice = resp.choices[0]
         return ChatMsg(
             role="assistant",
             content=choice.message.content or "",
             metadata={
-                "model": resp.model,  # type: ignore[union-attr]
+                "model": resp.model,
                 "usage": {
-                    "prompt_tokens": resp.usage.prompt_tokens if resp.usage else 0,  # type: ignore[union-attr]
-                    "completion_tokens": resp.usage.completion_tokens if resp.usage else 0,  # type: ignore[union-attr]
+                    "prompt_tokens": resp.usage.prompt_tokens if resp.usage else 0,
+                    "completion_tokens": resp.usage.completion_tokens if resp.usage else 0,
                 },
             },
         )
@@ -240,21 +240,21 @@ class OpenAIProvider(ChatProvider):
 
         resp = await self._client.chat.completions.create(
             model=config.model,
-            messages=self._build_messages(messages, config),  # type: ignore[arg-type]
+            messages=self._build_messages(messages, config),
             temperature=config.temperature,
             max_tokens=config.max_tokens,
             stream=True,
         )
 
         try:
-            async for chunk in resp:  # type: ignore[union-attr]
+            async for chunk in resp:
                 if cancel_event and cancel_event.is_set():
                     raise GenerationCancelledError("Generation cancelled by user")
                 delta = chunk.choices[0].delta if chunk.choices else None
                 if delta and delta.content:
                     yield delta.content
         finally:
-            await resp.response.aclose()  # type: ignore[union-attr]
+            await resp.response.aclose()
 
 
 class AnthropicProvider(ChatProvider):

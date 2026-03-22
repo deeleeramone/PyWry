@@ -1324,7 +1324,7 @@ def _get_pywry_base_css() -> str:
 
 if HAS_ANYWIDGET:
 
-    class PyWryWidget(anywidget.AnyWidget, EmittingWidget):  # pylint: disable=abstract-method
+    class PyWryWidget(anywidget.AnyWidget, EmittingWidget):  # type: ignore[misc]  # pylint: disable=abstract-method
         """Widget for inline notebook rendering using anywidget (no Plotly).
 
         Implements BaseWidget protocol for unified API.
