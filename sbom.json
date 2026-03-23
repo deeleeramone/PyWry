@@ -1295,7 +1295,7 @@
       "version": "11.7.0"
     },
     {
-      "bom-ref": "cyclopts==4.10.0",
+      "bom-ref": "cyclopts==4.10.1",
       "description": "Intuitive, easy CLIs based on type hints.",
       "externalReferences": [
         {
@@ -1318,9 +1318,9 @@
         }
       ],
       "name": "cyclopts",
-      "purl": "pkg:pypi/cyclopts@4.10.0",
+      "purl": "pkg:pypi/cyclopts@4.10.1",
       "type": "library",
-      "version": "4.10.0"
+      "version": "4.10.1"
     },
     {
       "bom-ref": "debugpy==1.8.20",
@@ -1769,7 +1769,7 @@
       "version": "2.34.1"
     },
     {
-      "bom-ref": "fastapi==0.135.1",
+      "bom-ref": "fastapi==0.135.2",
       "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production",
       "externalReferences": [
         {
@@ -1807,9 +1807,9 @@
         }
       ],
       "name": "fastapi",
-      "purl": "pkg:pypi/fastapi@0.135.1",
+      "purl": "pkg:pypi/fastapi@0.135.2",
       "type": "library",
-      "version": "0.135.1"
+      "version": "0.135.2"
     },
     {
       "bom-ref": "fastmcp==3.1.1",
@@ -2951,7 +2951,7 @@
       "version": "30.4.4"
     },
     {
-      "bom-ref": "logfire-api==4.29.0",
+      "bom-ref": "logfire-api==4.30.0",
       "description": "Shim for the Logfire SDK which does nothing unless Logfire is installed",
       "licenses": [
         {
@@ -2962,9 +2962,9 @@
         }
       ],
       "name": "logfire-api",
-      "purl": "pkg:pypi/logfire-api@4.29.0",
+      "purl": "pkg:pypi/logfire-api@4.30.0",
       "type": "library",
-      "version": "4.29.0"
+      "version": "4.30.0"
     },
     {
       "bom-ref": "lxml==6.0.2",
@@ -6865,7 +6865,7 @@
         "rich==14.3.3",
         "typing_extensions==4.15.0"
       ],
-      "ref": "cyclopts==4.10.0"
+      "ref": "cyclopts==4.10.1"
     },
     {
       "ref": "debugpy==1.8.20"
@@ -6959,14 +6959,14 @@
         "typing_extensions==4.15.0",
         "uvicorn==0.42.0"
       ],
-      "ref": "fastapi==0.135.1"
+      "ref": "fastapi==0.135.2"
     },
     {
       "dependsOn": [
         "Authlib==1.6.9",
         "PyYAML==6.0.3",
         "anthropic==0.86.0",
-        "cyclopts==4.10.0",
+        "cyclopts==4.10.1",
         "exceptiongroup==1.3.1",
         "httpx==0.28.1",
         "jsonref==1.1.0",
@@ -7293,7 +7293,7 @@
       "ref": "license-expression==30.4.4"
     },
     {
-      "ref": "logfire-api==4.29.0"
+      "ref": "logfire-api==4.30.0"
     },
     {
       "ref": "lxml==6.0.2"
@@ -7302,7 +7302,7 @@
       "dependsOn": [
         "anthropic==0.86.0",
         "filetype==1.2.0",
-        "logfire-api==4.29.0",
+        "logfire-api==4.30.0",
         "openai==2.29.0",
         "pydantic-settings==2.13.1",
         "pydantic==2.12.5",
@@ -7907,7 +7907,7 @@
         "anywidget==0.9.21",
         "cryptography==46.0.5",
         "fakeredis==2.34.1",
-        "fastapi==0.135.1",
+        "fastapi==0.135.2",
         "fastmcp==3.1.1",
         "griffe==2.0.0",
         "httpx==0.28.1",
@@ -7983,7 +7983,7 @@
     {
       "dependsOn": [
         "anyio==4.12.1",
-        "fastapi==0.135.1",
+        "fastapi==0.135.2",
         "starlette==1.0.0",
         "uvicorn==0.42.0"
       ],
@@ -8157,9 +8157,9 @@
       ],
       "name": "pywry",
       "type": "application",
-      "version": "2.0.0"
+      "version": "2.0.0rc1"
     },
-    "timestamp": "2026-03-23T04:57:34.584053+00:00",
+    "timestamp": "2026-03-23T19:59:59.565006+00:00",
     "tools": {
       "components": [
         {
@@ -8263,7 +8263,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:1de78dfd-cae5-4841-9e5f-9c8c01191bf7",
+  "serialNumber": "urn:uuid:4778496f-03c5-4d5f-89ab-f4630d5c016d",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
