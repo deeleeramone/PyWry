@@ -1919,7 +1919,7 @@
       "version": "2.1.0"
     },
     {
-      "bom-ref": "griffe==2.0.0",
+      "bom-ref": "griffe==2.0.1",
       "description": "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API.",
       "externalReferences": [
         {
@@ -1972,12 +1972,12 @@
         }
       ],
       "name": "griffe",
-      "purl": "pkg:pypi/griffe@2.0.0",
+      "purl": "pkg:pypi/griffe@2.0.1",
       "type": "library",
-      "version": "2.0.0"
+      "version": "2.0.1"
     },
     {
-      "bom-ref": "griffecli==2.0.0",
+      "bom-ref": "griffecli==2.0.1",
       "description": "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API.",
       "licenses": [
         {
@@ -1988,12 +1988,12 @@
         }
       ],
       "name": "griffecli",
-      "purl": "pkg:pypi/griffecli@2.0.0",
+      "purl": "pkg:pypi/griffecli@2.0.1",
       "type": "library",
-      "version": "2.0.0"
+      "version": "2.0.1"
     },
     {
-      "bom-ref": "griffelib==2.0.0",
+      "bom-ref": "griffelib==2.0.1",
       "description": "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API.",
       "licenses": [
         {
@@ -2010,9 +2010,9 @@
           "value": "pypi"
         }
       ],
-      "purl": "pkg:pypi/griffelib@2.0.0",
+      "purl": "pkg:pypi/griffelib@2.0.1",
       "type": "library",
-      "version": "2.0.0"
+      "version": "2.0.1"
     },
     {
       "bom-ref": "h11==0.16.0",
@@ -2568,7 +2568,7 @@
       "version": "0.13.0"
     },
     {
-      "bom-ref": "jsonpointer==3.1.0",
+      "bom-ref": "jsonpointer==3.1.1",
       "description": "Identify specific nodes in a JSON document (RFC 6901) ",
       "externalReferences": [
         {
@@ -2586,9 +2586,9 @@
         }
       ],
       "name": "jsonpointer",
-      "purl": "pkg:pypi/jsonpointer@3.1.0",
+      "purl": "pkg:pypi/jsonpointer@3.1.1",
       "type": "library",
-      "version": "3.1.0"
+      "version": "3.1.1"
     },
     {
       "bom-ref": "jsonref==1.1.0",
@@ -7004,24 +7004,24 @@
     },
     {
       "dependsOn": [
-        "griffecli==2.0.0",
-        "griffelib==2.0.0"
+        "griffecli==2.0.1",
+        "griffelib==2.0.1"
       ],
-      "ref": "griffe==2.0.0"
+      "ref": "griffe==2.0.1"
     },
     {
       "dependsOn": [
         "colorama==0.4.6",
-        "griffelib==2.0.0"
+        "griffelib==2.0.1"
       ],
-      "ref": "griffecli==2.0.0"
+      "ref": "griffecli==2.0.1"
     },
     {
       "dependsOn": [
         "pip==26.0.1",
         "platformdirs==4.9.4"
       ],
-      "ref": "griffelib==2.0.0"
+      "ref": "griffelib==2.0.1"
     },
     {
       "ref": "h11==0.16.0"
@@ -7200,7 +7200,7 @@
       "ref": "jiter==0.13.0"
     },
     {
-      "ref": "jsonpointer==3.1.0"
+      "ref": "jsonpointer==3.1.1"
     },
     {
       "ref": "jsonref==1.1.0"
@@ -7226,7 +7226,7 @@
         "fqdn==1.5.1",
         "idna==3.11",
         "isoduration==20.11.0",
-        "jsonpointer==3.1.0",
+        "jsonpointer==3.1.1",
         "jsonschema-specifications==2025.9.1",
         "referencing==0.37.0",
         "rfc3339-validator==0.1.4",
@@ -7439,7 +7439,7 @@
     },
     {
       "dependsOn": [
-        "griffelib==2.0.0",
+        "griffelib==2.0.1",
         "mkdocs-autorefs==1.4.4",
         "mkdocstrings==1.0.3",
         "typing_extensions==4.15.0"
@@ -7909,7 +7909,7 @@
         "fakeredis==2.34.1",
         "fastapi==0.135.2",
         "fastmcp==3.1.1",
-        "griffe==2.0.0",
+        "griffe==2.0.1",
         "httpx==0.28.1",
         "ipykernel==7.2.0",
         "keyring==25.7.0",
@@ -8159,7 +8159,7 @@
       "type": "application",
       "version": "2.0.0rc1"
     },
-    "timestamp": "2026-03-23T19:59:59.565006+00:00",
+    "timestamp": "2026-03-23T23:34:58.959019+00:00",
     "tools": {
       "components": [
         {
@@ -8263,7 +8263,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:4778496f-03c5-4d5f-89ab-f4630d5c016d",
+  "serialNumber": "urn:uuid:dcabec75-8326-4bd6-b9aa-cc7dba41465f",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
