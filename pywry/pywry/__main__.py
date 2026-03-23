@@ -140,6 +140,11 @@ import importlib  # noqa: E402
 import shutil  # noqa: E402
 import tempfile  # noqa: E402
 
+from pywry._freeze import _setup_pytauri_standalone  # noqa: E402
+
+
+_setup_pytauri_standalone()
+
 import pytauri_plugins  # noqa: E402
 
 from anyio import create_task_group  # noqa: E402
