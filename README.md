@@ -4,11 +4,11 @@
 
 </div>
 
-PyWry is a cross-platform rendering engine and GUI toolkit for Python. One API, three output targets:
+PyWry is a cross-platform rendering engine and desktop UI toolkit for Python. One API, three output targets:
 
 - **Native window** — OS webview via [PyTauri](https://pypi.org/project/pytauri/). Not Qt, not Electron. Use unrestricted HTML/CSS/JS.
-- **Jupyter widget** — anywidget or FastAPI + WebSocket, works in JupyterLab and notebook environments.
-- **Browser tab** — FastAPI server with Redis state backend for horizontal scaling and RBAC.
+- **Jupyter widget** — anywidget + FastAPI + WebSocket, works in JupyterLab, VS Code, and Colab.
+- **Browser tab** — FastAPI server with Redis state backend for horizontal scaling.
 
 **Build Once, Render Anywhere:** Prototype interactive data apps in a Jupyter Notebook, easily deploy them as web apps, and seamlessly compile them into secure, lightweight standalone desktop executables via `pywry[freeze]`.
 
@@ -23,9 +23,15 @@ pip install pywry
 | Extra | When to use |
 |-------|-------------|
 | `pip install 'pywry[notebook]'` | Jupyter / anywidget integration |
-| `pip install 'pywry[mcp]'` | MCP server for AI agents |
+| `pip install 'pywry[auth]'` | OAuth2 and keyring-backed auth support |
 | `pip install 'pywry[freeze]'` | PyInstaller hook for standalone executables |
+| `pip install 'pywry[mcp]'` | Model Context Protocol server support |
+| `pip install 'pywry[openai]'` | `OpenAIProvider` integration |
+| `pip install 'pywry[anthropic]'` | `AnthropicProvider` integration |
+| `pip install 'pywry[magentic]'` | `MagenticProvider` integration |
 | `pip install 'pywry[all]'` | Everything above |
+
+The chat UI itself is included in the base package. The provider extras only install optional third-party SDKs.
 
 **Linux only** — install system webview dependencies first:
 
@@ -126,11 +132,8 @@ The output in `dist/MyApp/` is fully self-contained. Target machines need no Pyt
 
 - [Getting Started](https://deeleeramone.github.io/PyWry/getting-started/) — installation, quick start, rendering paths
 - [Concepts](https://deeleeramone.github.io/PyWry/getting-started/) — events, configuration, state, hot reload, RBAC
-- [Chat Guide](https://deeleeramone.github.io/PyWry/guides/chat/) — ChatManager setup, streaming, slash commands, settings, attachments
-- [Chat Artifacts](https://deeleeramone.github.io/PyWry/guides/chat-artifacts/) — tables, charts, code blocks, provider-backed assistants
 - [Components](https://deeleeramone.github.io/PyWry/components/) — live previews for all toolbar components
 - [API Reference](https://deeleeramone.github.io/PyWry/reference/) — auto-generated docs for every class and function
-- [Chat API](https://deeleeramone.github.io/PyWry/reference/chat/) — core models, ChatManager, and provider adapters
 - [MCP Server](https://deeleeramone.github.io/PyWry/mcp/) — AI agent integration
 
 ## License
