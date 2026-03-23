@@ -498,62 +498,18 @@ jobs:
           for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
           for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev && break || { sleep 30; sudo apt-get update; }; done
 
-      - name: Cache OpenSSL (Windows ARM)
-        if: runner.os == 'Windows' && runner.arch == 'ARM64'
-        id: cache-openssl
-        uses: actions/cache@v5
-        with:
-          path: C:\OpenSSL
-          key: openssl-windows-arm64-3.3.2
-
-      - name: Install OpenSSL (Windows ARM)
-        if: runner.os == 'Windows' && runner.arch == 'ARM64' && steps.cache-openssl.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $opensslUrl = "https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.3.2-arm64.zip"
-          $zipPath = "$env:TEMP\openssl.zip"
-          $extractPath = "C:\OpenSSL"
-          
-          Write-Host "Downloading OpenSSL for Windows ARM64..."
-          Invoke-WebRequest -Uri $opensslUrl -OutFile $zipPath -UseBasicParsing
-          
-          Write-Host "Extracting OpenSSL..."
-          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-          
-          $opensslDir = Get-ChildItem -Path $extractPath -Directory | Select-Object -First 1
-          if ($opensslDir) {
-            Get-ChildItem -Path $opensslDir.FullName | Move-Item -Destination $extractPath -Force
-            Remove-Item -Path $opensslDir.FullName -Force -Recurse -ErrorAction SilentlyContinue
-          }
-          
-          Write-Host "OpenSSL installed to $extractPath"
-
-      - name: Set OpenSSL environment (Windows ARM)
-        if: runner.os == 'Windows' && runner.arch == 'ARM64'
-        shell: pwsh
-        run: |
-          $opensslDir = "C:\OpenSSL"
-          $libDir = Get-ChildItem -Path $opensslDir -Recurse -Directory -Filter "lib" | Select-Object -First 1
-          $includeDir = Get-ChildItem -Path $opensslDir -Recurse -Directory -Filter "include" | Select-Object -First 1
-          
-          if ($libDir -and $includeDir) {
-            $parentDir = Split-Path -Parent $libDir.FullName
-            echo "OPENSSL_DIR=$parentDir" >> $env:GITHUB_ENV
-          } else {
-            echo "OPENSSL_DIR=$opensslDir" >> $env:GITHUB_ENV
-          }
-
       - name: Download dist artifacts
         uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
 
-      - name: Install from built wheel with dev dependencies
+      - name: Install from built wheel
         shell: bash
         run: |
-          pip install --find-links dist/ "pywry[dev]==${{ needs.merge-artifacts.outputs.version }}"
+          WHEEL=$(ls $GITHUB_WORKSPACE/dist/pywry-*.whl | head -1)
+          echo "Installing: $WHEEL"
+          pip install "${WHEEL}[dev]"
 
       - name: Verify installation
         shell: bash
