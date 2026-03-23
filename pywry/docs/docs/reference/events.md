@@ -11,7 +11,7 @@ All events follow the `namespace:event-name` pattern:
 | namespace | Starts with letter, alphanumeric | `app`, `plotly`, `grid`, `myapp` |
 | event-name | Starts with letter, alphanumeric + hyphens | `click`, `row-select`, `update-data` |
 
-**Reserved namespaces:** `pywry:*`, `plotly:*`, `grid:*`, `toolbar:*`, `auth:*`
+**Reserved namespaces:** `pywry:*`, `plotly:*`, `grid:*`, `toolbar:*`, `auth:*`, `chat:*`, `tray:*`, `menu:*`, `modal:*`
 
 ---
 
@@ -230,6 +230,229 @@ When `authenticated` is `false` only the key itself is present:
 
 ```python
 {"authenticated": False}
+```
+
+---
+
+## Chat Events (chat:*)
+
+The `chat:*` namespace handles all communication between the Python `ChatManager` and the chat frontend. Events flow in both directions: user messages travel JS → Python, while assistant responses, artifacts, and state updates travel Python → JS.
+
+!!! note "Availability"
+    Chat events are only active when content is rendered via `app.show_chat()` or the `ChatManager` component. They require the chat frontend assets.
+
+### User Messages (JS → Python)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `chat:user-message` | `{text, threadId, timestamp, attachments?}` | User sends a message. Triggers handler execution and response streaming. |
+| `chat:stop-generation` | `{threadId, messageId}` | User clicks stop button to cancel in-progress generation. Sets cooperative cancel event. |
+| `chat:slash-command` | `{command, args, threadId}` | User submits a `/command` from the input bar (e.g., `/clear`, `/export`). |
+| `chat:input-response` | `{text, requestId, threadId}` | User responds to an `InputRequiredResponse` prompt mid-stream. |
+| `chat:request-state` | `{}` | Frontend requests full state snapshot on initialization. |
+| `chat:request-history` | `{threadId, limit}` | Frontend requests message history for a thread. |
+
+**`chat:user-message` attachment structure:**
+
+```python
+{
+    "type": "file" | "widget",
+    "name": str,
+    "path": str,             # Desktop only (filesystem path)
+    "content": str,          # Browser/inline (file content)
+    "widgetId": str,         # For widget attachments
+    "componentId": str
+}
+```
+
+### Thread Management (JS → Python)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `chat:thread-create` | `{title}` | Create a new conversation thread. |
+| `chat:thread-switch` | `{threadId}` | Switch active thread and replay its message history. |
+| `chat:thread-delete` | `{threadId}` | Delete a thread and switch to the next available one. |
+| `chat:thread-rename` | `{threadId, title}` | Rename a thread. |
+
+### Settings & Todos (JS → Python)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `chat:settings-change` | `{key, value}` | User changed a settings menu item (e.g., temperature slider, model select). |
+| `chat:todo-clear` | `{}` | User dismissed the todo list above the input bar. |
+
+### Assistant Responses (Python → JS)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `chat:assistant-message` | `{messageId, text, threadId, role?, stopped?}` | Complete (non-streamed) assistant message. Also used to replay history on thread switch. |
+| `chat:stream-chunk` | `{messageId, chunk, done, stopped?}` | Incremental text chunk during streaming. Flushed every 30 ms or 300 characters. |
+| `chat:typing-indicator` | `{typing, threadId?}` | Show or hide the typing indicator before/after streaming. |
+| `chat:generation-stopped` | `{messageId, partialContent}` | Generation was cancelled or stopped by the user or system. |
+
+### Reasoning & Status (Python → JS)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `chat:thinking-chunk` | `{messageId, text, threadId}` | Incremental reasoning/thinking text (rendered in a collapsible block). |
+| `chat:thinking-done` | `{messageId, threadId}` | Thinking stream complete — collapses the thinking block and shows character count. |
+| `chat:status-update` | `{messageId, text, threadId}` | Transient status message (e.g., "Searching..."). Shown inline, not stored in history. |
+
+### Tool Use (Python → JS)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `chat:tool-call` | `{messageId, toolId, name, arguments, threadId}` | Announces a tool invocation. Rendered as a collapsible `<details>` element. |
+| `chat:tool-result` | `{messageId, toolId, result, isError, threadId}` | Result of a tool invocation. Appended inside the corresponding tool-call block. |
+
+### Interactive Input (Python → JS)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `chat:input-required` | `{messageId, threadId, requestId, prompt, placeholder, inputType, options?}` | Pause streaming to request user input mid-conversation. |
+
+**`inputType` values:** `text`, `buttons`, `radio`
+
+Handler pattern:
+
+```python
+def my_handler(message, ctx):
+    yield "Which file should I process?"
+    yield InputRequiredResponse(placeholder="Enter filename...")
+    filename = ctx.wait_for_input()  # Blocks until user responds
+    yield f"Processing {filename}..."
+```
+
+### Rich Content (Python → JS)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `chat:artifact` | `{messageId, artifactType, title, threadId, ...}` | Rich content artifact (code, chart, table, image, etc.). |
+| `chat:citation` | `{messageId, url, title, snippet, threadId}` | Source citation/reference link. |
+| `chat:todo-update` | `{items}` | Push a todo list above the input bar. Not stored in history. |
+
+**Artifact types and type-specific fields:**
+
+| `artifactType` | Additional Fields |
+|----------------|------------------|
+| `code` | `content`, `language` |
+| `markdown` | `content` |
+| `html` | `content` |
+| `table` | `rowData`, `columns`, `columnTypes`, `columnDefs?`, `gridOptions?`, `height` |
+| `plotly` | `figure`, `height` |
+| `image` | `url`, `alt` |
+| `json` | `data` |
+
+**Todo item structure:**
+
+```python
+{
+    "id": int | str,
+    "title": str,
+    "status": "not-started" | "in-progress" | "completed"
+}
+```
+
+### State & Configuration (Python → JS)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `chat:state-response` | `{threads, activeThreadId, messages, settingsItems, contextSources}` | Full state snapshot in response to `chat:request-state`. |
+| `chat:clear` | `{threadId?}` | Clear all messages from the chat display. |
+| `chat:update-thread-list` | `{threads}` | Refresh the sidebar thread list after create/delete/rename. |
+| `chat:switch-thread` | `{threadId}` | Tell the frontend to switch the active thread. |
+| `chat:load-assets` | `{scripts, styles}` | Lazy-inject AG Grid or Plotly libraries on first artifact of that type. |
+| `chat:register-command` | `{name, description}` | Register a slash command in the input autocomplete palette. |
+| `chat:register-settings-item` | `{id, label, type, value, options?, min?, max?, step?}` | Register a settings menu item in the gear dropdown. |
+| `chat:context-sources` | `{sources}` | List of dashboard components available as @-mentionable context sources. |
+| `chat:update-settings` | `{key: value, ...}` | Push updated settings values to the frontend menu. |
+
+**Settings item types:** `action`, `toggle`, `select`, `range`, `separator`
+
+---
+
+## Tray Events (tray:*)
+
+The `tray:*` namespace handles system tray icon interactions. Events are dispatched on the synthetic label `__tray__{tray_id}`.
+
+!!! note "Availability"
+    Tray events are only available in native desktop mode. Requires a `TrayIconConfig` or `TrayProxy` setup.
+
+### Icon Interactions (Native → Python)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `tray:click` | `{tray_id, button, button_state, position?}` | Single click on the tray icon. |
+| `tray:double-click` | `{tray_id, button, position?}` | Double-click on the tray icon. |
+| `tray:right-click` | `{tray_id, position?}` | Right-click on the tray icon. |
+| `tray:enter` | `{tray_id, position?}` | Cursor enters tray icon area. |
+| `tray:leave` | `{tray_id, position?}` | Cursor leaves tray icon area. |
+| `tray:move` | `{tray_id, position?}` | Cursor moves over tray icon area. |
+
+**`button` values:** `"Left"`, `"Right"`, `"Middle"`
+
+**`button_state` values:** `"Up"`, `"Down"`
+
+**Position structure (when present):**
+
+```python
+{"x": float, "y": float}
+```
+
+---
+
+## Menu Events (menu:*)
+
+The `menu:*` namespace handles native OS menu item clicks from window menus, app menus, and tray menus.
+
+!!! note "Availability"
+    Menu events are only available in native desktop mode.
+
+### Menu Interactions (Native → Python)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `menu:click` | `{item_id, source?}` | A native menu item was clicked. `source` is `"tray"` for tray menu items, absent for window/app menus. |
+
+Menu item handlers are typically registered via `MenuProxy` or `TrayProxy.from_config()` rather than listened for directly.
+
+---
+
+## Modal Events (modal:*)
+
+The `modal:*` namespace controls modal dialog visibility. These events are **intercepted client-side** — they do not round-trip to Python.
+
+### Modal Control (Python → JS or JS → JS)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `modal:open:{id}` | `{}` | Open the modal with the given component ID. |
+| `modal:close:{id}` | `{}` | Close the modal with the given component ID. |
+| `modal:toggle:{id}` | `{}` | Toggle the modal open/closed. |
+
+Send these via `handle.emit()` or use them as toolbar button events:
+
+```python
+# From Python
+handle.emit("modal:open:settings-modal", {})
+
+# As a toolbar button event (handled entirely client-side)
+Button(label="⚙ Settings", event="modal:open:settings-modal")
+```
+
+### Modal Lifecycle (JS CustomEvents)
+
+These are DOM `CustomEvent` objects dispatched on the document. Listen for them in custom JavaScript:
+
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `modal:opened` | `{modalId}` | Fired after a modal opens. Bubbles. |
+| `modal:closed` | `{modalId, wasReset}` | Fired after a modal closes. `wasReset` indicates whether form fields were restored to initial values. |
+
+```javascript
+document.addEventListener("modal:opened", function(e) {
+    console.log("Modal opened:", e.detail.modalId);
+});
 ```
 
 ---
