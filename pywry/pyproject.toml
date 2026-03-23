@@ -43,6 +43,9 @@ dependencies = [
 [project.scripts]
 pywry = "pywry.cli:main"
 
+[project.entry-points.pytauri]
+ext_mod = "pywry._vendor.pytauri_wheel.ext_mod"
+
 [project.entry-points."pyinstaller40"]
 hook-dirs = "pywry._pyinstaller_hook:get_hook_dirs"
 
