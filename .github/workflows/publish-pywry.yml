@@ -152,7 +152,7 @@ jobs:
           subject-path: 'pywry/dist/*'
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-linux-x86_64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload sdist
         if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: sdist
           path: pywry/dist/*.tar.gz
@@ -216,7 +216,7 @@ jobs:
           subject-path: 'pywry/dist/*'
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-linux-aarch64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
@@ -264,7 +264,7 @@ jobs:
           subject-path: 'pywry/dist/*'
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-x86_64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
@@ -312,7 +312,7 @@ jobs:
           subject-path: 'pywry/dist/*'
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-arm64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
@@ -360,7 +360,7 @@ jobs:
           subject-path: 'pywry/dist/*'
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-windows-amd64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
@@ -408,7 +408,7 @@ jobs:
           subject-path: 'pywry/dist/*'
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-windows-arm64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
@@ -451,7 +451,7 @@ jobs:
           ls -la dist/
 
       - name: Upload merged dist
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/

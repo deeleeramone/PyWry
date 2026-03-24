@@ -21,10 +21,15 @@ from typing import Any, TypeVar
 
 import pytest
 
+import pywry
 from pywry import runtime
 from pywry.app import PyWry
 from pywry.config import AVAILABLE_TAURI_PLUGINS, TAURI_PLUGIN_REGISTRY
 from pywry.models import ThemeMode, WindowMode
+
+# Resolve package directory via the installed module so paths work even
+# when tests are copied to a temp directory for wheel validation CI.
+PYWRY_PKG_DIR = Path(pywry.__file__).parent
 
 # Import shared test utilities from tests.conftest
 from tests.conftest import ReadyWaiter, show_and_wait_ready, wait_for_result
@@ -68,30 +73,30 @@ class TestPluginCapabilities:
 
     def test_capabilities_file_exists(self):
         """Capabilities file exists in the correct location."""
-        capabilities_file = Path(__file__).parent.parent / "pywry" / "capabilities" / "default.toml"
+        capabilities_file = PYWRY_PKG_DIR / "capabilities" / "default.toml"
         assert capabilities_file.exists(), f"Capabilities file not found at {capabilities_file}"
 
     def test_capabilities_has_dialog_permission(self):
         """Capabilities file includes dialog:default permission."""
-        capabilities_file = Path(__file__).parent.parent / "pywry" / "capabilities" / "default.toml"
+        capabilities_file = PYWRY_PKG_DIR / "capabilities" / "default.toml"
         content = capabilities_file.read_text(encoding="utf-8")
         assert "dialog:default" in content, "dialog:default permission not found in capabilities"
 
     def test_capabilities_has_fs_permission(self):
         """Capabilities file includes fs:default permission."""
-        capabilities_file = Path(__file__).parent.parent / "pywry" / "capabilities" / "default.toml"
+        capabilities_file = PYWRY_PKG_DIR / "capabilities" / "default.toml"
         content = capabilities_file.read_text(encoding="utf-8")
         assert "fs:default" in content, "fs:default permission not found in capabilities"
 
     def test_capabilities_has_pytauri_permission(self):
         """Capabilities file includes pytauri:default for IPC."""
-        capabilities_file = Path(__file__).parent.parent / "pywry" / "capabilities" / "default.toml"
+        capabilities_file = PYWRY_PKG_DIR / "capabilities" / "default.toml"
         content = capabilities_file.read_text(encoding="utf-8")
         assert "pytauri:default" in content, "pytauri:default permission not found in capabilities"
 
     def test_capabilities_has_all_plugin_permissions(self):
         """Capabilities file includes '<plugin>:default' for plugins that register manifests."""
-        capabilities_file = Path(__file__).parent.parent / "pywry" / "capabilities" / "default.toml"
+        capabilities_file = PYWRY_PKG_DIR / "capabilities" / "default.toml"
         content = capabilities_file.read_text(encoding="utf-8")
         # Plugin names in capabilities use hyphens (e.g. clipboard-manager, not clipboard_manager)
         # NOTE: persisted-scope and single-instance do NOT register Tauri capability
@@ -227,7 +232,7 @@ class TestCustomCommandRegistration:
 
     def test_custom_commands_env_var_in_start(self):
         """PYWRY_CUSTOM_COMMANDS is in the env passed to subprocess."""
-        main_file = Path(__file__).parent.parent / "pywry" / "runtime.py"
+        main_file = PYWRY_PKG_DIR / "runtime.py"
         content = main_file.read_text(encoding="utf-8")
         assert "PYWRY_CUSTOM_COMMANDS" in content
 
@@ -529,19 +534,19 @@ class TestMainCustomCommandRegistration:
 
     def test_main_reads_custom_commands_env(self):
         """__main__.py reads PYWRY_CUSTOM_COMMANDS env var."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "PYWRY_CUSTOM_COMMANDS" in content
 
     def test_main_has_register_custom_commands_function(self):
         """__main__.py defines _register_custom_commands()."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "def _register_custom_commands(" in content
 
     def test_main_has_default_single_instance_callback(self):
         """__main__.py defines _default_single_instance_callback()."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "def _default_single_instance_callback(" in content
 
@@ -567,26 +572,26 @@ class TestMainModulePluginRegistration:
 
     def test_main_has_plugin_registry(self):
         """__main__.py imports _PLUGIN_REGISTRY from config."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "_PLUGIN_REGISTRY" in content, "_PLUGIN_REGISTRY not found in __main__.py"
         assert "TAURI_PLUGIN_REGISTRY" in content, "import from config not found"
 
     def test_main_has_load_plugins_function(self):
         """__main__.py defines _load_plugins() for dynamic loading."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "def _load_plugins(" in content, "_load_plugins function not found"
 
     def test_main_reads_env_var(self):
         """__main__.py reads PYWRY_TAURI_PLUGINS env var."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "PYWRY_TAURI_PLUGINS" in content, "PYWRY_TAURI_PLUGINS env var not read"
 
     def test_main_registers_plugins_dynamically(self):
         """__main__.py passes dynamic plugins list to builder.build()."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "plugins=plugins" in content or "plugins = plugins" in content, (
             "Dynamic plugins list not passed to builder.build()"
@@ -594,7 +599,7 @@ class TestMainModulePluginRegistration:
 
     def test_main_reads_extra_capabilities_env(self):
         """__main__.py reads PYWRY_EXTRA_CAPABILITIES env var."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "PYWRY_EXTRA_CAPABILITIES" in content, (
             "PYWRY_EXTRA_CAPABILITIES env var not consumed in __main__.py"
@@ -602,7 +607,7 @@ class TestMainModulePluginRegistration:
 
     def test_main_calls_stage_extra_capabilities(self):
         """__main__.py calls _stage_extra_capabilities when extra caps are present."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "_stage_extra_capabilities(" in content, (
             "_stage_extra_capabilities not called in main()"
@@ -610,7 +615,7 @@ class TestMainModulePluginRegistration:
 
     def test_main_cleans_up_temp_dir(self):
         """__main__.py cleans up staged temp dir in a finally block."""
-        main_file = Path(__file__).parent.parent / "pywry" / "__main__.py"
+        main_file = PYWRY_PKG_DIR / "__main__.py"
         content = main_file.read_text(encoding="utf-8")
         assert "shutil.rmtree(tmp_caps_dir" in content, "Temp dir cleanup not found in __main__.py"
 
