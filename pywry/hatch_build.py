@@ -154,7 +154,4 @@ __all__ = ["builder_factory", "context_factory"]
 '''
         (vendor_dir / "__init__.py").write_text(init_content)
 
-        # Add vendor directory to wheel
-        build_data["force_include"][str(vendor_dir)] = "pywry/_vendor/pytauri_wheel"
-
         self.app.display_success("Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel")
