@@ -255,7 +255,8 @@ class TestPyInstallerHook:
 
     def test_hook_includes_importlib_metadata(self) -> None:
         """importlib_metadata must be a hidden import (used by pytauri)."""
-        # Read the hook source and verify importlib_metadata is listed
-        hook_path = Path(__file__).parent.parent / "pywry" / "_pyinstaller_hook" / "hook-pywry.py"
+        from pywry._pyinstaller_hook import get_hook_dirs
+
+        hook_path = Path(get_hook_dirs()[0]) / "hook-pywry.py"
         source = hook_path.read_text(encoding="utf-8")
         assert "importlib_metadata" in source
