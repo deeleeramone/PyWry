@@ -563,7 +563,7 @@ jobs:
         run: |
           PYWRY_VERSION="${{ needs.merge-artifacts.outputs.version }}"
           pip install --find-links "$RUNNER_TEMP/dist/" "pywry[all]==$PYWRY_VERSION"
-          pip install pytest pytest-asyncio pytest-timeout httpx plotly fakeredis testcontainers
+          pip install pytest pytest-asyncio pytest-timeout httpx plotly fakeredis testcontainers pandas
 
       - name: Install cryptography (non-Windows-ARM)
         if: "!(runner.os == 'Windows' && runner.arch == 'ARM64')"
