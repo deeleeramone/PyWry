@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:c3dce149-5297-4c0f-bf3d-32eb7fd12e41" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:c4f76f48-6e6e-4940-a27b-ef83c8142680" version="1">
   <metadata>
-    <timestamp>2026-03-23T23:34:58.078447+00:00</timestamp>
+    <timestamp>2026-03-24T05:22:26.088754+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
@@ -5923,7 +5923,6 @@
       <dependency ref="pytest-timeout==2.4.0"/>
       <dependency ref="pytest==9.0.2"/>
       <dependency ref="redis==7.3.0"/>
-      <dependency ref="requests==2.32.5"/>
       <dependency ref="ruff==0.15.7"/>
       <dependency ref="setproctitle==1.3.7"/>
       <dependency ref="testcontainers==4.14.2"/>
