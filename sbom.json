@@ -7935,7 +7935,6 @@
         "pytest-timeout==2.4.0",
         "pytest==9.0.2",
         "redis==7.3.0",
-        "requests==2.32.5",
         "ruff==0.15.7",
         "setproctitle==1.3.7",
         "testcontainers==4.14.2",
@@ -8159,7 +8158,7 @@
       "type": "application",
       "version": "2.0.0rc1"
     },
-    "timestamp": "2026-03-23T23:34:58.959019+00:00",
+    "timestamp": "2026-03-24T05:22:26.986047+00:00",
     "tools": {
       "components": [
         {
@@ -8263,7 +8262,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:dcabec75-8326-4bd6-b9aa-cc7dba41465f",
+  "serialNumber": "urn:uuid:c642b1cf-0a18-4029-af30-34671a655c2c",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
