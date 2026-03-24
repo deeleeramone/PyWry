@@ -237,12 +237,21 @@ class TestPyInstallerHook:
         assert any("default.toml" in f for f in src_files)
 
     def test_hook_includes_native_ext_mod(self) -> None:
-        """hiddenimports must include pytauri_wheel.ext_mod (the .pyd)."""
+        """hiddenimports must include the native ext_mod (.pyd/.so/.dylib).
+
+        When installed from a wheel, pytauri_wheel is vendored under
+        pywry._vendor.pytauri_wheel.  In editable/dev installs it may
+        also be available as a top-level package.  The hook covers both;
+        we assert that at least one path resolves.
+        """
         from PyInstaller.utils.hooks import collect_submodules
 
-        # The hook uses collect_submodules which should find ext_mod
-        submodules = collect_submodules("pytauri_wheel")
-        assert "pytauri_wheel.ext_mod" in submodules
+        vendored = collect_submodules("pywry._vendor.pytauri_wheel")
+        top_level = collect_submodules("pytauri_wheel")
+        assert (
+            "pywry._vendor.pytauri_wheel.ext_mod" in vendored
+            or "pytauri_wheel.ext_mod" in top_level
+        )
 
     def test_hook_includes_importlib_metadata(self) -> None:
         """importlib_metadata must be a hidden import (used by pytauri)."""
