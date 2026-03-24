@@ -559,15 +559,11 @@ jobs:
         shell: bash
         run: |
           PYWRY_VERSION="${{ needs.merge-artifacts.outputs.version }}"
-          PY_TAG="cp$(python -c 'import sys; print(f"{sys.version_info.major}{sys.version_info.minor}")')"
-          WHEEL_PATH="$(ls "$RUNNER_TEMP"/dist/pywry-"$PYWRY_VERSION"-"$PY_TAG"-"$PY_TAG"-*.whl | head -n 1)"
-          if [ -z "$WHEEL_PATH" ]; then
-            echo "No compatible wheel found for $PY_TAG in $RUNNER_TEMP/dist"
-            ls -la "$RUNNER_TEMP"/dist/ || true
-            exit 1
-          fi
+          echo "📦 Installing pywry $PYWRY_VERSION from built wheels"
+          echo "Available wheels:"
+          ls -la "$RUNNER_TEMP"/dist/*.whl || true
           pip uninstall -y pywry || true
-          pip install --force-reinstall "$WHEEL_PATH"
+          pip install --force-reinstall --no-index --find-links "$RUNNER_TEMP/dist/" "pywry==$PYWRY_VERSION"
           pip install --find-links "$RUNNER_TEMP/dist/" "pywry[all]==$PYWRY_VERSION"
           pip install pytest pytest-asyncio pytest-timeout httpx plotly fakeredis testcontainers
 
