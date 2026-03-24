@@ -149,11 +149,6 @@ jobs:
         shell: bash
         run: ls -la dist/
 
-      - name: Generate artifact attestations
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: 'pywry/dist/*'
-
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
@@ -168,6 +163,11 @@ jobs:
           name: sdist
           path: pywry/dist/*.tar.gz
           retention-days: 30
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'pywry/dist/*'
 
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -213,17 +213,17 @@ jobs:
         shell: bash
         run: ls -la dist/
 
-      - name: Generate artifact attestations
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: 'pywry/dist/*'
-
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
           name: wheels-linux-aarch64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'pywry/dist/*'
 
   build-macos-x86_64:
     name: Build wheels - macOS x86_64
@@ -261,17 +261,17 @@ jobs:
         shell: bash
         run: ls -la dist/
 
-      - name: Generate artifact attestations
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: 'pywry/dist/*'
-
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-x86_64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'pywry/dist/*'
 
   build-macos-arm64:
     name: Build wheels - macOS arm64
@@ -309,17 +309,17 @@ jobs:
         shell: bash
         run: ls -la dist/
 
-      - name: Generate artifact attestations
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: 'pywry/dist/*'
-
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-arm64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'pywry/dist/*'
 
   build-windows-amd64:
     name: Build wheels - Windows AMD64
@@ -357,17 +357,17 @@ jobs:
         shell: bash
         run: ls -la dist/
 
-      - name: Generate artifact attestations
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: 'pywry/dist/*'
-
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
           name: wheels-windows-amd64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'pywry/dist/*'
 
   build-windows-arm64:
     name: Build wheels - Windows ARM64
@@ -405,17 +405,17 @@ jobs:
         shell: bash
         run: ls -la dist/
 
-      - name: Generate artifact attestations
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: 'pywry/dist/*'
-
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
           name: wheels-windows-arm64-py${{ matrix.python-version }}
           path: pywry/dist/*.whl
           retention-days: 30
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'pywry/dist/*'
 
   # =============================================================================
   # Step 3: Merge all artifacts into single dist
