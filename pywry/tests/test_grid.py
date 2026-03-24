@@ -987,9 +987,9 @@ class TestRowPinningJavaScript:
     @pytest.fixture
     def aggrid_defaults_js(self) -> str:
         """Load the aggrid-defaults.js file content."""
-        from pathlib import Path
+        from pywry.assets import SRC_DIR
 
-        js_path = Path(__file__).parent.parent / "pywry" / "frontend" / "src" / "aggrid-defaults.js"
+        js_path = SRC_DIR / "aggrid-defaults.js"
         return js_path.read_text(encoding="utf-8")
 
     # -------------------------------------------------------------------------

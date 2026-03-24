@@ -906,9 +906,9 @@ class TestAGGridExportIntegration:
     def test_aggrid_export_functions_check_tauri_first(self):
         """AG Grid export checks for Tauri before browser API."""
         # Read the aggrid-defaults.js to verify the logic
-        aggrid_js_file = (
-            Path(__file__).parent.parent / "pywry" / "frontend" / "src" / "aggrid-defaults.js"
-        )
+        from pywry.assets import SRC_DIR
+
+        aggrid_js_file = SRC_DIR / "aggrid-defaults.js"
         content = aggrid_js_file.read_text(encoding="utf-8")
 
         # Verify Tauri is checked BEFORE showSaveFilePicker
