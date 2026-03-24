@@ -559,11 +559,6 @@ jobs:
         shell: bash
         run: |
           PYWRY_VERSION="${{ needs.merge-artifacts.outputs.version }}"
-          echo "📦 Installing pywry $PYWRY_VERSION from built wheels"
-          echo "Available wheels:"
-          ls -la "$RUNNER_TEMP"/dist/*.whl || true
-          pip uninstall -y pywry || true
-          pip install --force-reinstall --no-index --find-links "$RUNNER_TEMP/dist/" "pywry==$PYWRY_VERSION"
           pip install --find-links "$RUNNER_TEMP/dist/" "pywry[all]==$PYWRY_VERSION"
           pip install pytest pytest-asyncio pytest-timeout httpx plotly fakeredis testcontainers
 
