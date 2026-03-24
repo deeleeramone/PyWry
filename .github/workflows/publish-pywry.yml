@@ -69,7 +69,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install ".[dev]"
 
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
@@ -571,56 +571,68 @@ jobs:
         shell: bash
         run: |
           python -c "import pywry; print(f'pywry {pywry.__version__} installed successfully')"
-          python -c "import pywry, sys; print('pywry module file:', pywry.__file__); print('sys.path[0]:', sys.path[0])"
           python -c "import pywry._vendor.pytauri_wheel.ext_mod as ext_mod; print('pytauri wheel ext_mod:', ext_mod.__file__)"
           python -c "from pywry import PyWry; print('PyWry class imported')"
           python -c "from pywry.toolbar import Button, Toolbar; print('Toolbar components imported')"
 
+      - name: Copy tests outside source tree
+        shell: bash
+        run: |
+          # Copy tests + config to a temp location so the checkout pywry/ directory
+          # does NOT shadow the installed wheel package on sys.path.
+          cp -r pywry/tests "$RUNNER_TEMP/tests"
+          cp pywry/pytest.ini "$RUNNER_TEMP/pytest.ini"
+
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
+        working-directory: ${{ runner.temp }}
         env:
           PYWRY_TEST_USE_INSTALLED_WHEEL: "1"
           PYWRY_HEADLESS: "1"
           NO_AT_BRIDGE: "1"
         run: |
-          dbus-run-session -- xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python -m pytest -c pywry/pytest.ini pywry/tests/ -v --tb=short -x
+          dbus-run-session -- xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python -m pytest -c pytest.ini tests/ -v --tb=short -x
 
       - name: Run tests (Windows x64)
         if: runner.os == 'Windows' && runner.arch == 'X64'
+        working-directory: ${{ runner.temp }}
         env:
           PYWRY_TEST_USE_INSTALLED_WHEEL: "1"
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
           PYTHONUTF8: "1"
         run: |
-          python -m pytest -c pywry/pytest.ini pywry/tests/ -v --tb=short -x --ignore=pywry/tests/test_state_redis_integration.py --ignore=pywry/tests/test_auth_rbac_integration.py --ignore=pywry/tests/test_deploy_mode_integration.py --ignore=pywry/tests/test_e2e_deploy_mode.py --ignore=pywry/tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+          python -m pytest -c pytest.ini tests/ -v --tb=short -x --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
 
       - name: Run tests (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
+        working-directory: ${{ runner.temp }}
         env:
           PYWRY_TEST_USE_INSTALLED_WHEEL: "1"
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
           PYTHONUTF8: "1"
         run: |
-          python -m pytest -c pywry/pytest.ini pywry/tests/ -v --tb=short -x --ignore=pywry/tests/test_state_redis_integration.py --ignore=pywry/tests/test_auth_rbac_integration.py --ignore=pywry/tests/test_deploy_mode_integration.py --ignore=pywry/tests/test_e2e_deploy_mode.py --ignore=pywry/tests/test_e2e_rbac_widgets.py --ignore=pywry/tests/test_inline_ssl.py -m "not redis and not container"
+          python -m pytest -c pytest.ini tests/ -v --tb=short -x --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py --ignore=tests/test_inline_ssl.py -m "not redis and not container"
 
       - name: Run tests (macOS ARM)
         if: runner.os == 'macOS' && runner.arch == 'ARM64'
+        working-directory: ${{ runner.temp }}
         env:
           PYWRY_TEST_USE_INSTALLED_WHEEL: "1"
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
         run: |
-          python -m pytest -c pywry/pytest.ini pywry/tests/ -v --tb=short -x --ignore=pywry/tests/test_state_redis_integration.py --ignore=pywry/tests/test_auth_rbac_integration.py --ignore=pywry/tests/test_deploy_mode_integration.py --ignore=pywry/tests/test_e2e_deploy_mode.py --ignore=pywry/tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+          python -m pytest -c pytest.ini tests/ -v --tb=short -x --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
 
       - name: Run tests (macOS Intel)
         if: runner.os == 'macOS' && runner.arch == 'X64'
+        working-directory: ${{ runner.temp }}
         env:
           PYWRY_TEST_USE_INSTALLED_WHEEL: "1"
           PYWRY_HEADLESS: "1"
         run: |
-          python -m pytest -c pywry/pytest.ini pywry/tests/ -v --tb=short -x
+          python -m pytest -c pytest.ini tests/ -v --tb=short -x
 
   # =============================================================================
   # Step 5: Create draft release with all artifacts (workflow_dispatch only)
