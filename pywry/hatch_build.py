@@ -118,9 +118,14 @@ class CustomBuildHook(BuildHookInterface[Any]):
 
         self.app.display_info(f"Bundling pytauri-wheel for {python_tag}-{wheel_platform_tag}")
 
-        # Create vendor directory in the package
-        vendor_dir = Path(self.root) / "pywry" / "_vendor" / "pytauri_wheel"
-        vendor_dir.mkdir(parents=True, exist_ok=True)
+        # Stage vendored files outside the package tree, then map them into the wheel.
+        # This avoids duplicate ZIP members when force_include targets pywry/_vendor.
+        staged_vendor_dir = Path(self.root) / ".hatch_build" / "pytauri_wheel"
+        if staged_vendor_dir.exists():
+            import shutil
+
+            shutil.rmtree(staged_vendor_dir)
+        staged_vendor_dir.mkdir(parents=True, exist_ok=True)
 
         # Copy the installed pytauri_wheel package to vendor directory
         # The build system already installs pytauri-wheel with the correct architecture
@@ -136,9 +141,9 @@ class CustomBuildHook(BuildHookInterface[Any]):
         pytauri_wheel_dir = Path(spec.origin).parent
         self.app.display_info(f"Found pytauri_wheel at: {pytauri_wheel_dir}")
 
-        # Copy the entire pytauri_wheel package to vendor directory
+        # Copy the entire pytauri_wheel package to staging directory
         for item in pytauri_wheel_dir.iterdir():
-            dest = vendor_dir / item.name
+            dest = staged_vendor_dir / item.name
             if item.is_dir():
                 if dest.exists():
                     shutil.rmtree(dest)
@@ -152,9 +157,10 @@ from pywry._vendor.pytauri_wheel.lib import builder_factory, context_factory
 
 __all__ = ["builder_factory", "context_factory"]
 '''
-        (vendor_dir / "__init__.py").write_text(init_content)
+        (staged_vendor_dir / "__init__.py").write_text(init_content)
 
-        # Add vendor directory to wheel
-        build_data["force_include"][str(vendor_dir)] = "pywry/_vendor/pytauri_wheel"
+        # Map staged files into the final wheel package location.
+        build_data.setdefault("force_include", {})
+        build_data["force_include"][str(staged_vendor_dir)] = "pywry/_vendor/pytauri_wheel"
 
         self.app.display_success("Bundled pytauri-wheel into pywry/_vendor/pytauri_wheel")
