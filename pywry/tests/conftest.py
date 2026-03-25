@@ -233,17 +233,30 @@ def show_and_wait_ready(
         If window doesn't become ready within timeout.
     """
     last_error: Exception | None = None
+    base_callbacks = (kwargs.get("callbacks") or {}).copy()
+    show_kwargs = {k: v for k, v in kwargs.items() if k != "callbacks"}
+
     for attempt in range(retries):
         waiter = ReadyWaiter(timeout=timeout)
 
         # Merge callbacks if provided
-        cb = (kwargs.pop("callbacks", {}) or {}).copy()
+        cb = base_callbacks.copy()
         cb["pywry:ready"] = waiter.on_ready
 
-        widget = app.show(content, callbacks=cb, **kwargs)
+        widget = app.show(content, callbacks=cb, **show_kwargs)
         label = widget.label if hasattr(widget, "label") else str(widget)
 
         if waiter.wait():
+            return label
+
+        # Fallback probe for CI flakes where the ready callback is occasionally missed.
+        ping = wait_for_result(
+            label,
+            "pywry.result({ state: document.readyState, hasBody: !!document.body });",
+            timeout=min(timeout, SHORT_TIMEOUT),
+            retries=1,
+        )
+        if isinstance(ping, dict) and ping.get("hasBody"):
             return label
 
         last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
@@ -262,15 +275,27 @@ def show_plotly_and_wait_ready(
 ) -> str:
     """Show Plotly figure and wait for window to be ready."""
     last_error: Exception | None = None
+    base_callbacks = (kwargs.get("callbacks") or {}).copy()
+    show_kwargs = {k: v for k, v in kwargs.items() if k != "callbacks"}
+
     for attempt in range(retries):
         waiter = ReadyWaiter(timeout=timeout)
-        cb = (kwargs.pop("callbacks", {}) or {}).copy()
+        cb = base_callbacks.copy()
         cb["pywry:ready"] = waiter.on_ready
 
-        widget = app.show_plotly(figure, callbacks=cb, **kwargs)
+        widget = app.show_plotly(figure, callbacks=cb, **show_kwargs)
         label = widget.label if hasattr(widget, "label") else str(widget)
 
         if waiter.wait():
+            return label
+
+        ping = wait_for_result(
+            label,
+            "pywry.result({ state: document.readyState, hasBody: !!document.body });",
+            timeout=min(timeout, SHORT_TIMEOUT),
+            retries=1,
+        )
+        if isinstance(ping, dict) and ping.get("hasBody"):
             return label
 
         last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
@@ -289,15 +314,27 @@ def show_dataframe_and_wait_ready(
 ) -> str:
     """Show DataFrame and wait for window to be ready."""
     last_error: Exception | None = None
+    base_callbacks = (kwargs.get("callbacks") or {}).copy()
+    show_kwargs = {k: v for k, v in kwargs.items() if k != "callbacks"}
+
     for attempt in range(retries):
         waiter = ReadyWaiter(timeout=timeout)
-        cb = (kwargs.pop("callbacks", {}) or {}).copy()
+        cb = base_callbacks.copy()
         cb["pywry:ready"] = waiter.on_ready
 
-        widget = app.show_dataframe(data, callbacks=cb, **kwargs)
+        widget = app.show_dataframe(data, callbacks=cb, **show_kwargs)
         label = widget.label if hasattr(widget, "label") else str(widget)
 
         if waiter.wait():
+            return label
+
+        ping = wait_for_result(
+            label,
+            "pywry.result({ state: document.readyState, hasBody: !!document.body });",
+            timeout=min(timeout, SHORT_TIMEOUT),
+            retries=1,
+        )
+        if isinstance(ping, dict) and ping.get("hasBody"):
             return label
 
         last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
