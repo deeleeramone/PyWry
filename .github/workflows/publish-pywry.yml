@@ -397,14 +397,51 @@ jobs:
         uses: actions/download-artifact@v8.0.1
         with:
           pattern: wheels-*
-          merge-multiple: true
-          path: dist/
+          path: artifacts/
 
       - name: Download sdist
         uses: actions/download-artifact@v8.0.1
         with:
           name: sdist
-          path: dist/
+          path: artifacts/sdist/
+
+      - name: Consolidate artifacts and fail on duplicate wheel names
+        shell: bash
+        run: |
+          mkdir -p dist
+          find artifacts -type f -name '*.whl' -print0 | while IFS= read -r -d '' f; do
+            base="$(basename "$f")"
+            if [ -e "dist/$base" ]; then
+              echo "❌ Duplicate wheel filename across build jobs: $base"
+              exit 1
+            fi
+            cp "$f" "dist/$base"
+          done
+          find artifacts/sdist -type f -name '*.tar.gz' -exec cp {} dist/ \;
+
+      - name: Validate wheel archives for duplicate ZIP members
+        shell: bash
+        run: |
+          python - <<'PY'
+          import collections
+          import glob
+          import sys
+          import zipfile
+
+          failed = False
+          for wheel in sorted(glob.glob('dist/*.whl')):
+              with zipfile.ZipFile(wheel) as zf:
+                  names = [entry.filename for entry in zf.infolist()]
+              duplicates = [name for name, count in collections.Counter(names).items() if count > 1]
+              if duplicates:
+                  failed = True
+                  print(f"::error file={wheel}::duplicate ZIP members detected")
+                  for name in duplicates[:20]:
+                      print(f"  - {name}")
+          if failed:
+              sys.exit(1)
+          print('All wheel archives passed duplicate ZIP member validation.')
+          PY
 
       - name: List all artifacts
         run: |
