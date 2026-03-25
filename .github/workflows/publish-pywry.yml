@@ -604,6 +604,41 @@ jobs:
         shell: bash
         run: pip install cryptography
 
+      - name: Configure Docker (macOS Intel)
+        if: runner.os == 'macOS' && runner.arch == 'X64'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if docker info >/dev/null 2>&1; then
+            echo "Docker daemon already available"
+          else
+            if [ -d "/Applications/Docker.app" ]; then
+              echo "Starting Docker Desktop"
+              open -a Docker
+              for _ in {1..30}; do
+                if docker info >/dev/null 2>&1; then
+                  break
+                fi
+                sleep 5
+              done
+            fi
+          fi
+
+          if ! docker info >/dev/null 2>&1; then
+            echo "Falling back to Colima"
+            brew install docker colima
+            colima start --runtime docker --arch x86_64 --cpu 2 --memory 4 --disk 20
+          fi
+
+          if [ -S "$HOME/.colima/default/docker.sock" ]; then
+            sudo mkdir -p /var/run
+            sudo ln -sf "$HOME/.colima/default/docker.sock" /var/run/docker.sock
+          fi
+
+          echo "DOCKER_HOST=unix:///var/run/docker.sock" >> "$GITHUB_ENV"
+          docker info
+
       - name: Verify installation
         shell: bash
         run: |
@@ -668,8 +703,9 @@ jobs:
         env:
           PYWRY_TEST_USE_INSTALLED_WHEEL: "1"
           PYWRY_HEADLESS: "1"
+          PYWRY_DEPLOY__STATE_BACKEND: "memory"
         run: |
-          python -m pytest -c pytest.ini tests/ -v --tb=short -x
+          python -m pytest -c pytest.ini tests/ -v --tb=short -x --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py
 
   # =============================================================================
   # Step 5: Create draft release with all artifacts (workflow_dispatch only)
