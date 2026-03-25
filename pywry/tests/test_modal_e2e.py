@@ -57,7 +57,7 @@ def _require_result(label: str, script: str, **kwargs) -> dict:
 # =============================================================================
 
 
-def verify_modal_rendered(label: str, modal_id: str) -> dict:
+def verify_modal_rendered(label: str, modal_id: str, timeout: float = 3.0) -> dict:
     """Verify a modal exists in the DOM with correct structure.
 
     Parameters
@@ -100,8 +100,18 @@ def verify_modal_rendered(label: str, modal_id: str) -> dict:
         }});
     }})();
     """
-    result = wait_for_result(label, script)
-    return result if result else {"error": "No response"}
+    deadline = time.monotonic() + timeout
+    last_result: dict | None = None
+
+    while time.monotonic() < deadline:
+        result = wait_for_result(label, script, timeout=1.0, retries=1)
+        if isinstance(result, dict):
+            last_result = result
+            if result.get("found"):
+                return result
+        time.sleep(0.1)
+
+    return last_result if last_result else {"error": "No response"}
 
 
 class TestModalHtmlMode:
@@ -210,25 +220,26 @@ class TestModalHtmlMode:
 
     def test_modal_size_class_applied(self) -> None:
         """Modal size class is correctly applied in DOM."""
-        app = PyWry(theme=ThemeMode.DARK)
-
         for size in ("sm", "md", "lg", "xl", "full"):
+            app = PyWry(theme=ThemeMode.DARK)
             modal = Modal(
                 title=f"Size {size}",
                 component_id=f"e2e-size-{size}",
                 size=size,  # type: ignore[arg-type]
             )
-            label = show_and_wait_ready(
-                app,
-                "<div>Content</div>",
-                modals=[modal],
-            )
-            result = verify_modal_rendered(label, f"e2e-size-{size}")
-            assert result.get("found"), f"Modal not found for size={size}"
-            assert f"pywry-modal-{size}" in result["containerClass"], (
-                f"Size class missing for {size}: {result['containerClass']}"
-            )
-            app.close()
+            try:
+                label = show_and_wait_ready(
+                    app,
+                    "<div>Content</div>",
+                    modals=[modal],
+                )
+                result = verify_modal_rendered(label, f"e2e-size-{size}")
+                assert result.get("found"), f"Modal not found for size={size}: {result}"
+                assert f"pywry-modal-{size}" in result["containerClass"], (
+                    f"Size class missing for {size}: {result['containerClass']}"
+                )
+            finally:
+                app.close()
 
     def test_modal_with_items_renders(self) -> None:
         """Modal items are rendered in the body."""

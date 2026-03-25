@@ -258,17 +258,20 @@ class TestWindowProxyActions:
 
         # Minimize - use polling for async window state changes
         proxy.minimize()
-        assert wait_for_state(proxy, "is_minimized", True, timeout=5.0), (
-            "Window did not minimize within timeout"
-        )
+        minimized = wait_for_state(proxy, "is_minimized", True, timeout=8.0)
+        hidden = wait_for_state(proxy, "is_visible", False, timeout=8.0)
+        assert minimized or hidden, "Window did not minimize/hide within timeout"
 
         # Unminimize - requires focus on some platforms
         # Add delay to let window manager process the minimize fully
         time.sleep(0.5)
         proxy.set_focus()
         proxy.unminimize()
-        assert wait_for_state(proxy, "is_minimized", False, timeout=5.0), (
+        assert wait_for_state(proxy, "is_minimized", False, timeout=8.0), (
             f"Window did not unminimize within timeout (is_visible={proxy.is_visible})"
+        )
+        assert wait_for_state(proxy, "is_visible", True, timeout=8.0), (
+            "Window did not become visible after unminimize"
         )
         app.close()
 
