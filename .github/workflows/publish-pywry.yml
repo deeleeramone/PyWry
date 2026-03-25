@@ -215,7 +215,7 @@ jobs:
     name: Build wheels - macOS x86_64
     needs: [test]
     if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
-    runs-on: macos-15
+    runs-on: macos-26-intel
     permissions:
       contents: read
     strategy:
@@ -256,7 +256,7 @@ jobs:
     name: Build wheels - macOS arm64
     needs: [test]
     if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
-    runs-on: macos-latest
+    runs-on: macos-26
     permissions:
       contents: read
     strategy:
@@ -513,8 +513,8 @@ jobs:
         include:
           - os: ubuntu-24.04
           - os: ubuntu-24.04-arm
-          - os: macos-15
-          - os: macos-latest
+          - os: macos-26-intel
+          - os: macos-26
           - os: windows-2025
           - os: windows-11-arm
 
