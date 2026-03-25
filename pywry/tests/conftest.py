@@ -552,6 +552,40 @@ def _configure_testcontainers() -> None:
         pass  # testcontainers not installed
 
 
+def _start_redis_container_with_fallback():
+    """Start a Redis testcontainer with retry and image fallback.
+
+    CI occasionally fails to pull ``redis:7`` from Docker Hub due to transient
+    registry/server issues. Try both the standard and alpine tags with retries
+    before failing the fixture.
+    """
+    from testcontainers.redis import RedisContainer
+
+    images = [REDIS_IMAGE, REDIS_ALPINE_IMAGE]
+    attempts_per_image = 2
+    errors: list[str] = []
+
+    for image in images:
+        for attempt in range(1, attempts_per_image + 1):
+            container = RedisContainer(image)
+            try:
+                container.start()
+                if image != REDIS_IMAGE:
+                    print(f"Using fallback Redis image: {image}")
+                return container
+            except Exception as e:  # pylint: disable=broad-except
+                errors.append(f"{image} (attempt {attempt}/{attempts_per_image}): {e}")
+                with contextlib.suppress(Exception):
+                    container.stop()
+
+                # Short backoff for transient Docker registry/server errors.
+                if attempt < attempts_per_image:
+                    time.sleep(1.0 * attempt)
+
+    joined = "\n  - ".join(errors)
+    raise RuntimeError(f"Failed to start Redis container:\n  - {joined}")
+
+
 @pytest.fixture(scope="session")
 def redis_container() -> Generator[str, None, None]:
     """Spin up a Redis container for integration tests using testcontainers.
@@ -571,7 +605,7 @@ def redis_container() -> Generator[str, None, None]:
         return
 
     try:
-        from testcontainers.redis import RedisContainer
+        import testcontainers.redis  # noqa: F401
     except ImportError:
         pytest.skip("testcontainers not installed (pip install testcontainers[redis])")
         return
@@ -579,22 +613,19 @@ def redis_container() -> Generator[str, None, None]:
     # Configure testcontainers (disable Ryuk on Windows)
     _configure_testcontainers()
 
-    # Use specific Redis image tag for reliability
-    container = RedisContainer(REDIS_IMAGE)
+    container = None
     try:
-        container.start()
+        container = _start_redis_container_with_fallback()
         host = container.get_container_host_ip()
         port = container.get_exposed_port(container.port)
         redis_url = f"redis://{host}:{port}/0"
         print("\n=== Redis Container Started ===")
         print(f"URL: {redis_url}")
         yield redis_url
-    except Exception as e:  # pylint: disable=broad-except
-        # On platforms without Docker, this will fail - raise the actual error
-        raise RuntimeError(f"Failed to start Redis container: {e}") from e
     finally:
-        with contextlib.suppress(Exception):
-            container.stop()
+        if container is not None:
+            with contextlib.suppress(Exception):
+                container.stop()
 
 
 @pytest.fixture(scope="session")
@@ -612,7 +643,7 @@ def redis_container_with_acl() -> Generator[dict, None, None]:
     - users: Dict of user info (username, password, role)
     """
     try:
-        from testcontainers.redis import RedisContainer
+        import testcontainers.redis  # noqa: F401
     except ImportError:
         pytest.skip("testcontainers not installed")
         return
@@ -620,9 +651,9 @@ def redis_container_with_acl() -> Generator[dict, None, None]:
     # Configure testcontainers (disable Ryuk on Windows)
     _configure_testcontainers()
 
-    container = RedisContainer(REDIS_IMAGE)
+    container = None
     try:
-        container.start()
+        container = _start_redis_container_with_fallback()
         host = container.get_container_host_ip()
         port = container.get_exposed_port(container.port)
         redis_url = f"redis://{host}:{port}/0"
@@ -678,8 +709,9 @@ def redis_container_with_acl() -> Generator[dict, None, None]:
     except Exception as e:  # pylint: disable=broad-except
         pytest.skip(f"Docker not available or container failed to start: {e}")
     finally:
-        with contextlib.suppress(Exception):
-            container.stop()
+        if container is not None:
+            with contextlib.suppress(Exception):
+                container.stop()
 
 
 @pytest.fixture
