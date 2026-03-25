@@ -10,10 +10,11 @@ windows with support for Plotly.js, AG Grid, and custom event handling.
 # enters the Tauri event loop and exits immediately so the developer's
 # application code never runs a second time.  It is a complete no-op in
 # every other situation (normal Python, frozen parent process, etc.).
-from ._freeze import freeze_support
+from ._freeze import freeze_support, setup_pytauri_runtime
 
 
 freeze_support()
+setup_pytauri_runtime()
 
 # pylint: disable=wrong-import-position
 # Inline notebook module - import functions directly

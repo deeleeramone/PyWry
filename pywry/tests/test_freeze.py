@@ -204,9 +204,9 @@ class TestPytauriStandaloneSetup:
                 sys.modules.pop("__pytauri_ext_mod__", None)
 
     def test_freeze_support_calls_setup_in_frozen_mode(self) -> None:
-        """freeze_support() must call _setup_pytauri_standalone when frozen."""
+        """freeze_support() must call setup_pytauri_runtime when frozen."""
         source = inspect.getsource(freeze_support)
-        assert "_setup_pytauri_standalone" in source
+        assert "setup_pytauri_runtime" in source
 
 
 # ── PyInstaller hook validation ───────────────────────────────────────

@@ -102,6 +102,20 @@ def _setup_pytauri_standalone() -> None:
     sys._pytauri_standalone = True  # type: ignore[attr-defined]
 
 
+def setup_pytauri_runtime() -> None:
+    """Configure pytauri extension loading for all runtime modes.
+
+    Pytauri discovers its native extension via the ``pytauri`` entry-point
+    group. If both the standalone ``pytauri-wheel`` package and PyWry are
+    installed, discovery can yield multiple ``ext_mod`` providers and abort.
+
+    To keep startup deterministic, pre-register the extension module through
+    pytauri's standalone mechanism before any ``import pytauri`` happens.
+    This is safe and idempotent in normal and frozen environments.
+    """
+    _setup_pytauri_standalone()
+
+
 def freeze_support() -> None:
     """Handle subprocess re-entry in frozen executables.
 
@@ -123,7 +137,7 @@ def freeze_support() -> None:
     # Pre-register pytauri's native extension to bypass entry-point
     # discovery, which fails in frozen builds when .dist-info metadata
     # is not preserved.  This must run BEFORE any ``import pytauri``.
-    _setup_pytauri_standalone()
+    setup_pytauri_runtime()
 
     if os.environ.get("PYWRY_IS_SUBPROCESS") != "1":
         return
