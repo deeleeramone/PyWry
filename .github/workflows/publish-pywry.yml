@@ -97,7 +97,7 @@ jobs:
   build-linux-x86_64:
     name: Build wheels - Linux x86_64
     needs: [test]
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -168,7 +168,7 @@ jobs:
   build-linux-aarch64:
     name: Build wheels - Linux aarch64
     needs: [test]
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
@@ -214,7 +214,7 @@ jobs:
   build-macos-x86_64:
     name: Build wheels - macOS x86_64
     needs: [test]
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     runs-on: macos-15
     permissions:
       contents: read
@@ -255,7 +255,7 @@ jobs:
   build-macos-arm64:
     name: Build wheels - macOS arm64
     needs: [test]
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     runs-on: macos-latest
     permissions:
       contents: read
@@ -296,7 +296,7 @@ jobs:
   build-windows-amd64:
     name: Build wheels - Windows AMD64
     needs: [test]
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     runs-on: windows-2025
     permissions:
       contents: read
@@ -337,7 +337,7 @@ jobs:
   build-windows-arm64:
     name: Build wheels - Windows ARM64
     needs: [test]
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     runs-on: windows-11-arm
     permissions:
       contents: read
@@ -381,7 +381,7 @@ jobs:
   merge-artifacts:
     name: Merge artifacts
     needs: [build-linux-x86_64, build-linux-aarch64, build-macos-x86_64, build-macos-arm64, build-windows-amd64, build-windows-arm64]
-    if: always() && (needs.build-linux-x86_64.result == 'success')
+    if: ${{ !cancelled() && needs.build-linux-x86_64.result == 'success' }}
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -500,7 +500,7 @@ jobs:
   test-wheels:
     name: Test wheel - ${{ matrix.os }}
     needs: [merge-artifacts]
-    if: always() && needs.merge-artifacts.result == 'success' && github.event_name == 'workflow_dispatch'
+    if: ${{ !cancelled() && needs.merge-artifacts.result == 'success' && github.event_name == 'workflow_dispatch' }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -677,7 +677,7 @@ jobs:
   create-release:
     name: Create Draft Release
     needs: [merge-artifacts]
-    if: always() && needs.merge-artifacts.result == 'success' && github.event_name == 'workflow_dispatch'
+    if: ${{ !cancelled() && needs.merge-artifacts.result == 'success' && github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -727,11 +727,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     needs: [merge-artifacts, test-wheels]
-    if: >-
-      always()
-      && needs.merge-artifacts.result == 'success'
-      && (needs.test-wheels.result == 'success' || needs.test-wheels.result == 'skipped')
-      && inputs.publish_to_pypi
+    if: ${{ !cancelled() && needs.merge-artifacts.result == 'success' && (needs.test-wheels.result == 'success' || needs.test-wheels.result == 'skipped') && inputs.publish_to_pypi }}
     runs-on: ubuntu-24.04
     defaults:
       run:
