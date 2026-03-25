@@ -408,16 +408,55 @@ jobs:
       - name: Consolidate artifacts and fail on duplicate wheel names
         shell: bash
         run: |
-          mkdir -p dist
-          find artifacts -type f -name '*.whl' -print0 | while IFS= read -r -d '' f; do
-            base="$(basename "$f")"
-            if [ -e "dist/$base" ]; then
-              echo "❌ Duplicate wheel filename across build jobs: $base"
-              exit 1
-            fi
-            cp "$f" "dist/$base"
-          done
-          find artifacts/sdist -type f -name '*.tar.gz' -exec cp {} dist/ \;
+          python - <<'PY'
+          import hashlib
+          import shutil
+          import sys
+          from pathlib import Path
+
+          artifacts_dir = Path("artifacts")
+          dist_dir = Path("dist")
+          dist_dir.mkdir(parents=True, exist_ok=True)
+
+          def sha256(path: Path) -> str:
+            h = hashlib.sha256()
+            with path.open("rb") as f:
+              for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(chunk)
+            return h.hexdigest()
+
+          seen: dict[str, tuple[str, Path]] = {}
+          copied = 0
+          skipped_identical = 0
+
+          for wheel in sorted(artifacts_dir.rglob("*.whl")):
+            name = wheel.name
+            digest = sha256(wheel)
+            if name in seen:
+              prev_digest, prev_path = seen[name]
+              if digest == prev_digest:
+                skipped_identical += 1
+                print(
+                  f"::warning::Duplicate wheel filename with identical content; "
+                  f"keeping first: {name} ({prev_path} == {wheel})"
+                )
+                continue
+              print(f"::error::Conflicting duplicate wheel filename: {name}")
+              print(f"  first:  {prev_path} ({prev_digest})")
+              print(f"  second: {wheel} ({digest})")
+              sys.exit(1)
+
+            shutil.copy2(wheel, dist_dir / name)
+            seen[name] = (digest, wheel)
+            copied += 1
+
+          for sdist in sorted((artifacts_dir / "sdist").rglob("*.tar.gz")):
+            shutil.copy2(sdist, dist_dir / sdist.name)
+
+          print(f"Copied {copied} unique wheels to dist/")
+          if skipped_identical:
+            print(f"Skipped {skipped_identical} identical duplicate wheel artifact(s)")
+          PY
 
       - name: Validate wheel archives for duplicate ZIP members
         shell: bash
