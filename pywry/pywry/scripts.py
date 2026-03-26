@@ -506,14 +506,15 @@ THEME_MANAGER_JS = """
         var mode = isDark ? 'dark' : 'light';
         updateTheme(mode);
 
-        // Also update Plotly with full template if available
+        // Also update Plotly with merged template (theme base + user overrides)
+        // relayout avoids carrying stale colours from the old layout.
         if (window.Plotly && window.__PYWRY_PLOTLY_DIV__) {
-            var templateName = theme;
-            var template = window.PYWRY_PLOTLY_TEMPLATES && window.PYWRY_PLOTLY_TEMPLATES[templateName];
-            if (template) {
-                var plotDiv = window.__PYWRY_PLOTLY_DIV__;
-                var newLayout = Object.assign({}, plotDiv.layout || {}, { template: template });
-                window.Plotly.newPlot(plotDiv, plotDiv.data, newLayout, plotDiv._fullLayout?._config || {});
+            var plotDiv = window.__PYWRY_PLOTLY_DIV__;
+            var templateName = isDark ? 'plotly_dark' : 'plotly_white';
+            if (window.__pywryMergeThemeTemplate) {
+                var merged = window.__pywryMergeThemeTemplate(plotDiv, templateName);
+                if (window.__pywryStripThemeColors) window.__pywryStripThemeColors(plotDiv);
+                window.Plotly.relayout(plotDiv, { template: merged });
             }
         }
 

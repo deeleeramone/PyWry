@@ -11,6 +11,121 @@ if (!window.__PYWRY_COMPONENTS__) {
 }
 
 /**
+ * Deep-merge two plain objects. Values in `overrides` win on conflict.
+ * Arrays are NOT deep-merged — the override array replaces the base.
+ * Used to layer user template customizations on top of a theme template.
+ */
+window.__pywryDeepMerge = function deepMerge(base, overrides) {
+    if (!overrides || typeof overrides !== 'object') return base ? JSON.parse(JSON.stringify(base)) : {};
+    if (!base || typeof base !== 'object') return JSON.parse(JSON.stringify(overrides));
+    var result = JSON.parse(JSON.stringify(base));
+    var keys = Object.keys(overrides);
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        var val = overrides[key];
+        if (val !== null && typeof val === 'object' && !Array.isArray(val)
+            && result[key] !== null && typeof result[key] === 'object' && !Array.isArray(result[key])) {
+            result[key] = deepMerge(result[key], val);
+        } else {
+            result[key] = (val !== null && typeof val === 'object') ? JSON.parse(JSON.stringify(val)) : val;
+        }
+    }
+    return result;
+};
+
+/**
+ * Build a merged Plotly template: theme base + user overrides (user always wins).
+ * Supports dual templates (separate dark/light overrides) — on theme toggle, the
+ * correct per-theme user override is deep-merged on top of the built-in base.
+ *
+ * User overrides are persisted on the plot div so they survive theme switches.
+ *
+ * @param {HTMLElement} plotDiv - The Plotly chart DOM element.
+ * @param {string} themeTemplateName - 'plotly_dark' or 'plotly_white'.
+ * @param {object|null} userTemplate - Single user template to store (legacy / layout.template).
+ * @param {object|null} userTemplateDark - User overrides specific to dark mode.
+ * @param {object|null} userTemplateLight - User overrides specific to light mode.
+ * @returns {object} The merged template.
+ */
+window.__pywryMergeThemeTemplate = function(plotDiv, themeTemplateName, userTemplate, userTemplateDark, userTemplateLight) {
+    var templates = window.PYWRY_PLOTLY_TEMPLATES || {};
+    var baseTemplate = templates[themeTemplateName] || {};
+
+    // Store dual templates if provided (first call / figure update)
+    if (userTemplateDark && typeof userTemplateDark === 'object' && Object.keys(userTemplateDark).length > 0) {
+        plotDiv.__pywry_user_template_dark__ = JSON.parse(JSON.stringify(userTemplateDark));
+    }
+    if (userTemplateLight && typeof userTemplateLight === 'object' && Object.keys(userTemplateLight).length > 0) {
+        plotDiv.__pywry_user_template_light__ = JSON.parse(JSON.stringify(userTemplateLight));
+    }
+
+    // Store single/legacy template if no dual templates given
+    if (userTemplate && typeof userTemplate === 'object' && Object.keys(userTemplate).length > 0
+        && !userTemplateDark && !userTemplateLight) {
+        plotDiv.__pywry_user_template__ = JSON.parse(JSON.stringify(userTemplate));
+    }
+
+    // Pick the right user override for this theme mode
+    var isDark = themeTemplateName.indexOf('dark') !== -1;
+    var overrides = null;
+    if (isDark && plotDiv.__pywry_user_template_dark__) {
+        overrides = plotDiv.__pywry_user_template_dark__;
+    } else if (!isDark && plotDiv.__pywry_user_template_light__) {
+        overrides = plotDiv.__pywry_user_template_light__;
+    } else {
+        // Fallback to single/legacy template (applies to both modes)
+        overrides = plotDiv.__pywry_user_template__;
+    }
+
+    if (!overrides) return JSON.parse(JSON.stringify(baseTemplate));
+
+    // Deep-merge: base theme first, then user overrides on top (user wins)
+    return window.__pywryDeepMerge(baseTemplate, overrides);
+};
+
+/**
+ * Remove theme-sensitive colour properties from the explicit (input) layout
+ * so that a subsequent Plotly.relayout({template:…}) can actually take
+ * effect.  In Plotly.js, explicit layout values ALWAYS beat template
+ * defaults, so colours set during the initial Plotly.newPlot (or injected
+ * by Plotly Express) will survive a template swap unless we delete them
+ * from gd.layout first.
+ *
+ * We only touch the known theme-sensitive keys — everything else
+ * (margin, title text, annotations, traces …) is left untouched.
+ *
+ * @param {HTMLElement} plotDiv - The Plotly graph div.
+ */
+window.__pywryStripThemeColors = function(plotDiv) {
+    var layout = plotDiv.layout;
+    if (!layout) return;
+
+    // Top-level colour properties provided by every Plotly theme template
+    delete layout.paper_bgcolor;
+    delete layout.plot_bgcolor;
+    delete layout.colorway;
+
+    // Font colour
+    if (layout.font) {
+        delete layout.font.color;
+        if (Object.keys(layout.font).length === 0) delete layout.font;
+    }
+
+    // Axis colour properties (xaxis, yaxis, xaxis2, yaxis2, …)
+    var axisRe = /^[xyz]axis\d*$/;
+    var keys = Object.keys(layout);
+    for (var i = 0; i < keys.length; i++) {
+        if (axisRe.test(keys[i]) && layout[keys[i]] && typeof layout[keys[i]] === 'object') {
+            var ax = layout[keys[i]];
+            delete ax.color;
+            delete ax.gridcolor;
+            delete ax.linecolor;
+            delete ax.zerolinecolor;
+        }
+    }
+};
+
+/**
  * Register a Plotly chart instance with PyWry.
  * @param {string} chartId - The unique ID for this chart.
  * @param {object} plotDiv - The DOM element containing the Plotly chart.
@@ -198,8 +313,27 @@ window.registerPyWryChart = registerPyWryChart;
             if (plotDiv && window.Plotly) {
                 var figData = data.figure ? data.figure.data : data.data;
                 var figLayout = data.figure ? data.figure.layout : data.layout;
-                var config = Object.assign({displaylogo: false}, processPlotlyConfig(data.config || {}));
+                var rawConfig = data.config || {};
+
+                // Extract per-theme templates before passing config to Plotly
+                var userTemplateDark = rawConfig.templateDark || null;
+                var userTemplateLight = rawConfig.templateLight || null;
+                delete rawConfig.templateDark;
+                delete rawConfig.templateLight;
+
+                var config = Object.assign({displaylogo: false}, processPlotlyConfig(rawConfig));
                 if (figData) {
+                    // Merge user template with theme base (user always wins)
+                    var userTemplate = null;
+                    if (figLayout && figLayout.template && typeof figLayout.template === 'object') {
+                        userTemplate = figLayout.template;
+                        figLayout.template = null;
+                    }
+                    var themeName = plotDiv.__pywry_theme_template__ || 'plotly_dark';
+                    if (userTemplate || userTemplateDark || userTemplateLight) {
+                        figLayout = figLayout || {};
+                        figLayout.template = window.__pywryMergeThemeTemplate(plotDiv, themeName, userTemplate, userTemplateDark, userTemplateLight);
+                    }
                     window.Plotly.react(plotDiv, figData, figLayout || {}, config);
                 }
             } else {
@@ -305,15 +439,16 @@ window.registerPyWryChart = registerPyWryChart;
                     container.classList.add(isDark ? 'pywry-theme-dark' : 'pywry-theme-light');
                 }
 
-                // Re-render chart with new template
+                // Update chart template (theme base + user overrides)
+                // Use relayout — NOT newPlot — so Plotly re-derives all
+                // template defaults (font colors, backgrounds, axis colours)
+                // without carrying stale values from the old layout.
                 var plotDiv = findPlotDiv();
                 if (plotDiv && window.Plotly && plotDiv.data && window.PYWRY_PLOTLY_TEMPLATES) {
                     var templateName = isDark ? 'plotly_dark' : 'plotly_white';
-                    var template = window.PYWRY_PLOTLY_TEMPLATES[templateName];
-                    if (template) {
-                        var newLayout = Object.assign({}, plotDiv.layout || {}, { template: template });
-                        window.Plotly.newPlot(plotDiv, plotDiv.data, newLayout, plotDiv._fullLayout && plotDiv._fullLayout._config || {});
-                    }
+                    var mergedTemplate = window.__pywryMergeThemeTemplate(plotDiv, templateName);
+                    if (window.__pywryStripThemeColors) window.__pywryStripThemeColors(plotDiv);
+                    window.Plotly.relayout(plotDiv, { template: mergedTemplate });
                 }
             }
         });

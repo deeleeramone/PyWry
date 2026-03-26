@@ -570,9 +570,6 @@ def _start_redis_container_with_fallback():
             container = RedisContainer(image)
             try:
                 container.start()
-                if image != REDIS_IMAGE:
-                    print(f"Using fallback Redis image: {image}")
-                return container
             except Exception as e:  # pylint: disable=broad-except
                 errors.append(f"{image} (attempt {attempt}/{attempts_per_image}): {e}")
                 with contextlib.suppress(Exception):
@@ -581,6 +578,10 @@ def _start_redis_container_with_fallback():
                 # Short backoff for transient Docker registry/server errors.
                 if attempt < attempts_per_image:
                     time.sleep(1.0 * attempt)
+            else:
+                if image != REDIS_IMAGE:
+                    print(f"Using fallback Redis image: {image}")
+                return container
 
     joined = "\n  - ".join(errors)
     raise RuntimeError(f"Failed to start Redis container:\n  - {joined}")

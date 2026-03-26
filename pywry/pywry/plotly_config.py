@@ -213,6 +213,26 @@ class PlotlyConfig(BaseModel):
     locale: str | None = None
     locales: dict[str, Any] | None = None
 
+    # PyWry theme templates — user overrides for dark/light modes.
+    # When the window toggles themes, the appropriate template is deep-merged
+    # on top of the built-in plotly_dark / plotly_white base.  User values always win.
+    #
+    # Usage:
+    #   PlotlyConfig(
+    #       template_dark={"layout": {"paper_bgcolor": "#1a1a2e", "plot_bgcolor": "#16213e"}},
+    #       template_light={"layout": {"paper_bgcolor": "#ffffff", "plot_bgcolor": "#f0f0f0"}},
+    #   )
+    template_dark: dict[str, Any] | None = Field(
+        default=None,
+        description="User template overrides applied when the window is in dark mode. "
+        "Deep-merged on top of the built-in plotly_dark template (user wins).",
+    )
+    template_light: dict[str, Any] | None = Field(
+        default=None,
+        description="User template overrides applied when the window is in light mode. "
+        "Deep-merged on top of the built-in plotly_white template (user wins).",
+    )
+
 
 class DownloadImageButton(ModeBarButton):
     """Button to download the chart as an image."""

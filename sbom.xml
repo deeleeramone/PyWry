@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:edab2cd7-e900-4e0e-9aa6-f2fe705a0e30" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:862c0686-6829-4721-8dab-97722c003c6f" version="1">
   <metadata>
-    <timestamp>2026-03-25T18:48:52.154015+00:00</timestamp>
+    <timestamp>2026-03-26T03:06:44.608860+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
@@ -82,7 +82,7 @@
     </tools>
     <component type="application" bom-ref="root-component">
       <name>pywry</name>
-      <version>2.0.0rc2</version>
+      <version>2.0.0rc4</version>
       <description>A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python.</description>
       <licenses>
         <license acknowledgement="declared">
@@ -963,14 +963,14 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="cryptography==46.0.5">
+    <component type="library" bom-ref="cryptography==46.0.6">
       <name>cryptography</name>
-      <version>46.0.5</version>
+      <version>46.0.6</version>
       <description>cryptography is a package which provides cryptographic recipes and primitives to Python developers.</description>
       <licenses>
         <expression acknowledgement="declared">Apache-2.0 OR BSD-3-Clause</expression>
       </licenses>
-      <purl>pkg:pypi/cryptography@46.0.5</purl>
+      <purl>pkg:pypi/cryptography@46.0.6</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://cryptography.io/</url>
@@ -2939,9 +2939,9 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="openai==2.29.0">
+    <component type="library" bom-ref="openai==2.30.0">
       <name>openai</name>
-      <version>2.29.0</version>
+      <version>2.30.0</version>
       <description>The official Python library for the openai API</description>
       <licenses>
         <license acknowledgement="declared">
@@ -2951,7 +2951,7 @@
           <name>License :: OSI Approved :: Apache Software License</name>
         </license>
       </licenses>
-      <purl>pkg:pypi/openai@2.29.0</purl>
+      <purl>pkg:pypi/openai@2.30.0</purl>
       <externalReferences>
         <reference type="vcs">
           <url>https://github.com/openai/openai-python</url>
@@ -5052,7 +5052,7 @@
   </components>
   <dependencies>
     <dependency ref="Authlib==1.6.9">
-      <dependency ref="cryptography==46.0.5"/>
+      <dependency ref="cryptography==46.0.6"/>
     </dependency>
     <dependency ref="Jinja2==3.1.6">
       <dependency ref="MarkupSafe==3.0.3"/>
@@ -5068,7 +5068,7 @@
     </dependency>
     <dependency ref="MarkupSafe==3.0.3"/>
     <dependency ref="PyJWT==2.12.1">
-      <dependency ref="cryptography==46.0.5"/>
+      <dependency ref="cryptography==46.0.6"/>
       <dependency ref="pytest==9.0.2"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
@@ -5077,7 +5077,7 @@
       <dependency ref="colorama==0.4.6"/>
     </dependency>
     <dependency ref="SecretStorage==3.5.0">
-      <dependency ref="cryptography==46.0.5"/>
+      <dependency ref="cryptography==46.0.6"/>
       <dependency ref="jeepney==0.9.0"/>
     </dependency>
     <dependency ref="aiofile==3.9.0">
@@ -5167,7 +5167,7 @@
     <dependency ref="comm==0.2.3">
       <dependency ref="pytest==9.0.2"/>
     </dependency>
-    <dependency ref="cryptography==46.0.5">
+    <dependency ref="cryptography==46.0.6">
       <dependency ref="certifi==2026.2.25"/>
       <dependency ref="cffi==2.0.0"/>
       <dependency ref="click==8.3.1"/>
@@ -5212,7 +5212,7 @@
     <dependency ref="dill==0.4.1"/>
     <dependency ref="distro==1.9.0"/>
     <dependency ref="dnspython==2.8.0">
-      <dependency ref="cryptography==46.0.5"/>
+      <dependency ref="cryptography==46.0.6"/>
       <dependency ref="httpcore==1.0.9"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="idna==3.11"/>
@@ -5274,7 +5274,7 @@
       <dependency ref="jsonref==1.1.0"/>
       <dependency ref="jsonschema-path==0.4.5"/>
       <dependency ref="mcp==1.26.0"/>
-      <dependency ref="openai==2.29.0"/>
+      <dependency ref="openai==2.30.0"/>
       <dependency ref="openapi-pydantic==0.5.1"/>
       <dependency ref="opentelemetry-api==1.40.0"/>
       <dependency ref="packaging==26.0"/>
@@ -5498,7 +5498,7 @@
       <dependency ref="anthropic==0.86.0"/>
       <dependency ref="filetype==1.2.0"/>
       <dependency ref="logfire-api==4.30.0"/>
-      <dependency ref="openai==2.29.0"/>
+      <dependency ref="openai==2.30.0"/>
       <dependency ref="pydantic-settings==2.13.1"/>
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="typing_extensions==4.15.0"/>
@@ -5626,7 +5626,7 @@
     </dependency>
     <dependency ref="nest-asyncio==1.6.0"/>
     <dependency ref="numpy==2.4.3"/>
-    <dependency ref="openai==2.29.0">
+    <dependency ref="openai==2.30.0">
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="distro==1.9.0"/>
       <dependency ref="httpx==0.28.1"/>
@@ -5743,7 +5743,7 @@
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="beartype==0.22.9"/>
       <dependency ref="cachetools==7.0.5"/>
-      <dependency ref="cryptography==46.0.5"/>
+      <dependency ref="cryptography==46.0.6"/>
       <dependency ref="keyring==25.7.0"/>
       <dependency ref="mkdocs-material==9.7.6"/>
       <dependency ref="mkdocs==1.6.1"/>
@@ -5851,7 +5851,7 @@
     </dependency>
     <dependency ref="redis==7.4.0">
       <dependency ref="PyJWT==2.12.1"/>
-      <dependency ref="cryptography==46.0.5"/>
+      <dependency ref="cryptography==46.0.6"/>
       <dependency ref="opentelemetry-api==1.40.0"/>
       <dependency ref="requests==2.33.0"/>
     </dependency>
@@ -5890,7 +5890,7 @@
       <dependency ref="anthropic==0.86.0"/>
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="anywidget==0.9.21"/>
-      <dependency ref="cryptography==46.0.5"/>
+      <dependency ref="cryptography==46.0.6"/>
       <dependency ref="fakeredis==2.34.1"/>
       <dependency ref="fastapi==0.135.2"/>
       <dependency ref="fastmcp==3.1.1"/>
@@ -5907,7 +5907,7 @@
       <dependency ref="mkdocs==1.6.1"/>
       <dependency ref="mkdocstrings==1.0.3"/>
       <dependency ref="mypy==1.19.1"/>
-      <dependency ref="openai==2.29.0"/>
+      <dependency ref="openai==2.30.0"/>
       <dependency ref="pandas==3.0.1"/>
       <dependency ref="plotly==6.6.0"/>
       <dependency ref="pydantic-settings==2.13.1"/>
@@ -5969,7 +5969,7 @@
     </dependency>
     <dependency ref="testcontainers==4.14.2">
       <dependency ref="PyYAML==6.0.3"/>
-      <dependency ref="cryptography==46.0.5"/>
+      <dependency ref="cryptography==46.0.6"/>
       <dependency ref="docker==7.1.0"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="python-dotenv==1.2.2"/>

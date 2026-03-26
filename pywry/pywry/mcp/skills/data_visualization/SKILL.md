@@ -28,18 +28,24 @@ update_plotly(widget_id, figure_json=json.dumps({"layout": layout_update}), layo
 ```
 
 ### Theme Consistency
+
+PyWry automatically switches Plotly charts between `plotly_dark` and `plotly_white`
+templates when the theme toggles. To customize per-theme styles while preserving
+automatic switching, use `template_dark` and `template_light` on `PlotlyConfig`:
+
 ```python
-# Use Plotly templates that match widget theme
+from pywry import PlotlyConfig
 
-# For dark theme
-fig.update_layout(template="plotly_dark")
+config = PlotlyConfig(
+    template_dark={"layout": {"paper_bgcolor": "#1a1a2e", "plot_bgcolor": "#16213e"}},
+    template_light={"layout": {"paper_bgcolor": "#ffffff", "plot_bgcolor": "#f0f0f0"}},
+)
 
-# For light theme
-fig.update_layout(template="plotly_white")
-
-# Or detect and set dynamically
-# (check widget theme, set template accordingly)
+show_plotly(figure_json=fig.to_json(), title="Themed Chart", config=config)
 ```
+
+User values are **deep-merged** on top of the built-in base template —
+your overrides always win, and anything you don't set is inherited from the base.
 
 ### Chart Sizing
 ```python

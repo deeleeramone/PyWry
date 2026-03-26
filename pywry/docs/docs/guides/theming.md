@@ -230,7 +230,40 @@ Target specific components by their `component_id`:
 
 ## Plotly Theming
 
-PyWry automatically switches Plotly figures between `plotly_dark` and `plotly_white` templates when the theme changes. For custom Plotly styling, set layout properties on the figure:
+PyWry automatically switches Plotly figures between `plotly_dark` and `plotly_white` templates when the theme changes.
+
+### Custom Per-Theme Templates
+
+To customize chart colors for each theme — while still getting automatic switching — use `template_dark` and `template_light` on `PlotlyConfig`:
+
+```python
+from pywry import PlotlyConfig
+
+config = PlotlyConfig(
+    template_dark={
+        "layout": {
+            "paper_bgcolor": "#1a1a2e",
+            "plot_bgcolor": "#16213e",
+            "font": {"color": "#e0e0e0"},
+        }
+    },
+    template_light={
+        "layout": {
+            "paper_bgcolor": "#ffffff",
+            "plot_bgcolor": "#f0f0f0",
+            "font": {"color": "#222222"},
+        }
+    },
+)
+
+app.show_plotly(fig, config=config)
+```
+
+Your overrides are **deep-merged** on top of the built-in base template — user values always win, and anything you don't set is inherited from the base. Both templates are stored on the chart element and automatically selected when the theme toggles via `pywry:update-theme`.
+
+### Transparent Backgrounds
+
+For charts that should use the window background color directly:
 
 ```python
 import plotly.graph_objects as go

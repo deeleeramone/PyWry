@@ -3138,6 +3138,26 @@ def generate_plotly_html(
         const figData = {figure_json};
         const plotlyConfig = figData.config || {{}};
 
+        // Extract per-theme user template overrides from config (PyWry extension)
+        const userTemplateDark = plotlyConfig.templateDark || null;
+        const userTemplateLight = plotlyConfig.templateLight || null;
+        delete plotlyConfig.templateDark;
+        delete plotlyConfig.templateLight;
+
+        // Extract single legacy template from layout
+        let userTemplate = null;
+        const templates = window.PYWRY_PLOTLY_TEMPLATES || {{}};
+        const themeTemplate = '{"plotly_dark" if theme == "dark" else "plotly_white"}';
+        if (figData.layout && typeof figData.layout.template === 'string' && templates[figData.layout.template]) {{
+            if (figData.layout.template !== themeTemplate) {{
+                userTemplate = templates[figData.layout.template];
+            }}
+            figData.layout.template = null;
+        }} else if (figData.layout && figData.layout.template && typeof figData.layout.template === 'object') {{
+            userTemplate = figData.layout.template;
+            figData.layout.template = null;
+        }}
+
         // Convert string functions to actual functions in modeBarButtonsToAdd
         // Also generate click handlers for buttons with 'event' property
         if (plotlyConfig.modeBarButtonsToAdd) {{
@@ -3203,6 +3223,13 @@ def generate_plotly_html(
 
             PlotlyLib.newPlot('chart', figData.data, figData.layout, finalConfig).then(function() {{
         const chartEl = document.getElementById('chart');
+
+        // Apply merged theme template (theme base + user overrides, user wins)
+        if (window.__pywryMergeThemeTemplate) {{
+            const merged = window.__pywryMergeThemeTemplate(chartEl, themeTemplate, userTemplate, userTemplateDark, userTemplateLight);
+            PlotlyLib.relayout(chartEl, {{ template: merged }});
+        }}
+        chartEl.__pywry_theme_template__ = themeTemplate;
 
         // Extract point data - include all primitive values and simple arrays
         function extractPointData(p) {{
@@ -3377,14 +3404,15 @@ def generate_plotly_html(
                     document.documentElement.classList.remove('dark', 'light');
                     document.documentElement.classList.add(prefersDark ? 'dark' : 'light');
 
-                    // Update Plotly if present
+                    // Update Plotly template (deep-merge theme + user overrides)
+                    // relayout avoids carrying stale colours from the old layout.
                     const plotDiv = document.querySelector('.js-plotly-plot');
                     if (plotDiv && window.Plotly && plotDiv.data) {{
                         const templateName = prefersDark ? 'plotly_dark' : 'plotly_white';
-                        const template = window.PYWRY_PLOTLY_TEMPLATES?.[templateName];
-                        if (template) {{
-                            const newLayout = Object.assign({{}}, plotDiv.layout || {{}}, {{ template: template }});
-                            window.Plotly.newPlot(plotDiv, plotDiv.data, newLayout, plotDiv._fullLayout?._config || {{}});
+                        if (window.__pywryMergeThemeTemplate) {{
+                            const merged = window.__pywryMergeThemeTemplate(plotDiv, templateName);
+                            if (window.__pywryStripThemeColors) window.__pywryStripThemeColors(plotDiv);
+                            window.Plotly.relayout(plotDiv, {{ template: merged }});
                         }}
                     }}
                 }}
@@ -3437,15 +3465,15 @@ def generate_plotly_html(
                 }}
             }}
 
-            // Update Plotly figure template using PYWRY_PLOTLY_TEMPLATES
+            // Update Plotly figure template — deep-merge theme base + user overrides
+            // relayout avoids carrying stale colours from the old layout.
             const plotDiv = document.querySelector('.js-plotly-plot');
             if (plotDiv && window.Plotly && plotDiv.data) {{
                 const templateName = isLight ? 'plotly_white' : 'plotly_dark';
-                const template = window.PYWRY_PLOTLY_TEMPLATES?.[templateName];
-                if (template) {{
-                    // Use newPlot to fully re-render with new template
-                    const newLayout = Object.assign({{}}, plotDiv.layout || {{}}, {{ template: template }});
-                    window.Plotly.newPlot(plotDiv, plotDiv.data, newLayout, plotDiv._fullLayout?._config || {{}});
+                if (window.__pywryMergeThemeTemplate) {{
+                    const merged = window.__pywryMergeThemeTemplate(plotDiv, templateName);
+                    if (window.__pywryStripThemeColors) window.__pywryStripThemeColors(plotDiv);
+                    window.Plotly.relayout(plotDiv, {{ template: merged }});
                 }}
             }}
 

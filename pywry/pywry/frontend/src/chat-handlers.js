@@ -1850,6 +1850,10 @@ function initChatHandlers(container, pywry) {
       var templates = window.PYWRY_PLOTLY_TEMPLATES || {};
       if (!layout.template) {
         layout.template = templates['plotly_dark'] || null;
+      } else if (typeof layout.template === 'object') {
+        // User provided custom template - merge with dark theme base (user wins)
+        var base = templates['plotly_dark'] || {};
+        layout.template = window.__pywryDeepMerge ? window.__pywryDeepMerge(base, layout.template) : layout.template;
       }
       layout.autosize = true;
       fig.layout = layout;

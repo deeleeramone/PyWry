@@ -206,6 +206,45 @@ To change theme dynamically:
 handle.emit("pywry:update-theme", {"theme": "light"})
 ```
 
+### Custom Per-Theme Templates
+
+By default, PyWry applies the built-in `plotly_dark` or `plotly_white` template based on the current theme. To customize chart colors *per theme* while preserving automatic switching, use `template_dark` and `template_light` on `PlotlyConfig`:
+
+```python
+from pywry import PlotlyConfig
+
+config = PlotlyConfig(
+    template_dark={
+        "layout": {
+            "paper_bgcolor": "#1a1a2e",
+            "plot_bgcolor": "#16213e",
+            "font": {"color": "#e0e0e0"},
+        }
+    },
+    template_light={
+        "layout": {
+            "paper_bgcolor": "#ffffff",
+            "plot_bgcolor": "#f0f0f0",
+            "font": {"color": "#222222"},
+        }
+    },
+)
+
+handle = app.show_plotly(fig, config=config)
+```
+
+**How it works:**
+
+- Your overrides are **deep-merged** on top of the built-in base template (`plotly_dark` or `plotly_white`).
+- **User values always win** on conflict. Anything you don't set is inherited from the base.
+- Both templates are stored on the chart and automatically selected when the theme toggles.
+- Arrays (e.g., colorways) are replaced entirely, not element-merged.
+
+You can also set only one side — e.g., `template_dark` alone — and the other theme will use the unmodified base.
+
+!!! tip
+    Use `template_dark` / `template_light` instead of setting `fig.update_layout(template=...)` directly. The latter gets overwritten on theme switch; the former survives toggles.
+
 ## Next Steps
 
 - **[`PlotlyConfig` Reference](../reference/plotly-config.md)** — All configuration options

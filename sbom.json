@@ -1140,7 +1140,7 @@
       "version": "0.2.3"
     },
     {
-      "bom-ref": "cryptography==46.0.5",
+      "bom-ref": "cryptography==46.0.6",
       "description": "cryptography is a package which provides cryptographic recipes and primitives to Python developers.",
       "externalReferences": [
         {
@@ -1176,9 +1176,9 @@
         }
       ],
       "name": "cryptography",
-      "purl": "pkg:pypi/cryptography@46.0.5",
+      "purl": "pkg:pypi/cryptography@46.0.6",
       "type": "library",
-      "version": "46.0.5"
+      "version": "46.0.6"
     },
     {
       "bom-ref": "cyclonedx-bom==7.2.2",
@@ -3781,7 +3781,7 @@
       "version": "2.4.3"
     },
     {
-      "bom-ref": "openai==2.29.0",
+      "bom-ref": "openai==2.30.0",
       "description": "The official Python library for the openai API",
       "externalReferences": [
         {
@@ -3810,9 +3810,9 @@
         }
       ],
       "name": "openai",
-      "purl": "pkg:pypi/openai@2.29.0",
+      "purl": "pkg:pypi/openai@2.30.0",
       "type": "library",
-      "version": "2.29.0"
+      "version": "2.30.0"
     },
     {
       "bom-ref": "openapi-pydantic==0.5.1",
@@ -6612,7 +6612,7 @@
   "dependencies": [
     {
       "dependsOn": [
-        "cryptography==46.0.5"
+        "cryptography==46.0.6"
       ],
       "ref": "Authlib==1.6.9"
     },
@@ -6639,7 +6639,7 @@
     },
     {
       "dependsOn": [
-        "cryptography==46.0.5",
+        "cryptography==46.0.6",
         "pytest==9.0.2",
         "typing_extensions==4.15.0"
       ],
@@ -6656,7 +6656,7 @@
     },
     {
       "dependsOn": [
-        "cryptography==46.0.5",
+        "cryptography==46.0.6",
         "jeepney==0.9.0"
       ],
       "ref": "SecretStorage==3.5.0"
@@ -6821,7 +6821,7 @@
         "ruff==0.15.7",
         "typing_extensions==4.15.0"
       ],
-      "ref": "cryptography==46.0.5"
+      "ref": "cryptography==46.0.6"
     },
     {
       "dependsOn": [
@@ -6879,7 +6879,7 @@
     },
     {
       "dependsOn": [
-        "cryptography==46.0.5",
+        "cryptography==46.0.6",
         "httpcore==1.0.9",
         "httpx==0.28.1",
         "idna==3.11",
@@ -6967,7 +6967,7 @@
         "jsonref==1.1.0",
         "jsonschema-path==0.4.5",
         "mcp==1.26.0",
-        "openai==2.29.0",
+        "openai==2.30.0",
         "openapi-pydantic==0.5.1",
         "opentelemetry-api==1.40.0",
         "packaging==26.0",
@@ -7298,7 +7298,7 @@
         "anthropic==0.86.0",
         "filetype==1.2.0",
         "logfire-api==4.30.0",
-        "openai==2.29.0",
+        "openai==2.30.0",
         "pydantic-settings==2.13.1",
         "pydantic==2.12.5",
         "typing_extensions==4.15.0"
@@ -7500,7 +7500,7 @@
         "typing_extensions==4.15.0",
         "websockets==16.0"
       ],
-      "ref": "openai==2.29.0"
+      "ref": "openai==2.30.0"
     },
     {
       "dependsOn": [
@@ -7668,7 +7668,7 @@
         "anyio==4.13.0",
         "beartype==0.22.9",
         "cachetools==7.0.5",
-        "cryptography==46.0.5",
+        "cryptography==46.0.6",
         "keyring==25.7.0",
         "mkdocs-material==9.7.6",
         "mkdocs==1.6.1",
@@ -7839,7 +7839,7 @@
     {
       "dependsOn": [
         "PyJWT==2.12.1",
-        "cryptography==46.0.5",
+        "cryptography==46.0.6",
         "opentelemetry-api==1.40.0",
         "requests==2.33.0"
       ],
@@ -7901,7 +7901,7 @@
         "anthropic==0.86.0",
         "anyio==4.13.0",
         "anywidget==0.9.21",
-        "cryptography==46.0.5",
+        "cryptography==46.0.6",
         "fakeredis==2.34.1",
         "fastapi==0.135.2",
         "fastmcp==3.1.1",
@@ -7918,7 +7918,7 @@
         "mkdocs==1.6.1",
         "mkdocstrings==1.0.3",
         "mypy==1.19.1",
-        "openai==2.29.0",
+        "openai==2.30.0",
         "pandas==3.0.1",
         "plotly==6.6.0",
         "pydantic-settings==2.13.1",
@@ -8008,7 +8008,7 @@
     {
       "dependsOn": [
         "PyYAML==6.0.3",
-        "cryptography==46.0.5",
+        "cryptography==46.0.6",
         "docker==7.1.0",
         "httpx==0.28.1",
         "python-dotenv==1.2.2",
@@ -8152,9 +8152,9 @@
       ],
       "name": "pywry",
       "type": "application",
-      "version": "2.0.0rc2"
+      "version": "2.0.0rc4"
     },
-    "timestamp": "2026-03-25T18:48:53.051211+00:00",
+    "timestamp": "2026-03-26T03:06:45.628984+00:00",
     "tools": {
       "components": [
         {
@@ -8258,7 +8258,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:3fd6f5f9-7d2a-4d44-82e5-7a5a560e1531",
+  "serialNumber": "urn:uuid:661ed41d-c61d-46b0-933b-28c9270feae5",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",

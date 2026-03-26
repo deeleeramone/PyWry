@@ -238,20 +238,41 @@ def build_plotly_init_script(
 
             var figData = {fig_json};
             var layout = figData.layout || {{}};
+            var config = figData.config || {{}};
             var themeTemplate = '{plotly_template}';
             var templates = window.PYWRY_PLOTLY_TEMPLATES || {{}};
 
-            // Resolve template if it's a string name
+            // Extract per-theme user template overrides from config (PyWry extension)
+            var userTemplateDark = config.templateDark || null;
+            var userTemplateLight = config.templateLight || null;
+            // Clean non-Plotly keys from config before passing to Plotly.newPlot
+            delete config.templateDark;
+            delete config.templateLight;
+
+            // Extract single legacy template overrides from layout.template
+            var userTemplate = null;
             if (typeof layout.template === 'string' && templates[layout.template]) {{
-                layout.template = templates[layout.template];
-            }} else if (!layout.template) {{
-                // No user template - use window theme template
-                layout.template = templates[themeTemplate] || null;
+                // User specified a named template - resolve it
+                // If it matches the current theme, no user overrides needed
+                if (layout.template !== themeTemplate) {{
+                    userTemplate = templates[layout.template];
+                }}
+                layout.template = null; // will be rebuilt below
+            }} else if (layout.template && typeof layout.template === 'object') {{
+                // User provided a custom template object - these are the overrides
+                userTemplate = layout.template;
+                layout.template = null; // will be rebuilt below
             }}
 
             figData.layout = layout;
 
-            Plotly.newPlot('{chart_id}', figData.data || [], figData.layout, figData.config).then(function(gd) {{
+            Plotly.newPlot('{chart_id}', figData.data || [], figData.layout, config).then(function(gd) {{
+                // Merge theme base + user overrides (user always wins)
+                var mergedTemplate = window.__pywryMergeThemeTemplate
+                    ? window.__pywryMergeThemeTemplate(gd, themeTemplate, userTemplate, userTemplateDark, userTemplateLight)
+                    : (templates[themeTemplate] || null);
+                Plotly.relayout(gd, {{ template: mergedTemplate }});
+
                 // Register with PyWry
                 if (window.registerPyWryChart) {{
                     window.registerPyWryChart('{chart_id}', gd);
