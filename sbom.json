@@ -8152,9 +8152,9 @@
       ],
       "name": "pywry",
       "type": "application",
-      "version": "2.0.0rc3"
+      "version": "2.0.0rc4"
     },
-    "timestamp": "2026-03-26T02:02:27.007141+00:00",
+    "timestamp": "2026-03-26T03:06:45.628984+00:00",
     "tools": {
       "components": [
         {
@@ -8258,7 +8258,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:0aeb3b4f-e1c1-42bd-9262-f11c923cb161",
+  "serialNumber": "urn:uuid:661ed41d-c61d-46b0-933b-28c9270feae5",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",

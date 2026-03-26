@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:4d0e78b1-d6c3-4c41-843b-e90c8ddd35d3" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:862c0686-6829-4721-8dab-97722c003c6f" version="1">
   <metadata>
-    <timestamp>2026-03-26T02:02:26.014872+00:00</timestamp>
+    <timestamp>2026-03-26T03:06:44.608860+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
@@ -82,7 +82,7 @@
     </tools>
     <component type="application" bom-ref="root-component">
       <name>pywry</name>
-      <version>2.0.0rc3</version>
+      <version>2.0.0rc4</version>
       <description>A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python.</description>
       <licenses>
         <license acknowledgement="declared">
