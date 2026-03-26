@@ -304,7 +304,7 @@ class TestThemeSwitchViaEventE2E:
 
     These tests fire app.emit('pywry:update-theme', ...) from Python, which goes
     through the full IPC path → JS window.pywry.on('pywry:update-theme') handler →
-    __pywryMergeThemeTemplate → Plotly.newPlot re-render. This is the ACTUAL code
+    __pywryMergeThemeTemplate → Plotly.relayout. This is the ACTUAL code
     path that runs when a user toggles the theme.
     """
 
@@ -333,7 +333,7 @@ class TestThemeSwitchViaEventE2E:
         # Fire the REAL event through the full Python → IPC → JS handler chain
         dark_app.emit("pywry:update-theme", {"theme": "plotly_white"}, label=label)
 
-        # Wait for the handler + Plotly.newPlot to complete
+        # Wait for the handler + Plotly.relayout to complete
         time.sleep(2.5)
 
         # Read back the rendered chart state
@@ -454,13 +454,52 @@ class TestThemeSwitchViaEventE2E:
         dark_app.emit("pywry:update-theme", {"theme": "plotly_white"}, label=label)
         time.sleep(2.5)
 
-        # The handler calls Plotly.newPlot which RECREATES the DOM element.
+        # The handler calls Plotly.relayout which preserves the DOM element.
         # Verify the stored templates survived the re-render.
         after = _read_chart_template_state(label)
         assert after is not None, "No response after toggle!"
         assert after["storedDark"], (
-            "template_dark lost after real event toggle + Plotly.newPlot re-render!"
+            "template_dark lost after real event toggle + Plotly.relayout!"
         )
         assert after["storedLight"], (
-            "template_light lost after real event toggle + Plotly.newPlot re-render!"
+            "template_light lost after real event toggle + Plotly.relayout!"
+        )
+
+    def test_font_colors_update_on_theme_switch(self, dark_app) -> None:
+        """Switching from light→dark must NOT leave black text on a dark background.
+
+        This is the core regression test: font.color, paper_bgcolor, and
+        plot_bgcolor should all come from the NEW template after a toggle,
+        not be carried over from the old one.
+        """
+        label = show_plotly_and_wait_ready(
+            dark_app,
+            SIMPLE_FIGURE,
+            title="Font Color Switch",
+            timeout=20.0,
+        )
+        time.sleep(2.0)
+
+        # Read initial dark state — font should be light
+        dark_state = _read_chart_template_state(label)
+        assert dark_state is not None and dark_state["fontColor"] is not None
+
+        # Toggle to light
+        dark_app.emit("pywry:update-theme", {"theme": "plotly_white"}, label=label)
+        time.sleep(2.5)
+        light_state = _read_chart_template_state(label)
+        assert light_state is not None, "No response after toggle to light"
+
+        # Toggle back to dark
+        dark_app.emit("pywry:update-theme", {"theme": "plotly_dark"}, label=label)
+        time.sleep(2.5)
+        back_dark = _read_chart_template_state(label)
+        assert back_dark is not None, "No response after toggle back to dark"
+
+        # Font color after round-trip must match the original dark font color,
+        # NOT the light theme's font color.
+        assert back_dark["fontColor"] == dark_state["fontColor"], (
+            f"Font color after light→dark round-trip is '{back_dark['fontColor']}' but "
+            f"should be '{dark_state['fontColor']}'. "
+            "Dark text on a dark background!"
         )

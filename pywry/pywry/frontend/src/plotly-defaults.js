@@ -397,13 +397,15 @@ window.registerPyWryChart = registerPyWryChart;
                     container.classList.add(isDark ? 'pywry-theme-dark' : 'pywry-theme-light');
                 }
 
-                // Re-render chart with merged template (theme base + user overrides)
+                // Update chart template (theme base + user overrides)
+                // Use relayout — NOT newPlot — so Plotly re-derives all
+                // template defaults (font colors, backgrounds, axis colours)
+                // without carrying stale values from the old layout.
                 var plotDiv = findPlotDiv();
                 if (plotDiv && window.Plotly && plotDiv.data && window.PYWRY_PLOTLY_TEMPLATES) {
                     var templateName = isDark ? 'plotly_dark' : 'plotly_white';
                     var mergedTemplate = window.__pywryMergeThemeTemplate(plotDiv, templateName);
-                    var newLayout = Object.assign({}, plotDiv.layout || {}, { template: mergedTemplate });
-                    window.Plotly.newPlot(plotDiv, plotDiv.data, newLayout, plotDiv._fullLayout && plotDiv._fullLayout._config || {});
+                    window.Plotly.relayout(plotDiv, { template: mergedTemplate });
                 }
             }
         });

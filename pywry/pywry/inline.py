@@ -3404,14 +3404,14 @@ def generate_plotly_html(
                     document.documentElement.classList.remove('dark', 'light');
                     document.documentElement.classList.add(prefersDark ? 'dark' : 'light');
 
-                    // Update Plotly if present (deep-merge theme + user overrides)
+                    // Update Plotly template (deep-merge theme + user overrides)
+                    // relayout avoids carrying stale colours from the old layout.
                     const plotDiv = document.querySelector('.js-plotly-plot');
                     if (plotDiv && window.Plotly && plotDiv.data) {{
                         const templateName = prefersDark ? 'plotly_dark' : 'plotly_white';
                         if (window.__pywryMergeThemeTemplate) {{
                             const merged = window.__pywryMergeThemeTemplate(plotDiv, templateName);
-                            const newLayout = Object.assign({{}}, plotDiv.layout || {{}}, {{ template: merged }});
-                            window.Plotly.newPlot(plotDiv, plotDiv.data, newLayout, plotDiv._fullLayout?._config || {{}});
+                            window.Plotly.relayout(plotDiv, {{ template: merged }});
                         }}
                     }}
                 }}
@@ -3465,13 +3465,13 @@ def generate_plotly_html(
             }}
 
             // Update Plotly figure template — deep-merge theme base + user overrides
+            // relayout avoids carrying stale colours from the old layout.
             const plotDiv = document.querySelector('.js-plotly-plot');
             if (plotDiv && window.Plotly && plotDiv.data) {{
                 const templateName = isLight ? 'plotly_white' : 'plotly_dark';
                 if (window.__pywryMergeThemeTemplate) {{
                     const merged = window.__pywryMergeThemeTemplate(plotDiv, templateName);
-                    const newLayout = Object.assign({{}}, plotDiv.layout || {{}}, {{ template: merged }});
-                    window.Plotly.newPlot(plotDiv, plotDiv.data, newLayout, plotDiv._fullLayout?._config || {{}});
+                    window.Plotly.relayout(plotDiv, {{ template: merged }});
                 }}
             }}
 

@@ -578,18 +578,17 @@ function render({ model, el }) {
         container.classList.remove('pywry-theme-dark', 'pywry-theme-light');
         container.classList.add(isDark ? 'pywry-theme-dark' : 'pywry-theme-light');
 
+        // relayout avoids carrying stale colours from the old layout.
         const plotDiv = container.querySelector('.js-plotly-plot');
         if (plotDiv && window.Plotly && plotDiv.data) {
             const templateName = isDark ? 'plotly_dark' : 'plotly_white';
             if (window.__pywryMergeThemeTemplate) {
                 const mergedTemplate = window.__pywryMergeThemeTemplate(plotDiv, templateName);
-                const newLayout = Object.assign({}, plotDiv.layout || {}, { template: mergedTemplate });
-                window.Plotly.newPlot(plotDiv, plotDiv.data, newLayout, plotDiv._fullLayout?._config || {});
+                window.Plotly.relayout(plotDiv, { template: mergedTemplate });
             } else {
                 const template = window.PYWRY_PLOTLY_TEMPLATES?.[templateName];
                 if (template) {
-                    const newLayout = Object.assign({}, plotDiv.layout || {}, { template: template });
-                    window.Plotly.newPlot(plotDiv, plotDiv.data, newLayout, plotDiv._fullLayout?._config || {});
+                    window.Plotly.relayout(plotDiv, { template: template });
                 }
             }
         }
