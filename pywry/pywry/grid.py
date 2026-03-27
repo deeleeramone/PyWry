@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import uuid
 
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -83,7 +83,9 @@ def _serialize_value(  # noqa: PLR0911
         components = value.components
         if components.days:
             return f"{components.days}d {components.hours:02d}:{components.minutes:02d}:{components.seconds:02d}"
-        return f"{components.hours:02d}:{components.minutes:02d}:{components.seconds:02d}"
+        return (
+            f"{components.hours:02d}:{components.minutes:02d}:{components.seconds:02d}"
+        )
 
     # datetime.timedelta (no components attribute)
     if (
@@ -165,13 +167,17 @@ class AGGridModel(BaseModel):
         Explicitly maps field names to aliases.
         """
         result: dict[str, Any] = {
-            (field_info.alias if field_info.alias else field_name): getattr(self, field_name)
+            (field_info.alias if field_info.alias else field_name): getattr(
+                self, field_name
+            )
             for field_name, field_info in getattr(self, "model_fields", {}).items()
             if getattr(self, field_name) is not None
         }
         # Include extra fields (not in model_fields)
         if self.__pydantic_extra__:
-            result.update({k: v for k, v in self.__pydantic_extra__.items() if v is not None})
+            result.update(
+                {k: v for k, v in self.__pydantic_extra__.items() if v is not None}
+            )
         return result
 
 
@@ -368,7 +374,9 @@ class DefaultColDef(AGGridModel):
     sortable: bool = True
     filter: bool = True  # Auto-detects: text, number, date
     resizable: bool = True
-    floating_filter: bool = Field(default=False, alias="floatingFilter")  # Filter via menu only
+    floating_filter: bool = Field(
+        default=False, alias="floatingFilter"
+    )  # Filter via menu only
 
     # Sizing
     min_width: int = Field(default=80, alias="minWidth")
@@ -409,8 +417,12 @@ class RowSelection(AGGridModel):
     checkboxes: bool = True
     header_checkbox: bool = Field(default=True, alias="headerCheckbox")
     # Default to True - click selects, Ctrl+click deselects
-    enable_click_selection: bool | str = Field(default=True, alias="enableClickSelection")
-    hide_disabled_checkboxes: bool = Field(default=False, alias="hideDisabledCheckboxes")
+    enable_click_selection: bool | str = Field(
+        default=True, alias="enableClickSelection"
+    )
+    hide_disabled_checkboxes: bool = Field(
+        default=False, alias="hideDisabledCheckboxes"
+    )
 
 
 class GridOptions(AGGridModel):
@@ -478,7 +490,9 @@ class GridOptions(AGGridModel):
     row_model_type: RowModelType = Field(default="clientSide", alias="rowModelType")
 
     # === Selection (enabled by default) ===
-    row_selection: dict[str, Any] | bool | None = Field(default=None, alias="rowSelection")
+    row_selection: dict[str, Any] | bool | None = Field(
+        default=None, alias="rowSelection"
+    )
     cell_selection: bool | None = Field(default=True, alias="cellSelection")
 
     @field_validator("row_selection", mode="before")
@@ -486,7 +500,11 @@ class GridOptions(AGGridModel):
     def _coerce_row_selection(cls, v: Any) -> dict[str, Any] | bool | None:
         if isinstance(v, RowSelection):
             return v.to_dict()
-        return v
+        if isinstance(v, dict):
+            return cast(dict[str, Any], v)
+        if isinstance(v, bool) or v is None:
+            return v
+        return cast(dict[str, Any] | bool | None, v)
 
     # === Layout ===
     dom_layout: DomLayoutType = Field(default="normal", alias="domLayout")
@@ -515,10 +533,14 @@ class GridOptions(AGGridModel):
     # === Editing ===
     single_click_edit: bool | None = Field(default=None, alias="singleClickEdit")
     undo_redo_cell_editing: bool = Field(default=True, alias="undoRedoCellEditing")
-    undo_redo_cell_editing_limit: int = Field(default=20, alias="undoRedoCellEditingLimit")
+    undo_redo_cell_editing_limit: int = Field(
+        default=20, alias="undoRedoCellEditingLimit"
+    )
 
     # === Clipboard ===
-    copy_headers_to_clipboard: bool = Field(default=True, alias="copyHeadersToClipboard")
+    copy_headers_to_clipboard: bool = Field(
+        default=True, alias="copyHeadersToClipboard"
+    )
 
     # === Rendering ===
     animate_rows: bool = Field(default=True, alias="animateRows")
@@ -668,7 +690,9 @@ def _detect_column_types(data: Any) -> dict[str, str]:
             column_types[col_str] = "boolean"
         elif "int" in dtype_str or "float" in dtype_str:
             column_types[col_str] = "number"
-        elif dtype.kind in ("O", "U", "S") or "str" in dtype_str or dtype_str == "object":
+        elif (
+            dtype.kind in ("O", "U", "S") or "str" in dtype_str or dtype_str == "object"
+        ):
             # dtype.kind: O=object, U=unicode string, S=byte string
             # Also check for "str" in dtype_str for pandas 3.0+ StringDtype
             # Check if this is a string column with numeric-looking strings
@@ -784,7 +808,8 @@ def _flatten_multiindex_rows(data: Any) -> tuple[Any, list[str]]:
     # Get index level names
     if hasattr(index, "names"):
         index_names = [
-            name if name is not None else f"index_{i}" for i, name in enumerate(index.names)
+            name if name is not None else f"index_{i}"
+            for i, name in enumerate(index.names)
         ]
     else:
         index_names = [index.name if index.name else "index"]
@@ -845,7 +870,9 @@ def normalize_data(data: Any) -> GridData:
             columns = list(data.columns)
 
             if index_columns:
-                debug(f"Flattened {len(index_columns)} index levels to columns: {index_columns}")
+                debug(
+                    f"Flattened {len(index_columns)} index levels to columns: {index_columns}"
+                )
             if column_groups:
                 debug(f"Created {len(column_groups)} column groups from MultiIndex")
 
@@ -855,7 +882,9 @@ def normalize_data(data: Any) -> GridData:
             if isinstance(first_value, (list, tuple)):
                 columns = list(data.keys())
                 num_rows = len(first_value) if first_value else 0
-                row_data = [{col: data[col][i] for col in columns} for i in range(num_rows)]
+                row_data = [
+                    {col: data[col][i] for col in columns} for i in range(num_rows)
+                ]
             else:
                 columns = list(data.keys())
                 row_data = [data]
@@ -935,7 +964,8 @@ def _infer_column_types_from_values(
         elif isinstance(first_val, str):
             # Check for leading zeros (should stay as text)
             has_leading_zero = any(
-                isinstance(v, str) and len(v) > 1 and v[0] == "0" and v.isdigit() for v in values
+                isinstance(v, str) and len(v) > 1 and v[0] == "0" and v.isdigit()
+                for v in values
             )
             if has_leading_zero:
                 column_types[col] = "text"
@@ -1199,7 +1229,11 @@ def build_grid_config(  # pylint: disable=too-many-arguments
     )
 
     # Theme class
-    theme_class = f"ag-theme-{aggrid_theme}-dark" if theme == "dark" else f"ag-theme-{aggrid_theme}"
+    theme_class = (
+        f"ag-theme-{aggrid_theme}-dark"
+        if theme == "dark"
+        else f"ag-theme-{aggrid_theme}"
+    )
 
     # Handle large datasets
     truncated_rows = 0
