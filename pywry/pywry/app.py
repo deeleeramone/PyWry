@@ -1186,11 +1186,20 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             Event data.
         label : str, optional
             Window label. If None, targets all active windows.
+
+        Notes
+        -----
+        ``pywry:update-theme`` is broadcast to all windows/widgets by default
+        so theme toggles stay in sync across multi-window sessions. To scope a
+        theme update to a single label, pass ``{"scope": "local"}`` in
+        ``data``.
         """
-        labels = [label] if label else self._mode.get_labels()
+        broadcast_theme = event_type == "pywry:update-theme" and data.get("scope") != "local"
+
+        labels = self._mode.get_labels() if (not label or broadcast_theme) else [label]
 
         # Also include inline (notebook) widgets when targeting all
-        if not label and self._inline_widgets:
+        if (not label or broadcast_theme) and self._inline_widgets:
             labels = list(set(labels) | set(self._inline_widgets.keys()))
 
         for lbl in labels:
