@@ -10,6 +10,7 @@ Tests:
 - build_grid_config() main entry point
 - MultiIndex column/row handling
 """
+
 # pylint: disable=too-many-lines
 
 from __future__ import annotations
@@ -740,6 +741,24 @@ class TestBuildGridConfig:
 
         assert opts_dict["animateRows"] is True
         assert opts_dict["suppressMenuHide"] is True
+
+    def test_grid_options_row_selection_no_duplicate_error(self):
+        """grid_options.rowSelection is honored without duplicate kwargs error."""
+        extra = {"rowSelection": {"mode": "singleRow", "checkboxes": False}}
+        result = build_grid_config([{"a": 1}], grid_options=extra)
+        opts_dict = result.options.to_dict()
+
+        assert opts_dict["rowSelection"]["mode"] == "singleRow"
+        assert opts_dict["rowSelection"]["checkboxes"] is False
+
+    def test_explicit_row_selection_overrides_grid_options(self):
+        """Explicit row_selection argument overrides grid_options.rowSelection."""
+        extra = {"rowSelection": {"mode": "singleRow", "checkboxes": False}}
+        result = build_grid_config([{"a": 1}], grid_options=extra, row_selection=True)
+        opts_dict = result.options.to_dict()
+
+        assert opts_dict["rowSelection"]["mode"] == "multiRow"
+        assert opts_dict["rowSelection"]["checkboxes"] is True
 
     @pytest.mark.skipif(
         not pytest.importorskip("pandas", reason="pandas required"),

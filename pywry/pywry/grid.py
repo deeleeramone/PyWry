@@ -1239,18 +1239,34 @@ def build_grid_config(  # pylint: disable=too-many-arguments
     elif isinstance(row_selection, dict):
         row_sel_dict = row_selection
 
+    # Normalize user-provided grid options and consume rowSelection aliases.
+    # This prevents duplicate keyword errors when both row_selection param and
+    # grid_options['rowSelection'] are present.
+    normalized_grid_options = dict(grid_options or {})
+    grid_opt_row_selection = normalized_grid_options.pop("rowSelection", None)
+    if grid_opt_row_selection is None and "row_selection" in normalized_grid_options:
+        grid_opt_row_selection = normalized_grid_options.pop("row_selection")
+
+    # Precedence:
+    # - Explicit row_selection argument (True / dict / RowSelection) wins.
+    # - If row_selection is False (default) and grid_options specifies rowSelection,
+    #   honor grid_options to preserve caller intent.
+    final_row_selection = row_sel_dict
+    if row_selection is False and grid_opt_row_selection is not None:
+        final_row_selection = grid_opt_row_selection
+
     options = GridOptions(
         columnDefs=col_defs,
         defaultColDef=DefaultColDef().to_dict(),
         rowData=row_data_for_grid,
         rowModelType=row_model_type,
-        rowSelection=row_sel_dict,
+        rowSelection=final_row_selection,
         domLayout="normal",
         pagination=pagination,
         paginationPageSize=pagination_page_size,
         cacheBlockSize=cache_block_size,
         enableCellSpan=use_cell_span,
-        **(grid_options or {}),
+        **normalized_grid_options,
     )
 
     context = PyWryGridContext(
