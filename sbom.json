@@ -266,7 +266,7 @@
       "version": "6.0.3"
     },
     {
-      "bom-ref": "Pygments==2.19.2",
+      "bom-ref": "Pygments==2.20.0",
       "description": "Pygments is a syntax highlighting package written in Python.",
       "externalReferences": [
         {
@@ -301,18 +301,12 @@
             "acknowledgement": "declared",
             "id": "BSD-2-Clause"
           }
-        },
-        {
-          "license": {
-            "acknowledgement": "declared",
-            "name": "License :: OSI Approved :: BSD License"
-          }
         }
       ],
       "name": "Pygments",
-      "purl": "pkg:pypi/pygments@2.19.2",
+      "purl": "pkg:pypi/pygments@2.20.0",
       "type": "library",
-      "version": "2.19.2"
+      "version": "2.20.0"
     },
     {
       "bom-ref": "SecretStorage==3.5.0",
@@ -496,7 +490,7 @@
       "version": "0.7.0"
     },
     {
-      "bom-ref": "anthropic==0.86.0",
+      "bom-ref": "anthropic==0.94.0",
       "description": "The official Python library for the anthropic API",
       "externalReferences": [
         {
@@ -519,9 +513,9 @@
         }
       ],
       "name": "anthropic",
-      "purl": "pkg:pypi/anthropic@0.86.0",
+      "purl": "pkg:pypi/anthropic@0.94.0",
       "type": "library",
-      "version": "0.86.0"
+      "version": "0.94.0"
     },
     {
       "bom-ref": "anyio==4.13.0",
@@ -562,7 +556,7 @@
       "version": "4.13.0"
     },
     {
-      "bom-ref": "anywidget==0.9.21",
+      "bom-ref": "anywidget==0.10.0",
       "description": "custom jupyter widgets made easy",
       "externalReferences": [
         {
@@ -580,9 +574,9 @@
         }
       ],
       "name": "anywidget",
-      "purl": "pkg:pypi/anywidget@0.9.21",
+      "purl": "pkg:pypi/anywidget@0.10.0",
       "type": "library",
-      "version": "0.9.21"
+      "version": "0.10.0"
     },
     {
       "bom-ref": "arrow==1.4.0",
@@ -1013,7 +1007,7 @@
       "version": "5.2.0"
     },
     {
-      "bom-ref": "charset-normalizer==3.4.6",
+      "bom-ref": "charset-normalizer==3.4.7",
       "description": "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet.",
       "externalReferences": [
         {
@@ -1046,12 +1040,12 @@
         }
       ],
       "name": "charset-normalizer",
-      "purl": "pkg:pypi/charset-normalizer@3.4.6",
+      "purl": "pkg:pypi/charset-normalizer@3.4.7",
       "type": "library",
-      "version": "3.4.6"
+      "version": "3.4.7"
     },
     {
-      "bom-ref": "click==8.3.1",
+      "bom-ref": "click==8.3.2",
       "description": "Composable command line interface toolkit",
       "externalReferences": [
         {
@@ -1089,9 +1083,9 @@
         }
       ],
       "name": "click",
-      "purl": "pkg:pypi/click@8.3.1",
+      "purl": "pkg:pypi/click@8.3.2",
       "type": "library",
-      "version": "8.3.1"
+      "version": "8.3.2"
     },
     {
       "bom-ref": "colorama==0.4.6",
@@ -1140,7 +1134,7 @@
       "version": "0.2.3"
     },
     {
-      "bom-ref": "cryptography==46.0.6",
+      "bom-ref": "cryptography==46.0.7",
       "description": "cryptography is a package which provides cryptographic recipes and primitives to Python developers.",
       "externalReferences": [
         {
@@ -1176,12 +1170,12 @@
         }
       ],
       "name": "cryptography",
-      "purl": "pkg:pypi/cryptography@46.0.6",
+      "purl": "pkg:pypi/cryptography@46.0.7",
       "type": "library",
-      "version": "46.0.6"
+      "version": "46.0.7"
     },
     {
-      "bom-ref": "cyclonedx-bom==7.2.2",
+      "bom-ref": "cyclonedx-bom==7.3.0",
       "description": "CycloneDX Software Bill of Materials (SBOM) generator for Python projects and environments",
       "externalReferences": [
         {
@@ -1230,9 +1224,9 @@
         }
       ],
       "name": "cyclonedx-bom",
-      "purl": "pkg:pypi/cyclonedx-bom@7.2.2",
+      "purl": "pkg:pypi/cyclonedx-bom@7.3.0",
       "type": "library",
-      "version": "7.2.2"
+      "version": "7.3.0"
     },
     {
       "bom-ref": "cyclonedx-python-lib==11.7.0",
@@ -1295,7 +1289,7 @@
       "version": "11.7.0"
     },
     {
-      "bom-ref": "cyclopts==4.10.1",
+      "bom-ref": "cyclopts==4.10.2",
       "description": "Intuitive, easy CLIs based on type hints.",
       "externalReferences": [
         {
@@ -1318,9 +1312,9 @@
         }
       ],
       "name": "cyclopts",
-      "purl": "pkg:pypi/cyclopts@4.10.1",
+      "purl": "pkg:pypi/cyclopts@4.10.2",
       "type": "library",
-      "version": "4.10.1"
+      "version": "4.10.2"
     },
     {
       "bom-ref": "debugpy==1.8.20",
@@ -1726,7 +1720,7 @@
       "version": "2.2.1"
     },
     {
-      "bom-ref": "fakeredis==2.34.1",
+      "bom-ref": "fakeredis==2.35.0",
       "description": "Python implementation of redis API, can be used for testing purposes.",
       "externalReferences": [
         {
@@ -1764,12 +1758,18 @@
         }
       ],
       "name": "fakeredis",
-      "purl": "pkg:pypi/fakeredis@2.34.1",
+      "properties": [
+        {
+          "name": "cdx:python:package:required-extra",
+          "value": "lua"
+        }
+      ],
+      "purl": "pkg:pypi/fakeredis@2.35.0",
       "type": "library",
-      "version": "2.34.1"
+      "version": "2.35.0"
     },
     {
-      "bom-ref": "fastapi==0.135.2",
+      "bom-ref": "fastapi==0.135.3",
       "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production",
       "externalReferences": [
         {
@@ -1807,12 +1807,12 @@
         }
       ],
       "name": "fastapi",
-      "purl": "pkg:pypi/fastapi@0.135.2",
+      "purl": "pkg:pypi/fastapi@0.135.3",
       "type": "library",
-      "version": "0.135.2"
+      "version": "0.135.3"
     },
     {
-      "bom-ref": "fastmcp==3.1.1",
+      "bom-ref": "fastmcp==3.2.3",
       "description": "The fast, Pythonic way to build MCP servers and clients.",
       "externalReferences": [
         {
@@ -1840,9 +1840,9 @@
         }
       ],
       "name": "fastmcp",
-      "purl": "pkg:pypi/fastmcp@3.1.1",
+      "purl": "pkg:pypi/fastmcp@3.2.3",
       "type": "library",
-      "version": "3.1.1"
+      "version": "3.2.3"
     },
     {
       "bom-ref": "filetype==1.2.0",
@@ -1919,7 +1919,7 @@
       "version": "2.1.0"
     },
     {
-      "bom-ref": "griffe==2.0.1",
+      "bom-ref": "griffe==2.0.2",
       "description": "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API.",
       "externalReferences": [
         {
@@ -1972,12 +1972,12 @@
         }
       ],
       "name": "griffe",
-      "purl": "pkg:pypi/griffe@2.0.1",
+      "purl": "pkg:pypi/griffe@2.0.2",
       "type": "library",
-      "version": "2.0.1"
+      "version": "2.0.2"
     },
     {
-      "bom-ref": "griffecli==2.0.1",
+      "bom-ref": "griffecli==2.0.2",
       "description": "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API.",
       "licenses": [
         {
@@ -1988,12 +1988,12 @@
         }
       ],
       "name": "griffecli",
-      "purl": "pkg:pypi/griffecli@2.0.1",
+      "purl": "pkg:pypi/griffecli@2.0.2",
       "type": "library",
-      "version": "2.0.1"
+      "version": "2.0.2"
     },
     {
-      "bom-ref": "griffelib==2.0.1",
+      "bom-ref": "griffelib==2.0.2",
       "description": "Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API.",
       "licenses": [
         {
@@ -2010,9 +2010,9 @@
           "value": "pypi"
         }
       ],
-      "purl": "pkg:pypi/griffelib@2.0.1",
+      "purl": "pkg:pypi/griffelib@2.0.2",
       "type": "library",
-      "version": "2.0.1"
+      "version": "2.0.2"
     },
     {
       "bom-ref": "h11==0.16.0",
@@ -2255,7 +2255,7 @@
       "version": "7.2.0"
     },
     {
-      "bom-ref": "ipython==9.11.0",
+      "bom-ref": "ipython==9.12.0",
       "description": "IPython: Productive Interactive Computing",
       "externalReferences": [
         {
@@ -2293,9 +2293,9 @@
         }
       ],
       "name": "ipython",
-      "purl": "pkg:pypi/ipython@9.11.0",
+      "purl": "pkg:pypi/ipython@9.12.0",
       "type": "library",
-      "version": "9.11.0"
+      "version": "9.12.0"
     },
     {
       "bom-ref": "ipython_pygments_lexers==1.1.1",
@@ -2545,7 +2545,7 @@
       "version": "0.9.0"
     },
     {
-      "bom-ref": "jiter==0.13.0",
+      "bom-ref": "jiter==0.14.0",
       "description": "Fast iterable JSON parser.",
       "externalReferences": [
         {
@@ -2563,9 +2563,9 @@
         }
       ],
       "name": "jiter",
-      "purl": "pkg:pypi/jiter@0.13.0",
+      "purl": "pkg:pypi/jiter@0.14.0",
       "type": "library",
-      "version": "0.13.0"
+      "version": "0.14.0"
     },
     {
       "bom-ref": "jsonpointer==3.1.1",
@@ -2900,7 +2900,7 @@
       "version": "1.3.1"
     },
     {
-      "bom-ref": "librt==0.8.1",
+      "bom-ref": "librt==0.9.0",
       "description": "Mypyc runtime library",
       "externalReferences": [
         {
@@ -2923,9 +2923,9 @@
         }
       ],
       "name": "librt",
-      "purl": "pkg:pypi/librt@0.8.1",
+      "purl": "pkg:pypi/librt@0.9.0",
       "type": "library",
-      "version": "0.8.1"
+      "version": "0.9.0"
     },
     {
       "bom-ref": "license-expression==30.4.4",
@@ -2951,7 +2951,7 @@
       "version": "30.4.4"
     },
     {
-      "bom-ref": "logfire-api==4.30.0",
+      "bom-ref": "logfire-api==4.32.0",
       "description": "Shim for the Logfire SDK which does nothing unless Logfire is installed",
       "licenses": [
         {
@@ -2962,12 +2962,12 @@
         }
       ],
       "name": "logfire-api",
-      "purl": "pkg:pypi/logfire-api@4.30.0",
+      "purl": "pkg:pypi/logfire-api@4.32.0",
       "type": "library",
-      "version": "4.30.0"
+      "version": "4.32.0"
     },
     {
-      "bom-ref": "lxml==6.0.2",
+      "bom-ref": "lxml==6.0.3",
       "description": "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API.",
       "externalReferences": [
         {
@@ -2995,9 +2995,9 @@
         }
       ],
       "name": "lxml",
-      "purl": "pkg:pypi/lxml@6.0.2",
+      "purl": "pkg:pypi/lxml@6.0.3",
       "type": "library",
-      "version": "6.0.2"
+      "version": "6.0.3"
     },
     {
       "bom-ref": "magentic==0.41.1",
@@ -3074,7 +3074,7 @@
       "version": "0.7.0"
     },
     {
-      "bom-ref": "mcp==1.26.0",
+      "bom-ref": "mcp==1.27.0",
       "description": "Model Context Protocol SDK",
       "externalReferences": [
         {
@@ -3102,9 +3102,9 @@
         }
       ],
       "name": "mcp",
-      "purl": "pkg:pypi/mcp@1.26.0",
+      "purl": "pkg:pypi/mcp@1.27.0",
       "type": "library",
-      "version": "1.26.0"
+      "version": "1.27.0"
     },
     {
       "bom-ref": "mdurl==0.1.2",
@@ -3580,7 +3580,7 @@
       "version": "2.0.3"
     },
     {
-      "bom-ref": "more-itertools==10.8.0",
+      "bom-ref": "more-itertools==11.0.2",
       "description": "More routines for operating on iterables, beyond itertools",
       "externalReferences": [
         {
@@ -3603,12 +3603,12 @@
         }
       ],
       "name": "more-itertools",
-      "purl": "pkg:pypi/more-itertools@10.8.0",
+      "purl": "pkg:pypi/more-itertools@11.0.2",
       "type": "library",
-      "version": "10.8.0"
+      "version": "11.0.2"
     },
     {
-      "bom-ref": "mypy==1.19.1",
+      "bom-ref": "mypy==1.20.0",
       "description": "Optional static typing for Python",
       "externalReferences": [
         {
@@ -3646,9 +3646,9 @@
         }
       ],
       "name": "mypy",
-      "purl": "pkg:pypi/mypy@1.19.1",
+      "purl": "pkg:pypi/mypy@1.20.0",
       "type": "library",
-      "version": "1.19.1"
+      "version": "1.20.0"
     },
     {
       "bom-ref": "mypy_extensions==1.1.0",
@@ -3674,7 +3674,7 @@
       "version": "1.1.0"
     },
     {
-      "bom-ref": "narwhals==2.18.1",
+      "bom-ref": "narwhals==2.19.0",
       "description": "Extremely lightweight compatibility layer between dataframe libraries",
       "externalReferences": [
         {
@@ -3707,9 +3707,9 @@
         }
       ],
       "name": "narwhals",
-      "purl": "pkg:pypi/narwhals@2.18.1",
+      "purl": "pkg:pypi/narwhals@2.19.0",
       "type": "library",
-      "version": "2.18.1"
+      "version": "2.19.0"
     },
     {
       "bom-ref": "nest-asyncio==1.6.0",
@@ -3735,7 +3735,7 @@
       "version": "1.6.0"
     },
     {
-      "bom-ref": "numpy==2.4.3",
+      "bom-ref": "numpy==2.4.4",
       "description": "Fundamental package for array computing in Python",
       "externalReferences": [
         {
@@ -3776,12 +3776,12 @@
         }
       ],
       "name": "numpy",
-      "purl": "pkg:pypi/numpy@2.4.3",
+      "purl": "pkg:pypi/numpy@2.4.4",
       "type": "library",
-      "version": "2.4.3"
+      "version": "2.4.4"
     },
     {
-      "bom-ref": "openai==2.30.0",
+      "bom-ref": "openai==2.31.0",
       "description": "The official Python library for the openai API",
       "externalReferences": [
         {
@@ -3810,9 +3810,9 @@
         }
       ],
       "name": "openai",
-      "purl": "pkg:pypi/openai@2.30.0",
+      "purl": "pkg:pypi/openai@2.31.0",
       "type": "library",
-      "version": "2.30.0"
+      "version": "2.31.0"
     },
     {
       "bom-ref": "openapi-pydantic==0.5.1",
@@ -3848,7 +3848,7 @@
       "version": "0.5.1"
     },
     {
-      "bom-ref": "opentelemetry-api==1.40.0",
+      "bom-ref": "opentelemetry-api==1.41.0",
       "description": "OpenTelemetry Python API",
       "externalReferences": [
         {
@@ -3871,9 +3871,9 @@
         }
       ],
       "name": "opentelemetry-api",
-      "purl": "pkg:pypi/opentelemetry-api@1.40.0",
+      "purl": "pkg:pypi/opentelemetry-api@1.41.0",
       "type": "library",
-      "version": "1.40.0"
+      "version": "1.41.0"
     },
     {
       "bom-ref": "packageurl-python==0.17.6",
@@ -3948,7 +3948,7 @@
       "version": "0.5.7"
     },
     {
-      "bom-ref": "pandas==3.0.1",
+      "bom-ref": "pandas==3.0.2",
       "description": "Powerful data structures for data analysis, time series, and statistics",
       "externalReferences": [
         {
@@ -3976,9 +3976,9 @@
         }
       ],
       "name": "pandas",
-      "purl": "pkg:pypi/pandas@3.0.1",
+      "purl": "pkg:pypi/pandas@3.0.2",
       "type": "library",
-      "version": "3.0.1"
+      "version": "3.0.2"
     },
     {
       "bom-ref": "parso==0.8.6",
@@ -4109,7 +4109,7 @@
       "version": "4.9.0"
     },
     {
-      "bom-ref": "pillow==12.1.1",
+      "bom-ref": "pillow==12.2.0",
       "description": "Python Imaging Library (fork)",
       "externalReferences": [
         {
@@ -4157,9 +4157,9 @@
         }
       ],
       "name": "pillow",
-      "purl": "pkg:pypi/pillow@12.1.1",
+      "purl": "pkg:pypi/pillow@12.2.0",
       "type": "library",
-      "version": "12.1.1"
+      "version": "12.2.0"
     },
     {
       "bom-ref": "pip==26.0.1",
@@ -4223,7 +4223,7 @@
       "version": "32.0.1"
     },
     {
-      "bom-ref": "platformdirs==4.9.4",
+      "bom-ref": "platformdirs==4.9.6",
       "description": "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`.",
       "externalReferences": [
         {
@@ -4261,12 +4261,12 @@
         }
       ],
       "name": "platformdirs",
-      "purl": "pkg:pypi/platformdirs@4.9.4",
+      "purl": "pkg:pypi/platformdirs@4.9.6",
       "type": "library",
-      "version": "4.9.4"
+      "version": "4.9.6"
     },
     {
-      "bom-ref": "plotly==6.6.0",
+      "bom-ref": "plotly==6.7.0",
       "description": "An open-source interactive data visualization library for Python",
       "externalReferences": [
         {
@@ -4280,12 +4280,12 @@
           "url": "https://github.com/plotly/plotly.py/blob/main/CHANGELOG.md"
         },
         {
-          "comment": "from packaging metadata Project-URL: Github",
+          "comment": "from packaging metadata Project-URL: GitHub",
           "type": "vcs",
           "url": "https://github.com/plotly/plotly.py"
         },
         {
-          "comment": "from packaging metadata Project-URL: HomePage",
+          "comment": "from packaging metadata Project-URL: Homepage",
           "type": "website",
           "url": "https://plotly.com/python/"
         }
@@ -4299,9 +4299,9 @@
         }
       ],
       "name": "plotly",
-      "purl": "pkg:pypi/plotly@6.6.0",
+      "purl": "pkg:pypi/plotly@6.7.0",
       "type": "library",
-      "version": "6.6.0"
+      "version": "6.7.0"
     },
     {
       "bom-ref": "pluggy==1.6.0",
@@ -4759,7 +4759,7 @@
       "version": "6.19.0"
     },
     {
-      "bom-ref": "pyinstaller-hooks-contrib==2026.3",
+      "bom-ref": "pyinstaller-hooks-contrib==2026.4",
       "description": "Community maintained hooks for PyInstaller",
       "externalReferences": [
         {
@@ -4788,9 +4788,9 @@
         }
       ],
       "name": "pyinstaller-hooks-contrib",
-      "purl": "pkg:pypi/pyinstaller-hooks-contrib@2026.3",
+      "purl": "pkg:pypi/pyinstaller-hooks-contrib@2026.4",
       "type": "library",
-      "version": "2026.3"
+      "version": "2026.4"
     },
     {
       "bom-ref": "pylint==4.0.5",
@@ -4846,7 +4846,7 @@
       "version": "4.0.5"
     },
     {
-      "bom-ref": "pymdown-extensions==10.21",
+      "bom-ref": "pymdown-extensions==10.21.2",
       "description": "Extension pack for Python Markdown.",
       "externalReferences": [
         {
@@ -4864,9 +4864,9 @@
         }
       ],
       "name": "pymdown-extensions",
-      "purl": "pkg:pypi/pymdown-extensions@10.21",
+      "purl": "pkg:pypi/pymdown-extensions@10.21.2",
       "type": "library",
-      "version": "10.21"
+      "version": "10.21.2"
     },
     {
       "bom-ref": "pyparsing==3.3.2",
@@ -4981,7 +4981,7 @@
       "version": "0.8.0"
     },
     {
-      "bom-ref": "pytest==9.0.2",
+      "bom-ref": "pytest==9.0.3",
       "description": "pytest: simple powerful testing with Python",
       "externalReferences": [
         {
@@ -5024,9 +5024,9 @@
         }
       ],
       "name": "pytest",
-      "purl": "pkg:pypi/pytest@9.0.2",
+      "purl": "pkg:pypi/pytest@9.0.3",
       "type": "library",
-      "version": "9.0.2"
+      "version": "9.0.3"
     },
     {
       "bom-ref": "pytest-asyncio==1.3.0",
@@ -5163,7 +5163,7 @@
       "version": "1.2.2"
     },
     {
-      "bom-ref": "python-multipart==0.0.22",
+      "bom-ref": "python-multipart==0.0.26",
       "description": "A streaming multipart parser for Python",
       "externalReferences": [
         {
@@ -5196,9 +5196,9 @@
         }
       ],
       "name": "python-multipart",
-      "purl": "pkg:pypi/python-multipart@0.0.22",
+      "purl": "pkg:pypi/python-multipart@0.0.26",
       "type": "library",
-      "version": "0.0.22"
+      "version": "0.0.26"
     },
     {
       "bom-ref": "pyyaml_env_tag==1.1",
@@ -5368,7 +5368,7 @@
       "version": "0.37.0"
     },
     {
-      "bom-ref": "requests==2.33.0",
+      "bom-ref": "requests==2.33.1",
       "description": "Python HTTP for Humans.",
       "externalReferences": [
         {
@@ -5397,9 +5397,9 @@
         }
       ],
       "name": "requests",
-      "purl": "pkg:pypi/requests@2.33.0",
+      "purl": "pkg:pypi/requests@2.33.1",
       "type": "library",
-      "version": "2.33.0"
+      "version": "2.33.1"
     },
     {
       "bom-ref": "rfc3339-validator==0.1.4",
@@ -5486,7 +5486,7 @@
       "version": "1.1.0"
     },
     {
-      "bom-ref": "rich==14.3.3",
+      "bom-ref": "rich==14.3.4",
       "description": "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal",
       "externalReferences": [
         {
@@ -5509,9 +5509,9 @@
         }
       ],
       "name": "rich",
-      "purl": "pkg:pypi/rich@14.3.3",
+      "purl": "pkg:pypi/rich@14.3.4",
       "type": "library",
-      "version": "14.3.3"
+      "version": "14.3.4"
     },
     {
       "bom-ref": "rich-rst==1.3.2",
@@ -5610,7 +5610,7 @@
       "version": "0.30.0"
     },
     {
-      "bom-ref": "ruff==0.15.7",
+      "bom-ref": "ruff==0.15.10",
       "description": "An extremely fast Python linter and code formatter, written in Rust.",
       "externalReferences": [
         {
@@ -5643,9 +5643,9 @@
         }
       ],
       "name": "ruff",
-      "purl": "pkg:pypi/ruff@0.15.7",
+      "purl": "pkg:pypi/ruff@0.15.10",
       "type": "library",
-      "version": "0.15.7"
+      "version": "0.15.10"
     },
     {
       "bom-ref": "setproctitle==1.3.7",
@@ -5808,7 +5808,7 @@
       "version": "2.4.0"
     },
     {
-      "bom-ref": "sse-starlette==3.3.3",
+      "bom-ref": "sse-starlette==3.3.4",
       "description": "SSE plugin for Starlette",
       "externalReferences": [
         {
@@ -5826,9 +5826,9 @@
         }
       ],
       "name": "sse-starlette",
-      "purl": "pkg:pypi/sse-starlette@3.3.3",
+      "purl": "pkg:pypi/sse-starlette@3.3.4",
       "type": "library",
-      "version": "3.3.3"
+      "version": "3.3.4"
     },
     {
       "bom-ref": "stack-data==0.6.3",
@@ -6157,13 +6157,13 @@
       "version": "4.15.0"
     },
     {
-      "bom-ref": "tzdata==2025.3",
+      "bom-ref": "tzdata==2026.1",
       "description": "Provider of IANA time zone data",
       "externalReferences": [
         {
           "comment": "from packaging metadata Project-URL: Documentation",
           "type": "documentation",
-          "url": "https://tzdata.readthedocs.io"
+          "url": "https://tzdata.python.org"
         },
         {
           "comment": "from packaging metadata Project-URL: Bug Reports",
@@ -6190,12 +6190,12 @@
         }
       ],
       "name": "tzdata",
-      "purl": "pkg:pypi/tzdata@2025.3",
+      "purl": "pkg:pypi/tzdata@2026.1",
       "type": "library",
-      "version": "2025.3"
+      "version": "2026.1"
     },
     {
-      "bom-ref": "uncalled-for==0.2.0",
+      "bom-ref": "uncalled-for==0.3.1",
       "description": "Async dependency injection for Python functions",
       "externalReferences": [
         {
@@ -6218,9 +6218,9 @@
         }
       ],
       "name": "uncalled-for",
-      "purl": "pkg:pypi/uncalled-for@0.2.0",
+      "purl": "pkg:pypi/uncalled-for@0.3.1",
       "type": "library",
-      "version": "0.2.0"
+      "version": "0.3.1"
     },
     {
       "bom-ref": "uri-template==1.3.0",
@@ -6284,7 +6284,7 @@
       "version": "2.6.3"
     },
     {
-      "bom-ref": "uvicorn==0.42.0",
+      "bom-ref": "uvicorn==0.44.0",
       "description": "The lightning-fast ASGI server.",
       "externalReferences": [
         {
@@ -6323,9 +6323,9 @@
           "value": "standard"
         }
       ],
-      "purl": "pkg:pypi/uvicorn@0.42.0",
+      "purl": "pkg:pypi/uvicorn@0.44.0",
       "type": "library",
-      "version": "0.42.0"
+      "version": "0.44.0"
     },
     {
       "bom-ref": "watchdog==6.0.0",
@@ -6612,7 +6612,7 @@
   "dependencies": [
     {
       "dependsOn": [
-        "cryptography==46.0.6"
+        "cryptography==46.0.7"
       ],
       "ref": "Authlib==1.6.9"
     },
@@ -6639,8 +6639,8 @@
     },
     {
       "dependsOn": [
-        "cryptography==46.0.6",
-        "pytest==9.0.2",
+        "cryptography==46.0.7",
+        "pytest==9.0.3",
         "typing_extensions==4.15.0"
       ],
       "ref": "PyJWT==2.12.1"
@@ -6652,11 +6652,11 @@
       "dependsOn": [
         "colorama==0.4.6"
       ],
-      "ref": "Pygments==2.19.2"
+      "ref": "Pygments==2.20.0"
     },
     {
       "dependsOn": [
-        "cryptography==46.0.6",
+        "cryptography==46.0.7",
         "jeepney==0.9.0"
       ],
       "ref": "SecretStorage==3.5.0"
@@ -6685,13 +6685,13 @@
         "distro==1.9.0",
         "docstring_parser==0.17.0",
         "httpx==0.28.1",
-        "jiter==0.13.0",
-        "mcp==1.26.0",
+        "jiter==0.14.0",
+        "mcp==1.27.0",
         "pydantic==2.12.5",
         "sniffio==1.3.1",
         "typing_extensions==4.15.0"
       ],
-      "ref": "anthropic==0.86.0"
+      "ref": "anthropic==0.94.0"
     },
     {
       "dependsOn": [
@@ -6708,13 +6708,13 @@
         "typing_extensions==4.15.0",
         "watchfiles==1.1.1"
       ],
-      "ref": "anywidget==0.9.21"
+      "ref": "anywidget==0.10.0"
     },
     {
       "dependsOn": [
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "python-dateutil==2.9.0.post0",
-        "tzdata==2025.3"
+        "tzdata==2026.1"
       ],
       "ref": "arrow==1.4.0"
     },
@@ -6727,7 +6727,7 @@
     {
       "dependsOn": [
         "astroid==4.0.4",
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "asttokens==3.0.1"
     },
@@ -6737,9 +6737,9 @@
     {
       "dependsOn": [
         "Jinja2==3.1.6",
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "setuptools==82.0.1",
-        "tzdata==2025.3"
+        "tzdata==2026.1"
       ],
       "ref": "babel==2.18.0"
     },
@@ -6748,16 +6748,16 @@
     },
     {
       "dependsOn": [
-        "Pygments==2.19.2",
-        "click==8.3.1",
+        "Pygments==2.20.0",
+        "click==8.3.2",
         "docutils==0.22.4",
-        "fastmcp==3.1.1",
+        "fastmcp==3.2.3",
         "mkdocs-material==9.7.6",
         "mkdocstrings-python==2.0.3",
-        "mypy==1.19.1",
-        "numpy==2.4.3",
+        "mypy==1.20.0",
+        "numpy==2.4.4",
         "pyinstaller==6.19.0",
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "redis==7.4.0",
         "setuptools==82.0.1",
         "typing_extensions==4.15.0"
@@ -6767,7 +6767,7 @@
     {
       "dependsOn": [
         "isort==8.0.1",
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "boolean.py==5.0"
     },
@@ -6776,7 +6776,7 @@
     },
     {
       "dependsOn": [
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "setuptools==82.0.1"
       ],
       "ref": "caio==0.9.25"
@@ -6794,20 +6794,20 @@
       "ref": "chardet==5.2.0"
     },
     {
-      "ref": "charset-normalizer==3.4.6"
+      "ref": "charset-normalizer==3.4.7"
     },
     {
       "dependsOn": [
         "colorama==0.4.6"
       ],
-      "ref": "click==8.3.1"
+      "ref": "click==8.3.2"
     },
     {
       "ref": "colorama==0.4.6"
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "comm==0.2.3"
     },
@@ -6815,13 +6815,13 @@
       "dependsOn": [
         "certifi==2026.2.25",
         "cffi==2.0.0",
-        "click==8.3.1",
-        "mypy==1.19.1",
-        "pytest==9.0.2",
-        "ruff==0.15.7",
+        "click==8.3.2",
+        "mypy==1.20.0",
+        "pytest==9.0.3",
+        "ruff==0.15.10",
         "typing_extensions==4.15.0"
       ],
-      "ref": "cryptography==46.0.6"
+      "ref": "cryptography==46.0.7"
     },
     {
       "dependsOn": [
@@ -6831,13 +6831,13 @@
         "packaging==26.0",
         "pip-requirements-parser==32.0.1"
       ],
-      "ref": "cyclonedx-bom==7.2.2"
+      "ref": "cyclonedx-bom==7.3.0"
     },
     {
       "dependsOn": [
         "jsonschema==4.26.0",
         "license-expression==30.4.4",
-        "lxml==6.0.2",
+        "lxml==6.0.3",
         "packageurl-python==0.17.6",
         "py-serializable==2.1.0",
         "referencing==0.37.0",
@@ -6854,13 +6854,13 @@
         "docstring_parser==0.17.0",
         "mkdocs==1.6.1",
         "pydantic==2.12.5",
-        "pymdown-extensions==10.21",
-        "pytest==9.0.2",
+        "pymdown-extensions==10.21.2",
+        "pytest==9.0.3",
         "rich-rst==1.3.2",
-        "rich==14.3.3",
+        "rich==14.3.4",
         "typing_extensions==4.15.0"
       ],
-      "ref": "cyclopts==4.10.1"
+      "ref": "cyclopts==4.10.2"
     },
     {
       "ref": "debugpy==1.8.20"
@@ -6879,29 +6879,29 @@
     },
     {
       "dependsOn": [
-        "cryptography==46.0.6",
+        "cryptography==46.0.7",
         "httpcore==1.0.9",
         "httpx==0.28.1",
         "idna==3.11",
-        "mypy==1.19.1",
+        "mypy==1.20.0",
         "pylint==4.0.5",
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "dnspython==2.8.0"
     },
     {
       "dependsOn": [
         "pytest-timeout==2.4.0",
-        "pytest==9.0.2",
-        "requests==2.33.0",
-        "ruff==0.15.7",
+        "pytest==9.0.3",
+        "requests==2.33.1",
+        "ruff==0.15.10",
         "urllib3==2.6.3"
       ],
       "ref": "docker==7.1.0"
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "docstring_parser==0.17.0"
     },
@@ -6917,7 +6917,7 @@
     },
     {
       "dependsOn": [
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "typing_extensions==4.15.0"
       ],
       "ref": "exceptiongroup==1.3.1"
@@ -6925,19 +6925,20 @@
     {
       "dependsOn": [
         "asttokens==3.0.1",
-        "ipython==9.11.0",
-        "pytest==9.0.2",
-        "rich==14.3.3"
+        "ipython==9.12.0",
+        "pytest==9.0.3",
+        "rich==14.3.4"
       ],
       "ref": "executing==2.2.1"
     },
     {
       "dependsOn": [
+        "numpy==2.4.4",
         "redis==7.4.0",
         "sortedcontainers==2.4.0",
         "typing_extensions==4.15.0"
       ],
-      "ref": "fakeredis==2.34.1"
+      "ref": "fakeredis==2.35.0"
     },
     {
       "dependsOn": [
@@ -6948,41 +6949,43 @@
         "httpx==0.28.1",
         "pydantic-settings==2.13.1",
         "pydantic==2.12.5",
-        "python-multipart==0.0.22",
+        "python-multipart==0.0.26",
         "starlette==1.0.0",
         "typing-inspection==0.4.2",
         "typing_extensions==4.15.0",
-        "uvicorn==0.42.0"
+        "uvicorn==0.44.0"
       ],
-      "ref": "fastapi==0.135.2"
+      "ref": "fastapi==0.135.3"
     },
     {
       "dependsOn": [
         "Authlib==1.6.9",
+        "PyJWT==2.12.1",
         "PyYAML==6.0.3",
-        "anthropic==0.86.0",
-        "cyclopts==4.10.1",
+        "anthropic==0.94.0",
+        "cyclopts==4.10.2",
         "exceptiongroup==1.3.1",
+        "fakeredis==2.35.0",
         "httpx==0.28.1",
         "jsonref==1.1.0",
         "jsonschema-path==0.4.5",
-        "mcp==1.26.0",
-        "openai==2.30.0",
+        "mcp==1.27.0",
+        "openai==2.31.0",
         "openapi-pydantic==0.5.1",
-        "opentelemetry-api==1.40.0",
+        "opentelemetry-api==1.41.0",
         "packaging==26.0",
-        "platformdirs==4.9.4",
+        "platformdirs==4.9.6",
         "py-key-value-aio==0.4.4",
         "pydantic==2.12.5",
         "pyperclip==1.11.0",
         "python-dotenv==1.2.2",
-        "rich==14.3.3",
-        "uncalled-for==0.2.0",
-        "uvicorn==0.42.0",
+        "rich==14.3.4",
+        "uncalled-for==0.3.1",
+        "uvicorn==0.44.0",
         "watchfiles==1.1.1",
         "websockets==16.0"
       ],
-      "ref": "fastmcp==3.1.1"
+      "ref": "fastmcp==3.2.3"
     },
     {
       "ref": "filetype==1.2.0"
@@ -6999,24 +7002,24 @@
     },
     {
       "dependsOn": [
-        "griffecli==2.0.1",
-        "griffelib==2.0.1"
+        "griffecli==2.0.2",
+        "griffelib==2.0.2"
       ],
-      "ref": "griffe==2.0.1"
+      "ref": "griffe==2.0.2"
     },
     {
       "dependsOn": [
         "colorama==0.4.6",
-        "griffelib==2.0.1"
+        "griffelib==2.0.2"
       ],
-      "ref": "griffecli==2.0.1"
+      "ref": "griffecli==2.0.2"
     },
     {
       "dependsOn": [
         "pip==26.0.1",
-        "platformdirs==4.9.4"
+        "platformdirs==4.9.6"
       ],
-      "ref": "griffelib==2.0.1"
+      "ref": "griffelib==2.0.2"
     },
     {
       "ref": "h11==0.16.0"
@@ -7034,30 +7037,30 @@
     },
     {
       "dependsOn": [
-        "Pygments==2.19.2",
+        "Pygments==2.20.0",
         "anyio==4.13.0",
         "certifi==2026.2.25",
-        "click==8.3.1",
+        "click==8.3.2",
         "httpcore==1.0.9",
         "idna==3.11",
-        "rich==14.3.3"
+        "rich==14.3.4"
       ],
       "ref": "httpx==0.28.1"
     },
     {
       "dependsOn": [
-        "mypy==1.19.1",
-        "pytest==9.0.2",
-        "ruff==0.15.7"
+        "mypy==1.20.0",
+        "pytest==9.0.3",
+        "ruff==0.15.10"
       ],
       "ref": "idna==3.11"
     },
     {
       "dependsOn": [
-        "ipython==9.11.0",
-        "mypy==1.19.1",
+        "ipython==9.12.0",
+        "mypy==1.20.0",
         "packaging==26.0",
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "zipp==3.23.0"
       ],
       "ref": "importlib_metadata==8.7.1"
@@ -7069,7 +7072,7 @@
       "dependsOn": [
         "comm==0.2.3",
         "debugpy==1.8.20",
-        "ipython==9.11.0",
+        "ipython==9.12.0",
         "jupyter_client==8.8.0",
         "jupyter_core==5.9.1",
         "matplotlib-inline==0.2.1",
@@ -7078,7 +7081,7 @@
         "psutil==7.2.2",
         "pytest-asyncio==1.3.0",
         "pytest-timeout==2.4.0",
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "pyzmq==27.1.0",
         "tornado==6.5.5",
         "traitlets==5.14.3"
@@ -7087,7 +7090,7 @@
     },
     {
       "dependsOn": [
-        "Pygments==2.19.2",
+        "Pygments==2.20.0",
         "colorama==0.4.6",
         "decorator==5.2.1",
         "exceptiongroup==1.3.1",
@@ -7095,23 +7098,23 @@
         "ipython_pygments_lexers==1.1.1",
         "jedi==0.19.2",
         "matplotlib-inline==0.2.1",
-        "numpy==2.4.3",
+        "numpy==2.4.4",
         "packaging==26.0",
-        "pandas==3.0.1",
+        "pandas==3.0.2",
         "pexpect==4.9.0",
         "prompt_toolkit==3.0.52",
         "pytest-asyncio==1.3.0",
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "setuptools==82.0.1",
         "stack-data==0.6.3",
         "traitlets==5.14.3",
         "typing_extensions==4.15.0"
       ],
-      "ref": "ipython==9.11.0"
+      "ref": "ipython==9.12.0"
     },
     {
       "dependsOn": [
-        "Pygments==2.19.2"
+        "Pygments==2.20.0"
       ],
       "ref": "ipython_pygments_lexers==1.1.1"
     },
@@ -7119,10 +7122,10 @@
       "dependsOn": [
         "comm==0.2.3",
         "ipykernel==7.2.0",
-        "ipython==9.11.0",
+        "ipython==9.12.0",
         "jsonschema==4.26.0",
         "jupyterlab_widgets==3.0.16",
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "traitlets==5.14.3",
         "widgetsnbextension==4.0.15"
       ],
@@ -7142,23 +7145,23 @@
     },
     {
       "dependsOn": [
-        "more-itertools==10.8.0",
-        "pytest==9.0.2"
+        "more-itertools==11.0.2",
+        "pytest==9.0.3"
       ],
       "ref": "jaraco.classes==3.4.0"
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "jaraco.context==6.1.2"
     },
     {
       "dependsOn": [
         "jaraco.classes==3.4.0",
-        "more-itertools==10.8.0",
-        "mypy==1.19.1",
-        "pytest==9.0.2"
+        "more-itertools==11.0.2",
+        "mypy==1.20.0",
+        "pytest==9.0.3"
       ],
       "ref": "jaraco.functools==4.4.0"
     },
@@ -7166,19 +7169,19 @@
       "dependsOn": [
         "Jinja2==3.1.6",
         "MarkupSafe==3.0.3",
-        "Pygments==2.19.2",
+        "Pygments==2.20.0",
         "attrs==26.1.0",
         "babel==2.18.0",
         "chardet==5.2.0",
         "colorama==0.4.6",
         "docutils==0.22.4",
         "idna==3.11",
-        "mypy==1.19.1",
+        "mypy==1.20.0",
         "packaging==26.0",
         "parso==0.8.6",
         "pyparsing==3.3.2",
-        "pytest==9.0.2",
-        "requests==2.33.0",
+        "pytest==9.0.3",
+        "requests==2.33.1",
         "six==1.17.0",
         "urllib3==2.6.3"
       ],
@@ -7187,12 +7190,12 @@
     {
       "dependsOn": [
         "pytest-asyncio==1.3.0",
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "jeepney==0.9.0"
     },
     {
-      "ref": "jiter==0.13.0"
+      "ref": "jiter==0.14.0"
     },
     {
       "ref": "jsonpointer==3.1.1"
@@ -7205,7 +7208,7 @@
         "PyYAML==6.0.3",
         "pathable==0.5.0",
         "referencing==0.37.0",
-        "requests==2.33.0"
+        "requests==2.33.1"
       ],
       "ref": "jsonschema-path==0.4.5"
     },
@@ -7238,9 +7241,9 @@
         "anyio==4.13.0",
         "ipykernel==7.2.0",
         "jupyter_core==5.9.1",
-        "mypy==1.19.1",
+        "mypy==1.20.0",
         "pytest-timeout==2.4.0",
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "python-dateutil==2.9.0.post0",
         "pyzmq==27.1.0",
         "tornado==6.5.5",
@@ -7251,9 +7254,9 @@
     {
       "dependsOn": [
         "ipykernel==7.2.0",
-        "platformdirs==4.9.4",
+        "platformdirs==4.9.6",
         "pytest-timeout==2.4.0",
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "traitlets==5.14.3"
       ],
       "ref": "jupyter_core==5.9.1"
@@ -7269,7 +7272,7 @@
         "jaraco.context==6.1.2",
         "jaraco.functools==4.4.0",
         "jeepney==0.9.0",
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "keyring==25.7.0"
     },
@@ -7277,28 +7280,28 @@
       "ref": "lark==1.3.1"
     },
     {
-      "ref": "librt==0.8.1"
+      "ref": "librt==0.9.0"
     },
     {
       "dependsOn": [
         "boolean.py==5.0",
-        "pytest==9.0.2",
-        "ruff==0.15.7"
+        "pytest==9.0.3",
+        "ruff==0.15.10"
       ],
       "ref": "license-expression==30.4.4"
     },
     {
-      "ref": "logfire-api==4.30.0"
+      "ref": "logfire-api==4.32.0"
     },
     {
-      "ref": "lxml==6.0.2"
+      "ref": "lxml==6.0.3"
     },
     {
       "dependsOn": [
-        "anthropic==0.86.0",
+        "anthropic==0.94.0",
         "filetype==1.2.0",
-        "logfire-api==4.30.0",
-        "openai==2.30.0",
+        "logfire-api==4.32.0",
+        "openai==2.31.0",
         "pydantic-settings==2.13.1",
         "pydantic==2.12.5",
         "typing_extensions==4.15.0"
@@ -7312,14 +7315,14 @@
         "ipykernel==7.2.0",
         "mdurl==0.1.2",
         "psutil==7.2.2",
-        "pytest==9.0.2",
-        "requests==2.33.0"
+        "pytest==9.0.3",
+        "requests==2.33.1"
       ],
       "ref": "markdown-it-py==4.0.0"
     },
     {
       "dependsOn": [
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "traitlets==5.14.3"
       ],
       "ref": "matplotlib-inline==0.2.1"
@@ -7337,16 +7340,16 @@
         "pydantic-settings==2.13.1",
         "pydantic==2.12.5",
         "python-dotenv==1.2.2",
-        "python-multipart==0.0.22",
-        "rich==14.3.3",
-        "sse-starlette==3.3.3",
+        "python-multipart==0.0.26",
+        "rich==14.3.4",
+        "sse-starlette==3.3.4",
         "starlette==1.0.0",
         "typing-inspection==0.4.2",
         "typing_extensions==4.15.0",
-        "uvicorn==0.42.0",
+        "uvicorn==0.44.0",
         "websockets==16.0"
       ],
-      "ref": "mcp==1.26.0"
+      "ref": "mcp==1.27.0"
     },
     {
       "ref": "mdurl==0.1.2"
@@ -7374,7 +7377,7 @@
         "PyYAML==6.0.3",
         "importlib_metadata==8.7.1",
         "mergedeep==1.3.4",
-        "platformdirs==4.9.4"
+        "platformdirs==4.9.6"
       ],
       "ref": "mkdocs-get-deps==0.2.2"
     },
@@ -7392,16 +7395,16 @@
       "dependsOn": [
         "Jinja2==3.1.6",
         "Markdown==3.10.2",
-        "Pygments==2.19.2",
+        "Pygments==2.20.0",
         "babel==2.18.0",
         "backrefs==6.2",
         "colorama==0.4.6",
         "mkdocs-material-extensions==1.3.1",
         "mkdocs==1.6.1",
         "paginate==0.5.7",
-        "pillow==12.1.1",
-        "pymdown-extensions==10.21",
-        "requests==2.33.0"
+        "pillow==12.2.0",
+        "pymdown-extensions==10.21.2",
+        "requests==2.33.1"
       ],
       "ref": "mkdocs-material==9.7.6"
     },
@@ -7419,7 +7422,7 @@
         "MarkupSafe==3.0.3",
         "PyYAML==6.0.3",
         "babel==2.18.0",
-        "click==8.3.1",
+        "click==8.3.2",
         "colorama==0.4.6",
         "ghp-import==2.1.0",
         "importlib_metadata==8.7.1",
@@ -7434,7 +7437,7 @@
     },
     {
       "dependsOn": [
-        "griffelib==2.0.1",
+        "griffelib==2.0.2",
         "mkdocs-autorefs==1.4.4",
         "mkdocstrings==1.0.3",
         "typing_extensions==4.15.0"
@@ -7449,17 +7452,17 @@
         "mkdocs-autorefs==1.4.4",
         "mkdocs==1.6.1",
         "mkdocstrings-python==2.0.3",
-        "pymdown-extensions==10.21"
+        "pymdown-extensions==10.21.2"
       ],
       "ref": "mkdocstrings==1.0.3"
     },
     {
-      "ref": "more-itertools==10.8.0"
+      "ref": "more-itertools==11.0.2"
     },
     {
       "dependsOn": [
-        "librt==0.8.1",
-        "lxml==6.0.2",
+        "librt==0.9.0",
+        "lxml==6.0.3",
         "mypy_extensions==1.1.0",
         "pathspec==1.0.4",
         "pip==26.0.1",
@@ -7467,7 +7470,7 @@
         "setuptools==82.0.1",
         "typing_extensions==4.15.0"
       ],
-      "ref": "mypy==1.19.1"
+      "ref": "mypy==1.20.0"
     },
     {
       "ref": "mypy_extensions==1.1.0"
@@ -7475,32 +7478,32 @@
     {
       "dependsOn": [
         "packaging==26.0",
-        "pandas==3.0.1",
-        "rich==14.3.3"
+        "pandas==3.0.2",
+        "rich==14.3.4"
       ],
-      "ref": "narwhals==2.18.1"
+      "ref": "narwhals==2.19.0"
     },
     {
       "ref": "nest-asyncio==1.6.0"
     },
     {
-      "ref": "numpy==2.4.3"
+      "ref": "numpy==2.4.4"
     },
     {
       "dependsOn": [
         "anyio==4.13.0",
         "distro==1.9.0",
         "httpx==0.28.1",
-        "jiter==0.13.0",
-        "numpy==2.4.3",
-        "pandas==3.0.1",
+        "jiter==0.14.0",
+        "numpy==2.4.4",
+        "pandas==3.0.2",
         "pydantic==2.12.5",
         "sniffio==1.3.1",
         "tqdm==4.67.3",
         "typing_extensions==4.15.0",
         "websockets==16.0"
       ],
-      "ref": "openai==2.30.0"
+      "ref": "openai==2.31.0"
     },
     {
       "dependsOn": [
@@ -7513,13 +7516,13 @@
         "importlib_metadata==8.7.1",
         "typing_extensions==4.15.0"
       ],
-      "ref": "opentelemetry-api==1.40.0"
+      "ref": "opentelemetry-api==1.41.0"
     },
     {
       "dependsOn": [
         "isort==8.0.1",
-        "mypy==1.19.1",
-        "pytest==9.0.2",
+        "mypy==1.20.0",
+        "pytest==9.0.3",
         "setuptools==82.0.1"
       ],
       "ref": "packageurl-python==0.17.6"
@@ -7529,24 +7532,24 @@
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "paginate==0.5.7"
     },
     {
       "dependsOn": [
         "Jinja2==3.1.6",
-        "lxml==6.0.2",
-        "numpy==2.4.3",
-        "pytest==9.0.2",
+        "lxml==6.0.3",
+        "numpy==2.4.4",
+        "pytest==9.0.3",
         "python-dateutil==2.9.0.post0",
-        "tzdata==2025.3"
+        "tzdata==2026.1"
       ],
-      "ref": "pandas==3.0.1"
+      "ref": "pandas==3.0.2"
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "parso==0.8.6"
     },
@@ -7555,7 +7558,7 @@
     },
     {
       "dependsOn": [
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "typing_extensions==4.15.0"
       ],
       "ref": "pathspec==1.0.4"
@@ -7571,15 +7574,15 @@
         "defusedxml==0.7.1",
         "packaging==26.0",
         "pytest-timeout==2.4.0",
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
-      "ref": "pillow==12.1.1"
+      "ref": "pillow==12.2.0"
     },
     {
       "dependsOn": [
         "packaging==26.0",
         "pyparsing==3.3.2",
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "pip-requirements-parser==32.0.1"
     },
@@ -7587,25 +7590,25 @@
       "ref": "pip==26.0.1"
     },
     {
-      "ref": "platformdirs==4.9.4"
+      "ref": "platformdirs==4.9.6"
     },
     {
       "dependsOn": [
-        "anywidget==0.9.21",
-        "narwhals==2.18.1",
-        "numpy==2.4.3",
+        "anywidget==0.10.0",
+        "narwhals==2.19.0",
+        "numpy==2.4.4",
         "packaging==26.0",
-        "pandas==3.0.1",
-        "pillow==12.1.1",
-        "pytest==9.0.2",
-        "requests==2.33.0",
-        "ruff==0.15.7"
+        "pandas==3.0.2",
+        "pillow==12.2.0",
+        "pytest==9.0.3",
+        "requests==2.33.1",
+        "ruff==0.15.10"
       ],
-      "ref": "plotly==6.6.0"
+      "ref": "plotly==6.7.0"
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "pluggy==1.6.0"
     },
@@ -7622,13 +7625,13 @@
         "MarkupSafe==3.0.3",
         "PyYAML==6.0.3",
         "babel==2.18.0",
-        "click==8.3.1",
+        "click==8.3.2",
         "colorama==0.4.6",
         "ghp-import==2.1.0",
         "importlib_metadata==8.7.1",
         "packaging==26.0",
         "pathspec==1.0.4",
-        "platformdirs==4.9.4",
+        "platformdirs==4.9.6",
         "pyyaml_env_tag==1.1",
         "watchdog==6.0.0"
       ],
@@ -7639,9 +7642,9 @@
         "colorama==0.4.6",
         "packaging==26.0",
         "pylint==4.0.5",
-        "pytest==9.0.2",
-        "requests==2.33.0",
-        "ruff==0.15.7",
+        "pytest==9.0.3",
+        "requests==2.33.1",
+        "ruff==0.15.10",
         "setuptools==82.0.1"
       ],
       "ref": "psutil==7.2.2"
@@ -7658,7 +7661,7 @@
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "pure_eval==0.2.3"
     },
@@ -7668,7 +7671,7 @@
         "anyio==4.13.0",
         "beartype==0.22.9",
         "cachetools==7.0.5",
-        "cryptography==46.0.6",
+        "cryptography==46.0.7",
         "keyring==25.7.0",
         "mkdocs-material==9.7.6",
         "mkdocs==1.6.1",
@@ -7705,7 +7708,7 @@
         "pydantic_core==2.41.5",
         "typing-inspection==0.4.2",
         "typing_extensions==4.15.0",
-        "tzdata==2025.3"
+        "tzdata==2026.1"
       ],
       "ref": "pydantic==2.12.5"
     },
@@ -7721,7 +7724,7 @@
         "packaging==26.0",
         "setuptools==82.0.1"
       ],
-      "ref": "pyinstaller-hooks-contrib==2026.3"
+      "ref": "pyinstaller-hooks-contrib==2026.4"
     },
     {
       "dependsOn": [
@@ -7729,8 +7732,8 @@
         "importlib_metadata==8.7.1",
         "packaging==26.0",
         "psutil==7.2.2",
-        "pyinstaller-hooks-contrib==2026.3",
-        "pytest==9.0.2",
+        "pyinstaller-hooks-contrib==2026.4",
+        "pytest==9.0.3",
         "setuptools==82.0.1"
       ],
       "ref": "pyinstaller==6.19.0"
@@ -7742,7 +7745,7 @@
         "dill==0.4.1",
         "isort==8.0.1",
         "mccabe==0.7.0",
-        "platformdirs==4.9.4",
+        "platformdirs==4.9.6",
         "tomlkit==0.14.0",
         "typing_extensions==4.15.0"
       ],
@@ -7752,9 +7755,9 @@
       "dependsOn": [
         "Markdown==3.10.2",
         "PyYAML==6.0.3",
-        "Pygments==2.19.2"
+        "Pygments==2.20.0"
       ],
-      "ref": "pymdown-extensions==10.21"
+      "ref": "pymdown-extensions==10.21.2"
     },
     {
       "dependsOn": [
@@ -7776,7 +7779,7 @@
       "dependsOn": [
         "anyio==4.13.0",
         "importlib_metadata==8.7.1",
-        "pillow==12.1.1",
+        "pillow==12.2.0",
         "pydantic==2.12.5",
         "typing_extensions==4.15.0"
       ],
@@ -7784,30 +7787,30 @@
     },
     {
       "dependsOn": [
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "typing_extensions==4.15.0"
       ],
       "ref": "pytest-asyncio==1.3.0"
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "pytest-timeout==2.4.0"
     },
     {
       "dependsOn": [
-        "Pygments==2.19.2",
+        "Pygments==2.20.0",
         "attrs==26.1.0",
         "colorama==0.4.6",
         "exceptiongroup==1.3.1",
         "iniconfig==2.3.0",
         "packaging==26.0",
         "pluggy==1.6.0",
-        "requests==2.33.0",
+        "requests==2.33.1",
         "setuptools==82.0.1"
       ],
-      "ref": "pytest==9.0.2"
+      "ref": "pytest==9.0.3"
     },
     {
       "dependsOn": [
@@ -7817,12 +7820,12 @@
     },
     {
       "dependsOn": [
-        "click==8.3.1"
+        "click==8.3.2"
       ],
       "ref": "python-dotenv==1.2.2"
     },
     {
-      "ref": "python-multipart==0.0.22"
+      "ref": "python-multipart==0.0.26"
     },
     {
       "dependsOn": [
@@ -7839,9 +7842,9 @@
     {
       "dependsOn": [
         "PyJWT==2.12.1",
-        "cryptography==46.0.6",
-        "opentelemetry-api==1.40.0",
-        "requests==2.33.0"
+        "cryptography==46.0.7",
+        "opentelemetry-api==1.41.0",
+        "requests==2.33.1"
       ],
       "ref": "redis==7.4.0"
     },
@@ -7857,12 +7860,11 @@
       "dependsOn": [
         "certifi==2026.2.25",
         "chardet==5.2.0",
-        "charset-normalizer==3.4.6",
+        "charset-normalizer==3.4.7",
         "idna==3.11",
-        "pytest==9.0.2",
         "urllib3==2.6.3"
       ],
-      "ref": "requests==2.33.0"
+      "ref": "requests==2.33.1"
     },
     {
       "dependsOn": [
@@ -7876,36 +7878,36 @@
     {
       "dependsOn": [
         "lark==1.3.1",
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "rfc3987-syntax==1.1.0"
     },
     {
       "dependsOn": [
         "docutils==0.22.4",
-        "rich==14.3.3"
+        "rich==14.3.4"
       ],
       "ref": "rich-rst==1.3.2"
     },
     {
       "dependsOn": [
-        "Pygments==2.19.2",
+        "Pygments==2.20.0",
         "ipywidgets==8.1.8",
         "markdown-it-py==4.0.0"
       ],
-      "ref": "rich==14.3.3"
+      "ref": "rich==14.3.4"
     },
     {
       "dependsOn": [
         "Authlib==1.6.9",
-        "anthropic==0.86.0",
+        "anthropic==0.94.0",
         "anyio==4.13.0",
-        "anywidget==0.9.21",
-        "cryptography==46.0.6",
-        "fakeredis==2.34.1",
-        "fastapi==0.135.2",
-        "fastmcp==3.1.1",
-        "griffe==2.0.1",
+        "anywidget==0.10.0",
+        "cryptography==46.0.7",
+        "fakeredis==2.35.0",
+        "fastapi==0.135.3",
+        "fastmcp==3.2.3",
+        "griffe==2.0.2",
         "httpx==0.28.1",
         "ipykernel==7.2.0",
         "keyring==25.7.0",
@@ -7917,10 +7919,10 @@
         "mkdocs-section-index==0.3.11",
         "mkdocs==1.6.1",
         "mkdocstrings==1.0.3",
-        "mypy==1.19.1",
-        "openai==2.30.0",
-        "pandas==3.0.1",
-        "plotly==6.6.0",
+        "mypy==1.20.0",
+        "openai==2.31.0",
+        "pandas==3.0.2",
+        "plotly==6.7.0",
         "pydantic-settings==2.13.1",
         "pydantic==2.12.5",
         "pyinstaller==6.19.0",
@@ -7929,12 +7931,12 @@
         "pytauri==0.8.0",
         "pytest-asyncio==1.3.0",
         "pytest-timeout==2.4.0",
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "redis==7.4.0",
-        "ruff==0.15.7",
+        "ruff==0.15.10",
         "setproctitle==1.3.7",
         "testcontainers==4.14.2",
-        "uvicorn==0.42.0",
+        "uvicorn==0.44.0",
         "watchdog==6.0.0",
         "websockets==16.0"
       ],
@@ -7944,11 +7946,11 @@
       "ref": "rpds-py==0.30.0"
     },
     {
-      "ref": "ruff==0.15.7"
+      "ref": "ruff==0.15.10"
     },
     {
       "dependsOn": [
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "setproctitle==1.3.7"
     },
@@ -7956,13 +7958,13 @@
       "dependsOn": [
         "importlib_metadata==8.7.1",
         "jaraco.functools==4.4.0",
-        "more-itertools==10.8.0",
-        "mypy==1.19.1",
+        "more-itertools==11.0.2",
+        "mypy==1.20.0",
         "packaging==26.0",
         "pip==26.0.1",
         "pytest-timeout==2.4.0",
-        "pytest==9.0.2",
-        "ruff==0.15.7"
+        "pytest==9.0.3",
+        "ruff==0.15.10"
       ],
       "ref": "setuptools==82.0.1"
     },
@@ -7978,19 +7980,19 @@
     {
       "dependsOn": [
         "anyio==4.13.0",
-        "fastapi==0.135.2",
+        "fastapi==0.135.3",
         "starlette==1.0.0",
-        "uvicorn==0.42.0"
+        "uvicorn==0.44.0"
       ],
-      "ref": "sse-starlette==3.3.3"
+      "ref": "sse-starlette==3.3.4"
     },
     {
       "dependsOn": [
-        "Pygments==2.19.2",
+        "Pygments==2.20.0",
         "asttokens==3.0.1",
         "executing==2.2.1",
         "pure_eval==0.2.3",
-        "pytest==9.0.2"
+        "pytest==9.0.3"
       ],
       "ref": "stack-data==0.6.3"
     },
@@ -8000,7 +8002,7 @@
         "PyYAML==6.0.3",
         "anyio==4.13.0",
         "httpx==0.28.1",
-        "python-multipart==0.0.22",
+        "python-multipart==0.0.26",
         "typing_extensions==4.15.0"
       ],
       "ref": "starlette==1.0.0"
@@ -8008,7 +8010,7 @@
     {
       "dependsOn": [
         "PyYAML==6.0.3",
-        "cryptography==46.0.6",
+        "cryptography==46.0.7",
         "docker==7.1.0",
         "httpx==0.28.1",
         "python-dotenv==1.2.2",
@@ -8032,15 +8034,15 @@
         "ipywidgets==8.1.8",
         "pytest-asyncio==1.3.0",
         "pytest-timeout==2.4.0",
-        "pytest==9.0.2",
-        "requests==2.33.0"
+        "pytest==9.0.3",
+        "requests==2.33.1"
       ],
       "ref": "tqdm==4.67.3"
     },
     {
       "dependsOn": [
-        "mypy==1.19.1",
-        "pytest==9.0.2"
+        "mypy==1.20.0",
+        "pytest==9.0.3"
       ],
       "ref": "traitlets==5.14.3"
     },
@@ -8054,14 +8056,14 @@
       "ref": "typing_extensions==4.15.0"
     },
     {
-      "ref": "tzdata==2025.3"
+      "ref": "tzdata==2026.1"
     },
     {
-      "ref": "uncalled-for==0.2.0"
+      "ref": "uncalled-for==0.3.1"
     },
     {
       "dependsOn": [
-        "mypy==1.19.1"
+        "mypy==1.20.0"
       ],
       "ref": "uri-template==1.3.0"
     },
@@ -8071,7 +8073,7 @@
     {
       "dependsOn": [
         "PyYAML==6.0.3",
-        "click==8.3.1",
+        "click==8.3.2",
         "colorama==0.4.6",
         "h11==0.16.0",
         "python-dotenv==1.2.2",
@@ -8079,7 +8081,7 @@
         "watchfiles==1.1.1",
         "websockets==16.0"
       ],
-      "ref": "uvicorn==0.42.0"
+      "ref": "uvicorn==0.44.0"
     },
     {
       "dependsOn": [
@@ -8107,7 +8109,7 @@
     },
     {
       "dependsOn": [
-        "pytest==9.0.2",
+        "pytest==9.0.3",
         "setuptools==82.0.1"
       ],
       "ref": "wrapt==2.1.2"
@@ -8115,8 +8117,8 @@
     {
       "dependsOn": [
         "jaraco.functools==4.4.0",
-        "more-itertools==10.8.0",
-        "pytest==9.0.2"
+        "more-itertools==11.0.2",
+        "pytest==9.0.3"
       ],
       "ref": "zipp==3.23.0"
     }
@@ -8152,9 +8154,9 @@
       ],
       "name": "pywry",
       "type": "application",
-      "version": "2.0.0rc4"
+      "version": "2.0.0rc5"
     },
-    "timestamp": "2026-03-26T03:06:45.628984+00:00",
+    "timestamp": "2026-04-11T05:49:11.596785+00:00",
     "tools": {
       "components": [
         {
@@ -8204,7 +8206,7 @@
           ],
           "name": "cyclonedx-py",
           "type": "application",
-          "version": "7.2.2"
+          "version": "7.3.0"
         },
         {
           "description": "Python library for CycloneDX",
@@ -8258,7 +8260,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:661ed41d-c61d-46b0-933b-28c9270feae5",
+  "serialNumber": "urn:uuid:5b7d8bd5-774f-4484-b955-a7753e04969c",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",

@@ -1,13 +1,13 @@
 <?xml version="1.0" ?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:862c0686-6829-4721-8dab-97722c003c6f" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:0a7afe27-3e9a-49e1-a05b-9df4bdda9c95" version="1">
   <metadata>
-    <timestamp>2026-03-26T03:06:44.608860+00:00</timestamp>
+    <timestamp>2026-04-11T05:49:10.702761+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
           <group>CycloneDX</group>
           <name>cyclonedx-py</name>
-          <version>7.2.2</version>
+          <version>7.3.0</version>
           <description>CycloneDX Software Bill of Materials (SBOM) generator for Python projects and environments</description>
           <licenses>
             <license acknowledgement="declared">
@@ -82,7 +82,7 @@
     </tools>
     <component type="application" bom-ref="root-component">
       <name>pywry</name>
-      <version>2.0.0rc4</version>
+      <version>2.0.0rc5</version>
       <description>A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python.</description>
       <licenses>
         <license acknowledgement="declared">
@@ -306,19 +306,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="Pygments==2.19.2">
+    <component type="library" bom-ref="Pygments==2.20.0">
       <name>Pygments</name>
-      <version>2.19.2</version>
+      <version>2.20.0</version>
       <description>Pygments is a syntax highlighting package written in Python.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-2-Clause</id>
         </license>
-        <license acknowledgement="declared">
-          <name>License :: OSI Approved :: BSD License</name>
-        </license>
       </licenses>
-      <purl>pkg:pypi/pygments@2.19.2</purl>
+      <purl>pkg:pypi/pygments@2.20.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://pygments.org/docs</url>
@@ -478,16 +475,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="anthropic==0.86.0">
+    <component type="library" bom-ref="anthropic==0.94.0">
       <name>anthropic</name>
-      <version>0.86.0</version>
+      <version>0.94.0</version>
       <description>The official Python library for the anthropic API</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/anthropic@0.86.0</purl>
+      <purl>pkg:pypi/anthropic@0.94.0</purl>
       <externalReferences>
         <reference type="vcs">
           <url>https://github.com/anthropics/anthropic-sdk-python</url>
@@ -528,16 +525,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="anywidget==0.9.21">
+    <component type="library" bom-ref="anywidget==0.10.0">
       <name>anywidget</name>
-      <version>0.9.21</version>
+      <version>0.10.0</version>
       <description>custom jupyter widgets made easy</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/anywidget@0.9.21</purl>
+      <purl>pkg:pypi/anywidget@0.10.0</purl>
       <externalReferences>
         <reference type="website">
           <url>https://github.com/manzt/anywidget</url>
@@ -867,16 +864,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="charset-normalizer==3.4.6">
+    <component type="library" bom-ref="charset-normalizer==3.4.7">
       <name>charset-normalizer</name>
-      <version>3.4.6</version>
+      <version>3.4.7</version>
       <description>The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/charset-normalizer@3.4.6</purl>
+      <purl>pkg:pypi/charset-normalizer@3.4.7</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://charset-normalizer.readthedocs.io/</url>
@@ -896,16 +893,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="click==8.3.1">
+    <component type="library" bom-ref="click==8.3.2">
       <name>click</name>
-      <version>8.3.1</version>
+      <version>8.3.2</version>
       <description>Composable command line interface toolkit</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/click@8.3.1</purl>
+      <purl>pkg:pypi/click@8.3.2</purl>
       <externalReferences>
         <reference type="chat">
           <url>https://discord.gg/pallets</url>
@@ -963,14 +960,14 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="cryptography==46.0.6">
+    <component type="library" bom-ref="cryptography==46.0.7">
       <name>cryptography</name>
-      <version>46.0.6</version>
+      <version>46.0.7</version>
       <description>cryptography is a package which provides cryptographic recipes and primitives to Python developers.</description>
       <licenses>
         <expression acknowledgement="declared">Apache-2.0 OR BSD-3-Clause</expression>
       </licenses>
-      <purl>pkg:pypi/cryptography@46.0.6</purl>
+      <purl>pkg:pypi/cryptography@46.0.7</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://cryptography.io/</url>
@@ -994,9 +991,9 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="cyclonedx-bom==7.2.2">
+    <component type="library" bom-ref="cyclonedx-bom==7.3.0">
       <name>cyclonedx-bom</name>
-      <version>7.2.2</version>
+      <version>7.3.0</version>
       <description>CycloneDX Software Bill of Materials (SBOM) generator for Python projects and environments</description>
       <licenses>
         <license acknowledgement="declared">
@@ -1006,7 +1003,7 @@
           <name>License :: OSI Approved :: Apache Software License</name>
         </license>
       </licenses>
-      <purl>pkg:pypi/cyclonedx-bom@7.2.2</purl>
+      <purl>pkg:pypi/cyclonedx-bom@7.3.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://cyclonedx-bom-tool.readthedocs.io/</url>
@@ -1077,16 +1074,16 @@
         <property name="cdx:python:package:required-extra">validation</property>
       </properties>
     </component>
-    <component type="library" bom-ref="cyclopts==4.10.1">
+    <component type="library" bom-ref="cyclopts==4.10.2">
       <name>cyclopts</name>
-      <version>4.10.1</version>
+      <version>4.10.2</version>
       <description>Intuitive, easy CLIs based on type hints.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>Apache-2.0</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/cyclopts@4.10.1</purl>
+      <purl>pkg:pypi/cyclopts@4.10.2</purl>
       <externalReferences>
         <reference type="vcs">
           <url>https://github.com/BrianPugh/cyclopts</url>
@@ -1396,16 +1393,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="fakeredis==2.34.1">
+    <component type="library" bom-ref="fakeredis==2.35.0">
       <name>fakeredis</name>
-      <version>2.34.1</version>
+      <version>2.35.0</version>
       <description>Python implementation of redis API, can be used for testing purposes.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/fakeredis@2.34.1</purl>
+      <purl>pkg:pypi/fakeredis@2.35.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://fakeredis.moransoftware.ca/</url>
@@ -1428,17 +1425,20 @@
           <comment>from packaging metadata Project-URL: Homepage</comment>
         </reference>
       </externalReferences>
+      <properties>
+        <property name="cdx:python:package:required-extra">lua</property>
+      </properties>
     </component>
-    <component type="library" bom-ref="fastapi==0.135.2">
+    <component type="library" bom-ref="fastapi==0.135.3">
       <name>fastapi</name>
-      <version>0.135.2</version>
+      <version>0.135.3</version>
       <description>FastAPI framework, high performance, easy to learn, fast to code, ready for production</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/fastapi@0.135.2</purl>
+      <purl>pkg:pypi/fastapi@0.135.3</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://fastapi.tiangolo.com/</url>
@@ -1462,16 +1462,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="fastmcp==3.1.1">
+    <component type="library" bom-ref="fastmcp==3.2.3">
       <name>fastmcp</name>
-      <version>3.1.1</version>
+      <version>3.2.3</version>
       <description>The fast, Pythonic way to build MCP servers and clients.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>Apache-2.0</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/fastmcp@3.1.1</purl>
+      <purl>pkg:pypi/fastmcp@3.2.3</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://gofastmcp.com</url>
@@ -1542,16 +1542,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="griffe==2.0.1">
+    <component type="library" bom-ref="griffe==2.0.2">
       <name>griffe</name>
-      <version>2.0.1</version>
+      <version>2.0.2</version>
       <description>Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>ISC</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/griffe@2.0.1</purl>
+      <purl>pkg:pypi/griffe@2.0.2</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://mkdocstrings.github.io/griffe</url>
@@ -1587,27 +1587,27 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="griffecli==2.0.1">
+    <component type="library" bom-ref="griffecli==2.0.2">
       <name>griffecli</name>
-      <version>2.0.1</version>
+      <version>2.0.2</version>
       <description>Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>ISC</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/griffecli@2.0.1</purl>
+      <purl>pkg:pypi/griffecli@2.0.2</purl>
     </component>
-    <component type="library" bom-ref="griffelib==2.0.1">
+    <component type="library" bom-ref="griffelib==2.0.2">
       <name>griffelib</name>
-      <version>2.0.1</version>
+      <version>2.0.2</version>
       <description>Signatures for entire Python programs. Extract the structure, the frame, the skeleton of your project, to generate API documentation or find breaking changes in your API.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>ISC</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/griffelib@2.0.1</purl>
+      <purl>pkg:pypi/griffelib@2.0.2</purl>
       <properties>
         <property name="cdx:python:package:required-extra">pypi</property>
       </properties>
@@ -1791,16 +1791,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="ipython==9.11.0">
+    <component type="library" bom-ref="ipython==9.12.0">
       <name>ipython</name>
-      <version>9.11.0</version>
+      <version>9.12.0</version>
       <description>IPython: Productive Interactive Computing</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/ipython@9.11.0</purl>
+      <purl>pkg:pypi/ipython@9.12.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://ipython.readthedocs.io/</url>
@@ -2009,16 +2009,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="jiter==0.13.0">
+    <component type="library" bom-ref="jiter==0.14.0">
       <name>jiter</name>
-      <version>0.13.0</version>
+      <version>0.14.0</version>
       <description>Fast iterable JSON parser.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/jiter@0.13.0</purl>
+      <purl>pkg:pypi/jiter@0.14.0</purl>
       <externalReferences>
         <reference type="website">
           <url>https://github.com/pydantic/jiter/</url>
@@ -2274,16 +2274,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="librt==0.8.1">
+    <component type="library" bom-ref="librt==0.9.0">
       <name>librt</name>
-      <version>0.8.1</version>
+      <version>0.9.0</version>
       <description>Mypyc runtime library</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/librt@0.8.1</purl>
+      <purl>pkg:pypi/librt@0.9.0</purl>
       <externalReferences>
         <reference type="issue-tracker">
           <url>https://github.com/mypyc/mypyc/issues</url>
@@ -2312,27 +2312,27 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="logfire-api==4.30.0">
+    <component type="library" bom-ref="logfire-api==4.32.0">
       <name>logfire-api</name>
-      <version>4.30.0</version>
+      <version>4.32.0</version>
       <description>Shim for the Logfire SDK which does nothing unless Logfire is installed</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/logfire-api@4.30.0</purl>
+      <purl>pkg:pypi/logfire-api@4.32.0</purl>
     </component>
-    <component type="library" bom-ref="lxml==6.0.2">
+    <component type="library" bom-ref="lxml==6.0.3">
       <name>lxml</name>
-      <version>6.0.2</version>
+      <version>6.0.3</version>
       <description>Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/lxml@6.0.2</purl>
+      <purl>pkg:pypi/lxml@6.0.3</purl>
       <externalReferences>
         <reference type="issue-tracker">
           <url>https://bugs.launchpad.net/lxml</url>
@@ -2404,16 +2404,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="mcp==1.26.0">
+    <component type="library" bom-ref="mcp==1.27.0">
       <name>mcp</name>
-      <version>1.26.0</version>
+      <version>1.27.0</version>
       <description>Model Context Protocol SDK</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/mcp@1.26.0</purl>
+      <purl>pkg:pypi/mcp@1.27.0</purl>
       <externalReferences>
         <reference type="issue-tracker">
           <url>https://github.com/modelcontextprotocol/python-sdk/issues</url>
@@ -2787,16 +2787,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="more-itertools==10.8.0">
+    <component type="library" bom-ref="more-itertools==11.0.2">
       <name>more-itertools</name>
-      <version>10.8.0</version>
+      <version>11.0.2</version>
       <description>More routines for operating on iterables, beyond itertools</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/more-itertools@10.8.0</purl>
+      <purl>pkg:pypi/more-itertools@11.0.2</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://more-itertools.readthedocs.io/en/stable/</url>
@@ -2808,16 +2808,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="mypy==1.19.1">
+    <component type="library" bom-ref="mypy==1.20.0">
       <name>mypy</name>
-      <version>1.19.1</version>
+      <version>1.20.0</version>
       <description>Optional static typing for Python</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/mypy@1.19.1</purl>
+      <purl>pkg:pypi/mypy@1.20.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://mypy.readthedocs.io/en/stable/index.html</url>
@@ -2858,16 +2858,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="narwhals==2.18.1">
+    <component type="library" bom-ref="narwhals==2.19.0">
       <name>narwhals</name>
-      <version>2.18.1</version>
+      <version>2.19.0</version>
       <description>Extremely lightweight compatibility layer between dataframe libraries</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/narwhals@2.18.1</purl>
+      <purl>pkg:pypi/narwhals@2.19.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://narwhals-dev.github.io/narwhals/</url>
@@ -2904,14 +2904,14 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="numpy==2.4.3">
+    <component type="library" bom-ref="numpy==2.4.4">
       <name>numpy</name>
-      <version>2.4.3</version>
+      <version>2.4.4</version>
       <description>Fundamental package for array computing in Python</description>
       <licenses>
         <expression acknowledgement="declared">BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0</expression>
       </licenses>
-      <purl>pkg:pypi/numpy@2.4.3</purl>
+      <purl>pkg:pypi/numpy@2.4.4</purl>
       <externalReferences>
         <reference type="distribution">
           <url>https://pypi.org/project/numpy/#files</url>
@@ -2939,9 +2939,9 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="openai==2.30.0">
+    <component type="library" bom-ref="openai==2.31.0">
       <name>openai</name>
-      <version>2.30.0</version>
+      <version>2.31.0</version>
       <description>The official Python library for the openai API</description>
       <licenses>
         <license acknowledgement="declared">
@@ -2951,7 +2951,7 @@
           <name>License :: OSI Approved :: Apache Software License</name>
         </license>
       </licenses>
-      <purl>pkg:pypi/openai@2.30.0</purl>
+      <purl>pkg:pypi/openai@2.31.0</purl>
       <externalReferences>
         <reference type="vcs">
           <url>https://github.com/openai/openai-python</url>
@@ -2988,16 +2988,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="opentelemetry-api==1.40.0">
+    <component type="library" bom-ref="opentelemetry-api==1.41.0">
       <name>opentelemetry-api</name>
-      <version>1.40.0</version>
+      <version>1.41.0</version>
       <description>OpenTelemetry Python API</description>
       <licenses>
         <license acknowledgement="declared">
           <id>Apache-2.0</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/opentelemetry-api@1.40.0</purl>
+      <purl>pkg:pypi/opentelemetry-api@1.41.0</purl>
       <externalReferences>
         <reference type="vcs">
           <url>https://github.com/open-telemetry/opentelemetry-python</url>
@@ -3062,16 +3062,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="pandas==3.0.1">
+    <component type="library" bom-ref="pandas==3.0.2">
       <name>pandas</name>
-      <version>3.0.1</version>
+      <version>3.0.2</version>
       <description>Powerful data structures for data analysis, time series, and statistics</description>
       <licenses>
         <license acknowledgement="declared">
           <name>License :: OSI Approved :: BSD License</name>
         </license>
       </licenses>
-      <purl>pkg:pypi/pandas@3.0.1</purl>
+      <purl>pkg:pypi/pandas@3.0.2</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://pandas.pydata.org/docs/</url>
@@ -3182,16 +3182,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="pillow==12.1.1">
+    <component type="library" bom-ref="pillow==12.2.0">
       <name>pillow</name>
-      <version>12.1.1</version>
+      <version>12.2.0</version>
       <description>Python Imaging Library (fork)</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT-CMU</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/pillow@12.1.1</purl>
+      <purl>pkg:pypi/pillow@12.2.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://pillow.readthedocs.io</url>
@@ -3269,16 +3269,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="platformdirs==4.9.4">
+    <component type="library" bom-ref="platformdirs==4.9.6">
       <name>platformdirs</name>
-      <version>4.9.4</version>
+      <version>4.9.6</version>
       <description>A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/platformdirs@4.9.4</purl>
+      <purl>pkg:pypi/platformdirs@4.9.6</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://platformdirs.readthedocs.io</url>
@@ -3302,16 +3302,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="plotly==6.6.0">
+    <component type="library" bom-ref="plotly==6.7.0">
       <name>plotly</name>
-      <version>6.6.0</version>
+      <version>6.7.0</version>
       <description>An open-source interactive data visualization library for Python</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/plotly@6.6.0</purl>
+      <purl>pkg:pypi/plotly@6.7.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://plotly.com/python/</url>
@@ -3323,11 +3323,11 @@
         </reference>
         <reference type="vcs">
           <url>https://github.com/plotly/plotly.py</url>
-          <comment>from packaging metadata Project-URL: Github</comment>
+          <comment>from packaging metadata Project-URL: GitHub</comment>
         </reference>
         <reference type="website">
           <url>https://plotly.com/python/</url>
-          <comment>from packaging metadata Project-URL: HomePage</comment>
+          <comment>from packaging metadata Project-URL: Homepage</comment>
         </reference>
       </externalReferences>
     </component>
@@ -3663,9 +3663,9 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="pyinstaller-hooks-contrib==2026.3">
+    <component type="library" bom-ref="pyinstaller-hooks-contrib==2026.4">
       <name>pyinstaller-hooks-contrib</name>
-      <version>2026.3</version>
+      <version>2026.4</version>
       <description>Community maintained hooks for PyInstaller</description>
       <licenses>
         <license acknowledgement="declared">
@@ -3675,7 +3675,7 @@
           <name>License :: OSI Approved :: Apache Software License</name>
         </license>
       </licenses>
-      <purl>pkg:pypi/pyinstaller-hooks-contrib@2026.3</purl>
+      <purl>pkg:pypi/pyinstaller-hooks-contrib@2026.4</purl>
       <externalReferences>
         <reference type="distribution">
           <url>https://pypi.org/project/pyinstaller-hooks-contrib</url>
@@ -3728,16 +3728,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="pymdown-extensions==10.21">
+    <component type="library" bom-ref="pymdown-extensions==10.21.2">
       <name>pymdown-extensions</name>
-      <version>10.21</version>
+      <version>10.21.2</version>
       <description>Extension pack for Python Markdown.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/pymdown-extensions@10.21</purl>
+      <purl>pkg:pypi/pymdown-extensions@10.21.2</purl>
       <externalReferences>
         <reference type="website">
           <url>https://github.com/facelessuser/pymdown-extensions</url>
@@ -3829,16 +3829,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="pytest==9.0.2">
+    <component type="library" bom-ref="pytest==9.0.3">
       <name>pytest</name>
-      <version>9.0.2</version>
+      <version>9.0.3</version>
       <description>pytest: simple powerful testing with Python</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/pytest@9.0.2</purl>
+      <purl>pkg:pypi/pytest@9.0.3</purl>
       <externalReferences>
         <reference type="issue-tracker">
           <url>https://github.com/pytest-dev/pytest/issues</url>
@@ -3964,16 +3964,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="python-multipart==0.0.22">
+    <component type="library" bom-ref="python-multipart==0.0.26">
       <name>python-multipart</name>
-      <version>0.0.22</version>
+      <version>0.0.26</version>
       <description>A streaming multipart parser for Python</description>
       <licenses>
         <license acknowledgement="declared">
           <id>Apache-2.0</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/python-multipart@0.0.22</purl>
+      <purl>pkg:pypi/python-multipart@0.0.26</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://kludex.github.io/python-multipart/</url>
@@ -4121,9 +4121,9 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="requests==2.33.0">
+    <component type="library" bom-ref="requests==2.33.1">
       <name>requests</name>
-      <version>2.33.0</version>
+      <version>2.33.1</version>
       <description>Python HTTP for Humans.</description>
       <licenses>
         <license acknowledgement="declared">
@@ -4133,7 +4133,7 @@
           <name>License :: OSI Approved :: Apache Software License</name>
         </license>
       </licenses>
-      <purl>pkg:pypi/requests@2.33.0</purl>
+      <purl>pkg:pypi/requests@2.33.1</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://requests.readthedocs.io</url>
@@ -4208,16 +4208,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="rich==14.3.3">
+    <component type="library" bom-ref="rich==14.3.4">
       <name>rich</name>
-      <version>14.3.3</version>
+      <version>14.3.4</version>
       <description>Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/rich@14.3.3</purl>
+      <purl>pkg:pypi/rich@14.3.4</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://rich.readthedocs.io/en/latest/</url>
@@ -4303,16 +4303,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="ruff==0.15.7">
+    <component type="library" bom-ref="ruff==0.15.10">
       <name>ruff</name>
-      <version>0.15.7</version>
+      <version>0.15.10</version>
       <description>An extremely fast Python linter and code formatter, written in Rust.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/ruff@0.15.7</purl>
+      <purl>pkg:pypi/ruff@0.15.10</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://docs.astral.sh/ruff/</url>
@@ -4448,16 +4448,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="sse-starlette==3.3.3">
+    <component type="library" bom-ref="sse-starlette==3.3.4">
       <name>sse-starlette</name>
-      <version>3.3.3</version>
+      <version>3.3.4</version>
       <description>SSE plugin for Starlette</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/sse-starlette@3.3.3</purl>
+      <purl>pkg:pypi/sse-starlette@3.3.4</purl>
       <externalReferences>
         <reference type="other">
           <url>https://github.com/sysid/sse-starlette</url>
@@ -4711,19 +4711,19 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="tzdata==2025.3">
+    <component type="library" bom-ref="tzdata==2026.1">
       <name>tzdata</name>
-      <version>2025.3</version>
+      <version>2026.1</version>
       <description>Provider of IANA time zone data</description>
       <licenses>
         <license acknowledgement="declared">
           <id>Apache-2.0</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/tzdata@2025.3</purl>
+      <purl>pkg:pypi/tzdata@2026.1</purl>
       <externalReferences>
         <reference type="documentation">
-          <url>https://tzdata.readthedocs.io</url>
+          <url>https://tzdata.python.org</url>
           <comment>from packaging metadata Project-URL: Documentation</comment>
         </reference>
         <reference type="issue-tracker">
@@ -4740,16 +4740,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="uncalled-for==0.2.0">
+    <component type="library" bom-ref="uncalled-for==0.3.1">
       <name>uncalled-for</name>
-      <version>0.2.0</version>
+      <version>0.3.1</version>
       <description>Async dependency injection for Python functions</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/uncalled-for@0.2.0</purl>
+      <purl>pkg:pypi/uncalled-for@0.3.1</purl>
       <externalReferences>
         <reference type="issue-tracker">
           <url>https://github.com/chrisguidry/uncalled-for/issues</url>
@@ -4807,16 +4807,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="uvicorn==0.42.0">
+    <component type="library" bom-ref="uvicorn==0.44.0">
       <name>uvicorn</name>
-      <version>0.42.0</version>
+      <version>0.44.0</version>
       <description>The lightning-fast ASGI server.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/uvicorn@0.42.0</purl>
+      <purl>pkg:pypi/uvicorn@0.44.0</purl>
       <externalReferences>
         <reference type="other">
           <url>https://github.com/Kludex/uvicorn</url>
@@ -5052,7 +5052,7 @@
   </components>
   <dependencies>
     <dependency ref="Authlib==1.6.9">
-      <dependency ref="cryptography==46.0.6"/>
+      <dependency ref="cryptography==46.0.7"/>
     </dependency>
     <dependency ref="Jinja2==3.1.6">
       <dependency ref="MarkupSafe==3.0.3"/>
@@ -5068,16 +5068,16 @@
     </dependency>
     <dependency ref="MarkupSafe==3.0.3"/>
     <dependency ref="PyJWT==2.12.1">
-      <dependency ref="cryptography==46.0.6"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="cryptography==46.0.7"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="PyYAML==6.0.3"/>
-    <dependency ref="Pygments==2.19.2">
+    <dependency ref="Pygments==2.20.0">
       <dependency ref="colorama==0.4.6"/>
     </dependency>
     <dependency ref="SecretStorage==3.5.0">
-      <dependency ref="cryptography==46.0.6"/>
+      <dependency ref="cryptography==46.0.7"/>
       <dependency ref="jeepney==0.9.0"/>
     </dependency>
     <dependency ref="aiofile==3.9.0">
@@ -5088,13 +5088,13 @@
     <dependency ref="annotated-types==0.7.0">
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="anthropic==0.86.0">
+    <dependency ref="anthropic==0.94.0">
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="distro==1.9.0"/>
       <dependency ref="docstring_parser==0.17.0"/>
       <dependency ref="httpx==0.28.1"/>
-      <dependency ref="jiter==0.13.0"/>
-      <dependency ref="mcp==1.26.0"/>
+      <dependency ref="jiter==0.14.0"/>
+      <dependency ref="mcp==1.27.0"/>
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="sniffio==1.3.1"/>
       <dependency ref="typing_extensions==4.15.0"/>
@@ -5104,54 +5104,54 @@
       <dependency ref="idna==3.11"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="anywidget==0.9.21">
+    <dependency ref="anywidget==0.10.0">
       <dependency ref="ipywidgets==8.1.8"/>
       <dependency ref="psygnal==0.15.1"/>
       <dependency ref="typing_extensions==4.15.0"/>
       <dependency ref="watchfiles==1.1.1"/>
     </dependency>
     <dependency ref="arrow==1.4.0">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="python-dateutil==2.9.0.post0"/>
-      <dependency ref="tzdata==2025.3"/>
+      <dependency ref="tzdata==2026.1"/>
     </dependency>
     <dependency ref="astroid==4.0.4">
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="asttokens==3.0.1">
       <dependency ref="astroid==4.0.4"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="attrs==26.1.0"/>
     <dependency ref="babel==2.18.0">
       <dependency ref="Jinja2==3.1.6"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="setuptools==82.0.1"/>
-      <dependency ref="tzdata==2025.3"/>
+      <dependency ref="tzdata==2026.1"/>
     </dependency>
     <dependency ref="backrefs==6.2"/>
     <dependency ref="beartype==0.22.9">
-      <dependency ref="Pygments==2.19.2"/>
-      <dependency ref="click==8.3.1"/>
+      <dependency ref="Pygments==2.20.0"/>
+      <dependency ref="click==8.3.2"/>
       <dependency ref="docutils==0.22.4"/>
-      <dependency ref="fastmcp==3.1.1"/>
+      <dependency ref="fastmcp==3.2.3"/>
       <dependency ref="mkdocs-material==9.7.6"/>
       <dependency ref="mkdocstrings-python==2.0.3"/>
-      <dependency ref="mypy==1.19.1"/>
-      <dependency ref="numpy==2.4.3"/>
+      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="numpy==2.4.4"/>
       <dependency ref="pyinstaller==6.19.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="redis==7.4.0"/>
       <dependency ref="setuptools==82.0.1"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="boolean.py==5.0">
       <dependency ref="isort==8.0.1"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="cachetools==7.0.5"/>
     <dependency ref="caio==0.9.25">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="setuptools==82.0.1"/>
     </dependency>
     <dependency ref="certifi==2026.2.25"/>
@@ -5159,24 +5159,24 @@
       <dependency ref="pycparser==3.0"/>
     </dependency>
     <dependency ref="chardet==5.2.0"/>
-    <dependency ref="charset-normalizer==3.4.6"/>
-    <dependency ref="click==8.3.1">
+    <dependency ref="charset-normalizer==3.4.7"/>
+    <dependency ref="click==8.3.2">
       <dependency ref="colorama==0.4.6"/>
     </dependency>
     <dependency ref="colorama==0.4.6"/>
     <dependency ref="comm==0.2.3">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
-    <dependency ref="cryptography==46.0.6">
+    <dependency ref="cryptography==46.0.7">
       <dependency ref="certifi==2026.2.25"/>
       <dependency ref="cffi==2.0.0"/>
-      <dependency ref="click==8.3.1"/>
-      <dependency ref="mypy==1.19.1"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="ruff==0.15.7"/>
+      <dependency ref="click==8.3.2"/>
+      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="ruff==0.15.10"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="cyclonedx-bom==7.2.2">
+    <dependency ref="cyclonedx-bom==7.3.0">
       <dependency ref="chardet==5.2.0"/>
       <dependency ref="cyclonedx-python-lib==11.7.0"/>
       <dependency ref="packageurl-python==0.17.6"/>
@@ -5186,24 +5186,24 @@
     <dependency ref="cyclonedx-python-lib==11.7.0">
       <dependency ref="jsonschema==4.26.0"/>
       <dependency ref="license-expression==30.4.4"/>
-      <dependency ref="lxml==6.0.2"/>
+      <dependency ref="lxml==6.0.3"/>
       <dependency ref="packageurl-python==0.17.6"/>
       <dependency ref="py-serializable==2.1.0"/>
       <dependency ref="referencing==0.37.0"/>
       <dependency ref="sortedcontainers==2.4.0"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="cyclopts==4.10.1">
+    <dependency ref="cyclopts==4.10.2">
       <dependency ref="Markdown==3.10.2"/>
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="attrs==26.1.0"/>
       <dependency ref="docstring_parser==0.17.0"/>
       <dependency ref="mkdocs==1.6.1"/>
       <dependency ref="pydantic==2.12.5"/>
-      <dependency ref="pymdown-extensions==10.21"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pymdown-extensions==10.21.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="rich-rst==1.3.2"/>
-      <dependency ref="rich==14.3.3"/>
+      <dependency ref="rich==14.3.4"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="debugpy==1.8.20"/>
@@ -5212,23 +5212,23 @@
     <dependency ref="dill==0.4.1"/>
     <dependency ref="distro==1.9.0"/>
     <dependency ref="dnspython==2.8.0">
-      <dependency ref="cryptography==46.0.6"/>
+      <dependency ref="cryptography==46.0.7"/>
       <dependency ref="httpcore==1.0.9"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="idna==3.11"/>
-      <dependency ref="mypy==1.19.1"/>
+      <dependency ref="mypy==1.20.0"/>
       <dependency ref="pylint==4.0.5"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="docker==7.1.0">
       <dependency ref="pytest-timeout==2.4.0"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="requests==2.33.0"/>
-      <dependency ref="ruff==0.15.7"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="requests==2.33.1"/>
+      <dependency ref="ruff==0.15.10"/>
       <dependency ref="urllib3==2.6.3"/>
     </dependency>
     <dependency ref="docstring_parser==0.17.0">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="docutils==0.22.4"/>
     <dependency ref="email-validator==2.3.0">
@@ -5236,21 +5236,22 @@
       <dependency ref="idna==3.11"/>
     </dependency>
     <dependency ref="exceptiongroup==1.3.1">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="executing==2.2.1">
       <dependency ref="asttokens==3.0.1"/>
-      <dependency ref="ipython==9.11.0"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="rich==14.3.3"/>
+      <dependency ref="ipython==9.12.0"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="rich==14.3.4"/>
     </dependency>
-    <dependency ref="fakeredis==2.34.1">
+    <dependency ref="fakeredis==2.35.0">
+      <dependency ref="numpy==2.4.4"/>
       <dependency ref="redis==7.4.0"/>
       <dependency ref="sortedcontainers==2.4.0"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="fastapi==0.135.2">
+    <dependency ref="fastapi==0.135.3">
       <dependency ref="Jinja2==3.1.6"/>
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="annotated-doc==0.0.4"/>
@@ -5258,34 +5259,36 @@
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="pydantic-settings==2.13.1"/>
       <dependency ref="pydantic==2.12.5"/>
-      <dependency ref="python-multipart==0.0.22"/>
+      <dependency ref="python-multipart==0.0.26"/>
       <dependency ref="starlette==1.0.0"/>
       <dependency ref="typing-inspection==0.4.2"/>
       <dependency ref="typing_extensions==4.15.0"/>
-      <dependency ref="uvicorn==0.42.0"/>
+      <dependency ref="uvicorn==0.44.0"/>
     </dependency>
-    <dependency ref="fastmcp==3.1.1">
+    <dependency ref="fastmcp==3.2.3">
       <dependency ref="Authlib==1.6.9"/>
+      <dependency ref="PyJWT==2.12.1"/>
       <dependency ref="PyYAML==6.0.3"/>
-      <dependency ref="anthropic==0.86.0"/>
-      <dependency ref="cyclopts==4.10.1"/>
+      <dependency ref="anthropic==0.94.0"/>
+      <dependency ref="cyclopts==4.10.2"/>
       <dependency ref="exceptiongroup==1.3.1"/>
+      <dependency ref="fakeredis==2.35.0"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="jsonref==1.1.0"/>
       <dependency ref="jsonschema-path==0.4.5"/>
-      <dependency ref="mcp==1.26.0"/>
-      <dependency ref="openai==2.30.0"/>
+      <dependency ref="mcp==1.27.0"/>
+      <dependency ref="openai==2.31.0"/>
       <dependency ref="openapi-pydantic==0.5.1"/>
-      <dependency ref="opentelemetry-api==1.40.0"/>
+      <dependency ref="opentelemetry-api==1.41.0"/>
       <dependency ref="packaging==26.0"/>
-      <dependency ref="platformdirs==4.9.4"/>
+      <dependency ref="platformdirs==4.9.6"/>
       <dependency ref="py-key-value-aio==0.4.4"/>
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="pyperclip==1.11.0"/>
       <dependency ref="python-dotenv==1.2.2"/>
-      <dependency ref="rich==14.3.3"/>
-      <dependency ref="uncalled-for==0.2.0"/>
-      <dependency ref="uvicorn==0.42.0"/>
+      <dependency ref="rich==14.3.4"/>
+      <dependency ref="uncalled-for==0.3.1"/>
+      <dependency ref="uvicorn==0.44.0"/>
       <dependency ref="watchfiles==1.1.1"/>
       <dependency ref="websockets==16.0"/>
     </dependency>
@@ -5295,17 +5298,17 @@
       <dependency ref="Markdown==3.10.2"/>
       <dependency ref="python-dateutil==2.9.0.post0"/>
     </dependency>
-    <dependency ref="griffe==2.0.1">
-      <dependency ref="griffecli==2.0.1"/>
-      <dependency ref="griffelib==2.0.1"/>
+    <dependency ref="griffe==2.0.2">
+      <dependency ref="griffecli==2.0.2"/>
+      <dependency ref="griffelib==2.0.2"/>
     </dependency>
-    <dependency ref="griffecli==2.0.1">
+    <dependency ref="griffecli==2.0.2">
       <dependency ref="colorama==0.4.6"/>
-      <dependency ref="griffelib==2.0.1"/>
+      <dependency ref="griffelib==2.0.2"/>
     </dependency>
-    <dependency ref="griffelib==2.0.1">
+    <dependency ref="griffelib==2.0.2">
       <dependency ref="pip==26.0.1"/>
-      <dependency ref="platformdirs==4.9.4"/>
+      <dependency ref="platformdirs==4.9.6"/>
     </dependency>
     <dependency ref="h11==0.16.0"/>
     <dependency ref="httpcore==1.0.9">
@@ -5315,31 +5318,31 @@
     </dependency>
     <dependency ref="httpx-sse==0.4.3"/>
     <dependency ref="httpx==0.28.1">
-      <dependency ref="Pygments==2.19.2"/>
+      <dependency ref="Pygments==2.20.0"/>
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="certifi==2026.2.25"/>
-      <dependency ref="click==8.3.1"/>
+      <dependency ref="click==8.3.2"/>
       <dependency ref="httpcore==1.0.9"/>
       <dependency ref="idna==3.11"/>
-      <dependency ref="rich==14.3.3"/>
+      <dependency ref="rich==14.3.4"/>
     </dependency>
     <dependency ref="idna==3.11">
-      <dependency ref="mypy==1.19.1"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="ruff==0.15.7"/>
+      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="ruff==0.15.10"/>
     </dependency>
     <dependency ref="importlib_metadata==8.7.1">
-      <dependency ref="ipython==9.11.0"/>
-      <dependency ref="mypy==1.19.1"/>
+      <dependency ref="ipython==9.12.0"/>
+      <dependency ref="mypy==1.20.0"/>
       <dependency ref="packaging==26.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="zipp==3.23.0"/>
     </dependency>
     <dependency ref="iniconfig==2.3.0"/>
     <dependency ref="ipykernel==7.2.0">
       <dependency ref="comm==0.2.3"/>
       <dependency ref="debugpy==1.8.20"/>
-      <dependency ref="ipython==9.11.0"/>
+      <dependency ref="ipython==9.12.0"/>
       <dependency ref="jupyter_client==8.8.0"/>
       <dependency ref="jupyter_core==5.9.1"/>
       <dependency ref="matplotlib-inline==0.2.1"/>
@@ -5348,13 +5351,13 @@
       <dependency ref="psutil==7.2.2"/>
       <dependency ref="pytest-asyncio==1.3.0"/>
       <dependency ref="pytest-timeout==2.4.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="pyzmq==27.1.0"/>
       <dependency ref="tornado==6.5.5"/>
       <dependency ref="traitlets==5.14.3"/>
     </dependency>
-    <dependency ref="ipython==9.11.0">
-      <dependency ref="Pygments==2.19.2"/>
+    <dependency ref="ipython==9.12.0">
+      <dependency ref="Pygments==2.20.0"/>
       <dependency ref="colorama==0.4.6"/>
       <dependency ref="decorator==5.2.1"/>
       <dependency ref="exceptiongroup==1.3.1"/>
@@ -5362,28 +5365,28 @@
       <dependency ref="ipython_pygments_lexers==1.1.1"/>
       <dependency ref="jedi==0.19.2"/>
       <dependency ref="matplotlib-inline==0.2.1"/>
-      <dependency ref="numpy==2.4.3"/>
+      <dependency ref="numpy==2.4.4"/>
       <dependency ref="packaging==26.0"/>
-      <dependency ref="pandas==3.0.1"/>
+      <dependency ref="pandas==3.0.2"/>
       <dependency ref="pexpect==4.9.0"/>
       <dependency ref="prompt_toolkit==3.0.52"/>
       <dependency ref="pytest-asyncio==1.3.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="setuptools==82.0.1"/>
       <dependency ref="stack-data==0.6.3"/>
       <dependency ref="traitlets==5.14.3"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="ipython_pygments_lexers==1.1.1">
-      <dependency ref="Pygments==2.19.2"/>
+      <dependency ref="Pygments==2.20.0"/>
     </dependency>
     <dependency ref="ipywidgets==8.1.8">
       <dependency ref="comm==0.2.3"/>
       <dependency ref="ipykernel==7.2.0"/>
-      <dependency ref="ipython==9.11.0"/>
+      <dependency ref="ipython==9.12.0"/>
       <dependency ref="jsonschema==4.26.0"/>
       <dependency ref="jupyterlab_widgets==3.0.16"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="traitlets==5.14.3"/>
       <dependency ref="widgetsnbextension==4.0.15"/>
     </dependency>
@@ -5394,49 +5397,49 @@
       <dependency ref="colorama==0.4.6"/>
     </dependency>
     <dependency ref="jaraco.classes==3.4.0">
-      <dependency ref="more-itertools==10.8.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="more-itertools==11.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="jaraco.context==6.1.2">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="jaraco.functools==4.4.0">
       <dependency ref="jaraco.classes==3.4.0"/>
-      <dependency ref="more-itertools==10.8.0"/>
-      <dependency ref="mypy==1.19.1"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="more-itertools==11.0.2"/>
+      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="jedi==0.19.2">
       <dependency ref="Jinja2==3.1.6"/>
       <dependency ref="MarkupSafe==3.0.3"/>
-      <dependency ref="Pygments==2.19.2"/>
+      <dependency ref="Pygments==2.20.0"/>
       <dependency ref="attrs==26.1.0"/>
       <dependency ref="babel==2.18.0"/>
       <dependency ref="chardet==5.2.0"/>
       <dependency ref="colorama==0.4.6"/>
       <dependency ref="docutils==0.22.4"/>
       <dependency ref="idna==3.11"/>
-      <dependency ref="mypy==1.19.1"/>
+      <dependency ref="mypy==1.20.0"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="parso==0.8.6"/>
       <dependency ref="pyparsing==3.3.2"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="requests==2.33.0"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="requests==2.33.1"/>
       <dependency ref="six==1.17.0"/>
       <dependency ref="urllib3==2.6.3"/>
     </dependency>
     <dependency ref="jeepney==0.9.0">
       <dependency ref="pytest-asyncio==1.3.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
-    <dependency ref="jiter==0.13.0"/>
+    <dependency ref="jiter==0.14.0"/>
     <dependency ref="jsonpointer==3.1.1"/>
     <dependency ref="jsonref==1.1.0"/>
     <dependency ref="jsonschema-path==0.4.5">
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="pathable==0.5.0"/>
       <dependency ref="referencing==0.37.0"/>
-      <dependency ref="requests==2.33.0"/>
+      <dependency ref="requests==2.33.1"/>
     </dependency>
     <dependency ref="jsonschema-specifications==2025.9.1">
       <dependency ref="referencing==0.37.0"/>
@@ -5460,9 +5463,9 @@
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="ipykernel==7.2.0"/>
       <dependency ref="jupyter_core==5.9.1"/>
-      <dependency ref="mypy==1.19.1"/>
+      <dependency ref="mypy==1.20.0"/>
       <dependency ref="pytest-timeout==2.4.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="python-dateutil==2.9.0.post0"/>
       <dependency ref="pyzmq==27.1.0"/>
       <dependency ref="tornado==6.5.5"/>
@@ -5470,9 +5473,9 @@
     </dependency>
     <dependency ref="jupyter_core==5.9.1">
       <dependency ref="ipykernel==7.2.0"/>
-      <dependency ref="platformdirs==4.9.4"/>
+      <dependency ref="platformdirs==4.9.6"/>
       <dependency ref="pytest-timeout==2.4.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="traitlets==5.14.3"/>
     </dependency>
     <dependency ref="jupyterlab_widgets==3.0.16"/>
@@ -5483,22 +5486,22 @@
       <dependency ref="jaraco.context==6.1.2"/>
       <dependency ref="jaraco.functools==4.4.0"/>
       <dependency ref="jeepney==0.9.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="lark==1.3.1"/>
-    <dependency ref="librt==0.8.1"/>
+    <dependency ref="librt==0.9.0"/>
     <dependency ref="license-expression==30.4.4">
       <dependency ref="boolean.py==5.0"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="ruff==0.15.7"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="ruff==0.15.10"/>
     </dependency>
-    <dependency ref="logfire-api==4.30.0"/>
-    <dependency ref="lxml==6.0.2"/>
+    <dependency ref="logfire-api==4.32.0"/>
+    <dependency ref="lxml==6.0.3"/>
     <dependency ref="magentic==0.41.1">
-      <dependency ref="anthropic==0.86.0"/>
+      <dependency ref="anthropic==0.94.0"/>
       <dependency ref="filetype==1.2.0"/>
-      <dependency ref="logfire-api==4.30.0"/>
-      <dependency ref="openai==2.30.0"/>
+      <dependency ref="logfire-api==4.32.0"/>
+      <dependency ref="openai==2.31.0"/>
       <dependency ref="pydantic-settings==2.13.1"/>
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="typing_extensions==4.15.0"/>
@@ -5509,15 +5512,15 @@
       <dependency ref="ipykernel==7.2.0"/>
       <dependency ref="mdurl==0.1.2"/>
       <dependency ref="psutil==7.2.2"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="requests==2.33.0"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="requests==2.33.1"/>
     </dependency>
     <dependency ref="matplotlib-inline==0.2.1">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="traitlets==5.14.3"/>
     </dependency>
     <dependency ref="mccabe==0.7.0"/>
-    <dependency ref="mcp==1.26.0">
+    <dependency ref="mcp==1.27.0">
       <dependency ref="PyJWT==2.12.1"/>
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="httpx-sse==0.4.3"/>
@@ -5526,13 +5529,13 @@
       <dependency ref="pydantic-settings==2.13.1"/>
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="python-dotenv==1.2.2"/>
-      <dependency ref="python-multipart==0.0.22"/>
-      <dependency ref="rich==14.3.3"/>
-      <dependency ref="sse-starlette==3.3.3"/>
+      <dependency ref="python-multipart==0.0.26"/>
+      <dependency ref="rich==14.3.4"/>
+      <dependency ref="sse-starlette==3.3.4"/>
       <dependency ref="starlette==1.0.0"/>
       <dependency ref="typing-inspection==0.4.2"/>
       <dependency ref="typing_extensions==4.15.0"/>
-      <dependency ref="uvicorn==0.42.0"/>
+      <dependency ref="uvicorn==0.44.0"/>
       <dependency ref="websockets==16.0"/>
     </dependency>
     <dependency ref="mdurl==0.1.2"/>
@@ -5550,7 +5553,7 @@
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="importlib_metadata==8.7.1"/>
       <dependency ref="mergedeep==1.3.4"/>
-      <dependency ref="platformdirs==4.9.4"/>
+      <dependency ref="platformdirs==4.9.6"/>
     </dependency>
     <dependency ref="mkdocs-literate-nav==0.6.3">
       <dependency ref="mkdocs==1.6.1"/>
@@ -5560,16 +5563,16 @@
     <dependency ref="mkdocs-material==9.7.6">
       <dependency ref="Jinja2==3.1.6"/>
       <dependency ref="Markdown==3.10.2"/>
-      <dependency ref="Pygments==2.19.2"/>
+      <dependency ref="Pygments==2.20.0"/>
       <dependency ref="babel==2.18.0"/>
       <dependency ref="backrefs==6.2"/>
       <dependency ref="colorama==0.4.6"/>
       <dependency ref="mkdocs-material-extensions==1.3.1"/>
       <dependency ref="mkdocs==1.6.1"/>
       <dependency ref="paginate==0.5.7"/>
-      <dependency ref="pillow==12.1.1"/>
-      <dependency ref="pymdown-extensions==10.21"/>
-      <dependency ref="requests==2.33.0"/>
+      <dependency ref="pillow==12.2.0"/>
+      <dependency ref="pymdown-extensions==10.21.2"/>
+      <dependency ref="requests==2.33.1"/>
     </dependency>
     <dependency ref="mkdocs-section-index==0.3.11">
       <dependency ref="mkdocs==1.6.1"/>
@@ -5581,7 +5584,7 @@
       <dependency ref="MarkupSafe==3.0.3"/>
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="babel==2.18.0"/>
-      <dependency ref="click==8.3.1"/>
+      <dependency ref="click==8.3.2"/>
       <dependency ref="colorama==0.4.6"/>
       <dependency ref="ghp-import==2.1.0"/>
       <dependency ref="importlib_metadata==8.7.1"/>
@@ -5593,7 +5596,7 @@
       <dependency ref="watchdog==6.0.0"/>
     </dependency>
     <dependency ref="mkdocstrings-python==2.0.3">
-      <dependency ref="griffelib==2.0.1"/>
+      <dependency ref="griffelib==2.0.2"/>
       <dependency ref="mkdocs-autorefs==1.4.4"/>
       <dependency ref="mkdocstrings==1.0.3"/>
       <dependency ref="typing_extensions==4.15.0"/>
@@ -5605,12 +5608,12 @@
       <dependency ref="mkdocs-autorefs==1.4.4"/>
       <dependency ref="mkdocs==1.6.1"/>
       <dependency ref="mkdocstrings-python==2.0.3"/>
-      <dependency ref="pymdown-extensions==10.21"/>
+      <dependency ref="pymdown-extensions==10.21.2"/>
     </dependency>
-    <dependency ref="more-itertools==10.8.0"/>
-    <dependency ref="mypy==1.19.1">
-      <dependency ref="librt==0.8.1"/>
-      <dependency ref="lxml==6.0.2"/>
+    <dependency ref="more-itertools==11.0.2"/>
+    <dependency ref="mypy==1.20.0">
+      <dependency ref="librt==0.9.0"/>
+      <dependency ref="lxml==6.0.3"/>
       <dependency ref="mypy_extensions==1.1.0"/>
       <dependency ref="pathspec==1.0.4"/>
       <dependency ref="pip==26.0.1"/>
@@ -5619,20 +5622,20 @@
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="mypy_extensions==1.1.0"/>
-    <dependency ref="narwhals==2.18.1">
+    <dependency ref="narwhals==2.19.0">
       <dependency ref="packaging==26.0"/>
-      <dependency ref="pandas==3.0.1"/>
-      <dependency ref="rich==14.3.3"/>
+      <dependency ref="pandas==3.0.2"/>
+      <dependency ref="rich==14.3.4"/>
     </dependency>
     <dependency ref="nest-asyncio==1.6.0"/>
-    <dependency ref="numpy==2.4.3"/>
-    <dependency ref="openai==2.30.0">
+    <dependency ref="numpy==2.4.4"/>
+    <dependency ref="openai==2.31.0">
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="distro==1.9.0"/>
       <dependency ref="httpx==0.28.1"/>
-      <dependency ref="jiter==0.13.0"/>
-      <dependency ref="numpy==2.4.3"/>
-      <dependency ref="pandas==3.0.1"/>
+      <dependency ref="jiter==0.14.0"/>
+      <dependency ref="numpy==2.4.4"/>
+      <dependency ref="pandas==3.0.2"/>
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="sniffio==1.3.1"/>
       <dependency ref="tqdm==4.67.3"/>
@@ -5642,65 +5645,65 @@
     <dependency ref="openapi-pydantic==0.5.1">
       <dependency ref="pydantic==2.12.5"/>
     </dependency>
-    <dependency ref="opentelemetry-api==1.40.0">
+    <dependency ref="opentelemetry-api==1.41.0">
       <dependency ref="importlib_metadata==8.7.1"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="packageurl-python==0.17.6">
       <dependency ref="isort==8.0.1"/>
-      <dependency ref="mypy==1.19.1"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="setuptools==82.0.1"/>
     </dependency>
     <dependency ref="packaging==26.0"/>
     <dependency ref="paginate==0.5.7">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
-    <dependency ref="pandas==3.0.1">
+    <dependency ref="pandas==3.0.2">
       <dependency ref="Jinja2==3.1.6"/>
-      <dependency ref="lxml==6.0.2"/>
-      <dependency ref="numpy==2.4.3"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="lxml==6.0.3"/>
+      <dependency ref="numpy==2.4.4"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="python-dateutil==2.9.0.post0"/>
-      <dependency ref="tzdata==2025.3"/>
+      <dependency ref="tzdata==2026.1"/>
     </dependency>
     <dependency ref="parso==0.8.6">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="pathable==0.5.0"/>
     <dependency ref="pathspec==1.0.4">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="pexpect==4.9.0">
       <dependency ref="ptyprocess==0.7.0"/>
     </dependency>
-    <dependency ref="pillow==12.1.1">
+    <dependency ref="pillow==12.2.0">
       <dependency ref="defusedxml==0.7.1"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="pytest-timeout==2.4.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="pip-requirements-parser==32.0.1">
       <dependency ref="packaging==26.0"/>
       <dependency ref="pyparsing==3.3.2"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="pip==26.0.1"/>
-    <dependency ref="platformdirs==4.9.4"/>
-    <dependency ref="plotly==6.6.0">
-      <dependency ref="anywidget==0.9.21"/>
-      <dependency ref="narwhals==2.18.1"/>
-      <dependency ref="numpy==2.4.3"/>
+    <dependency ref="platformdirs==4.9.6"/>
+    <dependency ref="plotly==6.7.0">
+      <dependency ref="anywidget==0.10.0"/>
+      <dependency ref="narwhals==2.19.0"/>
+      <dependency ref="numpy==2.4.4"/>
       <dependency ref="packaging==26.0"/>
-      <dependency ref="pandas==3.0.1"/>
-      <dependency ref="pillow==12.1.1"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="requests==2.33.0"/>
-      <dependency ref="ruff==0.15.7"/>
+      <dependency ref="pandas==3.0.2"/>
+      <dependency ref="pillow==12.2.0"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="requests==2.33.1"/>
+      <dependency ref="ruff==0.15.10"/>
     </dependency>
     <dependency ref="pluggy==1.6.0">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="prompt_toolkit==3.0.52">
       <dependency ref="wcwidth==0.6.0"/>
@@ -5711,13 +5714,13 @@
       <dependency ref="MarkupSafe==3.0.3"/>
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="babel==2.18.0"/>
-      <dependency ref="click==8.3.1"/>
+      <dependency ref="click==8.3.2"/>
       <dependency ref="colorama==0.4.6"/>
       <dependency ref="ghp-import==2.1.0"/>
       <dependency ref="importlib_metadata==8.7.1"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="pathspec==1.0.4"/>
-      <dependency ref="platformdirs==4.9.4"/>
+      <dependency ref="platformdirs==4.9.6"/>
       <dependency ref="pyyaml_env_tag==1.1"/>
       <dependency ref="watchdog==6.0.0"/>
     </dependency>
@@ -5725,9 +5728,9 @@
       <dependency ref="colorama==0.4.6"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="pylint==4.0.5"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="requests==2.33.0"/>
-      <dependency ref="ruff==0.15.7"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="requests==2.33.1"/>
+      <dependency ref="ruff==0.15.10"/>
       <dependency ref="setuptools==82.0.1"/>
     </dependency>
     <dependency ref="psygnal==0.15.1">
@@ -5736,14 +5739,14 @@
     </dependency>
     <dependency ref="ptyprocess==0.7.0"/>
     <dependency ref="pure_eval==0.2.3">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="py-key-value-aio==0.4.4">
       <dependency ref="aiofile==3.9.0"/>
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="beartype==0.22.9"/>
       <dependency ref="cachetools==7.0.5"/>
-      <dependency ref="cryptography==46.0.6"/>
+      <dependency ref="cryptography==46.0.7"/>
       <dependency ref="keyring==25.7.0"/>
       <dependency ref="mkdocs-material==9.7.6"/>
       <dependency ref="mkdocs==1.6.1"/>
@@ -5769,12 +5772,12 @@
       <dependency ref="pydantic_core==2.41.5"/>
       <dependency ref="typing-inspection==0.4.2"/>
       <dependency ref="typing_extensions==4.15.0"/>
-      <dependency ref="tzdata==2025.3"/>
+      <dependency ref="tzdata==2026.1"/>
     </dependency>
     <dependency ref="pydantic_core==2.41.5">
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="pyinstaller-hooks-contrib==2026.3">
+    <dependency ref="pyinstaller-hooks-contrib==2026.4">
       <dependency ref="importlib_metadata==8.7.1"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="setuptools==82.0.1"/>
@@ -5784,8 +5787,8 @@
       <dependency ref="importlib_metadata==8.7.1"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="psutil==7.2.2"/>
-      <dependency ref="pyinstaller-hooks-contrib==2026.3"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pyinstaller-hooks-contrib==2026.4"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="setuptools==82.0.1"/>
     </dependency>
     <dependency ref="pylint==4.0.5">
@@ -5794,14 +5797,14 @@
       <dependency ref="dill==0.4.1"/>
       <dependency ref="isort==8.0.1"/>
       <dependency ref="mccabe==0.7.0"/>
-      <dependency ref="platformdirs==4.9.4"/>
+      <dependency ref="platformdirs==4.9.6"/>
       <dependency ref="tomlkit==0.14.0"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="pymdown-extensions==10.21">
+    <dependency ref="pymdown-extensions==10.21.2">
       <dependency ref="Markdown==3.10.2"/>
       <dependency ref="PyYAML==6.0.3"/>
-      <dependency ref="Pygments==2.19.2"/>
+      <dependency ref="Pygments==2.20.0"/>
     </dependency>
     <dependency ref="pyparsing==3.3.2">
       <dependency ref="Jinja2==3.1.6"/>
@@ -5814,35 +5817,35 @@
     <dependency ref="pytauri==0.8.0">
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="importlib_metadata==8.7.1"/>
-      <dependency ref="pillow==12.1.1"/>
+      <dependency ref="pillow==12.2.0"/>
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="pytest-asyncio==1.3.0">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="pytest-timeout==2.4.0">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
-    <dependency ref="pytest==9.0.2">
-      <dependency ref="Pygments==2.19.2"/>
+    <dependency ref="pytest==9.0.3">
+      <dependency ref="Pygments==2.20.0"/>
       <dependency ref="attrs==26.1.0"/>
       <dependency ref="colorama==0.4.6"/>
       <dependency ref="exceptiongroup==1.3.1"/>
       <dependency ref="iniconfig==2.3.0"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="pluggy==1.6.0"/>
-      <dependency ref="requests==2.33.0"/>
+      <dependency ref="requests==2.33.1"/>
       <dependency ref="setuptools==82.0.1"/>
     </dependency>
     <dependency ref="python-dateutil==2.9.0.post0">
       <dependency ref="six==1.17.0"/>
     </dependency>
     <dependency ref="python-dotenv==1.2.2">
-      <dependency ref="click==8.3.1"/>
+      <dependency ref="click==8.3.2"/>
     </dependency>
-    <dependency ref="python-multipart==0.0.22"/>
+    <dependency ref="python-multipart==0.0.26"/>
     <dependency ref="pyyaml_env_tag==1.1">
       <dependency ref="PyYAML==6.0.3"/>
     </dependency>
@@ -5851,21 +5854,20 @@
     </dependency>
     <dependency ref="redis==7.4.0">
       <dependency ref="PyJWT==2.12.1"/>
-      <dependency ref="cryptography==46.0.6"/>
-      <dependency ref="opentelemetry-api==1.40.0"/>
-      <dependency ref="requests==2.33.0"/>
+      <dependency ref="cryptography==46.0.7"/>
+      <dependency ref="opentelemetry-api==1.41.0"/>
+      <dependency ref="requests==2.33.1"/>
     </dependency>
     <dependency ref="referencing==0.37.0">
       <dependency ref="attrs==26.1.0"/>
       <dependency ref="rpds-py==0.30.0"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
-    <dependency ref="requests==2.33.0">
+    <dependency ref="requests==2.33.1">
       <dependency ref="certifi==2026.2.25"/>
       <dependency ref="chardet==5.2.0"/>
-      <dependency ref="charset-normalizer==3.4.6"/>
+      <dependency ref="charset-normalizer==3.4.7"/>
       <dependency ref="idna==3.11"/>
-      <dependency ref="pytest==9.0.2"/>
       <dependency ref="urllib3==2.6.3"/>
     </dependency>
     <dependency ref="rfc3339-validator==0.1.4">
@@ -5874,27 +5876,27 @@
     <dependency ref="rfc3986-validator==0.1.1"/>
     <dependency ref="rfc3987-syntax==1.1.0">
       <dependency ref="lark==1.3.1"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="rich-rst==1.3.2">
       <dependency ref="docutils==0.22.4"/>
-      <dependency ref="rich==14.3.3"/>
+      <dependency ref="rich==14.3.4"/>
     </dependency>
-    <dependency ref="rich==14.3.3">
-      <dependency ref="Pygments==2.19.2"/>
+    <dependency ref="rich==14.3.4">
+      <dependency ref="Pygments==2.20.0"/>
       <dependency ref="ipywidgets==8.1.8"/>
       <dependency ref="markdown-it-py==4.0.0"/>
     </dependency>
     <dependency ref="root-component">
       <dependency ref="Authlib==1.6.9"/>
-      <dependency ref="anthropic==0.86.0"/>
+      <dependency ref="anthropic==0.94.0"/>
       <dependency ref="anyio==4.13.0"/>
-      <dependency ref="anywidget==0.9.21"/>
-      <dependency ref="cryptography==46.0.6"/>
-      <dependency ref="fakeredis==2.34.1"/>
-      <dependency ref="fastapi==0.135.2"/>
-      <dependency ref="fastmcp==3.1.1"/>
-      <dependency ref="griffe==2.0.1"/>
+      <dependency ref="anywidget==0.10.0"/>
+      <dependency ref="cryptography==46.0.7"/>
+      <dependency ref="fakeredis==2.35.0"/>
+      <dependency ref="fastapi==0.135.3"/>
+      <dependency ref="fastmcp==3.2.3"/>
+      <dependency ref="griffe==2.0.2"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="ipykernel==7.2.0"/>
       <dependency ref="keyring==25.7.0"/>
@@ -5906,10 +5908,10 @@
       <dependency ref="mkdocs-section-index==0.3.11"/>
       <dependency ref="mkdocs==1.6.1"/>
       <dependency ref="mkdocstrings==1.0.3"/>
-      <dependency ref="mypy==1.19.1"/>
-      <dependency ref="openai==2.30.0"/>
-      <dependency ref="pandas==3.0.1"/>
-      <dependency ref="plotly==6.6.0"/>
+      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="openai==2.31.0"/>
+      <dependency ref="pandas==3.0.2"/>
+      <dependency ref="plotly==6.7.0"/>
       <dependency ref="pydantic-settings==2.13.1"/>
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="pyinstaller==6.19.0"/>
@@ -5918,58 +5920,58 @@
       <dependency ref="pytauri==0.8.0"/>
       <dependency ref="pytest-asyncio==1.3.0"/>
       <dependency ref="pytest-timeout==2.4.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="redis==7.4.0"/>
-      <dependency ref="ruff==0.15.7"/>
+      <dependency ref="ruff==0.15.10"/>
       <dependency ref="setproctitle==1.3.7"/>
       <dependency ref="testcontainers==4.14.2"/>
-      <dependency ref="uvicorn==0.42.0"/>
+      <dependency ref="uvicorn==0.44.0"/>
       <dependency ref="watchdog==6.0.0"/>
       <dependency ref="websockets==16.0"/>
     </dependency>
     <dependency ref="rpds-py==0.30.0"/>
-    <dependency ref="ruff==0.15.7"/>
+    <dependency ref="ruff==0.15.10"/>
     <dependency ref="setproctitle==1.3.7">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="setuptools==82.0.1">
       <dependency ref="importlib_metadata==8.7.1"/>
       <dependency ref="jaraco.functools==4.4.0"/>
-      <dependency ref="more-itertools==10.8.0"/>
-      <dependency ref="mypy==1.19.1"/>
+      <dependency ref="more-itertools==11.0.2"/>
+      <dependency ref="mypy==1.20.0"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="pip==26.0.1"/>
       <dependency ref="pytest-timeout==2.4.0"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="ruff==0.15.7"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="ruff==0.15.10"/>
     </dependency>
     <dependency ref="six==1.17.0"/>
     <dependency ref="sniffio==1.3.1"/>
     <dependency ref="sortedcontainers==2.4.0"/>
-    <dependency ref="sse-starlette==3.3.3">
+    <dependency ref="sse-starlette==3.3.4">
       <dependency ref="anyio==4.13.0"/>
-      <dependency ref="fastapi==0.135.2"/>
+      <dependency ref="fastapi==0.135.3"/>
       <dependency ref="starlette==1.0.0"/>
-      <dependency ref="uvicorn==0.42.0"/>
+      <dependency ref="uvicorn==0.44.0"/>
     </dependency>
     <dependency ref="stack-data==0.6.3">
-      <dependency ref="Pygments==2.19.2"/>
+      <dependency ref="Pygments==2.20.0"/>
       <dependency ref="asttokens==3.0.1"/>
       <dependency ref="executing==2.2.1"/>
       <dependency ref="pure_eval==0.2.3"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="starlette==1.0.0">
       <dependency ref="Jinja2==3.1.6"/>
       <dependency ref="PyYAML==6.0.3"/>
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="httpx==0.28.1"/>
-      <dependency ref="python-multipart==0.0.22"/>
+      <dependency ref="python-multipart==0.0.26"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="testcontainers==4.14.2">
       <dependency ref="PyYAML==6.0.3"/>
-      <dependency ref="cryptography==46.0.6"/>
+      <dependency ref="cryptography==46.0.7"/>
       <dependency ref="docker==7.1.0"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="python-dotenv==1.2.2"/>
@@ -5986,26 +5988,26 @@
       <dependency ref="ipywidgets==8.1.8"/>
       <dependency ref="pytest-asyncio==1.3.0"/>
       <dependency ref="pytest-timeout==2.4.0"/>
-      <dependency ref="pytest==9.0.2"/>
-      <dependency ref="requests==2.33.0"/>
+      <dependency ref="pytest==9.0.3"/>
+      <dependency ref="requests==2.33.1"/>
     </dependency>
     <dependency ref="traitlets==5.14.3">
-      <dependency ref="mypy==1.19.1"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="typing-inspection==0.4.2">
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="typing_extensions==4.15.0"/>
-    <dependency ref="tzdata==2025.3"/>
-    <dependency ref="uncalled-for==0.2.0"/>
+    <dependency ref="tzdata==2026.1"/>
+    <dependency ref="uncalled-for==0.3.1"/>
     <dependency ref="uri-template==1.3.0">
-      <dependency ref="mypy==1.19.1"/>
+      <dependency ref="mypy==1.20.0"/>
     </dependency>
     <dependency ref="urllib3==2.6.3"/>
-    <dependency ref="uvicorn==0.42.0">
+    <dependency ref="uvicorn==0.44.0">
       <dependency ref="PyYAML==6.0.3"/>
-      <dependency ref="click==8.3.1"/>
+      <dependency ref="click==8.3.2"/>
       <dependency ref="colorama==0.4.6"/>
       <dependency ref="h11==0.16.0"/>
       <dependency ref="python-dotenv==1.2.2"/>
@@ -6024,13 +6026,13 @@
     <dependency ref="websockets==16.0"/>
     <dependency ref="widgetsnbextension==4.0.15"/>
     <dependency ref="wrapt==2.1.2">
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
       <dependency ref="setuptools==82.0.1"/>
     </dependency>
     <dependency ref="zipp==3.23.0">
       <dependency ref="jaraco.functools==4.4.0"/>
-      <dependency ref="more-itertools==10.8.0"/>
-      <dependency ref="pytest==9.0.2"/>
+      <dependency ref="more-itertools==11.0.2"/>
+      <dependency ref="pytest==9.0.3"/>
     </dependency>
   </dependencies>
 </bom>
