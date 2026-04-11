@@ -270,9 +270,7 @@ class CallbackRegistry:
         """Wait for all pending sync handler futures to complete."""
         if self._pending_futures:
             concurrent.futures.wait(self._pending_futures, timeout=timeout)
-            self._pending_futures = [
-                f for f in self._pending_futures if not f.done()
-            ]
+            self._pending_futures = [f for f in self._pending_futures if not f.done()]
 
     def _ensure_executor(self) -> concurrent.futures.ThreadPoolExecutor:
         """Lazily create the thread pool executor for sync handlers."""
