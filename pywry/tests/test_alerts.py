@@ -598,9 +598,7 @@ class TestNativeWindowAlertE2E:
                 time.sleep(1.0 * (attempt + 1))  # progressive back-off
 
         if last_error is not None:
-            pytest.skip(
-                f"Subprocess failed to start after {max_attempts} attempts: {last_error}"
-            )
+            pytest.skip(f"Subprocess failed to start after {max_attempts} attempts: {last_error}")
 
         yield
 
