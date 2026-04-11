@@ -19,7 +19,7 @@ import uuid
 
 from typing import TYPE_CHECKING, Any, cast
 
-from .base import ChatStore, ConnectionRouter, EventBus, SessionStore, WidgetStore
+from .base import ChartStore, ChatStore, ConnectionRouter, EventBus, SessionStore, WidgetStore
 from .types import ConnectionInfo, EventMessage, UserSession, WidgetData
 
 
@@ -881,6 +881,189 @@ class RedisChatStore(ChatStore):
 
         thread_key = self._thread_key(widget_id, thread_id)
         await r.hset(thread_key, "updated_at", str(time.time()))
+
+    async def close(self) -> None:
+        """Close any resources."""
+
+
+class RedisChartStore(ChartStore):
+    """Redis-backed chart layout/settings store for multi-worker deployments.
+
+    Uses Redis hashes for layout metadata, strings for layout data, and
+    sorted sets for the layout index.
+    """
+
+    def __init__(
+        self,
+        redis_url: str = "redis://localhost:6379/0",
+        prefix: str = "pywry",
+        chart_ttl: int = 2_592_000,  # 30 days
+        pool_size: int = 10,
+        *,
+        redis_client: Redis | None = None,
+    ) -> None:
+        _check_redis()
+        self._redis_url = redis_url
+        self._prefix = prefix
+        self._chart_ttl = chart_ttl
+        self._pool_size = pool_size
+        self._client = redis_client
+
+    # -- Key helpers -------------------------------------------------------
+
+    def _layout_key(self, user_id: str, layout_id: str) -> str:
+        return f"{self._prefix}:chart:{user_id}:layout:{layout_id}"
+
+    def _meta_key(self, user_id: str, layout_id: str) -> str:
+        return f"{self._prefix}:chart:{user_id}:layout_meta:{layout_id}"
+
+    def _index_key(self, user_id: str) -> str:
+        return f"{self._prefix}:chart:{user_id}:layouts"
+
+    def _template_key(self, user_id: str) -> str:
+        return f"{self._prefix}:chart:{user_id}:settings_template"
+
+    def _default_id_key(self, user_id: str) -> str:
+        return f"{self._prefix}:chart:{user_id}:settings_default_id"
+
+    async def _redis(self) -> Any:
+        if self._client is not None:
+            return self._client
+        return RedisClient.from_url(self._redis_url, decode_responses=True)
+
+    # -- Layout operations -------------------------------------------------
+
+    async def save_layout(
+        self,
+        user_id: str,
+        layout_id: str,
+        name: str,
+        data_json: str,
+        *,
+        summary: str = "",
+    ) -> dict[str, Any]:
+        """Save or update a chart layout."""
+        now = int(time.time() * 1000)
+        entry = {
+            "id": layout_id,
+            "name": name,
+            "savedAt": str(now),
+            "summary": summary,
+        }
+        r = await self._redis()
+        async with r.pipeline() as pipe:
+            await pipe.set(self._layout_key(user_id, layout_id), data_json)
+            await pipe.expire(self._layout_key(user_id, layout_id), self._chart_ttl)
+            await pipe.hset(self._meta_key(user_id, layout_id), mapping=entry)
+            await pipe.expire(self._meta_key(user_id, layout_id), self._chart_ttl)
+            await pipe.zadd(self._index_key(user_id), {layout_id: now})
+            await pipe.expire(self._index_key(user_id), self._chart_ttl)
+            await pipe.execute()
+        entry["savedAt"] = now
+        return entry
+
+    async def get_layout(self, user_id: str, layout_id: str) -> str | None:
+        """Get layout data by ID."""
+        r = await self._redis()
+        return await r.get(self._layout_key(user_id, layout_id))
+
+    async def list_layouts(self, user_id: str) -> list[dict[str, Any]]:
+        """List all layout index entries."""
+        r = await self._redis()
+        # Sorted set stores layout_id → score (savedAt), newest first
+        ids_with_scores = await r.zrevrangebyscore(
+            self._index_key(user_id), "+inf", "-inf", withscores=True, start=0, num=200
+        )
+        results: list[dict[str, Any]] = []
+        for lid, score in ids_with_scores:
+            meta = await r.hgetall(self._meta_key(user_id, lid))
+            if meta:
+                meta["savedAt"] = int(float(meta.get("savedAt", score)))
+                results.append(meta)
+            else:
+                results.append({"id": lid, "name": lid, "savedAt": int(score), "summary": ""})
+        return results
+
+    async def delete_layout(self, user_id: str, layout_id: str) -> bool:
+        """Delete a layout."""
+        r = await self._redis()
+        existed = await r.exists(self._layout_key(user_id, layout_id))
+        async with r.pipeline() as pipe:
+            await pipe.delete(self._layout_key(user_id, layout_id))
+            await pipe.delete(self._meta_key(user_id, layout_id))
+            await pipe.zrem(self._index_key(user_id), layout_id)
+            await pipe.execute()
+        return bool(existed)
+
+    async def rename_layout(self, user_id: str, layout_id: str, new_name: str) -> bool:
+        """Rename a layout."""
+        r = await self._redis()
+        key = self._meta_key(user_id, layout_id)
+        if not await r.exists(key):
+            return False
+        now = int(time.time() * 1000)
+        async with r.pipeline() as pipe:
+            await pipe.hset(key, "name", new_name)
+            await pipe.hset(key, "savedAt", str(now))
+            await pipe.expire(key, self._chart_ttl)
+            await pipe.zadd(self._index_key(user_id), {layout_id: now})
+            await pipe.execute()
+        return True
+
+    async def update_layout_meta(
+        self,
+        user_id: str,
+        layout_id: str,
+        *,
+        name: str = "",
+        summary: str = "",
+    ) -> bool:
+        """Update metadata for an existing layout index entry."""
+        r = await self._redis()
+        key = self._meta_key(user_id, layout_id)
+        if not await r.exists(key):
+            return False
+        mapping: dict[str, str] = {}
+        if name:
+            mapping["name"] = name
+        if summary:
+            mapping["summary"] = summary
+        if mapping:
+            await r.hset(key, mapping=mapping)
+            await r.expire(key, self._chart_ttl)
+        return True
+
+    # -- Settings template operations --------------------------------------
+
+    async def save_settings_template(self, user_id: str, template_json: str) -> None:
+        """Save a custom settings template."""
+        r = await self._redis()
+        await r.set(self._template_key(user_id), template_json, ex=self._chart_ttl)
+
+    async def get_settings_template(self, user_id: str) -> str | None:
+        """Get the custom settings template."""
+        r = await self._redis()
+        return await r.get(self._template_key(user_id))
+
+    async def get_settings_default_id(self, user_id: str) -> str:
+        """Get which settings template is active."""
+        r = await self._redis()
+        val = await r.get(self._default_id_key(user_id))
+        return val if val in ("factory", "custom") else "factory"
+
+    async def set_settings_default_id(self, user_id: str, template_id: str) -> None:
+        """Set which settings template is active."""
+        val = template_id if template_id in ("factory", "custom") else "factory"
+        r = await self._redis()
+        await r.set(self._default_id_key(user_id), val, ex=self._chart_ttl)
+
+    async def clear_settings_template(self, user_id: str) -> None:
+        """Remove the custom settings template and reset to factory."""
+        r = await self._redis()
+        async with r.pipeline() as pipe:
+            await pipe.delete(self._template_key(user_id))
+            await pipe.set(self._default_id_key(user_id), "factory", ex=self._chart_ttl)
+            await pipe.execute()
 
     async def close(self) -> None:
         """Close any resources."""

@@ -160,8 +160,7 @@ nav:
       - Rendering Paths: getting-started/rendering-paths.md
     - Concepts:
       - app.show(): guides/app-show.md
-      - HtmlContent: guides/html-content.md
-      - Content Assembly: guides/content-assembly.md
+      - Content Assembly: components/htmlcontent/content-assembly.md
       - Window Modes: guides/window-management.md
       - Event System: guides/events.md
       - JavaScript Bridge: guides/javascript-bridge.md
@@ -169,28 +168,72 @@ nav:
       - State, Redis & RBAC: guides/state-and-auth.md
       - OAuth2 Authentication: guides/oauth2.md
       - Hot Reload: guides/hot-reload.md
-    - UI:
-      - Toolbar System: guides/toolbars.md
-      - Chat: guides/chat.md
-      - Chat Artifacts & Providers: guides/chat-artifacts.md
-      - Modals: guides/modals.md
-      - Toasts & Alerts: guides/toasts.md
-      - Theming & CSS: guides/theming.md
     - Native:
       - Builder Options: guides/builder-options.md
       - Native Menus: guides/menus.md
       - System Tray: guides/tray.md
-    - Integrations:
-      - Plotly Charts: guides/plotly.md
-      - AgGrid Tables: guides/aggrid.md
-      - Multi-Widget Pages: guides/multi-widget.md
-      - Tauri Plugins: guides/tauri-plugins.md
     - Hosting:
       - Browser Mode: guides/browser-mode.md
       - Deploy Mode: guides/deploy-mode.md
       - Standalone Executable: guides/standalone-executable.md
     - Features: features.md
     - Changelog: changelog.md
+
+  - Components:
+    - components/index.md
+    - HtmlContent: components/htmlcontent/index.md
+    - Toolbar:
+      - components/toolbar/index.md
+      - Button: components/toolbar/button.md
+      - Select: components/toolbar/select.md
+      - MultiSelect: components/toolbar/multiselect.md
+      - RadioGroup: components/toolbar/radiogroup.md
+      - TabGroup: components/toolbar/tabgroup.md
+      - TextInput: components/toolbar/textinput.md
+      - TextArea: components/toolbar/textarea.md
+      - SearchInput: components/toolbar/searchinput.md
+      - SecretInput: components/toolbar/secretinput.md
+      - NumberInput: components/toolbar/numberinput.md
+      - DateInput: components/toolbar/dateinput.md
+      - SliderInput: components/toolbar/sliderinput.md
+      - RangeInput: components/toolbar/rangeinput.md
+      - Toggle: components/toolbar/toggle.md
+      - Checkbox: components/toolbar/checkbox.md
+      - Div: components/toolbar/div.md
+      - Marquee: components/toolbar/marquee.md
+      - TickerItem: components/toolbar/tickeritem.md
+      - Toolbar: components/toolbar/toolbar.md
+      - Option: components/toolbar/option.md
+      - ToolbarItem: components/toolbar/toolbaritem.md
+    - Modal:
+      - components/modal/index.md
+    - Toasts:
+      - components/toasts/index.md
+    - Chat:
+      - components/chat/index.md
+    - Theming & CSS: components/theming.md
+
+  - Integrations:
+    - integrations/index.md
+    - AgGrid:
+      - integrations/aggrid/index.md
+      - Grid API: integrations/aggrid/grid.md
+    - Plotly:
+      - integrations/plotly/index.md
+      - PlotlyConfig API: integrations/plotly/plotly-config.md
+    - TradingView:
+      - integrations/tradingview/index.md
+      - Config: integrations/tradingview/tvchart-config.md
+      - Models: integrations/tradingview/tvchart-models.md
+      - DatafeedProvider: integrations/tradingview/tvchart-datafeed.md
+      - UDFAdapter: integrations/tradingview/tvchart-udf.md
+      - TVChartStateMixin: integrations/tradingview/tvchart-mixin.md
+    - Chat:
+      - integrations/chat/index.md
+      - Chat Providers API: integrations/chat/chat-providers.md
+    - Multi-Widget: integrations/multi-widget.md
+    - Anywidget: integrations/anywidget.md
+    - Tauri Plugins: integrations/tauri-plugins.md
 
   - API:
     - reference/index.md
@@ -206,7 +249,19 @@ nav:
       - Window Manager: reference/window-manager.md
       - Window Dispatch: reference/window-dispatch.md
       - Commands: reference/commands.md
-    - Events: reference/events.md
+    - Events:
+      - reference/events/index.md
+      - System (pywry): reference/events/system.md
+      - Plotly: reference/events/plotly.md
+      - AG Grid: reference/events/grid.md
+      - Toolbar: reference/events/toolbar.md
+      - Auth: reference/events/auth.md
+      - Chat: reference/events/chat.md
+      - TradingView: reference/events/tvchart.md
+      - Tray: reference/events/tray.md
+      - Menu: reference/events/menu.md
+      - Modal: reference/events/modal.md
+      - JavaScript API: reference/events/javascript-api.md
     - Models & Config:
       - Models: reference/models.md
       - Config: reference/config.md
@@ -215,7 +270,6 @@ nav:
     - Chat:
       - Chat Core: reference/chat.md
       - Chat Manager: reference/chat-manager.md
-      - Chat Providers: reference/chat-providers.md
     - State:
       - State: reference/state.md
       - Mixins: reference/state-mixins.md
@@ -230,37 +284,15 @@ nav:
       - Deploy Routes: reference/auth-deploy-routes.md
       - Callback Server: reference/auth-callback-server.md
       - PKCE: reference/auth-pkce.md
-    - UI:
-      - reference/components/index.md
-      - CSS: reference/css.md
-      - Modal: reference/modal.md
-      - Toolbar Functions: reference/toolbar-functions.md
-      - Components:
-        - Button: reference/components/button.md
-        - Checkbox: reference/components/checkbox.md
-        - DateInput: reference/components/dateinput.md
-        - Div: reference/components/div.md
-        - Marquee: reference/components/marquee.md
-        - MultiSelect: reference/components/multiselect.md
-        - NumberInput: reference/components/numberinput.md
-        - Option: reference/components/option.md
-        - RadioGroup: reference/components/radiogroup.md
-        - RangeInput: reference/components/rangeinput.md
-        - SearchInput: reference/components/searchinput.md
-        - SecretInput: reference/components/secretinput.md
-        - Select: reference/components/select.md
-        - SliderInput: reference/components/sliderinput.md
-        - TabGroup: reference/components/tabgroup.md
-        - TextArea: reference/components/textarea.md
-        - TextInput: reference/components/textinput.md
-        - TickerItem: reference/components/tickeritem.md
-        - Toggle: reference/components/toggle.md
-        - Toolbar: reference/components/toolbar.md
-        - ToolbarItem: reference/components/toolbaritem.md
-    - Integrations:
-      - Plotly: reference/plotly-config.md
-      - Grid: reference/grid.md
-      - MCP API: reference/mcp-api.md
+    - CSS:
+      - reference/css/index.md
+      - Core (pywry.css): reference/css/core.md
+      - Chat (chat.css): reference/css/chat.md
+      - Toast (toast.css): reference/css/toast.md
+      - TradingView (tvchart.css): reference/css/tvchart.md
+    - Modal: reference/modal.md
+    - Toolbar Functions: reference/toolbar-functions.md
+    - MCP API: reference/mcp-api.md
     - Utilities:
       - Callbacks: reference/callbacks.md
       - Asset Loader: reference/asset-loader.md
@@ -273,30 +305,6 @@ nav:
       - Notebook: reference/notebook.md
       - CLI: reference/cli.md
       - Utils: reference/utils.md
-
-  - Components:
-    - components/index.md
-    - Button: components/button.md
-    - Select: components/select.md
-    - MultiSelect: components/multiselect.md
-    - RadioGroup: components/radiogroup.md
-    - TabGroup: components/tabgroup.md
-    - TextInput: components/textinput.md
-    - TextArea: components/textarea.md
-    - SearchInput: components/searchinput.md
-    - SecretInput: components/secretinput.md
-    - NumberInput: components/numberinput.md
-    - DateInput: components/dateinput.md
-    - SliderInput: components/sliderinput.md
-    - RangeInput: components/rangeinput.md
-    - Toggle: components/toggle.md
-    - Checkbox: components/checkbox.md
-    - Div: components/div.md
-    - Marquee: components/marquee.md
-    - TickerItem: components/tickeritem.md
-    - Toolbar: components/toolbar.md
-    - Option: components/option.md
-    - ToolbarItem: components/toolbaritem.md
 
   - MCP:
     - mcp/index.md

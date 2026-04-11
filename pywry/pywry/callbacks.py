@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import fnmatch
 import inspect
 import re
@@ -60,6 +61,9 @@ class CallbackRegistry:
         # {window_label: {event_type: [(widget_type, widget_id, handler)]}}
         self._scoped_callbacks: dict[str, dict[str, list[tuple[str, str, CallbackFunc]]]] = {}
         self._destroyed_labels: set[str] = set()
+        # Thread pool for sync handlers — avoids blocking the reader thread
+        self._executor: concurrent.futures.ThreadPoolExecutor | None = None
+        self._max_workers: int = 4
 
     @staticmethod
     def _matches(pattern: str, source: str) -> bool:
@@ -261,14 +265,23 @@ class CallbackRegistry:
 
         return handlers
 
+    def _ensure_executor(self) -> concurrent.futures.ThreadPoolExecutor:
+        """Lazily create the thread pool executor for sync handlers."""
+        if self._executor is None:
+            self._executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=self._max_workers,
+                thread_name_prefix="pywry-callback",
+            )
+        return self._executor
+
     def _invoke_handler(
         self, handler: CallbackFunc, data: Any, event_type: str, label: str
     ) -> bool:
         """Invoke a single handler with appropriate arguments.
 
-        Sync handlers are executed directly on the current thread.
-        Async handlers are scheduled via the BlockingPortal for proper
-        async runtime integration.
+        Sync handlers are submitted to a thread pool so they never block
+        the reader thread. Async handlers are scheduled via the
+        BlockingPortal for proper async runtime integration.
         """
         try:
             sig = inspect.signature(handler)
@@ -283,13 +296,19 @@ class CallbackRegistry:
                 # Async handler - schedule via portal
                 return self._invoke_async_handler(handler, data, event_type, label, num_params)
 
-            # Sync handler - execute directly
-            if num_params >= 3:
-                handler(data, event_type, label)
-            elif num_params == 2:
-                handler(data, event_type)
-            else:
-                handler(data)
+            # Sync handler - offload to thread pool
+            def _run_sync() -> None:
+                try:
+                    if num_params >= 3:
+                        handler(data, event_type, label)
+                    elif num_params == 2:
+                        handler(data, event_type)
+                    else:
+                        handler(data)
+                except Exception:
+                    log_callback_error(event_type, label, Exception("Handler invocation failed"))
+
+            self._ensure_executor().submit(_run_sync)
             return True
 
         except Exception:
@@ -504,6 +523,9 @@ class CallbackRegistry:
         self._callbacks.clear()
         self._scoped_callbacks.clear()
         self._destroyed_labels.clear()
+        if self._executor is not None:
+            self._executor.shutdown(wait=False)
+            self._executor = None
         debug("Cleared all callbacks")
 
 

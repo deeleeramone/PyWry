@@ -12,7 +12,13 @@ import uuid
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
-from .state_mixins import ChatStateMixin, EmittingWidget, GridStateMixin, PlotlyStateMixin
+from .state_mixins import (
+    ChatStateMixin,
+    EmittingWidget,
+    GridStateMixin,
+    PlotlyStateMixin,
+)
+from .tvchart.mixin import TVChartStateMixin
 
 
 if TYPE_CHECKING:
@@ -392,6 +398,8 @@ function render({ model, el }) {
             const event = JSON.stringify({ type: type, data: data, ts: Date.now() });
             model.set('_js_event', event);
             model.save_changes();
+            // Also dispatch locally so JS-side listeners fire immediately
+            this._fire(type, data || {});
         },
         on: function(type, callback) {
             if (!this._handlers[type]) this._handlers[type] = [];
@@ -1051,6 +1059,8 @@ function render({ model, el }) {
             const event = JSON.stringify({ type: type, data: data, ts: Date.now() });
             model.set('_js_event', event);
             model.save_changes();
+            // Also dispatch locally so JS-side listeners fire immediately
+            this._fire(type, data || {});
         },
         on: function(type, callback) {
             if (!this._handlers[type]) this._handlers[type] = [];
@@ -1299,6 +1309,59 @@ function render({ model, el }) {
     setTimeout(renderContent, 100);
 }
 export default { render };
+"""
+
+
+@lru_cache(maxsize=1)
+def _get_tvchart_widget_esm() -> str:
+    """Build the TradingView chart widget ESM by combining bundled assets and widget code."""
+    from .assets import get_toast_notifications_js, get_tvchart_defaults_js, get_tvchart_js
+
+    tvchart_js = get_tvchart_js()
+    if not tvchart_js:
+        raise RuntimeError("LightweightCharts JS not found in bundled assets")
+
+    tvchart_defaults_js = get_tvchart_defaults_js()
+    if not tvchart_defaults_js:
+        raise RuntimeError("TVChart defaults JS not found")
+
+    toast_js = get_toast_notifications_js() or ""
+    toolbar_handlers_js = _get_toolbar_handlers_js()
+
+    widget_js_file = _SRC_DIR / "tvchart-widget.js"
+    if not widget_js_file.exists():
+        raise FileNotFoundError(f"TVChart widget JS not found: {widget_js_file}")
+
+    widget_js = widget_js_file.read_text(encoding="utf-8")
+    widget_js = widget_js.replace("__TOOLBAR_HANDLERS__", toolbar_handlers_js)
+
+    return f"""
+// Load toast notification system
+{toast_js}
+
+console.log('[PyWry TVChart ESM] Module loading...');
+
+// Load LightweightCharts if not already present
+if (typeof LightweightCharts === 'undefined') {{
+    console.log('[PyWry TVChart ESM] Loading LightweightCharts...');
+    var _origDefine = (typeof define !== 'undefined') ? define : undefined;
+    if (typeof define !== 'undefined') define = undefined;
+    if (typeof self === 'undefined' && typeof window !== 'undefined') {{
+        var self = window;
+    }}
+
+{tvchart_js}
+
+    if (_origDefine) define = _origDefine;
+    console.log('[PyWry TVChart ESM] LightweightCharts loaded');
+}} else {{
+    console.log('[PyWry TVChart ESM] LightweightCharts already loaded');
+}}
+
+// Load tvchart defaults (registry, event handlers, theme palettes)
+{tvchart_defaults_js}
+
+{widget_js}
 """
 
 
@@ -1820,6 +1883,48 @@ if HAS_ANYWIDGET:
         content = traitlets.Unicode("").tag(sync=True)
         theme = traitlets.Unicode("dark").tag(sync=True)
 
+    class PyWryTVChartWidget(PyWryWidget, TVChartStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
+        """Widget for inline notebook rendering with TradingView Lightweight Charts."""
+
+        _esm = _get_tvchart_widget_esm()
+        _css = _get_pywry_base_css()
+
+        content = traitlets.Unicode("").tag(sync=True)
+        chart_config = traitlets.Unicode("").tag(sync=True)
+        theme = traitlets.Unicode("dark").tag(sync=True)
+        width = traitlets.Unicode("100%").tag(sync=True)
+        height = traitlets.Unicode("500px").tag(sync=True)
+        chart_id = traitlets.Unicode("").tag(sync=True)
+        _js_event = traitlets.Unicode("").tag(sync=True)
+        _py_event = traitlets.Unicode("").tag(sync=True)
+
+        def __init__(
+            self,
+            content: str = "",
+            theme: str = "dark",
+            width: str = "100%",
+            height: str = "500px",
+            chart_config: str = "",
+            chart_id: str = "",
+            **kwargs,
+        ):
+            super().__init__(content=content, theme=theme, width=width, height=height, **kwargs)
+            self.chart_config = chart_config
+            self.chart_id = chart_id or self._label
+            self.observe(self._handle_js_event, names=["_js_event"])
+
+        def emit(self, event_type: str, data: dict[str, Any] | None = None) -> None:
+            """Send an event from Python to JavaScript."""
+            payload = data.copy() if data else {}
+            payload.setdefault("chartId", self.chart_id)
+            super().emit(event_type, payload)
+
+        def display(self) -> None:
+            """Display the widget in the current notebook output context."""
+            from IPython.display import display as ipy_display
+
+            ipy_display(self)
+
 else:
 
     class PyWryWidget(EmittingWidget):  # type: ignore[no-redef]
@@ -1901,3 +2006,6 @@ else:
 
     class PyWryChatWidget(PyWryWidget):  # type: ignore[no-redef]
         """Fallback Chat widget when anywidget is not available."""
+
+    class PyWryTVChartWidget(PyWryWidget):  # type: ignore[no-redef]
+        """Fallback TVChart widget when anywidget is not available."""

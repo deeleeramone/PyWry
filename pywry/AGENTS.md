@@ -35,6 +35,7 @@ Built on [PyTauri](https://pypi.org/project/pytauri/) (which uses Rust's [Tauri]
 - **Security**: Scoped token auth enabled by default, CSP headers, internal API protection, production presets available
 - **AgGrid Tables**: Best-in-class Pandas → AgGrid conversion with pre-wired events, context menus, and practical defaults
 - **Plotly Charts**: Plotly rendering with pre-wired plot events for Dash-like interactivity
+- **TradingView Charts**: TradingView Lightweight Charts integration with OHLCV normalization, multi-series, indicators, and toolbar-driven controls
 - **Toast Notifications**: Built-in alert system with positioning (info, success, warning, error, confirm)
 - **Marquee Ticker**: Scrolling text/content with dynamic updates
 - **Secrets Handling**: Secure password inputs — values stored server-side, never rendered in HTML
@@ -123,6 +124,8 @@ pywry/
 ├── asset_loader.py      # CSS/JS file loading with caching
 ├── grid.py              # AgGrid Pydantic models (ColDef, GridOptions, etc.)
 ├── plotly_config.py     # Plotly configuration models (PlotlyConfig, ModeBarButton, etc.)
+├── tvchart_config.py    # TradingView chart config models (TVChartConfig, SeriesConfig, etc.)
+├── tvchart.py           # OHLCV data normalization and toolbar factory
 ├── toolbar.py           # Toolbar component models (Button, Select, etc.)
 ├── state_mixins.py      # Widget state management mixins
 ├── hot_reload.py        # Hot reload manager
@@ -196,7 +199,7 @@ from pywry.grid import ColDef, ColGroupDef, DefaultColDef, RowSelection, GridOpt
 from pywry import GridStateMixin, PlotlyStateMixin, ToolbarStateMixin
 
 # Inline functions (for notebooks)
-from pywry.inline import show_plotly, show_dataframe, block, stop_server
+from pywry.inline import show_plotly, show_dataframe, show_tvchart, block, stop_server
 
 # Notebook detection
 from pywry import NotebookEnvironment, detect_notebook_environment, is_anywidget_available, should_use_inline_rendering
@@ -307,6 +310,22 @@ handle = app.show_dataframe(
     on_cell_click=None,         # Cell click callback (notebook mode)
     on_row_selected=None,       # Row selection callback (notebook mode)
     server_side=False,          # Use server-side mode for large datasets
+)
+
+# Show TradingView Lightweight Chart
+handle = app.show_tvchart(
+    data,                       # OHLCV DataFrame, list of dicts, or dict of lists
+    title=None,
+    width=None,
+    height=None,
+    callbacks=None,
+    chart_options=None,         # Chart-level options (layout, grid, etc.)
+    series_options=None,        # Series-specific options (colors, etc.)
+    symbol_col=None,            # Column name for multi-series grouping
+    max_bars=10_000,
+    toolbars=None,
+    on_click=None,
+    on_crosshair=None,
 )
 ```
 

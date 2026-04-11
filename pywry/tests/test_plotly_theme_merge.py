@@ -9,6 +9,8 @@ Proves that:
 These are NEW tests for the deep-merge / dual-template feature.
 """
 
+# pylint: disable=missing-function-docstring
+
 from __future__ import annotations
 
 import json
@@ -285,8 +287,7 @@ def _node_available() -> bool:
         )
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
-    else:
-        return result.returncode == 0
+    return result.returncode == 0
 
 
 def _run_js(code: str) -> str:

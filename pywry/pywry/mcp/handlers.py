@@ -342,6 +342,34 @@ def _handle_show_dataframe(ctx: HandlerContext) -> HandlerResult:
     }
 
 
+def _handle_show_tvchart(ctx: HandlerContext) -> HandlerResult:
+    data = json.loads(ctx.args["data_json"])
+
+    app = get_app()
+    widget = app.show_tvchart(
+        data=data,
+        title=ctx.args.get("title", "Chart"),
+        height=ctx.args.get("height", 500),
+        chart_options=ctx.args.get("chart_options"),
+        series_options=ctx.args.get("series_options"),
+    )
+
+    widget_id = getattr(widget, "widget_id", None) or uuid.uuid4().hex
+    register_widget(widget_id, widget)
+
+    if ctx.headless:
+        from ..inline import _state as inline_state
+
+        if widget_id in inline_state.widgets:
+            inline_state.widgets[widget_id]["persistent"] = True
+
+    return {
+        "widget_id": widget_id,
+        "path": f"/widget/{widget_id}",
+        "created": True,
+    }
+
+
 # =============================================================================
 # Widget Manipulation Handlers
 # =============================================================================
@@ -1044,6 +1072,7 @@ _HANDLERS: dict[str, Callable[[HandlerContext], HandlerResult]] = {
     "build_ticker_item": _handle_build_ticker_item,
     "show_plotly": _handle_show_plotly,
     "show_dataframe": _handle_show_dataframe,
+    "show_tvchart": _handle_show_tvchart,
     # Widget Manipulation
     "set_content": _handle_set_content,
     "set_style": _handle_set_style,

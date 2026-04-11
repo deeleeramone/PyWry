@@ -80,7 +80,9 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "S104",
     "S105",
     "S106",
+    "S310",
     "ARG",
+    "ASYNC240",
 ]
 
 "__init__.py" = [
@@ -100,6 +102,14 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 "examples/**/*.py" = [
     "S311",   # pseudo-random for UI animation/demo delays, not security
+    "S110",   # try-except-pass acceptable in demos
+    "N806",   # uppercase variable names in function scope
+    "C901",   # complexity limits relaxed for demos
+    "PLR0911", # too many return statements
+    "PLR0912", # too many branches
+    "PLR0915", # too many statements
+    "RUF002", # ambiguous unicode in docstrings (en-dash)
+    "RUF003", # ambiguous unicode in comments (en-dash)
 ]
 
 "pywry/config.py" = [

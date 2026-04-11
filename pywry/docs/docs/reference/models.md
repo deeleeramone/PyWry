@@ -11,6 +11,7 @@ Core Pydantic models for content, window configuration, and events.
       show_root_heading: true
       heading_level: 2
       members: true
+      show_if_no_docstring: true
 
 ---
 
@@ -21,6 +22,7 @@ Core Pydantic models for content, window configuration, and events.
       show_root_heading: true
       heading_level: 2
       members: true
+      show_if_no_docstring: true
 
 ---
 

@@ -4178,3 +4178,221 @@ def show_dataframe(  # pylint: disable=too-many-arguments
     else:
         widget.display()  # Jupyter notebook mode: show IFrame
     return widget
+
+
+def _preload_chart_data(user_id: str = "default") -> dict[str, str]:
+    """Fetch all chart layouts and settings from ChartStore for JS preload."""
+    import json as _json  # noqa: PLC0415
+
+    from .state import get_chart_store  # noqa: PLC0415
+    from .state.sync_helpers import run_async  # noqa: PLC0415
+
+    store = get_chart_store()
+    preload: dict[str, str] = {}
+    try:
+        index = run_async(store.list_layouts(user_id), timeout=10.0)
+        preload["__pywry_tvchart_layout_index_v1"] = _json.dumps(index)
+        for entry in index:
+            lid = entry.get("id", "")
+            if lid:
+                layout_data = run_async(store.get_layout(user_id, lid), timeout=5.0)
+                if layout_data:
+                    preload[f"__pywry_tvchart_layout_data_v1_{lid}"] = layout_data
+        tmpl = run_async(store.get_settings_template(user_id), timeout=5.0)
+        if tmpl:
+            preload["__pywry_tvchart_settings_custom_template_v1"] = tmpl
+        def_id = run_async(store.get_settings_default_id(user_id), timeout=5.0)
+        preload["__pywry_tvchart_settings_default_template_v1"] = def_id
+    except Exception:
+        logger.debug("Chart preload failed", exc_info=True)
+    return preload
+
+
+def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
+    data: Any = None,
+    callbacks: dict[str, Callable[..., Any]] | None = None,
+    title: str = "Chart",
+    width: str = "100%",
+    height: int = 500,
+    theme: ThemeLiteral | None = None,
+    chart_options: dict[str, Any] | None = None,
+    series_options: dict[str, Any] | None = None,
+    symbol_col: str | None = None,
+    max_bars: int = 10_000,
+    toolbars: list[dict[str, Any] | Toolbar] | None = None,
+    modals: list[dict[str, Any] | Modal] | None = None,
+    open_browser: bool = False,
+    storage: dict[str, Any] | None = None,
+    use_datafeed: bool = False,
+    symbol: str | None = None,
+    resolution: str = "1D",
+) -> Any:
+    """Show a TradingView Lightweight Chart inline in a notebook.
+
+    Parameters
+    ----------
+    data : Any, optional
+        OHLCV data as a DataFrame, list of dicts, or dict of lists.
+        Required in static mode; omit in datafeed mode.
+    callbacks : dict, optional
+        Event callbacks keyed by event name.
+    title : str
+        Widget title.
+    width : str
+        CSS width string.
+    height : int
+        Widget height in pixels.
+    theme : 'dark' or 'light', optional
+        Color theme. Defaults based on environment.
+    chart_options : dict, optional
+        Chart-level options (layout, grid, crosshair, etc.).
+    series_options : dict, optional
+        Series-specific options (colors, line width, etc.).
+    symbol_col : str, optional
+        Column name for multi-series grouping.
+    max_bars : int
+        Maximum bars per series.
+    toolbars : list, optional
+        Toolbar configurations.
+    modals : list, optional
+        Modal configurations.
+    open_browser : bool
+        If True, open in system browser instead of IFrame.
+    storage : dict, optional
+        Optional persistence backend config for TVChart layouts/templates.
+        If omitted, defaults to ``settings.tvchart.storage_*`` in non-deploy mode,
+        and ``localStorage`` in deploy mode.
+    use_datafeed : bool
+        If True, operate in datafeed mode where data is fetched asynchronously
+        via the Datafeed API (onReady, resolveSymbol, getBars, subscribeBars).
+        Register callbacks for ``tvchart:datafeed-*`` events to supply data.
+    symbol : str, optional
+        Initial symbol to resolve in datafeed mode.
+    resolution : str
+        Initial resolution/interval for datafeed mode (e.g. "1", "5", "1D").
+
+    Returns
+    -------
+    BaseWidget
+    """
+    import json as _json
+    import uuid as _uuid
+
+    from .modal import wrap_content_with_modals
+    from .notebook import _wrap_content_with_toolbars
+    from .runtime import is_headless  # pylint: disable=redefined-outer-name
+    from .widget import HAS_ANYWIDGET, PyWryTVChartWidget
+
+    if theme is None:
+        theme = _get_default_theme()
+
+    series_payload: list[dict[str, Any]] = []
+    if use_datafeed:
+        # Datafeed mode — data comes asynchronously via the Datafeed API
+        series_payload = [
+            {
+                "seriesId": "main",
+                "symbol": symbol or "",
+                "resolution": resolution,
+                "seriesType": "Candlestick",
+                "seriesOptions": series_options or {},
+                "bars": [],
+                "volume": [],
+            }
+        ]
+    else:
+        from .tvchart import normalize_ohlcv
+
+        chart_data = normalize_ohlcv(data, symbol_col=symbol_col, max_bars=max_bars)
+
+        for s in chart_data.series:
+            series_payload.append(
+                {
+                    "seriesId": s.series_id,
+                    "bars": s.bars,
+                    "volume": s.volume,
+                    "seriesType": s.series_type.value.capitalize(),
+                    "seriesOptions": series_options or {},
+                }
+            )
+
+    from .config import get_settings  # pylint: disable=redefined-outer-name
+    from .state import is_deploy_mode
+
+    settings = get_settings()
+    raw_storage = (
+        storage.copy()
+        if isinstance(storage, dict)
+        else {
+            "backend": settings.tvchart.storage_backend,
+            "path": settings.tvchart.storage_path,
+            "namespace": settings.tvchart.storage_namespace,
+            "adapter": settings.tvchart.storage_adapter,
+        }
+    )
+    storage_config = {
+        "backend": str(raw_storage.get("backend", "file")),
+        "path": str(raw_storage.get("path", "")) if raw_storage.get("path") is not None else "",
+        "namespace": str(raw_storage.get("namespace", "pywry.tvchart")),
+        "adapter": str(raw_storage.get("adapter", ""))
+        if raw_storage.get("adapter") is not None
+        else "",
+    }
+
+    # Preload from ChartStore for file/server backends (or deploy mode)
+    _use_server_backend = is_deploy_mode() or storage_config["backend"] in (
+        "file",
+        "server",
+    )
+    if _use_server_backend:
+        storage_config["preload"] = _preload_chart_data()
+        storage_config["backend"] = "server"
+
+    config_payload = _json.dumps(
+        {
+            "chartOptions": chart_options or {},
+            "series": series_payload,
+            "storage": storage_config,
+            "useDatafeed": use_datafeed,
+        }
+    )
+
+    widget_id = _uuid.uuid4().hex
+    chart_id = f"tvchart_{widget_id[:8]}"
+
+    chart_html = f'<div id="{chart_id}" class="pywry-tvchart-container"></div>'
+
+    # Inject toolbars
+    chart_html = _wrap_content_with_toolbars(chart_html, toolbars)
+
+    # Inject modals
+    if modals:
+        modal_html, modal_scripts = wrap_content_with_modals("", modals)
+        chart_html = f"{chart_html}{modal_html}{modal_scripts}"
+
+    if HAS_ANYWIDGET and not open_browser and not is_headless():
+        widget = PyWryTVChartWidget(
+            content=chart_html,
+            chart_config=config_payload,
+            theme=theme,
+            width=width,
+            height=f"{height}px",
+            chart_id=chart_id,
+        )
+    else:
+        widget = PyWryTVChartWidget(content=chart_html)
+
+    if callbacks:
+        for event_type, callback in callbacks.items():
+            widget.on(event_type, callback)
+
+    if _use_server_backend and hasattr(widget, "_wire_chart_storage"):
+        widget._wire_chart_storage(user_id="default")
+
+    if is_headless():
+        pass
+    elif open_browser and hasattr(widget, "open_in_browser"):
+        widget.open_in_browser()
+    else:
+        widget.display()
+    return widget

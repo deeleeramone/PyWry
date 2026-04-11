@@ -96,6 +96,8 @@ PYWRY_BRIDGE_JS = """
         if (window.__TAURI__ && window.__TAURI__.pytauri && window.__TAURI__.pytauri.pyInvoke) {
             window.__TAURI__.pytauri.pyInvoke('pywry_event', payload);
         }
+        // Also dispatch locally so JS-side listeners fire immediately
+        this._trigger(eventType, data || {});
     };
 
     window.pywry.on = function(eventType, callback) {

@@ -34,7 +34,11 @@ from pywry.models import ThemeMode, WindowMode
 PYWRY_PKG_DIR = Path(pywry.__file__).parent
 
 # Import shared test utilities from tests.conftest
-from tests.conftest import ReadyWaiter, show_and_wait_ready, wait_for_result  # noqa: E402
+from tests.conftest import (  # noqa: E402  # pylint: disable=wrong-import-position
+    ReadyWaiter,
+    show_and_wait_ready,
+    wait_for_result,
+)
 
 
 F = TypeVar("F", bound=Callable[..., Any])

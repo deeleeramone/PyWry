@@ -330,6 +330,6 @@ You now understand the basics of PyWry. Continue with:
 
 - [Rendering Paths](rendering-paths.md) — Native windows, notebook widgets, and browser mode
 - [Event System](../guides/events.md) — How callbacks work and common patterns
-- [Event Reference](../reference/events.md) — Complete list of all events and payloads
-- [Toolbar System](../guides/toolbars.md) — Building interactive controls
+- [Event Reference](../reference/events/index.md) — Complete list of all events and payloads
+- [Toolbar System](../components/toolbar/index.md) — Building interactive controls
 - [Configuration](../guides/configuration.md) — TOML files, environment variables, security presets

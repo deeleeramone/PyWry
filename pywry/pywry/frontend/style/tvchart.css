@@ -1,0 +1,3411 @@
+/* ============================================================================
+   TV Chart UI
+   ============================================================================ */
+
+:root,
+html.dark,
+.pywry-theme-dark,
+.pywry-theme-system {
+    --pywry-tvchart-bg: #0a0a0d;
+    --pywry-tvchart-border: #1c1f26;
+    --pywry-tvchart-border-strong: #262a33;
+    --pywry-tvchart-panel-bg: #0a0a0d;
+    --pywry-tvchart-panel-bg-strong: #050608;
+    --pywry-tvchart-hover: #17191f;
+    --pywry-tvchart-active-bg: rgba(41, 98, 255, 0.16);
+    --pywry-tvchart-active-text: #2962ff;
+    --pywry-tvchart-text: #d1d4dc;
+    --pywry-tvchart-text-muted: #aeb4c2;
+    --pywry-tvchart-text-dim: #787b86;
+    --pywry-tvchart-grid: rgba(255, 255, 255, 0.05);
+    --pywry-tvchart-crosshair: #758696;
+    --pywry-tvchart-crosshair-label-bg: #1b1f27;
+    --pywry-tvchart-up: #089981;
+    --pywry-tvchart-down: #f23645;
+    --pywry-tvchart-border-up: #089981;
+    --pywry-tvchart-border-down: #f23645;
+    --pywry-tvchart-wick-up: #089981;
+    --pywry-tvchart-wick-down: #f23645;
+    --pywry-tvchart-grid-vert: rgba(255, 255, 255, 0.05);
+    --pywry-tvchart-grid-horz: rgba(255, 255, 255, 0.05);
+    --pywry-tvchart-separator: rgba(255, 255, 255, 0.06);
+    --pywry-tvchart-separator-hover: rgba(255, 255, 255, 0.15);
+    --pywry-tvchart-vol-up: rgba(8, 153, 129, 0.35);
+    --pywry-tvchart-volume-down: rgba(242, 54, 69, 0.35);
+    --pywry-tvchart-area-bottom: rgba(8, 153, 129, 0.04);
+    --pywry-tvchart-hlcarea-high: #089981;
+    --pywry-tvchart-hlcarea-low: #f23645;
+    --pywry-tvchart-hlcarea-close: #2962ff;
+    --pywry-tvchart-hlcarea-fill-up: rgba(8, 153, 129, 0.28);
+    --pywry-tvchart-hlcarea-fill-down: rgba(242, 54, 69, 0.28);
+    --pywry-tvchart-baseline-top-fill1: rgba(8, 153, 129, 0.28);
+    --pywry-tvchart-baseline-top-fill2: rgba(8, 153, 129, 0.05);
+    --pywry-tvchart-baseline-bottom-fill1: rgba(242, 54, 69, 0.05);
+    --pywry-tvchart-baseline-bottom-fill2: rgba(242, 54, 69, 0.28);
+    --pywry-bg-primary: #0a0a0d;
+    --pywry-bg-secondary: #0a0a0d;
+    --pywry-bg-hover: #17191f;
+    --pywry-tvchart-selected-bg: #e7e7e7;
+    --pywry-tvchart-selected-text: #121722;
+    --pywry-tvchart-overlay: rgba(0, 0, 0, 0.56);
+    --pywry-tvchart-shadow: rgba(0, 0, 0, 0.45);
+    --pywry-tvchart-shadow-lg: rgba(0, 0, 0, 0.58);
+    --pywry-tvchart-legend-border: rgba(76, 135, 255, 0.85);
+    --pywry-tvchart-legend-bg: rgba(10, 10, 13, 0.94);
+    /* Drawing defaults */
+    --pywry-draw-default-color: #2962ff;
+    --pywry-draw-label-text: #ffffff;
+    --pywry-draw-handle-fill: #ffffff;
+    --pywry-draw-measure-up: #26a69a;
+    --pywry-draw-measure-down: #ef5350;
+    /* Preset drawing colors (15-color palette) */
+    --pywry-preset-0: #787b86;
+    --pywry-preset-1: #2962ff;
+    --pywry-preset-2: #089981;
+    --pywry-preset-3: #f23645;
+    --pywry-preset-4: #f3c127;
+    --pywry-preset-5: #9588fd;
+    --pywry-preset-6: #4c87ff;
+    --pywry-preset-7: #00d4ff;
+    --pywry-preset-8: #f09614;
+    --pywry-preset-9: #ff6d00;
+    --pywry-preset-10: #ff1493;
+    --pywry-preset-11: #ffd700;
+    --pywry-preset-12: #00ff7f;
+    --pywry-preset-13: #87ceeb;
+    --pywry-preset-14: #dda0dd;
+    /* Fibonacci colors (7-level palette) */
+    --pywry-fib-color-0: #787b86;
+    --pywry-fib-color-1: #2962ff;
+    --pywry-fib-color-2: #089981;
+    --pywry-fib-color-3: #f23645;
+    --pywry-fib-color-4: #f3c127;
+    --pywry-fib-color-5: #9588fd;
+    --pywry-fib-color-6: #4c87ff;
+    /* Session breaks and crosshair */
+    --pywry-tvchart-session-breaks: #4c87ff;
+    --pywry-tvchart-crosshair-color: rgba(235, 180, 194, 0.8);
+}
+
+html.light,
+.pywry-theme-light {
+    --pywry-tvchart-bg: #ffffff;
+    --pywry-tvchart-border: #d5dbe5;
+    --pywry-tvchart-border-strong: #ccd3df;
+    --pywry-tvchart-panel-bg: #f8fafc;
+    --pywry-tvchart-panel-bg-strong: #ffffff;
+    --pywry-tvchart-hover: #edf2f7;
+    --pywry-tvchart-active-bg: rgba(41, 98, 255, 0.12);
+    --pywry-tvchart-active-text: #2962ff;
+    --pywry-tvchart-text: #1c2430;
+    --pywry-tvchart-text-muted: #5a6472;
+    --pywry-tvchart-text-dim: #7b8796;
+    --pywry-tvchart-grid: rgba(197, 203, 206, 0.5);
+    --pywry-tvchart-crosshair: #9598a1;
+    --pywry-tvchart-crosshair-label-bg: #e1ecf2;
+    --pywry-tvchart-up: #26a69a;
+    --pywry-tvchart-down: #ef5350;
+    --pywry-tvchart-border-up: #26a69a;
+    --pywry-tvchart-border-down: #ef5350;
+    --pywry-tvchart-wick-up: #26a69a;
+    --pywry-tvchart-wick-down: #ef5350;
+    --pywry-tvchart-grid-vert: rgba(197, 203, 206, 0.5);
+    --pywry-tvchart-grid-horz: rgba(197, 203, 206, 0.5);
+    --pywry-tvchart-separator: rgba(0, 0, 0, 0.08);
+    --pywry-tvchart-separator-hover: rgba(0, 0, 0, 0.18);
+    --pywry-tvchart-vol-up: rgba(38, 166, 154, 0.34);
+    --pywry-tvchart-volume-down: rgba(239, 83, 80, 0.34);
+    --pywry-tvchart-area-bottom: rgba(38, 166, 154, 0.04);
+    --pywry-tvchart-hlcarea-high: #26a69a;
+    --pywry-tvchart-hlcarea-low: #ef5350;
+    --pywry-tvchart-hlcarea-close: #2962ff;
+    --pywry-tvchart-hlcarea-fill-up: rgba(38, 166, 154, 0.28);
+    --pywry-tvchart-hlcarea-fill-down: rgba(239, 83, 80, 0.28);
+    --pywry-tvchart-baseline-top-fill1: rgba(38, 166, 154, 0.28);
+    --pywry-tvchart-baseline-top-fill2: rgba(38, 166, 154, 0.05);
+    --pywry-tvchart-baseline-bottom-fill1: rgba(239, 83, 80, 0.05);
+    --pywry-tvchart-baseline-bottom-fill2: rgba(239, 83, 80, 0.28);
+    --pywry-tvchart-selected-bg: #1f2937;
+    --pywry-tvchart-selected-text: #ffffff;
+    --pywry-tvchart-overlay: rgba(245, 248, 252, 0.64);
+    --pywry-tvchart-shadow: rgba(15, 23, 42, 0.12);
+    --pywry-tvchart-shadow-lg: rgba(15, 23, 42, 0.2);
+    --pywry-tvchart-legend-border: rgba(41, 98, 255, 0.6);
+    --pywry-tvchart-legend-bg: rgba(255, 255, 255, 0.92);
+    /* Drawing defaults */
+    --pywry-draw-default-color: #2962ff;
+    --pywry-draw-label-text: #ffffff;
+    --pywry-draw-handle-fill: #ffffff;
+    --pywry-draw-measure-up: #38a699;
+    --pywry-draw-measure-down: #ef5350;
+    /* Preset drawing colors (15-color palette) */
+    --pywry-preset-0: #7b8796;
+    --pywry-preset-1: #2962ff;
+    --pywry-preset-2: #26a69a;
+    --pywry-preset-3: #ef5350;
+    --pywry-preset-4: #f3c127;
+    --pywry-preset-5: #9588fd;
+    --pywry-preset-6: #4c87ff;
+    --pywry-preset-7: #00d4ff;
+    --pywry-preset-8: #f09614;
+    --pywry-preset-9: #ff6d00;
+    --pywry-preset-10: #ff1493;
+    --pywry-preset-11: #ffd700;
+    --pywry-preset-12: #00ff7f;
+    --pywry-preset-13: #87ceeb;
+    --pywry-preset-14: #dda0dd;
+    /* Fibonacci colors (7-level palette) */
+    --pywry-fib-color-0: #7b8796;
+    --pywry-fib-color-1: #2962ff;
+    --pywry-fib-color-2: #26a69a;
+    --pywry-fib-color-3: #ef5350;
+    --pywry-fib-color-4: #f3c127;
+    --pywry-fib-color-5: #9588fd;
+    --pywry-fib-color-6: #4c87ff;
+    /* Session breaks and crosshair */
+    --pywry-tvchart-session-breaks: #4c87ff;
+    --pywry-tvchart-crosshair-color: #9598a1;
+}
+
+.pywry-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--pywry-tvchart-text-dim);
+    transition: background 0.1s, color 0.1s;
+    user-select: none;
+    position: relative;
+}
+
+.pywry-icon-btn:hover {
+    background: var(--pywry-tvchart-hover);
+    color: var(--pywry-tvchart-text);
+}
+
+.pywry-icon-btn:active,
+.pywry-icon-btn.active {
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 84%, black 16%);
+    color: var(--pywry-tvchart-text);
+}
+
+.pywry-icon-btn svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.pywry-icon-btn-wrap {
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 0;
+}
+
+.tvchart-header {
+    padding: 0 !important;
+    min-height: 40px;
+    border-bottom: 1px solid var(--pywry-tvchart-border) !important;
+    background: var(--pywry-tvchart-bg) !important;
+    overflow: visible !important;
+    position: relative;
+    z-index: 2000;
+}
+
+.tvchart-header .pywry-toolbar-content {
+    gap: 0 !important;
+    padding: 0 6px !important;
+    overflow: visible !important;
+    position: relative;
+    z-index: 2000;
+}
+
+.pywry-toolbar-top .pywry-icon-btn-wrap,
+.tvchart-header .pywry-icon-btn-wrap {
+    display: inline-flex;
+    position: relative;
+    overflow: visible !important;
+}
+
+.tvchart-menu-anchor,
+.tv-interval-anchor {
+    position: relative;
+    display: inline-flex;
+    overflow: visible;
+}
+
+.tvchart-menu-anchor {
+    align-items: stretch;
+}
+
+.tvchart-menu-trigger {
+    width: 34px;
+    height: 34px;
+}
+
+.tv-separator {
+    width: 1px;
+    height: 25px;
+    background: var(--pywry-tvchart-border);
+}
+
+.tv-separator-wrap {
+    padding: 0 4px !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+}
+
+.pywry-toolbar-left .tv-separator {
+    width: 100%;
+    height: 1px;
+    margin: 2px 0;
+}
+
+.pywry-toolbar-left .tv-separator-wrap {
+    display: flex !important;
+    padding: 0 !important;
+    width: 100%;
+}
+
+.tv-tf-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+}
+
+.tv-tf-group-wrap,
+.tv-interval-wrap {
+    display: inline-flex !important;
+}
+
+.tv-tf-btn {
+    padding: 4px 7px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--pywry-tvchart-text-dim);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.1s, color 0.1s;
+    font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.tv-tf-btn:hover,
+.tv-interval-btn:hover {
+    background: var(--pywry-bg-hover);
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-tf-btn.tv-tf-active {
+    background: var(--pywry-tvchart-active-bg);
+    color: var(--pywry-tvchart-active-text);
+    font-weight: 600;
+}
+
+.tvchart-chart-type-menu,
+.tvchart-interval-menu,
+.tvchart-save-menu {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    background: var(--pywry-tvchart-bg);
+    border: 1px solid var(--pywry-tvchart-border);
+    border-radius: 4px;
+    box-shadow: 0 8px 24px var(--pywry-tvchart-shadow-lg);
+    padding: 6px 0;
+    z-index: 2005;
+    font-family: 'Trebuchet MS', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    color: var(--pywry-tvchart-text);
+    display: none;
+}
+
+.tvchart-chart-type-menu {
+    min-width: 172px;
+}
+
+.tvchart-chart-type-anchor .tvchart-chart-type-menu {
+    min-width: 180px;
+}
+
+.tvchart-chart-type-menu.open,
+.tvchart-interval-menu.open,
+.tvchart-save-menu.open {
+    display: block;
+}
+
+.tvchart-chart-type-item,
+.tvchart-interval-item,
+.tvchart-save-menu-item {
+    padding: 8px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    line-height: 20px;
+}
+
+.tvchart-chart-type-item:hover,
+.tvchart-interval-item:hover,
+.tvchart-save-menu-item:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tvchart-chart-type-item.selected,
+.tvchart-interval-item.selected {
+    background: var(--pywry-tvchart-selected-bg);
+    color: var(--pywry-tvchart-selected-text);
+    font-weight: 600;
+}
+
+.tv-interval-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pywry-tvchart-text);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.1s;
+    font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
+    user-select: none;
+    white-space: nowrap;
+    position: relative;
+}
+
+.tv-interval-caret {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
+.tvchart-interval-menu {
+    min-width: 136px;
+    max-height: none;
+    overflow-y: visible;
+}
+
+.tvchart-interval-section {
+    padding: 10px 14px 5px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--pywry-tvchart-text-dim);
+    cursor: default;
+}
+
+.tvchart-interval-item.disabled {
+    color: color-mix(in srgb, var(--pywry-tvchart-text-dim) 78%, black 22%);
+    cursor: default;
+}
+
+.tvchart-interval-item.disabled:hover {
+    background: transparent;
+}
+
+.tvchart-left {
+    padding: 4px 0 !important;
+    width: 44px !important;
+    border-right: 1px solid var(--pywry-tvchart-border) !important;
+    background: var(--pywry-tvchart-bg) !important;
+}
+
+.tvchart-left .pywry-toolbar-content {
+    gap: 0 !important;
+    padding: 0 !important;
+    align-items: center !important;
+}
+
+.pywry-toolbar-left .pywry-icon-btn-wrap {
+    display: flex;
+}
+
+.pywry-toolbar-left .pywry-icon-btn {
+    width: 38px;
+    height: 34px;
+    border-radius: 4px;
+}
+
+.pywry-toolbar-left .pywry-icon-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ---- Tool-group button (has submenu caret) ---- */
+.pywry-tool-group {
+    position: relative;
+}
+
+.pywry-tool-group-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pywry-tool-group-caret {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 0;
+    height: 0;
+    border-left: 3.5px solid transparent;
+    border-top: 3.5px solid currentColor;
+    opacity: 0.45;
+}
+
+.pywry-tool-group:hover .pywry-tool-group-caret,
+.pywry-tool-group.active .pywry-tool-group-caret {
+    opacity: 0.7;
+}
+
+/* ---- Tool-group flyout submenu ---- */
+.pywry-tool-flyout {
+    background: var(--pywry-tvchart-bg, #131722);
+    border: 1px solid var(--pywry-tvchart-border, #2a2e39);
+    border-radius: 6px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+    padding: 6px 0;
+    z-index: 2100;
+    min-width: 220px;
+    max-height: 80vh;
+    overflow-y: auto;
+    font-family: 'Trebuchet MS', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    color: var(--pywry-tvchart-text, #d1d4dc);
+    user-select: none;
+}
+
+.pywry-tool-flyout-header {
+    padding: 8px 14px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    color: var(--pywry-tvchart-muted, #787b86);
+    text-transform: uppercase;
+}
+
+.pywry-tool-flyout-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 20px;
+    border-radius: 0;
+    transition: background 0.08s;
+}
+
+.pywry-tool-flyout-item:hover {
+    background: var(--pywry-tvchart-hover, rgba(255, 255, 255, 0.06));
+}
+
+.pywry-tool-flyout-item.selected {
+    background: var(--pywry-tvchart-selected-bg, rgba(41, 98, 255, 0.2));
+    color: var(--pywry-tvchart-selected-text, #2962ff);
+}
+
+.pywry-tool-flyout-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.pywry-tool-flyout-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.pywry-tool-flyout-name {
+    flex: 1;
+}
+
+.pywry-tool-flyout-shortcut {
+    font-size: 11px;
+    color: var(--pywry-tvchart-muted, #787b86);
+    margin-left: auto;
+    padding-left: 16px;
+}
+
+.tvchart-bottom {
+    padding: 0 8px !important;
+    min-height: 32px !important;
+    border-top: 1px solid var(--pywry-tvchart-border) !important;
+    background: var(--pywry-tvchart-bg) !important;
+}
+
+.tvchart-bottom .pywry-toolbar-content {
+    gap: 6px !important;
+}
+
+.tv-spacer {
+    flex: 1 1 auto;
+}
+
+.tv-spacer-wrap {
+    flex: 1 1 auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Bottom bar clickable text buttons (Timezone, Session) */
+.tvchart-bottom-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
+    color: var(--pywry-tvchart-text-muted);
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    user-select: none;
+    line-height: 1.4;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.tvchart-bottom-btn:hover {
+    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.08));
+    border-color: var(--pywry-tvchart-border, rgba(255,255,255,0.12));
+    color: var(--pywry-tvchart-text);
+}
+.tvchart-bottom-btn:active {
+    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.12));
+}
+.tvchart-bottom-btn.active {
+    color: var(--pywry-tvchart-accent, #2962FF);
+}
+.tvchart-bottom-btn-caret {
+    opacity: 0.6;
+    margin-top: 1px;
+}
+.tvchart-bottom-btn:hover .tvchart-bottom-btn-caret {
+    opacity: 1;
+}
+.tv-tz-btn-wrap,
+.tv-session-btn-wrap {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+.tv-scale-btn-wrap {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Bottom bar scale-mode buttons (%, log, auto) — TradingView style */
+.tvchart-scale-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
+    font-weight: 700;
+    color: var(--pywry-tvchart-text-muted);
+    background: var(--pywry-tvchart-btn-bg, rgba(255,255,255,0.04));
+    border: none;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    user-select: none;
+    line-height: 1.4;
+    min-width: 28px;
+    text-align: center;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.tvchart-scale-btn:hover {
+    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.08));
+    color: var(--pywry-tvchart-text);
+}
+.tvchart-scale-btn:active {
+    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.12));
+}
+.tvchart-scale-btn.active {
+    color: var(--pywry-tvchart-text);
+    background: var(--pywry-tvchart-btn-active-bg, rgba(255,255,255,0.12));
+}
+
+/* Timezone dropdown menu */
+.tvchart-tz-menu {
+    position: fixed;
+    z-index: 10200;
+    min-width: 220px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: var(--pywry-tvchart-panel-bg, #1e222d);
+    border: 1px solid var(--pywry-tvchart-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    padding: 4px 0;
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
+    scrollbar-width: thin;
+    scrollbar-color: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5)) transparent;
+}
+.tvchart-tz-menu::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+.tvchart-tz-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+.tvchart-tz-menu::-webkit-scrollbar-thumb {
+    background: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5));
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+.tvchart-tz-menu::-webkit-scrollbar-thumb:hover {
+    background: var(--pywry-scrollbar-thumb-hover, rgba(155, 155, 155, 0.7));
+}
+.tvchart-tz-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--pywry-tvchart-text);
+    transition: background 0.1s ease;
+    white-space: nowrap;
+}
+.tvchart-tz-menu-item:hover {
+    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.08));
+}
+.tvchart-tz-menu-item.selected {
+    color: var(--pywry-tvchart-accent, #2962FF);
+}
+.tvchart-tz-menu-item .tz-check {
+    width: 16px;
+    margin-right: 6px;
+    font-size: 14px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.tvchart-tz-menu-sep {
+    height: 1px;
+    background: var(--pywry-tvchart-border);
+    margin: 4px 0;
+}
+.tvchart-session-menu-header {
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--pywry-tvchart-text-muted);
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.pywry-toolbar-inside.tvchart-inside {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+}
+
+.pywry-toolbar-inside.tvchart-inside .pywry-toolbar-content,
+.tvchart-legend-wrap {
+    background: transparent !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    width: 100%;
+    height: 100%;
+}
+
+.tvchart-legend-container {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+    font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--pywry-tvchart-text);
+    pointer-events: none;
+    white-space: normal;
+    transition: opacity 0.12s ease;
+    max-width: calc(100% - 96px);
+}
+
+.tvchart-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 22px;
+    pointer-events: auto;
+}
+
+.tvchart-legend-row-volume {
+    margin-top: 2px;
+}
+
+.tvchart-legend-series {
+    display: none;
+    margin-top: 2px;
+    pointer-events: auto;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.tvchart-legend-series-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 20px;
+    font-size: 11px;
+    color: var(--pywry-tvchart-text);
+    margin-right: 0;
+    margin-top: 1px;
+    width: fit-content;
+    white-space: nowrap;
+}
+
+.tvchart-legend-series-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.tvchart-legend-series-name {
+    color: var(--pywry-tvchart-text-muted);
+}
+
+.tvchart-legend-series-value {
+    font-variant-numeric: tabular-nums;
+}
+
+.tvchart-legend-series-actions {
+    margin-left: 0;
+}
+
+.tvchart-legend-title {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 1px 8px 0;
+    border: 1px solid var(--pywry-tvchart-legend-border);
+    border-radius: 6px;
+    background: var(--pywry-tvchart-legend-bg);
+    box-sizing: border-box;
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--pywry-tvchart-text);
+    letter-spacing: 0;
+    max-width: fit-content;
+    white-space: nowrap;
+}
+
+.tvchart-legend-ohlc {
+    display: inline-block;
+    font-size: 12px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.tvchart-legend-vol {
+    display: inline-block;
+    color: var(--pywry-tvchart-text);
+    font-size: 11px;
+    margin-left: 2px;
+    white-space: nowrap;
+}
+
+.tvchart-legend-indicators {
+    display: block;
+    margin-top: 4px;
+    white-space: normal;
+}
+
+.tvchart-legend-collapse-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 18px;
+    margin-top: 2px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: var(--pywry-tvchart-legend-bg);
+    color: var(--pywry-tvchart-text-muted);
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0.7;
+    transition: opacity 0.12s, background 0.12s;
+}
+
+.tvchart-legend-collapse-btn:hover {
+    opacity: 1;
+    background: var(--pywry-tvchart-hover);
+}
+
+/* Per-pane legend overlay for subplot indicators (RSI, etc.) */
+.tvchart-pane-legend {
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    z-index: 10;
+    font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--pywry-tvchart-text);
+    pointer-events: none;
+    white-space: normal;
+    max-width: calc(100% - 96px);
+}
+
+.tvchart-ind-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    line-height: 20px;
+    pointer-events: auto;
+}
+
+.tvchart-ind-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+.tvchart-ind-name {
+    font-weight: 500;
+}
+
+.tvchart-ind-val {
+    color: var(--pywry-tvchart-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.tvchart-ind-ctrl {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.tvchart-legend-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 2px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease;
+}
+
+.tvchart-legend-row:hover .tvchart-legend-row-actions,
+.tvchart-legend-row:focus-within .tvchart-legend-row-actions {
+    opacity: 1;
+    visibility: visible;
+}
+
+.tvchart-legend-row[data-hidden='1'] .tvchart-ind-name,
+.tvchart-legend-row[data-hidden='1'] .tvchart-legend-title,
+.tvchart-legend-row[data-hidden='1'] .tvchart-legend-vol,
+.tvchart-legend-row[data-hidden='1'] .tvchart-legend-ohlc,
+.tvchart-legend-row[data-hidden='1'] .tvchart-ind-val {
+    opacity: 0.45;
+}
+
+.tvchart-legend-row[data-hidden='1'] .tvchart-legend-series-row,
+.tvchart-legend-row[data-hidden='1'] .tvchart-legend-series-value,
+.tvchart-legend-row[data-hidden='1'] .tvchart-legend-series-name {
+    opacity: 0.45;
+}
+
+.tvchart-legend-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    color: var(--pywry-tvchart-text-muted);
+    border-radius: 4px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+}
+
+.tvchart-legend-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.tvchart-legend-btn:hover {
+    color: var(--pywry-tvchart-text);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tvchart-legend-menu {
+    position: fixed;
+    z-index: 99999;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    border-radius: 6px;
+    background: var(--pywry-tvchart-bg);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+
+.tvchart-legend-menu-item {
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--pywry-tvchart-text);
+    text-align: left;
+    font-size: 11px;
+    line-height: 1.2;
+    border-radius: 4px;
+    padding: 6px 8px;
+    cursor: pointer;
+}
+
+.tvchart-legend-menu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tvchart-legend-menu-item.is-disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.tvchart-legend-menu-item.is-disabled:hover {
+    background: transparent;
+}
+
+.tvchart-legend-menu-item-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pywry-tvchart-text-muted);
+}
+
+.tvchart-legend-menu-item-label {
+    color: var(--pywry-tvchart-text);
+    white-space: nowrap;
+}
+
+.tvchart-legend-menu-item-meta {
+    color: var(--pywry-tvchart-text-muted);
+    font-size: 10px;
+    white-space: nowrap;
+    margin-left: 10px;
+}
+
+.tvchart-legend-menu-sep {
+    height: 1px;
+    margin: 4px 6px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Settings dialog: horizontal tab bar (shared by drawing & indicator settings) */
+.tv-settings-tabs,
+.tv-ind-settings-tabs {
+    display: flex;
+    margin-top: 8px;
+    border-bottom: 1px solid var(--pywry-tvchart-border-strong);
+}
+
+.tv-settings-tab,
+.tv-ind-settings-tab {
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--pywry-tvchart-text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    user-select: none;
+}
+
+.tv-settings-tab:hover,
+.tv-ind-settings-tab:hover {
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-settings-tab.active,
+.tv-ind-settings-tab.active {
+    color: var(--pywry-tvchart-text);
+    border-bottom-color: #2962ff;
+    font-weight: 500;
+}
+
+.pywry-content:has(.pywry-tvchart-container) .pywry-scroll-container {
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    display: -webkit-flex;
+    flex-direction: column;
+    -webkit-flex-direction: column;
+    height: 100%;
+}
+
+.pywry-tvchart-container {
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    display: block;
+}
+
+.pywry-content:has(.pywry-tvchart-container),
+.pywry-content:has(.pywry-tvchart-container) .pywry-wrapper-inside,
+.pywry-content:has(.pywry-tvchart-container) .pywry-wrapper-top,
+.pywry-content:has(.pywry-tvchart-container) .pywry-wrapper-left,
+.pywry-content:has(.pywry-tvchart-container) .pywry-body-scroll {
+    min-height: 0;
+}
+
+.pywry-content:has(.pywry-tvchart-container) .pywry-scroll-container > .pywry-tvchart-container {
+    flex: 1 1 0%;
+    -webkit-flex: 1 1 0%;
+    min-height: 0;
+}
+
+.pywry-draw-toolbar {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--pywry-tvchart-bg);
+    border: 1px solid var(--pywry-tvchart-border);
+    border-radius: 6px;
+    padding: 2px 4px;
+    z-index: 20;
+    box-shadow: 0 4px 16px var(--pywry-tvchart-shadow);
+    pointer-events: auto;
+    font-family: var(--pywry-font-family);
+    font-size: 12px;
+    color: var(--pywry-tvchart-text-muted);
+    white-space: nowrap;
+}
+
+.pywry-draw-toolbar .dt-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--pywry-tvchart-border);
+    margin: 0 3px;
+}
+
+.pywry-draw-toolbar button {
+    background: none;
+    border: none;
+    color: var(--pywry-tvchart-text-muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    position: relative;
+}
+
+.pywry-draw-toolbar button:hover {
+    background: var(--pywry-tvchart-hover);
+    color: var(--pywry-tvchart-text);
+}
+
+.pywry-draw-toolbar button.active {
+    background: var(--pywry-tvchart-active-bg);
+    color: var(--pywry-tvchart-active-text);
+}
+
+.pywry-draw-toolbar button svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    pointer-events: none;
+}
+
+.pywry-draw-toolbar .dt-label {
+    font-size: 11px;
+    padding: 0 6px;
+    cursor: pointer;
+    height: 28px;
+    line-height: 28px;
+    border-radius: 4px;
+}
+
+.pywry-draw-toolbar .dt-label:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.pywry-draw-toolbar .dt-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    border: 2px solid var(--pywry-tvchart-border);
+    cursor: pointer;
+}
+
+.pywry-draw-toolbar .dt-color-btn {
+    flex-direction: column;
+    gap: 1px;
+    padding: 2px 0 0;
+}
+
+.pywry-draw-toolbar .dt-color-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.pywry-draw-toolbar .dt-color-indicator {
+    display: block;
+    width: 16px;
+    height: 3px;
+    border-radius: 1px;
+    pointer-events: none;
+}
+
+.pywry-draw-width-picker,
+.pywry-draw-ctx-menu,
+.tv-indicators-panel {
+    background: var(--pywry-tvchart-bg);
+    border: 1px solid var(--pywry-tvchart-border);
+    box-shadow: 0 4px 16px var(--pywry-tvchart-shadow);
+}
+
+.pywry-draw-width-picker {
+    position: fixed;
+    border-radius: 6px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 25;
+}
+
+.pywry-draw-width-picker .wp-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--pywry-tvchart-text-muted);
+    font-size: 11px;
+}
+
+.pywry-draw-width-picker .wp-row:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.pywry-draw-width-picker .wp-row.sel {
+    background: var(--pywry-tvchart-active-bg);
+    color: var(--pywry-tvchart-active-text);
+}
+
+.pywry-draw-width-picker .wp-line {
+    height: 0;
+    flex: 1;
+    min-width: 40px;
+    border-top-style: solid;
+    border-color: currentColor;
+}
+
+.pywry-draw-ctx-menu {
+    position: absolute;
+    border-radius: 6px;
+    padding: 4px 0;
+    z-index: 30;
+    min-width: 180px;
+    font-family: var(--pywry-font-family);
+    font-size: 13px;
+    color: var(--pywry-tvchart-text);
+    pointer-events: auto;
+}
+
+.pywry-draw-ctx-menu .cm-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pywry-draw-ctx-menu .cm-item:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.pywry-draw-ctx-menu .cm-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pywry-draw-ctx-menu .cm-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.pywry-draw-ctx-menu .cm-label {
+    flex: 1;
+}
+
+.pywry-draw-ctx-menu .cm-shortcut {
+    margin-left: auto;
+    color: var(--pywry-tvchart-text-dim);
+    font-size: 11px;
+}
+
+.pywry-draw-ctx-menu .cm-sep {
+    height: 1px;
+    background: var(--pywry-tvchart-border);
+    margin: 4px 0;
+}
+
+.pywry-draw-ctx-menu .cm-item.cm-danger {
+    color: #ef5350;
+}
+
+.pywry-draw-ctx-menu .cm-item.cm-danger:hover {
+    background: rgba(239, 83, 80, 0.16);
+}
+
+.tv-settings-overlay,
+.tv-indicators-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--pywry-tvchart-overlay);
+    pointer-events: auto;
+}
+
+.tv-settings-panel,
+.tv-indicators-panel {
+    background: var(--pywry-tvchart-panel-bg);
+    border-radius: 6px;
+    color: var(--pywry-tvchart-text);
+    position: relative;
+    z-index: 12001;
+}
+
+.tv-compare-panel {
+    background: var(--pywry-tvchart-panel-bg);
+    border-radius: 6px;
+    color: var(--pywry-tvchart-text);
+    position: relative;
+    z-index: 12001;
+    border: 1px solid var(--pywry-tvchart-border);
+    box-shadow: 0 16px 44px var(--pywry-tvchart-shadow-lg);
+    width: 720px;
+    max-width: calc(100% - 32px);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tv-compare-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--pywry-tvchart-border-strong);
+    padding: 14px 16px 10px;
+}
+
+.tv-compare-header h3 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    flex: 1;
+    letter-spacing: -0.02em;
+}
+
+.tv-compare-search-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--pywry-tvchart-border-strong);
+}
+
+.tv-compare-search-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--pywry-tvchart-text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.tv-compare-search-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.tv-compare-search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--pywry-tvchart-text);
+    font-size: 20px;
+    line-height: 1.2;
+    font-family: inherit;
+}
+
+.tv-compare-add-btn {
+    width: 28px;
+    height: 28px;
+    border: 2px solid color-mix(in srgb, var(--pywry-tvchart-text) 84%, transparent 16%);
+    border-radius: 999px;
+    background: transparent;
+    color: color-mix(in srgb, var(--pywry-tvchart-text) 84%, transparent 16%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.tv-compare-add-btn:hover {
+    border-color: var(--pywry-tvchart-text);
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-compare-add-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.tv-compare-search-input::placeholder {
+    color: color-mix(in srgb, var(--pywry-tvchart-text-muted) 85%, transparent 15%);
+}
+
+.tv-compare-results {
+    max-height: 210px;
+    overflow-y: hidden;
+    border-bottom: 1px solid var(--pywry-tvchart-border-strong);
+}
+
+.tv-compare-search-empty {
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pywry-tvchart-text-muted);
+    font-size: 14px;
+    letter-spacing: 0.01em;
+}
+
+.tv-date-range-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 12010;
+    background: color-mix(in srgb, #000000 8%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tv-date-range-panel {
+    width: 472px;
+    max-width: calc(100% - 24px);
+    border: 1px solid color-mix(in srgb, var(--pywry-tvchart-border) 78%, #4f5568 22%);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--pywry-tvchart-panel-bg) 80%, #24262f 20%);
+    box-shadow: 0 12px 26px color-mix(in srgb, #000 68%, transparent);
+    overflow: hidden;
+}
+
+.tv-date-range-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--pywry-tvchart-border-strong);
+}
+
+.tv-date-range-header h3 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.tv-date-range-close {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--pywry-tvchart-text-muted);
+    cursor: pointer;
+}
+
+.tv-date-range-close svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.tv-date-range-close:hover {
+    background: var(--pywry-tvchart-hover);
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-date-range-tabs {
+    display: flex;
+    gap: 20px;
+    padding: 10px 18px 0;
+    border-bottom: 1px solid var(--pywry-tvchart-border-strong);
+}
+
+.tv-date-range-tab {
+    border: none;
+    background: transparent;
+    color: var(--pywry-tvchart-text-muted);
+    font: 600 14px/1.15 var(--pywry-font-family);
+    padding: 0 0 10px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+}
+
+.tv-date-range-tab.active {
+    color: var(--pywry-tvchart-text);
+    border-bottom-color: #2962ff;
+}
+
+.tv-date-range-body {
+    padding: 8px 18px 8px;
+}
+
+.tv-date-range-pane {
+    display: none;
+}
+
+.tv-date-range-pane.active {
+    display: block;
+}
+
+.tv-date-range-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(112px, 0.48fr);
+    align-items: center;
+    column-gap: 8px;
+    margin-bottom: 8px;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+}
+
+.tv-date-range-controls > * {
+    min-width: 0;
+}
+
+.tv-date-range-input-wrap {
+    position: relative;
+    min-width: 0;
+    max-width: 100%;
+    isolation: isolate;
+}
+
+.tv-date-range-custom-fields {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding-bottom: 10px;
+}
+
+.tv-date-range-controls-custom {
+    margin-bottom: 0;
+}
+
+.tv-date-range-field {
+    display: grid;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--pywry-tvchart-text-muted);
+}
+
+.tv-date-range-input {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    border-radius: 9px;
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    background: color-mix(in srgb, var(--pywry-tvchart-panel-bg) 88%, #000 12%);
+    color: var(--pywry-tvchart-text);
+    font-size: 16px;
+    padding: 0 12px;
+    outline: none;
+    box-sizing: border-box;
+    font-family: var(--pywry-font-family);
+}
+
+.tv-date-range-input-wrap .tv-date-range-input {
+    padding-right: 36px;
+}
+
+.tv-date-range-input-icon-btn {
+    position: absolute;
+    top: 50%;
+    right: 7px;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--pywry-tvchart-border-strong) 92%, transparent 8%);
+    background: transparent;
+    color: var(--pywry-tvchart-text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.tv-date-range-input-icon-btn svg {
+    width: 11px;
+    height: 11px;
+}
+
+.tv-date-range-input-icon-btn:hover {
+    color: var(--pywry-tvchart-text);
+    background: var(--pywry-tvchart-hover);
+}
+
+.tv-date-range-input-date {
+    letter-spacing: 0.01em;
+}
+
+.tv-date-range-input-time {
+    text-align: left;
+}
+
+.tv-date-range-input:focus {
+    border-color: color-mix(in srgb, var(--pywry-tvchart-border-strong) 86%, #8f95a3 14%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pywry-tvchart-border-strong) 86%, #8f95a3 14%);
+}
+
+.tv-date-range-month-nav {
+    display: grid;
+    grid-template-columns: 24px 1fr 24px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.tv-date-range-month-btn {
+    border: none;
+    background: transparent;
+    color: var(--pywry-tvchart-text-muted);
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tv-date-range-month-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.tv-date-range-month-btn:hover {
+    color: var(--pywry-tvchart-text);
+    background: var(--pywry-tvchart-hover);
+}
+
+.tv-date-range-month-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 14px;
+    line-height: 1.1;
+    font-weight: 500;
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-date-range-month-name {
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 2px 8px;
+}
+
+.tv-date-range-month-name:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tv-date-range-year-input {
+    width: 62px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--pywry-tvchart-text);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    padding: 2px 4px;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.tv-date-range-year-input::-webkit-inner-spin-button,
+.tv-date-range-year-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.tv-date-range-year-input:hover {
+    border-color: var(--pywry-tvchart-border-strong);
+}
+
+.tv-date-range-year-input:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--pywry-tvchart-border-strong) 86%, #8f95a3 14%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pywry-tvchart-border-strong) 86%, #8f95a3 14%);
+}
+
+.tv-date-range-grid-pick {
+    grid-template-columns: repeat(4, 1fr);
+    min-height: 232px;
+}
+
+.tv-date-range-cell {
+    height: 48px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--pywry-tvchart-text);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.tv-date-range-cell.muted {
+    color: color-mix(in srgb, var(--pywry-tvchart-text-muted) 66%, transparent 34%);
+}
+
+.tv-date-range-cell:hover {
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 75%, #ffffff 25%);
+}
+
+.tv-date-range-cell.selected {
+    background: #eceef5;
+    color: #111319;
+    font-weight: 700;
+}
+
+.tv-date-range-week-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0;
+    margin-bottom: 4px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 82%, transparent 18%);
+}
+
+.tv-date-range-week-header span {
+    text-align: center;
+    font-size: 11px;
+    color: var(--pywry-tvchart-text-muted);
+    padding: 4px 0;
+}
+
+.tv-date-range-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    min-height: 232px;
+}
+
+.tv-date-range-day {
+    height: 30px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--pywry-tvchart-text);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.tv-date-range-day.muted {
+    color: color-mix(in srgb, var(--pywry-tvchart-text-muted) 66%, transparent 34%);
+}
+
+.tv-date-range-day:hover {
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 75%, #ffffff 25%);
+}
+
+.tv-date-range-day.in-range {
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 94%, #2d2f35 6%);
+    color: var(--pywry-tvchart-text);
+    font-weight: 600;
+}
+
+.tv-date-range-day.range-start,
+.tv-date-range-day.range-end {
+    background: #eceef5;
+    color: #111319;
+    font-weight: 700;
+}
+
+.tv-date-range-day.selected {
+    background: #eceef5;
+    color: #111319;
+    font-weight: 700;
+    box-shadow: inset 0 -2px 0 #161a24;
+}
+
+.tv-date-range-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 18px 12px;
+    border-top: 1px solid var(--pywry-tvchart-border-strong);
+}
+
+.tv-date-range-btn {
+    min-width: 92px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    font-size: 16px;
+    line-height: 1.1;
+    cursor: pointer;
+    font-family: var(--pywry-font-family);
+}
+
+.tv-date-range-btn-secondary {
+    background: transparent;
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-date-range-btn-primary {
+    background: color-mix(in srgb, #ffffff 92%, transparent 8%);
+    color: #111319;
+    border-color: transparent;
+}
+
+.tv-date-range-btn-secondary:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tv-date-range-btn-primary:hover {
+    filter: brightness(0.96);
+}
+
+.tv-compare-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+}
+
+.tv-compare-result-row {
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    padding: 0 16px;
+    min-height: 76px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid color-mix(in srgb, var(--pywry-tvchart-border) 72%, transparent);
+}
+
+.tv-compare-result-row:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tv-compare-result-identity {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.tv-compare-result-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 78%, #2d313a 22%);
+    color: var(--pywry-tvchart-text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 18px/1 var(--pywry-font-family);
+    flex: 0 0 auto;
+    text-transform: uppercase;
+}
+
+.tv-compare-result-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.tv-compare-result-top {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.tv-compare-result-symbol {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #2962ff;
+}
+
+.tv-compare-result-meta {
+    margin-left: auto;
+    font-size: 14px;
+    text-align: right;
+    color: var(--pywry-tvchart-text-muted);
+}
+
+.tv-compare-result-sub {
+    margin-top: 2px;
+    font-size: 13px;
+    color: color-mix(in srgb, var(--pywry-tvchart-text-muted) 85%, #ffffff 15%);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tv-compare-result-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+}
+
+.tv-compare-result-row:hover .tv-compare-result-actions,
+.tv-compare-result-row:focus-within .tv-compare-result-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.tv-compare-result-action {
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--pywry-tvchart-border-strong) 90%, white 10%);
+    background: color-mix(in srgb, var(--pywry-tvchart-panel-bg) 92%, #0f1117 8%);
+    color: var(--pywry-tvchart-text);
+    font: 500 13px/1 var(--pywry-font-family);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.tv-compare-result-action:hover {
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 84%, #ffffff 16%);
+}
+
+.tv-compare-result-action-primary {
+    box-shadow: inset 0 0 0 2px #2962ff;
+}
+
+.tv-compare-list {
+    flex: 1;
+    min-height: 240px;
+    overflow-y: auto;
+    padding: 6px 0;
+}
+
+.tv-compare-empty {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: var(--pywry-tvchart-text-muted);
+    text-align: center;
+    padding: 16px;
+}
+
+.tv-compare-empty-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 999px;
+    border: 2px dashed color-mix(in srgb, var(--pywry-tvchart-text-muted) 68%, transparent 32%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: color-mix(in srgb, var(--pywry-tvchart-text-muted) 85%, white 15%);
+}
+
+.tv-compare-empty-icon svg {
+    width: 46px;
+    height: 46px;
+}
+
+.tv-compare-empty-text {
+    font-size: 17px;
+    line-height: 1.25;
+}
+
+.tv-compare-symbol-row {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border-radius: 6px;
+    margin: 0 8px;
+}
+
+.tv-compare-symbol-row:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tv-compare-symbol-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #7f8fff;
+    flex: 0 0 auto;
+}
+
+.tv-compare-symbol-label {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tv-compare-symbol-remove {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--pywry-tvchart-text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.tv-compare-symbol-remove:hover {
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 88%, #ffffff 12%);
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-compare-symbol-remove svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.tv-compare-footer {
+    border-top: 1px solid var(--pywry-tvchart-border-strong);
+    background: color-mix(in srgb, var(--pywry-tvchart-panel-bg) 95%, #ffffff 5%);
+    padding: 9px 16px;
+}
+
+.tv-compare-extend-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--pywry-tvchart-text-muted);
+    cursor: pointer;
+}
+
+.tv-compare-extend-check {
+    width: 16px;
+    height: 16px;
+}
+
+/* ---------------------------------------------------------------------------
+   Symbol Search Dialog
+   --------------------------------------------------------------------------- */
+
+.tv-symbol-search-panel {
+    background: var(--pywry-tvchart-panel-bg);
+    border-radius: 6px;
+    color: var(--pywry-tvchart-text);
+    position: relative;
+    z-index: 12001;
+    border: 1px solid var(--pywry-tvchart-border);
+    box-shadow: 0 16px 44px var(--pywry-tvchart-shadow-lg);
+    width: 560px;
+    max-width: calc(100% - 32px);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tv-symbol-search-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--pywry-tvchart-border-strong);
+}
+
+.tv-symbol-search-filter-select {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--pywry-tvchart-border);
+    border-radius: 4px;
+    background: var(--pywry-tvchart-panel-bg);
+    color: var(--pywry-tvchart-text);
+    font-size: 13px;
+    padding: 5px 8px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+}
+
+.tv-symbol-search-filter-select:focus {
+    border-color: #2962ff;
+}
+
+.tv-symbol-search-results {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 80px;
+}
+
+.tv-symbol-search-result-row {
+    cursor: pointer;
+}
+
+.tv-symbol-search-result-row:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tv-settings-panel {
+    border: 1px solid var(--pywry-tvchart-border);
+    box-shadow: 0 16px 44px var(--pywry-tvchart-shadow-lg);
+    width: 680px;
+    max-width: calc(100% - 32px);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: row;
+    font-family: var(--pywry-font-family);
+    font-size: 13px;
+    position: relative;
+    overflow: hidden;
+}
+
+.tv-settings-header,
+.tv-indicators-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--pywry-tvchart-border-strong);
+}
+
+.tv-settings-header {
+    padding: 14px 16px 10px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--pywry-tvchart-panel-bg);
+    z-index: 10;
+}
+
+.tv-settings-header h3,
+.tv-indicators-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    flex: 1;
+}
+
+.tv-settings-close {
+    background: none;
+    border: none;
+    color: var(--pywry-tvchart-text-muted);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.tv-settings-close:hover {
+    background: var(--pywry-tvchart-hover);
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-settings-close svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.tv-settings-icon-btn {
+    background: none;
+    border: none;
+    color: var(--pywry-tvchart-text-muted);
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.tv-settings-icon-btn:hover {
+    background: var(--pywry-tvchart-hover);
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-settings-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 200px;
+    border-right: 1px solid var(--pywry-tvchart-border-strong);
+    padding-top: 52px;
+    overflow-y: auto;
+    max-height: calc(85vh - 52px);
+}
+
+.tv-settings-sidebar-tab {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--pywry-tvchart-text-muted);
+    border-left: 3px solid transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.tv-settings-sidebar-tab:hover {
+    background: var(--pywry-tvchart-hover);
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-settings-sidebar-tab.active {
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 88%, var(--pywry-tvchart-panel-bg) 12%);
+    color: var(--pywry-tvchart-text);
+    border-left-color: var(--pywry-tvchart-active-text);
+}
+
+.tv-settings-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-top: 52px;
+    padding-bottom: 60px;
+    overflow: hidden;
+}
+
+.tv-settings-content-pane {
+    display: none;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.tv-settings-content-pane.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.tv-settings-body,
+.tv-settings-section-body {
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.tv-settings-body {
+    flex: 1;
+    gap: 14px;
+}
+
+.tv-settings-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 34px;
+}
+
+.tv-settings-row-spaced {
+    margin-bottom: 8px;
+}
+
+.tv-settings-row-spaced-lg {
+    margin-bottom: 12px;
+}
+
+.tv-settings-row-indent {
+    padding-left: 18px;
+}
+
+.tv-settings-row label {
+    flex: 0 0 176px;
+    font-size: 12px;
+    color: var(--pywry-tvchart-text-muted);
+    line-height: 1.35;
+    padding-top: 6px;
+    white-space: normal;
+}
+
+.tv-settings-inline-label {
+    white-space: nowrap;
+}
+
+.tv-settings-inline-gap {
+    margin-left: 4px;
+}
+
+.tv-settings-unit {
+    margin-left: 4px;
+    color: var(--pywry-tvchart-text-muted);
+}
+
+.tv-settings-slider {
+    flex: 1;
+    min-width: 0;
+    margin-left: 0;
+}
+
+.ts-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    justify-content: flex-start;
+    min-width: 0;
+    min-height: 28px;
+    flex-wrap: wrap;
+}
+
+.tv-settings-row-combo label {
+    flex: 0 0 0;
+    padding-top: 0;
+}
+
+.ts-controls-slider {
+    gap: 10px;
+}
+
+.tv-settings-color-pair {
+    display: inline-flex;
+    align-items: center;
+}
+
+.tv-settings-row-indent label {
+    flex-basis: 158px;
+}
+
+.tv-settings-slider-value {
+    flex: 0 0 38px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--pywry-tvchart-text-dim);
+    font-variant-numeric: tabular-nums;
+}
+
+.tv-settings-section {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--pywry-tvchart-text-dim);
+    letter-spacing: 0.5px;
+    padding: 8px 0 4px;
+    margin-top: 8px;
+    border-top: 1px solid var(--pywry-tvchart-border-strong);
+    padding-top: 8px;
+}
+
+.tv-settings-title {
+    font-weight: 600;
+    color: color-mix(in srgb, var(--pywry-tvchart-text) 84%, var(--pywry-tvchart-text-muted) 16%);
+    margin-bottom: 12px;
+}
+
+.ts-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.ts-swatch:hover {
+    border-color: var(--pywry-tvchart-text-muted);
+}
+
+/* Line style toggle button group */
+.ts-line-style-group {
+    display: inline-flex;
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-left: 6px;
+    flex-shrink: 0;
+}
+
+.ts-line-style-btn {
+    background: var(--pywry-tvchart-panel-bg-strong);
+    border: none;
+    border-right: 1px solid var(--pywry-tvchart-border-strong);
+    color: var(--pywry-tvchart-text-muted);
+    cursor: pointer;
+    padding: 3px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ts-line-style-btn:last-child {
+    border-right: none;
+}
+
+.ts-line-style-btn:hover {
+    background: var(--pywry-tvchart-hover);
+    color: var(--pywry-tvchart-text);
+}
+
+.ts-line-style-btn.active {
+    background: color-mix(in srgb, var(--pywry-tvchart-accent) 25%, var(--pywry-tvchart-panel-bg-strong) 75%);
+    color: var(--pywry-tvchart-text);
+}
+
+.ts-line-style-btn svg {
+    display: block;
+}
+
+.ts-select,
+.ts-input,
+.tv-indicators-search input {
+    background: var(--pywry-tvchart-panel-bg-strong);
+    border: 1px solid color-mix(in srgb, var(--pywry-tvchart-border-strong) 90%, white 10%);
+    border-radius: 4px;
+    color: var(--pywry-tvchart-text);
+    outline: none;
+}
+
+.ts-select {
+    font-size: 12px;
+    padding: 5px 8px;
+    min-width: 140px;
+    flex: 1;
+    min-width: 0;
+    max-width: 280px;
+}
+
+.ts-input {
+    font-size: 12px;
+    padding: 5px 8px;
+    width: 80px;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.ts-input::-webkit-inner-spin-button,
+.ts-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.ts-input.ts-input-sm {
+    width: 60px;
+}
+
+.ts-input.ts-input-wide {
+    margin-left: auto;
+    width: 120px;
+}
+.ts-input.ts-input-full {
+    width: 100%;
+}
+
+.ts-select:focus,
+.ts-input:focus,
+.tv-indicators-search input:focus {
+    border-color: #4b5160;
+}
+
+.ts-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: #2962ff;
+    cursor: pointer;
+}
+
+.tv-settings-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--pywry-tvchart-border-strong);
+    justify-content: flex-end;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--pywry-tvchart-panel-bg);
+}
+
+.tv-settings-footer button {
+    padding: 7px 20px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.ts-btn-template {
+    background: none;
+    border: 1px solid color-mix(in srgb, var(--pywry-tvchart-border-strong) 90%, white 10%);
+    color: var(--pywry-tvchart-text-muted);
+    margin-right: auto;
+}
+
+.tv-settings-template-wrap {
+    position: relative;
+    margin-right: auto;
+}
+
+.tv-settings-template-wrap .ts-btn-template {
+    position: relative;
+    padding-right: 26px;
+}
+
+.tv-settings-template-wrap .ts-btn-template::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    transform: translateY(-70%) rotate(45deg);
+    opacity: 0.92;
+}
+
+.tv-settings-template-menu {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 8px);
+    min-width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--pywry-tvchart-border-strong) 88%, white 12%);
+    background: color-mix(in srgb, var(--pywry-tvchart-panel-bg) 92%, #0b0d12 8%);
+    box-shadow: 0 12px 30px var(--pywry-tvchart-shadow-lg);
+    z-index: 12040;
+}
+
+.tv-settings-template-sep {
+    height: 1px;
+    margin: 4px 2px;
+    background: color-mix(in srgb, var(--pywry-tvchart-border-strong) 88%, white 12%);
+}
+
+.tv-settings-template-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 9px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--pywry-tvchart-text);
+    font: 12px/1.3 var(--pywry-font-family);
+    text-align: left;
+    cursor: pointer;
+}
+
+.tv-settings-template-item:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tv-settings-template-item:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.tv-settings-template-item:disabled:hover {
+    background: transparent;
+}
+
+.tv-settings-template-badge {
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--pywry-tvchart-border-strong) 80%, white 20%);
+    color: var(--pywry-tvchart-text-dim);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.tv-settings-template-item.active-default .tv-settings-template-badge {
+    border-color: color-mix(in srgb, #2962ff 72%, var(--pywry-tvchart-border-strong) 28%);
+    color: #8fb0ff;
+}
+
+.ts-btn-cancel {
+    background: none;
+    border: 1px solid color-mix(in srgb, var(--pywry-tvchart-border-strong) 90%, white 10%);
+    color: var(--pywry-tvchart-text-muted);
+}
+
+.ts-btn-cancel:hover,
+.ts-btn-template:hover {
+    background: var(--pywry-tvchart-hover);
+    color: var(--pywry-tvchart-text);
+}
+
+.ts-btn-ok {
+    background: #2962ff;
+    border: none;
+    color: #fff;
+    font-weight: 600;
+}
+
+.ts-btn-ok:hover {
+    opacity: 0.9;
+}
+
+.tv-indicators-panel {
+    border: 1px solid var(--pywry-tvchart-border);
+    box-shadow: 0 16px 44px var(--pywry-tvchart-shadow-lg);
+    width: 332px;
+    max-width: calc(100% - 32px);
+    max-height: 66%;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Trebuchet MS', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+}
+
+.tv-indicators-header {
+    padding: 10px 12px 8px;
+}
+
+.tv-indicators-search {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--pywry-tvchart-border-strong);
+}
+
+.tv-indicators-search .pywry-search-icon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--pywry-tvchart-text-dim);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.tv-indicators-search .pywry-search-icon svg {
+    width: 13px;
+    height: 13px;
+    display: block;
+    fill: currentColor;
+    stroke: none;
+    opacity: 0.92;
+}
+
+.tv-indicators-search .pywry-search-input {
+    width: 100%;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 32px !important;
+    color: var(--pywry-tvchart-text);
+}
+
+.tv-indicators-list {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    padding: 4px 0;
+    min-height: 180px;
+    max-height: 380px;
+}
+
+.tv-indicators-section {
+    padding: 6px 12px;
+    font-size: 9px;
+    text-transform: uppercase;
+    color: #727989;
+    letter-spacing: 0.6px;
+    box-sizing: border-box;
+}
+
+.tv-indicator-item {
+    padding: 7px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 18px;
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.tv-indicator-item:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tv-indicator-item .ind-name {
+    flex: 1;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.tv-indicator-item .ind-added {
+    font-size: 11px;
+    color: var(--pywry-tvchart-active-text);
+}
+
+.tvchart-save-split {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    height: 34px;
+}
+
+.tvchart-save-split .tvchart-save-main {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 0 8px;
+    width: auto !important;
+    min-width: 58px;
+    height: 34px;
+    line-height: 1;
+}
+
+.tvchart-save-split .tvchart-save-label {
+    font-size: 12px;
+    white-space: nowrap;
+    letter-spacing: 0.1px;
+}
+
+.tvchart-save-split .tvchart-save-caret {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 34px;
+    padding: 0;
+    border-left: 1px solid var(--pywry-tvchart-border);
+    cursor: pointer;
+}
+
+.tvchart-save-split .tvchart-save-caret:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tvchart-save-menu {
+    right: 0;
+    left: auto;
+    margin-top: 3px;
+    min-width: 196px;
+    font-size: 13px;
+    pointer-events: auto;
+}
+
+.tvchart-save-menu-item svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    flex-shrink: 0;
+}
+
+.tvchart-save-menu-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tvchart-save-menu-sep {
+    height: 1px;
+    background: var(--pywry-tvchart-border);
+    margin: 6px 0;
+}
+
+.tvchart-save-shortcut {
+    margin-left: auto;
+    color: #8e95a3;
+    font-size: 11px;
+}
+
+.ts-hidden-color-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
+}
+
+.pywry-tvchart-plus-button {
+    position: absolute;
+    right: 8px;
+    top: 52px;
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    border: 1px solid #3a4050;
+    background: var(--pywry-tvchart-bg);
+    color: var(--pywry-tvchart-text);
+    font: 12px/16px var(--pywry-font-family);
+    text-align: center;
+    z-index: 12;
+    pointer-events: none;
+}
+
+.pywry-tvchart-countdown {
+    position: absolute;
+    right: 32px;
+    bottom: 36px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--pywry-tvchart-hover);
+    color: var(--pywry-tvchart-text);
+    font: 11px/1.2 var(--pywry-font-family);
+    z-index: 12;
+    pointer-events: none;
+}
+
+.tvchart-layout-modal-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2600;
+    background: color-mix(in srgb, var(--pywry-tvchart-overlay) 45%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+}
+
+.tvchart-layout-modal-panel {
+    width: min(700px, 100%);
+    max-height: min(760px, calc(100% - 20px));
+    overflow: hidden;
+    border-radius: 10px;
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    background: color-mix(in srgb, var(--pywry-tvchart-bg) 94%, #1d2028 6%);
+    box-shadow: 0 18px 48px var(--pywry-tvchart-shadow-lg);
+    display: flex;
+    flex-direction: column;
+}
+
+.tvchart-layout-modal-panel-save {
+    width: min(560px, 100%);
+}
+
+.tvchart-layout-modal-panel-open {
+    width: min(720px, 100%);
+}
+
+.tvchart-layout-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid var(--pywry-tvchart-border);
+}
+
+.tvchart-layout-modal-panel-save .tvchart-layout-modal-header {
+    padding-bottom: 10px;
+    border-bottom: none;
+}
+
+.tvchart-layout-modal-title {
+    font: 600 24px/1.18 var(--pywry-font-family);
+    color: var(--pywry-tvchart-text);
+    letter-spacing: -0.01em;
+}
+
+.tvchart-layout-modal-panel-save .tvchart-layout-modal-title {
+    font-size: 24px;
+}
+
+.tvchart-layout-modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--pywry-tvchart-text);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.tvchart-layout-modal-close svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.tvchart-layout-modal-close:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tvchart-layout-modal-body {
+    padding: 0 24px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+}
+
+.tvchart-layout-modal-panel-open .tvchart-layout-modal-body {
+    padding: 0;
+    gap: 0;
+}
+
+.tvchart-layout-modal-panel-save .tvchart-layout-modal-body {
+    padding: 0 24px 18px;
+    gap: 8px;
+}
+
+.tvchart-layout-top-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+}
+
+.tvchart-layout-search-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--pywry-tvchart-border);
+}
+
+.tvchart-layout-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: var(--pywry-tvchart-panel-bg);
+}
+
+.tvchart-layout-modal-panel-open .tvchart-layout-search-wrap {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    width: 100%;
+}
+
+.tvchart-layout-search-label {
+    font: 500 13px/1.2 var(--pywry-font-family);
+    color: var(--pywry-tvchart-text-dim);
+}
+
+.tvchart-layout-search-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--pywry-tvchart-text-dim);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.tvchart-layout-search-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.tvchart-layout-search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--pywry-tvchart-text);
+    font: 500 16px/1.2 var(--pywry-font-family);
+}
+
+.tvchart-layout-modal-panel-open .tvchart-layout-search-input {
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.tvchart-layout-sort {
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: var(--pywry-tvchart-panel-bg);
+    color: var(--pywry-tvchart-text);
+    min-width: 158px;
+}
+
+.tvchart-layout-list-title {
+    font: 600 12px/1 var(--pywry-font-family);
+    letter-spacing: 0.06em;
+    color: var(--pywry-tvchart-text-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px 8px;
+}
+
+.tvchart-layout-count {
+    float: right;
+    letter-spacing: normal;
+    font-weight: 500;
+}
+
+.tvchart-layout-sort-btn {
+    border: none;
+    background: transparent;
+    color: var(--pywry-tvchart-text-dim);
+    font: 600 18px/1 var(--pywry-font-family);
+    cursor: pointer;
+    padding: 0;
+    border-radius: 4px;
+}
+
+.tvchart-layout-sort-btn:hover {
+    color: var(--pywry-tvchart-text);
+    background: var(--pywry-tvchart-hover);
+}
+
+.tvchart-layout-list {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    overflow: auto;
+    max-height: 500px;
+    min-height: 320px;
+    outline: none;
+}
+
+.tvchart-layout-modal-panel-open .tvchart-layout-list {
+    max-height: 500px;
+    min-height: 320px;
+}
+
+.tvchart-layout-empty {
+    padding: 16px;
+    color: var(--pywry-tvchart-text-dim);
+    font: 500 13px/1.35 var(--pywry-font-family);
+}
+
+.tvchart-layout-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px 16px;
+    border: none;
+    border-left: 3px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    color: var(--pywry-tvchart-text);
+    display: grid;
+    grid-template-columns: 28px 1fr 28px;
+    align-items: center;
+    gap: 12px;
+}
+
+.tvchart-layout-item.selected {
+    background: color-mix(in srgb, var(--pywry-tvchart-hover) 85%, #2a2d35 15%);
+    border-left-color: transparent;
+}
+
+.tvchart-layout-item-last {
+    margin-bottom: 6px;
+}
+
+.tvchart-layout-item:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tvchart-layout-item-main {
+    min-width: 0;
+}
+
+.tvchart-layout-item-name {
+    font: 500 16px/1.2 var(--pywry-font-family);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tvchart-layout-item-meta {
+    margin-top: 4px;
+    color: var(--pywry-tvchart-text-dim);
+    font: 500 13px/1.2 var(--pywry-font-family);
+}
+
+.tvchart-layout-modal-panel-open .tvchart-layout-item-name {
+    font-size: 16px;
+}
+
+.tvchart-layout-modal-panel-open .tvchart-layout-item-meta {
+    font-size: 13px;
+}
+
+.tvchart-layout-item-fav,
+.tvchart-layout-item-delete {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--pywry-tvchart-text-dim);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tvchart-layout-item-fav svg,
+.tvchart-layout-item-delete svg {
+    width: 20px;
+    height: 20px;
+}
+
+.tvchart-layout-item.selected .tvchart-layout-item-fav,
+.tvchart-layout-item.selected .tvchart-layout-item-delete {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.tvchart-layout-item-fav:hover,
+.tvchart-layout-item-delete:hover {
+    color: var(--pywry-tvchart-text);
+    background: var(--pywry-tvchart-hover);
+}
+
+.tvchart-layout-btn-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.tvchart-layout-btn {
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    border-radius: 9px;
+    min-height: 38px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font: 500 13px/1.2 var(--pywry-font-family);
+    background: var(--pywry-tvchart-panel-bg);
+    color: var(--pywry-tvchart-text);
+}
+
+.tvchart-layout-btn:hover {
+    background: var(--pywry-tvchart-hover);
+}
+
+.tvchart-layout-btn-primary {
+    border-color: #2962ff;
+    background: #2962ff;
+    color: #ffffff;
+}
+
+.tvchart-layout-btn-primary:hover {
+    background: #1f57f0;
+}
+
+.tvchart-layout-btn:disabled,
+.tvchart-layout-btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--pywry-tvchart-hover);
+    border-color: var(--pywry-tvchart-border-strong);
+    color: var(--pywry-tvchart-text-dim);
+}
+
+.tvchart-layout-hint {
+    color: var(--pywry-tvchart-text-muted);
+    font: 500 12px/1.35 var(--pywry-font-family);
+}
+
+.tvchart-layout-save-input {
+    width: 100%;
+    border: 1px solid var(--pywry-tvchart-border-strong);
+    border-radius: 8px;
+    padding: 8px 10px;
+    min-height: 36px;
+    background: var(--pywry-tvchart-panel-bg-strong);
+    color: var(--pywry-tvchart-text);
+    font: 500 14px/1.2 var(--pywry-font-family);
+    outline: none;
+}
+
+.tvchart-layout-save-input:focus {
+    border-color: #2962ff;
+    box-shadow: 0 0 0 1px #2962ff;
+}
+
+.tvchart-layout-error {
+    min-height: 18px;
+    color: #ef4444;
+    font: 500 12px/1.2 var(--pywry-font-family);
+}
+
+.tvchart-layout-duplicate {
+    min-height: 18px;
+    color: #f3c127;
+    font: 500 12px/1.2 var(--pywry-font-family);
+}
+
+@media (max-width: 960px) {
+    .tvchart-layout-modal-overlay {
+        padding: 14px;
+    }
+
+    .tvchart-layout-modal-panel-open,
+    .tvchart-layout-modal-panel {
+        width: min(700px, 100%);
+    }
+
+    .tvchart-layout-modal-header,
+    .tvchart-layout-search-row,
+    .tvchart-layout-list-title,
+    .tvchart-layout-item {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .tvchart-layout-modal-title,
+    .tvchart-layout-modal-panel-save .tvchart-layout-modal-title {
+        font-size: 20px;
+    }
+
+    .tvchart-layout-modal-panel-open .tvchart-layout-search-input {
+        font-size: 15px;
+    }
+
+    .tvchart-layout-modal-panel-open .tvchart-layout-item-name {
+        font-size: 15px;
+    }
+
+    .tvchart-layout-modal-panel-open .tvchart-layout-item-meta {
+        font-size: 12px;
+    }
+
+    .tvchart-layout-modal-panel-save .tvchart-layout-modal-body {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+/* Keep all TV chart scrollbars on the library visual system (no OS default bars). */
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-sidebar,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-content-pane,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-body,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-section-body,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-textarea,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-indicators-list,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-list,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-modal-body,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-symbol-search-results {
+    scrollbar-width: thin;
+    scrollbar-color: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5)) transparent;
+}
+
+/* Settings/modals/flyouts can be mounted on document.body, so style those containers directly too. */
+.tv-settings-sidebar,
+.tv-settings-content-pane,
+.tv-settings-body,
+.tv-settings-section-body,
+.tv-settings-textarea,
+.tv-indicators-list,
+.tvchart-layout-list,
+.tvchart-layout-modal-body,
+.pywry-tool-flyout,
+.tv-symbol-search-results {
+    scrollbar-width: thin;
+    scrollbar-color: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5)) transparent;
+}
+
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-sidebar::-webkit-scrollbar,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-content-pane::-webkit-scrollbar,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-body::-webkit-scrollbar,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-section-body::-webkit-scrollbar,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-textarea::-webkit-scrollbar,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-indicators-list::-webkit-scrollbar,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-list::-webkit-scrollbar,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-modal-body::-webkit-scrollbar,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-symbol-search-results::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.tv-settings-sidebar::-webkit-scrollbar,
+.tv-settings-content-pane::-webkit-scrollbar,
+.tv-settings-body::-webkit-scrollbar,
+.tv-settings-section-body::-webkit-scrollbar,
+.tv-settings-textarea::-webkit-scrollbar,
+.tv-indicators-list::-webkit-scrollbar,
+.tvchart-layout-list::-webkit-scrollbar,
+.tvchart-layout-modal-body::-webkit-scrollbar,
+.pywry-tool-flyout::-webkit-scrollbar,
+.tv-symbol-search-results::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-sidebar::-webkit-scrollbar-track,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-content-pane::-webkit-scrollbar-track,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-body::-webkit-scrollbar-track,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-section-body::-webkit-scrollbar-track,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-textarea::-webkit-scrollbar-track,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-indicators-list::-webkit-scrollbar-track,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-list::-webkit-scrollbar-track,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-modal-body::-webkit-scrollbar-track,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-symbol-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tv-settings-sidebar::-webkit-scrollbar-track,
+.tv-settings-content-pane::-webkit-scrollbar-track,
+.tv-settings-body::-webkit-scrollbar-track,
+.tv-settings-section-body::-webkit-scrollbar-track,
+.tv-settings-textarea::-webkit-scrollbar-track,
+.tv-indicators-list::-webkit-scrollbar-track,
+.tvchart-layout-list::-webkit-scrollbar-track,
+.tvchart-layout-modal-body::-webkit-scrollbar-track,
+.pywry-tool-flyout::-webkit-scrollbar-track,
+.tv-symbol-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-sidebar::-webkit-scrollbar-thumb,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-content-pane::-webkit-scrollbar-thumb,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-body::-webkit-scrollbar-thumb,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-section-body::-webkit-scrollbar-thumb,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-textarea::-webkit-scrollbar-thumb,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-indicators-list::-webkit-scrollbar-thumb,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-list::-webkit-scrollbar-thumb,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-modal-body::-webkit-scrollbar-thumb,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-symbol-search-results::-webkit-scrollbar-thumb {
+    background: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5));
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.tv-settings-sidebar::-webkit-scrollbar-thumb,
+.tv-settings-content-pane::-webkit-scrollbar-thumb,
+.tv-settings-body::-webkit-scrollbar-thumb,
+.tv-settings-section-body::-webkit-scrollbar-thumb,
+.tv-settings-textarea::-webkit-scrollbar-thumb,
+.tv-indicators-list::-webkit-scrollbar-thumb,
+.tvchart-layout-list::-webkit-scrollbar-thumb,
+.tvchart-layout-modal-body::-webkit-scrollbar-thumb,
+.pywry-tool-flyout::-webkit-scrollbar-thumb,
+.tv-symbol-search-results::-webkit-scrollbar-thumb {
+    background: var(--pywry-scrollbar-thumb, rgba(155, 155, 155, 0.5));
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-sidebar::-webkit-scrollbar-thumb:hover,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-content-pane::-webkit-scrollbar-thumb:hover,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-body::-webkit-scrollbar-thumb:hover,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-section-body::-webkit-scrollbar-thumb:hover,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-settings-textarea::-webkit-scrollbar-thumb:hover,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-indicators-list::-webkit-scrollbar-thumb:hover,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-list::-webkit-scrollbar-thumb:hover,
+.pywry-widget:not(.pywry-custom-scrollbar) .tvchart-layout-modal-body::-webkit-scrollbar-thumb:hover,
+.pywry-widget:not(.pywry-custom-scrollbar) .tv-symbol-search-results::-webkit-scrollbar-thumb:hover {
+    background: var(--pywry-scrollbar-thumb-hover, rgba(175, 175, 175, 0.7));
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.tv-settings-sidebar::-webkit-scrollbar-thumb:hover,
+.tv-settings-content-pane::-webkit-scrollbar-thumb:hover,
+.tv-settings-body::-webkit-scrollbar-thumb:hover,
+.tv-settings-section-body::-webkit-scrollbar-thumb:hover,
+.tv-settings-textarea::-webkit-scrollbar-thumb:hover,
+.tv-indicators-list::-webkit-scrollbar-thumb:hover,
+.tvchart-layout-list::-webkit-scrollbar-thumb:hover,
+.tvchart-layout-modal-body::-webkit-scrollbar-thumb:hover,
+.pywry-tool-flyout::-webkit-scrollbar-thumb:hover,
+.tv-symbol-search-results::-webkit-scrollbar-thumb:hover {
+    background: var(--pywry-scrollbar-thumb-hover, rgba(175, 175, 175, 0.7));
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+

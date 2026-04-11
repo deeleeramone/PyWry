@@ -160,4 +160,4 @@ export PYWRY_HOT_RELOAD__ENABLED=false
 ## Next Steps
 
 - **[Configuration](configuration.md)** — Full configuration reference
-- **[Theming & CSS](theming.md)** — Styling your application
+- **[Theming & CSS](../components/theming.md)** — Styling your application

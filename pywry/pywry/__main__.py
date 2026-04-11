@@ -145,15 +145,31 @@ from pywry._freeze import _setup_pytauri_standalone  # noqa: E402
 
 _setup_pytauri_standalone()
 
-import pytauri_plugins  # noqa: E402
+import pytauri_plugins  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
 
-from anyio import create_task_group  # noqa: E402
-from anyio.from_thread import start_blocking_portal  # noqa: E402
-from pydantic import BaseModel  # noqa: E402
-from pytauri import Commands, Manager, RunEvent, WebviewUrl, WindowEvent  # noqa: E402
-from pytauri.webview import WebviewWindowBuilder  # noqa: E402
+from anyio import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+    create_task_group,
+)
+from anyio.from_thread import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+    start_blocking_portal,
+)
+from pydantic import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+    BaseModel,
+)
+from pytauri import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+    Commands,
+    Manager,
+    RunEvent,
+    WebviewUrl,
+    WindowEvent,
+)
+from pytauri.webview import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+    WebviewWindowBuilder,
+)
 
-from pywry.config import TAURI_PLUGIN_REGISTRY as _PLUGIN_REGISTRY  # noqa: E402
+from pywry.config import (  # noqa: E402  # pylint: disable=wrong-import-order,ungrouped-imports
+    TAURI_PLUGIN_REGISTRY as _PLUGIN_REGISTRY,
+)
 
 
 # Try vendored pytauri_wheel first, fall back to installed package
@@ -322,6 +338,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
         self.menu_items: dict[str, Any] = {}  # item_id -> MenuItem-like object
         self.trays: dict[str, Any] = {}  # tray_id -> TrayIcon object
         self.tray_menu_items: set[str] = set()  # item IDs owned by trays
+        self._destroyed_windows: set[str] = set()  # labels of destroyed windows
         self.app_handle: Any = None
         self.running = True
 
@@ -353,6 +370,18 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
         """Send an error message."""
         log_error(error)
         self.send({"type": "error", "error": error})
+
+    def _window_not_found(self, label: str, context: str = "") -> None:
+        """Log a 'window not found' message at the appropriate level.
+
+        If the window was already destroyed (user closed it), this is
+        expected and logged at debug level.  Otherwise it's a real error.
+        """
+        prefix = f"{context}: " if context else ""
+        if label in self._destroyed_windows:
+            log(f"{prefix}Window already closed: {label}")
+        else:
+            self.send_error(f"{prefix}Window not found: {label}")
 
     def send_result(self, label: str, success: bool) -> None:
         """Send a command result."""
@@ -598,7 +627,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
                 log(f"Found window '{label}' via Manager")
 
         if window is None:
-            self.send_error(f"Window not found: {label}")
+            self._window_not_found(label, "set_content")
             return
 
         try:
@@ -727,7 +756,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
             except Exception as e:
                 self.send_error(f"Failed to show window: {e}")
         else:
-            self.send_error(f"Window not found: {label}")
+            self._window_not_found(label, "show")
 
     def hide_window(self, cmd: dict[str, Any]) -> None:
         """Hide a window (keeps it alive, just not visible)."""
@@ -757,7 +786,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
             except Exception as e:
                 self.send_error(f"Failed to hide window: {e}")
         else:
-            self.send_error(f"Window not found: {label}")
+            self._window_not_found(label, "hide")
 
     def emit_event(self, cmd: dict[str, Any]) -> None:
         """Emit an event to a window.
@@ -792,7 +821,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
                 self.windows[label] = window
 
         if window is None:
-            self.send_error(f"emit: Window not found: {label}")
+            self._window_not_found(label, "emit")
             return
 
         try:
@@ -832,7 +861,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
                 self.windows[label] = window
 
         if window is None:
-            self.send_error(f"eval: Window not found: {label}")
+            self._window_not_found(label, "eval")
             return
 
         try:
@@ -875,7 +904,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
             except Exception as e:
                 self.send_error(f"Failed to close window: {e}")
         else:
-            self.send_error(f"Window not found: {label}")
+            self._window_not_found(label, "close")
 
     def _get_window(self, label: str) -> Any | None:
         """Get a window by label, checking cache first then manager."""
@@ -1174,7 +1203,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
             elif target == "window":
                 window = self._get_window(label)
                 if window is None:
-                    self.send_error(f"Window not found: {label}")
+                    self._window_not_found(label, "set_menu")
                     return
                 window.set_menu(menu)
                 log(f"Set window '{label}' menu: {menu_id}")
@@ -1194,7 +1223,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
 
         window = self._get_window(label)
         if window is None:
-            self.send_error(f"Window not found: {label}")
+            self._window_not_found(label, "popup_menu")
             return
 
         try:
@@ -1628,6 +1657,7 @@ def _handle_close_requested(ipc: JsonIPC, app_handle: Any, label: str, window_ev
             window.destroy()
         if label in ipc.windows:
             del ipc.windows[label]
+        ipc._destroyed_windows.add(label)
         ipc.send({"type": "event", "event_type": "window:closed", "label": label, "data": {}})
     else:
         log(f"CloseRequested for '{label}' - hiding")
@@ -1755,8 +1785,9 @@ def main() -> int:  # noqa: C901  # pylint: disable=too-many-statements
                     label = run_event.label
                     if isinstance(window_event, WindowEvent.CloseRequested):
                         _handle_close_requested(ipc, app_handle, label, window_event)
-                    elif isinstance(window_event, WindowEvent.Destroyed) and label in ipc.windows:
-                        del ipc.windows[label]
+                    elif isinstance(window_event, WindowEvent.Destroyed):
+                        ipc.windows.pop(label, None)
+                        ipc._destroyed_windows.add(label)
                         log(f"Window '{label}' destroyed, removed from cache")
                 elif isinstance(run_event, RunEvent.MenuEvent):
                     # Menu item clicked — forward as menu:click event.

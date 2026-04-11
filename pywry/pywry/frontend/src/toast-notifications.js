@@ -21,6 +21,7 @@
 
     window.PYWRY_TOAST = {
         _initialized: true,
+        _defaultContainer: null,
 
         // Type configurations with escaped unicode icons
         types: {
@@ -33,6 +34,10 @@
 
         maxVisible: 3,
         defaultPosition: 'top-right',
+
+        setContainer: function(container) {
+            this._defaultContainer = container || null;
+        },
 
         /**
          * Get or create the toast state for a widget container
@@ -70,7 +75,7 @@
             var title = options.title || '';
             var duration = options.duration !== undefined ? options.duration : typeConfig.autoDismiss;
             var position = options.position || this.defaultPosition;
-            var widget = options.container || document.querySelector('.pywry-widget') || document.body;
+            var widget = options.container || this._defaultContainer || document.querySelector('.pywry-widget') || document.body;
 
             // Get widget-specific state
             var state = this._getWidgetState(widget);
@@ -164,7 +169,7 @@
             var confirmText = options.confirmText || 'Confirm';
             var cancelText = options.cancelText || 'Cancel';
             var position = options.position || this.defaultPosition;
-            var widget = options.container || document.querySelector('.pywry-widget') || document.body;
+            var widget = options.container || this._defaultContainer || document.querySelector('.pywry-widget') || document.body;
 
             // Get widget-specific state
             var state = this._getWidgetState(widget);

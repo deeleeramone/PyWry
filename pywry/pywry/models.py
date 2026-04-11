@@ -55,10 +55,12 @@ class WindowConfig(BaseModel):
     allow_network: bool = True
     enable_plotly: bool = False
     enable_aggrid: bool = False
+    enable_tvchart: bool = False
     plotly_theme: Literal[
         "plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "simple_white"
     ] = "plotly_dark"
     aggrid_theme: Literal["quartz", "alpine", "balham", "material"] = "alpine"
+    tvchart_theme: Literal["dark", "light"] = "dark"
 
     # ── Builder-level (forwarded to WebviewWindowBuilder.build()) ─────────
     resizable: bool = True

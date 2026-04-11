@@ -74,9 +74,9 @@ The MCP server bridges AI agents and PyWry's rendering engine:
 ```mermaid
 flowchart LR
     A["AI Agent<br>(Claude, etc.)"] <-->|"MCP Protocol<br>(stdio / SSE)"| B["PyWry MCP Server"]
-    B --> C["Tools<br>29 widget operations"]
+    B --> C["Tools<br>38 widget operations"]
     B --> D["Resources<br>Docs, source, exports"]
-    B --> E["Skills<br>12 guidance prompts"]
+    B --> E["Skills<br>13 guidance prompts"]
     C --> F["PyWry Widgets<br>(native or browser)"]
     D --> B
     E --> B
@@ -104,16 +104,17 @@ In headless mode, `list_widgets` returns URLs like `http://127.0.0.1:PORT/widget
 
 The MCP server exposes three types of capabilities:
 
-### Tools (29)
+### Tools (38)
 
-Operations the agent can call — creating widgets, updating content, managing state. Organized into six groups:
+Operations the agent can call — creating widgets, updating content, managing state. Organized into eight groups:
 
 | Group | Tools | Purpose |
 |:---|:---|:---|
 | **Discovery** | `get_skills` | Retrieve guidance and component reference |
-| **Widget creation** | `create_widget`, `show_plotly`, `show_dataframe`, `build_div`, `build_ticker_item` | Build new widgets |
+| **Widget creation** | `create_widget`, `show_plotly`, `show_dataframe`, `show_tvchart`, `build_div`, `build_ticker_item` | Build new widgets |
 | **Widget manipulation** | `set_content`, `set_style`, `show_toast`, `update_theme`, `inject_css`, `remove_css`, `navigate`, `download`, `update_plotly`, `update_marquee`, `update_ticker_item`, `send_event` | Modify existing widgets |
 | **Widget management** | `list_widgets`, `get_events`, `destroy_widget` | Track and clean up widgets |
+| **Chat** | `create_chat_widget`, `chat_send_message`, `chat_stop_generation`, `chat_manage_thread`, `chat_register_command`, `chat_get_history`, `chat_update_settings`, `chat_set_typing` | Conversational chat widgets |
 | **Resources & export** | `get_component_docs`, `get_component_source`, `export_widget`, `list_resources` | Documentation and code generation |
 | **Autonomous building** | `plan_widget`, `build_app`, `export_project`, `scaffold_app` | LLM-powered end-to-end app creation |
 
@@ -133,7 +134,7 @@ Read-only data the agent can access via `pywry://` URIs:
 
 ### Prompts (Skills)
 
-12 guidance prompts that teach the agent how to use PyWry effectively:
+13 guidance prompts that teach the agent how to use PyWry effectively:
 
 | Skill | What it teaches |
 |:---|:---|
@@ -148,6 +149,7 @@ Read-only data the agent can access via `pywry://` URIs:
 | `data_visualization` | Plotly charts, AG Grid tables, live data patterns |
 | `forms_and_inputs` | Form building with validation and event collection |
 | `modals` | Modal dialogs — schema, sizes, open/close/reset |
+| `chat` | Conversational chat widget — streaming, threads, slash commands, providers |
 | `autonomous_building` | End-to-end app generation with `plan_widget`, `build_app`, `export_project`, `scaffold_app` |
 
 ## Next Steps

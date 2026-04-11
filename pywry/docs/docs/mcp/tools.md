@@ -1,6 +1,6 @@
 # Tools Reference
 
-The MCP server exposes **29 tools** organized into six groups.
+The MCP server exposes **38 tools** organized into eight groups.
 Every description, parameter name, type, and default below comes directly from the tool schemas in the source code.
 
 !!! warning "Mandatory first step"
@@ -22,7 +22,7 @@ The `component_reference` skill is **mandatory** — it contains the only correc
 |:---|:---|:---|:---|
 | `skill` | `string` | No | Skill to retrieve. If omitted, returns the full list with descriptions. |
 
-**Skill IDs:** `component_reference`, `interactive_buttons`, `native`, `jupyter`, `iframe`, `deploy`, `css_selectors`, `styling`, `data_visualization`, `forms_and_inputs`, `modals`, `autonomous_building`
+**Skill IDs:** `component_reference`, `interactive_buttons`, `native`, `jupyter`, `iframe`, `deploy`, `css_selectors`, `styling`, `data_visualization`, `forms_and_inputs`, `modals`, `chat`, `autonomous_building`
 
 **System events available via `component_reference`:**
 
@@ -173,6 +173,22 @@ Create an AG Grid table widget from JSON data.
 **Returns:** `{"widget_id": "...", "path": "...", "created": true}`
 
 To update later, use `send_event` with event `grid:update-data` and data `{"data": [...], "strategy": "set"}`. Strategies: `set` (replace all rows), `append` (add rows), `update` (merge by row ID).
+
+---
+
+### show_tvchart
+
+Create a TradingView Lightweight Charts widget from JSON data.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `data_json` | `string` | **Yes** | — | Chart data as JSON array of OHLCV objects |
+| `title` | `string` | No | `"Chart"` | Window title |
+| `height` | `integer` | No | `500` | Window height |
+| `chart_options` | `string` | No | `null` | Chart-level options as JSON string |
+| `series_options` | `string` | No | `null` | Series-level options as JSON string |
+
+**Returns:** `{"widget_id": "...", "path": "...", "created": true}`
 
 ---
 
@@ -495,6 +511,121 @@ All three parameters are **required**.
 |:---|:---|:---|
 | `toolbar:marquee-set-item` | `{"ticker": "AAPL", "text": "AAPL $185", "styles": {"color": "green"}}` | Update one ticker item |
 | `toolbar:marquee-set-content` | `{"id": "...", "text": "..."}` | Replace marquee content |
+
+---
+
+## Chat
+
+Tools for creating and managing conversational chat widgets with LLM integration, threading, and slash commands.
+
+### create_chat_widget
+
+Create a chat widget with LLM-powered conversation capabilities.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `title` | `string` | No | `"Chat"` | Window title |
+| `height` | `integer` | No | `600` | Window height |
+| `system_prompt` | `string` | No | `null` | System prompt for the LLM |
+| `model` | `string` | No | `null` | Model name (provider-specific) |
+| `temperature` | `number` | No | `null` | Sampling temperature |
+| `max_tokens` | `integer` | No | `null` | Maximum response tokens |
+| `streaming` | `boolean` | No | `true` | Enable streaming responses |
+| `persist` | `boolean` | No | `false` | Persist chat history |
+| `provider` | `string` | No | `null` | LLM provider name |
+| `show_sidebar` | `boolean` | No | `true` | Show thread sidebar |
+| `slash_commands` | `array` | No | `null` | Slash command definitions |
+| `toolbars` | `array` | No | `null` | Toolbar component definitions |
+
+**Returns:** `{"widget_id": "...", "path": "...", "created": true}`
+
+---
+
+### chat_send_message
+
+Send a message to a chat widget.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | Target chat widget |
+| `text` | `string` | **Yes** | — | Message text |
+| `thread_id` | `string` | No | `null` | Target thread (uses active thread if omitted) |
+
+---
+
+### chat_stop_generation
+
+Stop the current LLM generation in a chat widget.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | Target chat widget |
+| `thread_id` | `string` | No | Target thread (uses active thread if omitted) |
+
+---
+
+### chat_manage_thread
+
+Create, switch, delete, rename, or list threads in a chat widget.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | Target chat widget |
+| `action` | `string` | **Yes** | — | One of `create`, `switch`, `delete`, `rename`, `list` |
+| `thread_id` | `string` | No | `null` | Thread to target (required for `switch`, `delete`, `rename`) |
+| `title` | `string` | No | `null` | Thread title (for `create` or `rename`) |
+
+---
+
+### chat_register_command
+
+Register a slash command in a chat widget.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | Target chat widget |
+| `name` | `string` | **Yes** | Command name (without leading `/`) |
+| `description` | `string` | No | Command description shown in autocomplete |
+
+---
+
+### chat_get_history
+
+Retrieve message history from a chat widget.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | Target chat widget |
+| `thread_id` | `string` | No | `null` | Thread to get history for (uses active thread if omitted) |
+| `limit` | `integer` | No | `50` | Maximum messages to return |
+| `before_id` | `string` | No | `null` | Return messages before this message ID (pagination) |
+
+---
+
+### chat_update_settings
+
+Update LLM settings for a chat widget.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | Target chat widget |
+| `model` | `string` | No | Model name |
+| `temperature` | `number` | No | Sampling temperature |
+| `max_tokens` | `integer` | No | Maximum response tokens |
+| `system_prompt` | `string` | No | System prompt |
+| `streaming` | `boolean` | No | Enable/disable streaming |
+
+---
+
+### chat_set_typing
+
+Set or clear the typing indicator in a chat widget.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | Target chat widget |
+| `typing` | `boolean` | No | `true` | Whether to show the typing indicator |
+| `thread_id` | `string` | No | `null` | Target thread (uses active thread if omitted) |
 
 ---
 

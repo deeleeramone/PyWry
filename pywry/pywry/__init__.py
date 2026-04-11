@@ -67,7 +67,7 @@ from .grid import (
     to_js_grid_config,
 )
 from .hot_reload import HotReloadManager
-from .inline import block, show_dataframe, show_plotly
+from .inline import block, show_dataframe, show_plotly, show_tvchart
 from .menu_proxy import MenuProxy
 from .modal import Modal
 from .models import (
@@ -119,6 +119,42 @@ from .toolbar import (
     ToolbarItem,
 )
 from .tray_proxy import TrayProxy
+from .tvchart import (
+    DatafeedProvider,
+    QuoteData,
+    TVChartBar,
+    TVChartConfig,
+    TVChartData,
+    TVChartDatafeedBarUpdate,
+    TVChartDatafeedConfigRequest,
+    TVChartDatafeedConfigResponse,
+    TVChartDatafeedConfiguration,
+    TVChartDatafeedHistoryRequest,
+    TVChartDatafeedHistoryResponse,
+    TVChartDatafeedMarksRequest,
+    TVChartDatafeedMarksResponse,
+    TVChartDatafeedResolveRequest,
+    TVChartDatafeedResolveResponse,
+    TVChartDatafeedSearchRequest,
+    TVChartDatafeedSearchResponse,
+    TVChartDatafeedServerTimeRequest,
+    TVChartDatafeedServerTimeResponse,
+    TVChartDatafeedSubscribeRequest,
+    TVChartDatafeedSymbolType,
+    TVChartDatafeedTimescaleMarksRequest,
+    TVChartDatafeedTimescaleMarksResponse,
+    TVChartDatafeedUnsubscribeRequest,
+    TVChartExchange,
+    TVChartLibrarySubsessionInfo,
+    TVChartMark,
+    TVChartSearchSymbolResultItem,
+    TVChartStateMixin,
+    TVChartSymbolInfo,
+    TVChartSymbolInfoPriceSource,
+    TVChartTimescaleMark,
+    UDFAdapter,
+    build_tvchart_toolbars,
+)
 from .types import (
     CheckMenuItemConfig,
     IconMenuItemConfig,
@@ -131,7 +167,7 @@ from .types import (
     SubmenuConfig,
     TrayIconConfig,
 )
-from .widget import PyWryAgGridWidget, PyWryPlotlyWidget, PyWryWidget
+from .widget import PyWryAgGridWidget, PyWryPlotlyWidget, PyWryTVChartWidget, PyWryWidget
 from .window_manager import BrowserMode, get_lifecycle
 
 
@@ -153,6 +189,7 @@ __all__ = [
     "CodeArtifact",
     "ColDef",
     "ColGroupDef",
+    "DatafeedProvider",
     "DateInput",
     "DefaultColDef",
     "Div",
@@ -191,7 +228,9 @@ __all__ = [
     "PyWryAgGridWidget",
     "PyWryPlotlyWidget",
     "PyWrySettings",
+    "PyWryTVChartWidget",
     "PyWryWidget",
+    "QuoteData",
     "RadioGroup",
     "RangeInput",
     "RowSelection",
@@ -206,6 +245,36 @@ __all__ = [
     "StatusResponse",
     "SubmenuConfig",
     "SvgIcon",
+    "TVChartBar",
+    "TVChartConfig",
+    "TVChartData",
+    "TVChartDatafeedBarUpdate",
+    "TVChartDatafeedConfigRequest",
+    "TVChartDatafeedConfigResponse",
+    "TVChartDatafeedConfiguration",
+    "TVChartDatafeedHistoryRequest",
+    "TVChartDatafeedHistoryResponse",
+    "TVChartDatafeedMarksRequest",
+    "TVChartDatafeedMarksResponse",
+    "TVChartDatafeedResolveRequest",
+    "TVChartDatafeedResolveResponse",
+    "TVChartDatafeedSearchRequest",
+    "TVChartDatafeedSearchResponse",
+    "TVChartDatafeedServerTimeRequest",
+    "TVChartDatafeedServerTimeResponse",
+    "TVChartDatafeedSubscribeRequest",
+    "TVChartDatafeedSymbolType",
+    "TVChartDatafeedTimescaleMarksRequest",
+    "TVChartDatafeedTimescaleMarksResponse",
+    "TVChartDatafeedUnsubscribeRequest",
+    "TVChartExchange",
+    "TVChartLibrarySubsessionInfo",
+    "TVChartMark",
+    "TVChartSearchSymbolResultItem",
+    "TVChartStateMixin",
+    "TVChartSymbolInfo",
+    "TVChartSymbolInfoPriceSource",
+    "TVChartTimescaleMark",
     "TabGroup",
     "TableArtifact",
     "TextArea",
@@ -226,6 +295,7 @@ __all__ = [
     "ToolbarStateMixin",
     "TrayIconConfig",
     "TrayProxy",
+    "UDFAdapter",
     "WidgetType",
     "WindowConfig",
     "WindowMode",
@@ -234,6 +304,7 @@ __all__ = [
     "block",
     "build_chat_html",
     "build_grid_config",
+    "build_tvchart_toolbars",
     "detect_notebook_environment",
     "freeze_support",
     "get_asset_loader",
@@ -244,5 +315,6 @@ __all__ = [
     "should_use_inline_rendering",
     "show_dataframe",
     "show_plotly",
+    "show_tvchart",
     "to_js_grid_config",
 ]

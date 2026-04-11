@@ -15,6 +15,7 @@ AGGRID_JS_URL = (
     "https://cdn.jsdelivr.net/npm/ag-grid-community@35.0.0/dist/ag-grid-community.min.js"
 )
 AGGRID_CSS_BASE_URL = "https://cdn.jsdelivr.net/npm/ag-grid-community@35.0.0/styles"
+TVCHART_JS_URL = "https://cdn.jsdelivr.net/npm/lightweight-charts@5.1.0/dist/lightweight-charts.standalone.production.js"
 
 # Asset directory
 ASSETS_DIR = Path(__file__).parent / "pywry" / "frontend" / "assets"
@@ -121,6 +122,16 @@ def download_aggrid_css() -> bool:
     return success
 
 
+def download_tvchart_js() -> bool:
+    """Download TradingView Lightweight Charts JS library."""
+    dest = ASSETS_DIR / "lightweight-charts-5.1.0.standalone.production.js"
+    gz_dest = Path(str(dest) + ".gz")
+    if gz_dest.exists():
+        print(f"Lightweight Charts JS already exists at {gz_dest}")
+        return True
+    return download_file(TVCHART_JS_URL, dest, "Lightweight Charts v5.1.0")
+
+
 def create_placeholder_files() -> None:
     """Create placeholder files if downloads fail."""
     placeholder_files = [
@@ -130,6 +141,10 @@ def create_placeholder_files() -> None:
             b"// AG Grid placeholder - download failed\n",
         ),
         ("ag-grid-35.0.0.css.gz", b"/* AG Grid CSS placeholder - download failed */\n"),
+        (
+            "lightweight-charts-5.1.0.standalone.production.js.gz",
+            b"// Lightweight Charts placeholder - download failed\n",
+        ),
     ]
 
     for filename, content in placeholder_files:
@@ -153,6 +168,7 @@ def download_all_assets() -> bool:
         download_plotly_js(),
         download_aggrid_js(),
         download_aggrid_css(),
+        download_tvchart_js(),
     ]
 
     success = all(results)
@@ -176,6 +192,7 @@ def verify_assets() -> dict[str, bool]:
         "plotly-3.3.1.js.gz",  # Full bundle with templates
         "ag-grid-community-35.0.0.min.js.gz",
         "ag-grid-35.0.0.css.gz",
+        "lightweight-charts-5.1.0.standalone.production.js.gz",
     ]
 
     return {asset: (ASSETS_DIR / asset).exists() for asset in required_assets}

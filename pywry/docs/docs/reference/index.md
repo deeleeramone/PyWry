@@ -8,12 +8,17 @@ Complete API documentation for PyWry.
 |--------|-------------|
 | [pywry](pywry.md) | Main `PyWry` class for native windows |
 | [InlineWidget](inline-widget.md) | Browser/notebook widgets via FastAPI |
+| [Widget](widget.md) | Notebook widget classes |
+| [Runtime](runtime.md) | PyTauri subprocess management |
+| [WindowProxy](window-proxy.md) | Native window control handle |
+| [MenuProxy](menu-proxy.md) | Native menu management |
+| [TrayProxy](tray-proxy.md) | System tray management |
 
 ## Events
 
 | Module | Description |
 |--------|-------------|
-| [Event Reference](events.md) | All events, payloads, and the JavaScript bridge API |
+| [Event Reference](events/index.md) | All events, payloads, and the JavaScript bridge API |
 
 ## Models & Configuration
 
@@ -21,31 +26,41 @@ Complete API documentation for PyWry.
 |--------|-------------|
 | [pywry.models](models.md) | `HtmlContent`, `WindowConfig`, `WindowMode` |
 | [pywry.config](config.md) | Settings classes and configuration |
+| [pywry.types](types.md) | Type aliases and enums |
+| [pywry.exceptions](exceptions.md) | Exception classes |
+
+## CSS
+
+| Page | Description |
+|------|-------------|
+| [CSS Overview](css/index.md) | Variables, theming, custom CSS injection |
+| [Core Stylesheet](css/core.md) | Layout, toolbar, buttons, inputs, controls, modal, scrollbars |
+| [Chat Stylesheet](css/chat.md) | Chat UI classes |
+| [Toast Stylesheet](css/toast.md) | Toast notification classes |
+| [TradingView Stylesheet](css/tvchart.md) | TradingView chart UI classes |
+
+## Chat
+
+| Module | Description |
+|--------|-------------|
+| [pywry.chat](chat.md) | Core chat models, config, and HTML builder |
+| [pywry.chat_manager](chat-manager.md) | High-level chat orchestration, artifacts, and UI state |
 
 ## State Management
 
 | Module | Description |
 |--------|-------------|
 | [State](state.md) | `WidgetStore`, `EventBus`, `CallbackRegistry`, Redis backend |
+| [State Mixins](state-mixins.md) | Grid, Plotly, TVChart, Toolbar state mixins |
 
-## Widgets & UI
-
-| Module | Description |
-|--------|-------------|
-| [pywry.widget](widget.md) | Notebook widget classes |
-| [Toolbar](../components/index.md) | Toolbar components |
-| [CSS Reference](css.md) | CSS variables, classes, and theming |
-
-## Integrations
+## Toolbar & Modal
 
 | Module | Description |
 |--------|-------------|
-| [pywry.chat](chat.md) | Core chat models, config, and HTML builder |
-| [pywry.chat_manager](chat-manager.md) | High-level chat orchestration, artifacts, and UI state |
-| [pywry.chat_providers](chat-providers.md) | OpenAI, Anthropic, callback, and magentic adapters |
-| [pywry.plotly_config](plotly-config.md) | Plotly configuration |
-| [pywry.grid](grid.md) | AG Grid configuration |
-| [MCP Server](../mcp/index.md) | Model Context Protocol for AI agents |
+| [Modal](modal.md) | Modal dialog API |
+| [Toolbar Functions](toolbar-functions.md) | Secret management and event utilities |
+
+Toolbar component signatures are documented inline on each [Components](../components/index.md) page.
 
 ## Utilities
 
@@ -54,3 +69,5 @@ Complete API documentation for PyWry.
 | [pywry.callbacks](callbacks.md) | Callback registry |
 | [pywry.asset_loader](asset-loader.md) | Asset loading |
 | [pywry.hot_reload](hot-reload.md) | Hot reload manager |
+| [pywry.templates](templates.md) | HTML template builder |
+| [pywry.scripts](scripts.md) | JavaScript bridge code |
