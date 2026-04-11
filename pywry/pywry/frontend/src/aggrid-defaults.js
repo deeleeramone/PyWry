@@ -72,7 +72,7 @@ window.PYWRY_AGGRID_DEFAULT_COL_DEF = {
     sortable: true,
     resizable: true,
     wrapText: true,
-    wrapHeaderText: true,
+    wrapHeaderText: false,
     autoHeight: true,
     filterParams: {
         buttons: ['apply', 'clear', 'reset'],
@@ -82,60 +82,53 @@ window.PYWRY_AGGRID_DEFAULT_COL_DEF = {
 };
 
 /**
- * Format numbers intelligently:
- * - Large integers with trailing zeros → K/M/B (75000 → "75K")
- * - Large integers without trailing zeros → commas (75123 → "75,123")
- * - Small decimals (< 1) → preserve full precision, no truncation
- * - Very small numbers (many leading zeros) → scientific notation
- * - Regular decimals → preserve full precision
+ * Format numbers with predictable compact notation.
  *
- * @param {number} value - The number to format
- * @returns {string} Formatted number string
+ * Rules:
+ * - Always promote large magnitudes to the highest sensible unit (K/M/B/T).
+ * - Avoid giant K values (e.g. 19,225,200K) by promoting to M/B/T.
+ * - Keep small/medium numbers comma-formatted unless K is clean (divisible by 1,000).
+ * - Preserve decimal precision for normal decimals; scientific for very tiny values.
  */
 window.PYWRY_FORMAT_NUMBER = function(value) {
     if (value == null || isNaN(value)) return '';
 
     var absValue = Math.abs(value);
-    var sign = value < 0 ? '-' : '';
 
-    // Very small numbers (with many leading zeros after decimal) → scientific notation
-    // e.g., 0.00000123 → "1.23e-6"
+    // Very small non-zero values: keep scientific notation readable
     if (absValue > 0 && absValue < 0.0001) {
-        return value.toExponential();
+        return value.toExponential(2);
     }
 
-    // Handle non-integers (decimals) - add thousand separators
+    // Non-integers: preserve precision while adding comma separators to integer part
     if (!Number.isInteger(value)) {
-        var parts = value.toString().split('.');
-        var integerPart = parseInt(parts[0]);
+        var parts = String(value).split('.');
+        var integerPart = Number(parts[0] || 0);
         var decimalPart = parts[1] || '';
-
-        // Format integer part with commas
         var formattedInteger = integerPart.toLocaleString('en-US');
-
-        // Return with decimal part preserved
         return decimalPart ? formattedInteger + '.' + decimalPart : formattedInteger;
     }
 
-    // From here, we're dealing with integers only
-    // Abbreviate integers with trailing zeros consistently
-
-    // Billions (1,000,000,000+) - must be divisible by 1B
-    if (absValue >= 1e9 && absValue % 1e9 === 0) {
-        return sign + (absValue / 1e9).toFixed(0) + 'B';
+    function formatCompact(n, divisor, suffix) {
+        var compact = n / divisor;
+        var decimals = compact >= 100 ? 0 : (compact >= 10 ? 1 : 2);
+        var rounded = compact.toFixed(decimals);
+        if (rounded.indexOf('.') !== -1) {
+            rounded = rounded.replace(/0+$/, '').replace(/\.$/, '');
+        }
+        return rounded + suffix;
     }
 
-    // Millions (1,000,000+) - must be divisible by 1M
-    if (absValue >= 1e6 && absValue % 1e6 === 0) {
-        return sign + (absValue / 1e6).toFixed(0) + 'M';
-    }
+    // Always use the highest magnitude for million+ values
+    if (absValue >= 1e12) return formatCompact(value, 1e12, 'T');
+    if (absValue >= 1e9) return formatCompact(value, 1e9, 'B');
+    if (absValue >= 1e6) return formatCompact(value, 1e6, 'M');
 
-    // Thousands (1,000+) - must be divisible by 1K
+    // For thousands, keep comma format unless it's a clean thousand (e.g., 75,000 -> 75K)
     if (absValue >= 1e3 && absValue % 1e3 === 0) {
-        return sign + (absValue / 1e3).toFixed(0) + 'K';
+        return formatCompact(value, 1e3, 'K');
     }
 
-    // Otherwise use thousand separators for non-abbreviatable integers
     return value.toLocaleString('en-US');
 };
 
@@ -155,6 +148,13 @@ window.PYWRY_AGGRID_PROCESS_COLUMN_DEFS = function(columnDefs) {
         // Remove undefined cellDataType to avoid AG Grid warning
         if (processed.cellDataType === undefined || processed.cellDataType === null) {
             delete processed.cellDataType;
+        }
+
+        if (processed.headerTooltip === undefined || processed.headerTooltip === null || processed.headerTooltip === '') {
+            var headerLabel = processed.headerName || processed.field || processed.colId;
+            if (headerLabel !== undefined && headerLabel !== null && String(headerLabel).length > 8) {
+                processed.headerTooltip = String(headerLabel);
+            }
         }
 
         // Convert valueGetter string to function
@@ -288,6 +288,7 @@ window.PYWRY_AGGRID_BUILD_OPTIONS = function(config, gridId) {
  */
 window.PYWRY_AGGRID_BUILD_CLIENT_OPTIONS = function(config, id, rowData, rowCount, truncatedRows) {
     var LARGE_DATASET_THRESHOLD = 10000;
+    var isNativeWebKit = document.documentElement.classList.contains('pywry-native');
 
     // Pagination logic:
     // - If config.pagination === true: always enable
@@ -337,6 +338,9 @@ window.PYWRY_AGGRID_BUILD_CLIENT_OPTIONS = function(config, id, rowData, rowCoun
         suppressMenuHide: true,
         enableCellTextSelection: true,
         ensureDomOrder: true,
+        suppressAnimationFrame: isNativeWebKit,
+        tooltipShowDelay: 1200,
+        tooltipHideDelay: 5000,
         // Row spanning support (AG Grid v32+)
         enableCellSpan: config.enableCellSpan || false,
 
@@ -390,6 +394,16 @@ window.PYWRY_AGGRID_BUILD_CLIENT_OPTIONS = function(config, id, rowData, rowCoun
                              ' of ' + (rowCount + truncatedRows).toLocaleString() + ' rows'
                 });
             }
+        },
+
+        onBodyScroll: function(event) {
+            if (!isNativeWebKit) return;
+            if (!event || !event.api) return;
+            window.requestAnimationFrame(function() {
+                try {
+                    event.api.redrawRows();
+                } catch (e) {}
+            });
         }
     };
 
@@ -415,6 +429,7 @@ window.PYWRY_AGGRID_BUILD_SERVER_SIDE_OPTIONS = function(config, id, serverConfi
     var totalRows = serverConfig.totalRows || 0;
     var blockSize = serverConfig.blockSize || 500;  // Rows per block for infinite scroll
     var currentFilteredTotal = totalRows;
+    var isNativeWebKit = document.documentElement.classList.contains('pywry-native');
 
     // Pending requests
     var pendingRequests = {};
@@ -517,6 +532,9 @@ window.PYWRY_AGGRID_BUILD_SERVER_SIDE_OPTIONS = function(config, id, serverConfi
         suppressMenuHide: true,
         enableCellTextSelection: true,
         ensureDomOrder: true,
+        suppressAnimationFrame: isNativeWebKit,
+        tooltipShowDelay: 1200,
+        tooltipHideDelay: 5000,
 
         // Row ID for selection persistence
         getRowId: function(params) {
@@ -616,6 +634,16 @@ window.PYWRY_AGGRID_BUILD_SERVER_SIDE_OPTIONS = function(config, id, serverConfi
                         ' rows). Use filters to narrow down results.'
                 });
             }
+        },
+
+        onBodyScroll: function(event) {
+            if (!isNativeWebKit) return;
+            if (!event || !event.api) return;
+            window.requestAnimationFrame(function() {
+                try {
+                    event.api.redrawRows();
+                } catch (e) {}
+            });
         }
     };
 

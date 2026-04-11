@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import uuid
 
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -480,6 +480,17 @@ class GridOptions(AGGridModel):
     # === Selection (enabled by default) ===
     row_selection: dict[str, Any] | bool | None = Field(default=None, alias="rowSelection")
     cell_selection: bool | None = Field(default=True, alias="cellSelection")
+
+    @field_validator("row_selection", mode="before")
+    @classmethod
+    def _coerce_row_selection(cls, v: Any) -> dict[str, Any] | bool | None:
+        if isinstance(v, RowSelection):
+            return v.to_dict()
+        if isinstance(v, dict):
+            return cast(dict[str, Any], v)
+        if isinstance(v, bool) or v is None:
+            return v
+        return cast(dict[str, Any] | bool | None, v)
 
     # === Layout ===
     dom_layout: DomLayoutType = Field(default="normal", alias="domLayout")
@@ -1228,18 +1239,34 @@ def build_grid_config(  # pylint: disable=too-many-arguments
     elif isinstance(row_selection, dict):
         row_sel_dict = row_selection
 
+    # Normalize user-provided grid options and consume rowSelection aliases.
+    # This prevents duplicate keyword errors when both row_selection param and
+    # grid_options['rowSelection'] are present.
+    normalized_grid_options = dict(grid_options or {})
+    grid_opt_row_selection = normalized_grid_options.pop("rowSelection", None)
+    if grid_opt_row_selection is None and "row_selection" in normalized_grid_options:
+        grid_opt_row_selection = normalized_grid_options.pop("row_selection")
+
+    # Precedence:
+    # - Explicit row_selection argument (True / dict / RowSelection) wins.
+    # - If row_selection is False (default) and grid_options specifies rowSelection,
+    #   honor grid_options to preserve caller intent.
+    final_row_selection = row_sel_dict
+    if row_selection is False and grid_opt_row_selection is not None:
+        final_row_selection = grid_opt_row_selection
+
     options = GridOptions(
         columnDefs=col_defs,
         defaultColDef=DefaultColDef().to_dict(),
         rowData=row_data_for_grid,
         rowModelType=row_model_type,
-        rowSelection=row_sel_dict,
+        rowSelection=final_row_selection,
         domLayout="normal",
         pagination=pagination,
         paginationPageSize=pagination_page_size,
         cacheBlockSize=cache_block_size,
         enableCellSpan=use_cell_span,
-        **(grid_options or {}),
+        **normalized_grid_options,
     )
 
     context = PyWryGridContext(

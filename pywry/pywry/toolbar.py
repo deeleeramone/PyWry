@@ -736,11 +736,33 @@ class TextInput(ToolbarItem):
     value: str = ""
     placeholder: str = ""
     debounce: int = Field(default=300, ge=0)
+    spellcheck: bool = Field(
+        default=False,
+        description="Enable browser spell checking",
+    )
+    autocomplete: str = Field(
+        default="off",
+        description="Browser autocomplete behavior",
+    )
+    autocorrect: Literal["on", "off"] = Field(
+        default="off",
+        description="Enable browser auto-correction (Safari/iOS)",
+    )
+    autocapitalize: Literal["off", "none", "on", "sentences", "words", "characters"] = Field(
+        default="off",
+        description="Control capitalization on mobile keyboards",
+    )
 
     def build_html(self) -> str:
         """Build text input HTML."""
         disabled_attr = " disabled" if self.disabled else ""
         title_attr = self._build_title_attr()
+        browser_attrs = (
+            f' spellcheck="{str(self.spellcheck).lower()}"'
+            f' autocomplete="{html.escape(self.autocomplete)}"'
+            f' autocorrect="{self.autocorrect}"'
+            f' autocapitalize="{self.autocapitalize}"'
+        )
         oninput = (
             f"clearTimeout(this._debounce); "
             f"var _el = this; "
@@ -752,7 +774,7 @@ class TextInput(ToolbarItem):
         input_html = (
             f'<input type="text" class="pywry-input pywry-input-text" '
             f'id="{self.component_id}" value="{html.escape(self.value)}" '
-            f'placeholder="{html.escape(self.placeholder)}" oninput="{oninput}"{title_attr}{disabled_attr}>'
+            f'placeholder="{html.escape(self.placeholder)}" oninput="{oninput}"{browser_attrs}{title_attr}{disabled_attr}>'
         )
 
         if self.label:
@@ -1275,6 +1297,22 @@ class TextArea(ToolbarItem):
     max_height: str = ""
     min_width: str = ""
     max_width: str = ""
+    spellcheck: bool = Field(
+        default=False,
+        description="Enable browser spell checking",
+    )
+    autocomplete: str = Field(
+        default="off",
+        description="Browser autocomplete behavior",
+    )
+    autocorrect: Literal["on", "off"] = Field(
+        default="off",
+        description="Enable browser auto-correction (Safari/iOS)",
+    )
+    autocapitalize: Literal["off", "none", "on", "sentences", "words", "characters"] = Field(
+        default="off",
+        description="Control capitalization on mobile keyboards",
+    )
 
     def build_html(self) -> str:
         """Build textarea HTML."""
@@ -1305,13 +1343,20 @@ class TextArea(ToolbarItem):
             f"}} }}, {self.debounce});"
         )
 
+        browser_attrs = (
+            f' spellcheck="{str(self.spellcheck).lower()}"'
+            f' autocomplete="{html.escape(self.autocomplete)}"'
+            f' autocorrect="{self.autocorrect}"'
+            f' autocapitalize="{self.autocapitalize}"'
+        )
+
         textarea_html = (
             f'<textarea class="pywry-input pywry-textarea" '
             f'id="{self.component_id}" '
             f'rows="{self.rows}" cols="{self.cols}" '
             f'placeholder="{html.escape(self.placeholder)}" '
             f'style="{html.escape(inline_style)}" '
-            f'oninput="{oninput}"{title_attr}{disabled_attr}>'
+            f'oninput="{oninput}"{browser_attrs}{title_attr}{disabled_attr}>'
             f"{html.escape(self.value)}</textarea>"
         )
 

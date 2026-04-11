@@ -1103,6 +1103,10 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         on_cell_click: Any = None,
         on_row_selected: Any = None,
         server_side: bool = False,
+        row_selection: Any = False,
+        pagination: bool | None = None,
+        pagination_page_size: int = 100,
+        enable_cell_span: bool | None = None,
     ) -> NativeWindowHandle | BaseWidget:
         """Show a DataFrame in an AG Grid table.
 
@@ -1173,7 +1177,13 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 toolbars=toolbars,
                 modals=modals,
                 callbacks=inline_callbacks,
-                open_browser=is_browser_mode,  # Open in browser for BROWSER mode
+                open_browser=is_browser_mode,
+                column_defs=column_defs,
+                grid_options=grid_options,
+                row_selection=row_selection,
+                pagination=pagination,
+                pagination_page_size=pagination_page_size,
+                enable_cell_span=enable_cell_span,
             )
             self._register_inline_widget(widget)
             return widget
@@ -1563,11 +1573,20 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             Event data.
         label : str, optional
             Window label. If None, targets all active windows.
+
+        Notes
+        -----
+        ``pywry:update-theme`` is broadcast to all windows/widgets by default
+        so theme toggles stay in sync across multi-window sessions. To scope a
+        theme update to a single label, pass ``{"scope": "local"}`` in
+        ``data``.
         """
-        labels = [label] if label else self._mode.get_labels()
+        broadcast_theme = event_type == "pywry:update-theme" and data.get("scope") != "local"
+
+        labels = self._mode.get_labels() if (not label or broadcast_theme) else [label]
 
         # Also include inline (notebook) widgets when targeting all
-        if not label and self._inline_widgets:
+        if (not label or broadcast_theme) and self._inline_widgets:
             labels = list(set(labels) | set(self._inline_widgets.keys()))
 
         for lbl in labels:

@@ -885,7 +885,6 @@ def _handle_chat_stop_generation(ctx: HandlerContext) -> HandlerResult:
 
 
 def _handle_chat_manage_thread(ctx: HandlerContext) -> HandlerResult:
-
     widget_id = ctx.args["widget_id"]
     action = ctx.args["action"]
     thread_id = ctx.args.get("thread_id")

@@ -3105,6 +3105,85 @@ def generate_plotly_html(
     # Use window.Plotly for anywidget compatibility (ESM scope)
     plotly_handlers_script = f"""<script>
     (function() {{
+        if (!window.__pywryDeepMerge) {{
+            window.__pywryDeepMerge = function deepMerge(base, overrides) {{
+                if (!overrides || typeof overrides !== 'object') return base ? JSON.parse(JSON.stringify(base)) : {{}};
+                if (!base || typeof base !== 'object') return JSON.parse(JSON.stringify(overrides));
+                var result = JSON.parse(JSON.stringify(base));
+                var keys = Object.keys(overrides);
+                for (var i = 0; i < keys.length; i++) {{
+                    var key = keys[i];
+                    var val = overrides[key];
+                    if (val !== null && typeof val === 'object' && !Array.isArray(val)
+                        && result[key] !== null && typeof result[key] === 'object' && !Array.isArray(result[key])) {{
+                        result[key] = deepMerge(result[key], val);
+                    }} else {{
+                        result[key] = (val !== null && typeof val === 'object') ? JSON.parse(JSON.stringify(val)) : val;
+                    }}
+                }}
+                return result;
+            }};
+        }}
+
+        if (!window.__pywryMergeThemeTemplate) {{
+            window.__pywryMergeThemeTemplate = function(chartEl, themeTemplateName, userTemplate, userTemplateDark, userTemplateLight) {{
+                var templates = window.PYWRY_PLOTLY_TEMPLATES || {{}};
+                var baseTemplate = templates[themeTemplateName] || {{}};
+
+                if (userTemplateDark && typeof userTemplateDark === 'object' && Object.keys(userTemplateDark).length > 0) {{
+                    chartEl.__pywry_user_template_dark__ = JSON.parse(JSON.stringify(userTemplateDark));
+                }}
+                if (userTemplateLight && typeof userTemplateLight === 'object' && Object.keys(userTemplateLight).length > 0) {{
+                    chartEl.__pywry_user_template_light__ = JSON.parse(JSON.stringify(userTemplateLight));
+                }}
+                if (userTemplate && typeof userTemplate === 'object' && Object.keys(userTemplate).length > 0
+                    && !userTemplateDark && !userTemplateLight) {{
+                    chartEl.__pywry_user_template__ = JSON.parse(JSON.stringify(userTemplate));
+                }}
+
+                var isDarkTemplate = themeTemplateName.indexOf('dark') !== -1;
+                var overrides = null;
+                if (isDarkTemplate && chartEl.__pywry_user_template_dark__) {{
+                    overrides = chartEl.__pywry_user_template_dark__;
+                }} else if (!isDarkTemplate && chartEl.__pywry_user_template_light__) {{
+                    overrides = chartEl.__pywry_user_template_light__;
+                }} else {{
+                    overrides = chartEl.__pywry_user_template__;
+                }}
+
+                if (!overrides) return JSON.parse(JSON.stringify(baseTemplate));
+                return window.__pywryDeepMerge(baseTemplate, overrides);
+            }};
+        }}
+
+        if (!window.__pywryStripThemeColors) {{
+            window.__pywryStripThemeColors = function(chartEl) {{
+                var layout = chartEl.layout;
+                if (!layout) return;
+
+                delete layout.paper_bgcolor;
+                delete layout.plot_bgcolor;
+                delete layout.colorway;
+
+                if (layout.font) {{
+                    delete layout.font.color;
+                    if (Object.keys(layout.font).length === 0) delete layout.font;
+                }}
+
+                var axisRe = /^[xyz]axis\\d*$/;
+                var keys = Object.keys(layout);
+                for (var i = 0; i < keys.length; i++) {{
+                    if (axisRe.test(keys[i]) && layout[keys[i]] && typeof layout[keys[i]] === 'object') {{
+                        var ax = layout[keys[i]];
+                        delete ax.color;
+                        delete ax.gridcolor;
+                        delete ax.linecolor;
+                        delete ax.zerolinecolor;
+                    }}
+                }}
+            }};
+        }}
+
         // Debug: Check Plotly availability
         console.log('[PyWry] Checking Plotly availability...');
         console.log('[PyWry] window.Plotly:', typeof window.Plotly);

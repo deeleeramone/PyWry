@@ -119,6 +119,22 @@ window.PYWRY_SCROLLBARS = (function() {
     var scrollTimeout = null;
     var trackPadding = 6; // Padding inside the track for the thumb
 
+    function disableCustomScrollbarForAgGrid() {
+      if (!(scrollContainer.querySelector('.pywry-grid') ||
+            scrollContainer.querySelector('.ag-root-wrapper') ||
+            scrollContainer.closest('.ag-root-wrapper'))) {
+        return false;
+      }
+      if (trackV.parentNode) trackV.parentNode.removeChild(trackV);
+      if (trackH.parentNode) trackH.parentNode.removeChild(trackH);
+      wrapper.classList.remove('has-both-scrollbars', 'is-scrolling');
+      scrollContainer.classList.remove('has-scrollbar-v', 'has-scrollbar-h');
+      scrollContainer.dataset.customScrollbar = 'skipped';
+      return true;
+    }
+
+    if (disableCustomScrollbarForAgGrid()) return;
+
     function updateScrollbars() {
       var scrollHeight = scrollContainer.scrollHeight;
       var clientHeight = scrollContainer.clientHeight;
@@ -296,6 +312,10 @@ window.PYWRY_SCROLLBARS = (function() {
     // Use ResizeObserver to track size changes - observe ALL descendants AND toolbars
     if (typeof ResizeObserver !== 'undefined') {
       var resizeObserver = new ResizeObserver(function() {
+        if (disableCustomScrollbarForAgGrid()) {
+          resizeObserver.disconnect();
+          return;
+        }
         updateScrollbars();
       });
 
@@ -326,6 +346,11 @@ window.PYWRY_SCROLLBARS = (function() {
 
       // Watch for new elements and observe them too (including new toolbars)
       var elementObserver = new MutationObserver(function(mutations) {
+        if (disableCustomScrollbarForAgGrid()) {
+          resizeObserver.disconnect();
+          elementObserver.disconnect();
+          return;
+        }
         mutations.forEach(function(mutation) {
           mutation.addedNodes.forEach(function(node) {
             if (node.nodeType === 1) {

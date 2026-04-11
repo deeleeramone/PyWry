@@ -308,9 +308,17 @@ function setupCustomScrollbar(scrollContainer) {
   // Skip if already set up
   if (scrollContainer.dataset.customScrollbar) return;
 
-  // Skip Plotly containers only - they have their own responsive layout
+  // Skip Plotly containers - they have their own responsive layout
   if (scrollContainer.querySelector('.pywry-plotly') ||
       scrollContainer.querySelector('.js-plotly-plot')) {
+    scrollContainer.dataset.customScrollbar = 'skipped';
+    return;
+  }
+
+  // Skip AG Grid containers - AG Grid manages its own scrolling/virtualization
+  if (scrollContainer.querySelector('.pywry-grid') ||
+      scrollContainer.querySelector('.ag-root-wrapper') ||
+      scrollContainer.closest('.ag-root-wrapper')) {
     scrollContainer.dataset.customScrollbar = 'skipped';
     return;
   }
@@ -356,6 +364,22 @@ function setupCustomScrollbar(scrollContainer) {
   var startScrollLeft = 0;
   var scrollTimeout = null;
   var trackPadding = 6; // Padding inside the track for the thumb
+
+  function disableCustomScrollbarForAgGrid() {
+    if (!(scrollContainer.querySelector('.pywry-grid') ||
+          scrollContainer.querySelector('.ag-root-wrapper') ||
+          scrollContainer.closest('.ag-root-wrapper'))) {
+      return false;
+    }
+    if (trackV.parentNode) trackV.parentNode.removeChild(trackV);
+    if (trackH.parentNode) trackH.parentNode.removeChild(trackH);
+    wrapper.classList.remove('has-both-scrollbars', 'is-scrolling');
+    scrollContainer.classList.remove('has-scrollbar-v', 'has-scrollbar-h');
+    scrollContainer.dataset.customScrollbar = 'skipped';
+    return true;
+  }
+
+  if (disableCustomScrollbarForAgGrid()) return;
 
   function updateScrollbars() {
     var scrollHeight = scrollContainer.scrollHeight;
@@ -522,6 +546,12 @@ function setupCustomScrollbar(scrollContainer) {
   window.addEventListener('resize', updateScrollbars);
 
   // Re-observe for content changes
-  var contentObserver = new MutationObserver(updateScrollbars);
+  var contentObserver = new MutationObserver(function() {
+    if (disableCustomScrollbarForAgGrid()) {
+      contentObserver.disconnect();
+      return;
+    }
+    updateScrollbars();
+  });
   contentObserver.observe(scrollContainer, { childList: true, subtree: true, characterData: true });
 }

@@ -21,12 +21,12 @@ html.pywry-native .pywry-scroll-container::-webkit-scrollbar {
     display: none;
 }
 /* Only reserve space for scrollbar when content overflows (but not for Plotly) */
-html.pywry-native .pywry-scroll-container.has-scrollbar-v:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)),
-.pywry-custom-scrollbar .pywry-scroll-container.has-scrollbar-v:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)) {
+html.pywry-native .pywry-scroll-container.has-scrollbar-v:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)):not(:has(.pywry-grid)):not(:has(.ag-root-wrapper)),
+.pywry-custom-scrollbar .pywry-scroll-container.has-scrollbar-v:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)):not(:has(.pywry-grid)):not(:has(.ag-root-wrapper)) {
     padding-right: 18px; /* 4px margin + 10px track + 4px inner margin */
 }
-html.pywry-native .pywry-scroll-container.has-scrollbar-h:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)),
-.pywry-custom-scrollbar .pywry-scroll-container.has-scrollbar-h:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)) {
+html.pywry-native .pywry-scroll-container.has-scrollbar-h:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)):not(:has(.pywry-grid)):not(:has(.ag-root-wrapper)),
+.pywry-custom-scrollbar .pywry-scroll-container.has-scrollbar-h:not(:has(.pywry-plotly)):not(:has(.js-plotly-plot)):not(:has(.pywry-grid)):not(:has(.ag-root-wrapper)) {
     padding-bottom: 18px; /* 4px margin + 10px track + 4px inner margin */
 }
 html.pywry-native .pywry-scroll-container::-webkit-scrollbar,
@@ -95,6 +95,20 @@ html.pywry-native .ag-root-wrapper.is-scrolling .pywry-scrollbar-track-h,
 .pywry-custom-scrollbar .ag-root-wrapper.is-scrolling .pywry-scrollbar-track-v,
 .pywry-custom-scrollbar .ag-root-wrapper.is-scrolling .pywry-scrollbar-track-h {
     opacity: 1;
+}
+
+/* AG Grid uses its own scrollbars/virtualization; disable custom overlay tracks */
+html.pywry-native .pywry-scroll-wrapper:has(.pywry-grid) > .pywry-scrollbar-track-v,
+html.pywry-native .pywry-scroll-wrapper:has(.pywry-grid) > .pywry-scrollbar-track-h,
+html.pywry-native .pywry-scroll-wrapper:has(.ag-root-wrapper) > .pywry-scrollbar-track-v,
+html.pywry-native .pywry-scroll-wrapper:has(.ag-root-wrapper) > .pywry-scrollbar-track-h,
+.pywry-custom-scrollbar .pywry-scroll-wrapper:has(.pywry-grid) > .pywry-scrollbar-track-v,
+.pywry-custom-scrollbar .pywry-scroll-wrapper:has(.pywry-grid) > .pywry-scrollbar-track-h,
+.pywry-custom-scrollbar .pywry-scroll-wrapper:has(.ag-root-wrapper) > .pywry-scrollbar-track-v,
+.pywry-custom-scrollbar .pywry-scroll-wrapper:has(.ag-root-wrapper) > .pywry-scrollbar-track-h {
+    pointer-events: none !important;
+    opacity: 0 !important;
+    display: none !important;
 }
 
 /* Custom scrollbar thumb - vertical */
@@ -2704,6 +2718,16 @@ html.light .pywry-input-date {
 .ag-cell-focus:not(.ag-cell-range-selected):focus-within {
     border-color: var(--pywry-border-focus, #555) !important;
     outline: none !important;
+}
+
+.ag-header-cell-label {
+    min-width: 0;
+}
+
+.ag-header-cell-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* AG Grid scrollbar styling - NATIVE WINDOW ONLY */
