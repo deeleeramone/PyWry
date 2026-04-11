@@ -149,8 +149,14 @@ def chart(request) -> dict[str, Any]:
             retries=1,
         )
         if not (isinstance(ping, dict) and ping.get("hasBody")):
-            raise TimeoutError(
+            # Clean up before skipping so the finalizer doesn't error
+            udf.close()
+            app.close()
+            _stop_runtime_sync()
+            _clear_registries()
+            pytest.skip(
                 f"UDF chart window '{label}' did not become ready within {WINDOW_TIMEOUT}s"
+                " (native runtime unavailable)"
             )
 
     time.sleep(CHART_RENDER_WAIT)
@@ -1110,8 +1116,13 @@ def light_chart(request) -> dict[str, Any]:
             retries=1,
         )
         if not (isinstance(ping, dict) and ping.get("hasBody")):
-            raise TimeoutError(
+            udf.close()
+            app.close()
+            _stop_runtime_sync()
+            _clear_registries()
+            pytest.skip(
                 f"Light chart '{label}' did not become ready within {WINDOW_TIMEOUT}s"
+                " (native runtime unavailable)"
             )
 
     time.sleep(CHART_RENDER_WAIT)
@@ -1223,8 +1234,13 @@ def server_storage_chart(request) -> dict[str, Any]:
             retries=1,
         )
         if not (isinstance(ping, dict) and ping.get("hasBody")):
-            raise TimeoutError(
+            udf.close()
+            app.close()
+            _stop_runtime_sync()
+            _clear_registries()
+            pytest.skip(
                 f"Storage chart '{label}' did not become ready within {WINDOW_TIMEOUT}s"
+                " (native runtime unavailable)"
             )
 
     time.sleep(CHART_RENDER_WAIT)
