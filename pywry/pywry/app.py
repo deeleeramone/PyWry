@@ -1475,7 +1475,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 "adapter": self._settings.tvchart.storage_adapter,
             }
         )
-        storage_config = {
+        storage_config: dict[str, Any] = {
             "backend": str(raw_storage.get("backend", "file")),
             "path": str(raw_storage.get("path", "")) if raw_storage.get("path") is not None else "",
             "namespace": str(raw_storage.get("namespace", "pywry.tvchart")),

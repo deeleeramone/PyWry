@@ -84,6 +84,7 @@ class TestCallbackRegistry:
         registry.register("main", "test:event", callback1)
         registry.register("main", "test:event", callback2)
         registry.dispatch("main", "test:event", {"data": "value"})
+        registry._drain(timeout=5.0)
         callback1.assert_called_once()
         callback2.assert_called_once()
 
@@ -135,6 +136,7 @@ class TestCallbackRegistry:
         registry.register("main", "*", callback)
         registry.dispatch("main", "event1:test", {})
         registry.dispatch("main", "event2:test", {})
+        registry._drain(timeout=5.0)
         assert len(calls) == 2
 
 

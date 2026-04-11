@@ -64,6 +64,7 @@ class CallbackRegistry:
         # Thread pool for sync handlers — avoids blocking the reader thread
         self._executor: concurrent.futures.ThreadPoolExecutor | None = None
         self._max_workers: int = 4
+        self._pending_futures: list[concurrent.futures.Future[None]] = []
 
     @staticmethod
     def _matches(pattern: str, source: str) -> bool:
@@ -265,6 +266,14 @@ class CallbackRegistry:
 
         return handlers
 
+    def _drain(self, timeout: float | None = None) -> None:
+        """Wait for all pending sync handler futures to complete."""
+        if self._pending_futures:
+            concurrent.futures.wait(self._pending_futures, timeout=timeout)
+            self._pending_futures = [
+                f for f in self._pending_futures if not f.done()
+            ]
+
     def _ensure_executor(self) -> concurrent.futures.ThreadPoolExecutor:
         """Lazily create the thread pool executor for sync handlers."""
         if self._executor is None:
@@ -308,7 +317,8 @@ class CallbackRegistry:
                 except Exception:
                     log_callback_error(event_type, label, Exception("Handler invocation failed"))
 
-            self._ensure_executor().submit(_run_sync)
+            fut = self._ensure_executor().submit(_run_sync)
+            self._pending_futures.append(fut)
             return True
 
         except Exception:

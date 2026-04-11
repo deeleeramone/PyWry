@@ -4283,7 +4283,7 @@ def _preload_chart_data(user_id: str = "default") -> dict[str, str]:
         def_id = run_async(store.get_settings_default_id(user_id), timeout=5.0)
         preload["__pywry_tvchart_settings_default_template_v1"] = def_id
     except Exception:
-        logger.debug("Chart preload failed", exc_info=True)
+        log_debug("Chart preload failed")
     return preload
 
 
@@ -4409,7 +4409,7 @@ def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
             "adapter": settings.tvchart.storage_adapter,
         }
     )
-    storage_config = {
+    storage_config: dict[str, Any] = {
         "backend": str(raw_storage.get("backend", "file")),
         "path": str(raw_storage.get("path", "")) if raw_storage.get("path") is not None else "",
         "namespace": str(raw_storage.get("namespace", "pywry.tvchart")),

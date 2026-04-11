@@ -944,7 +944,7 @@ class RedisChartStore(ChartStore):
     ) -> dict[str, Any]:
         """Save or update a chart layout."""
         now = int(time.time() * 1000)
-        entry = {
+        entry: dict[str, Any] = {
             "id": layout_id,
             "name": name,
             "savedAt": str(now),
@@ -965,7 +965,8 @@ class RedisChartStore(ChartStore):
     async def get_layout(self, user_id: str, layout_id: str) -> str | None:
         """Get layout data by ID."""
         r = await self._redis()
-        return await r.get(self._layout_key(user_id, layout_id))
+        val: str | None = await r.get(self._layout_key(user_id, layout_id))
+        return val
 
     async def list_layouts(self, user_id: str) -> list[dict[str, Any]]:
         """List all layout index entries."""
@@ -1043,7 +1044,8 @@ class RedisChartStore(ChartStore):
     async def get_settings_template(self, user_id: str) -> str | None:
         """Get the custom settings template."""
         r = await self._redis()
-        return await r.get(self._template_key(user_id))
+        val: str | None = await r.get(self._template_key(user_id))
+        return val
 
     async def get_settings_default_id(self, user_id: str) -> str:
         """Get which settings template is active."""

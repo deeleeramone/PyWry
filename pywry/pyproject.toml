@@ -20,7 +20,7 @@ classifiers = [
     "Topic :: Desktop Environment :: Gnome",
     "Topic :: Internet :: WWW/HTTP"
 ]
-keywords = ["rendering", "frontend", "webview", "tauri", "gui", "plotly", "aggrid", "desktop", "notebook", "ipywidget"]
+keywords = ["rendering", "frontend", "webview", "tauri", "gui", "plotly", "aggrid", "tradingview", "desktop", "notebook", "ipywidget"]
 
 dependencies = [
     "pytauri>=0.8.0",
@@ -148,7 +148,6 @@ module = [
     "plotly.*",
     "anywidget", "anywidget.*",
     "ipywidgets", "ipywidgets.*",
-    "pyinstaller", "pyinstaller.*",
     "mcp.*",
     "traitlets", "traitlets.*",
     "IPython", "IPython.*",
