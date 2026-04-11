@@ -992,6 +992,13 @@ html.pywry-native body:not([style*="flex"]) .pywry-container {
 .pywry-marquee {
     display: flex;
     overflow: hidden;
+    width: 100%;
+    align-items: center;
+    white-space: nowrap;
+    position: relative;
+}
+/* Horizontal marquee mask */
+.pywry-marquee.pywry-marquee-horizontal {
     position: relative;
     flex: 1;
     min-width: 0;
@@ -1900,6 +1907,7 @@ html.light .pywry-select option {
     width: 80px;
     padding-left: var(--pywry-spacing-lg);
     padding-right: var(--pywry-spacing-sm);
+    appearance: textfield;
     -moz-appearance: textfield;
 }
 
@@ -3005,7 +3013,7 @@ html.light .ag-standard-button:hover {
 .pywry-tooltip::before {
     content: '';
     position: absolute;
-    left: 50%;
+    left: var(--pywry-tooltip-arrow-left, 50%);
     transform: translateX(-50%);
     border: 6px solid transparent;
 }
@@ -3222,3 +3230,4 @@ html.light .pywry-modal-container {
 body.pywry-modal-body-locked {
     overflow: hidden !important;
 }
+

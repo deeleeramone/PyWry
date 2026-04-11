@@ -110,10 +110,18 @@ def get_pywry_css() -> str:
     str
         The PyWry CSS content, or empty if not found.
     """
-    css_file = STYLE_DIR / "pywry.css"
-    if css_file.exists():
-        return css_file.read_text(encoding="utf-8")
-    return ""
+    css_parts: list[str] = []
+
+    base_css_file = STYLE_DIR / "pywry.css"
+    if base_css_file.exists():
+        css_parts.append(base_css_file.read_text(encoding="utf-8"))
+
+    # Keep TradingView styles isolated while preserving single bundled injection.
+    tv_css_file = STYLE_DIR / "tvchart.css"
+    if tv_css_file.exists():
+        css_parts.append(tv_css_file.read_text(encoding="utf-8"))
+
+    return "\n".join(css_parts) if css_parts else ""
 
 
 @lru_cache(maxsize=1)
@@ -191,10 +199,19 @@ def _get_pywry_css_bundled() -> str:
     str
         The PyWry base CSS content.
     """
-    css_file = STYLE_DIR / "pywry.css"
-    if css_file.exists():
+    css_parts: list[str] = []
+
+    base_css_file = STYLE_DIR / "pywry.css"
+    if base_css_file.exists():
+        css_parts.append(base_css_file.read_text(encoding="utf-8"))
+
+    tv_css_file = STYLE_DIR / "tvchart.css"
+    if tv_css_file.exists():
+        css_parts.append(tv_css_file.read_text(encoding="utf-8"))
+
+    if css_parts:
         debug("Loading PyWry CSS from bundled assets")
-        return css_file.read_text(encoding="utf-8")
+        return "\n".join(css_parts)
 
     debug("PyWry CSS not bundled")
     return ""
@@ -283,6 +300,8 @@ def clear_cache() -> None:
     get_modal_handlers_js.cache_clear()
     get_chat_handlers_js.cache_clear()
     get_chat_css.cache_clear()
+    get_tvchart_js.cache_clear()
+    get_tvchart_defaults_js.cache_clear()
 
 
 @lru_cache(maxsize=1)
@@ -361,4 +380,42 @@ def get_chat_css() -> str:
         debug("Loading chat CSS from style")
         return css_file.read_text(encoding="utf-8")
     debug("Chat CSS not found")
+    return ""
+
+
+@lru_cache(maxsize=1)
+def get_tvchart_js() -> str:
+    """Return the bundled Lightweight Charts JS library."""
+    gz_file = ASSETS_DIR / "lightweight-charts-5.1.0.standalone.production.js.gz"
+    if gz_file.exists():
+        debug("Loading Lightweight Charts JS from compressed bundled assets")
+        return gzip.decompress(gz_file.read_bytes()).decode("utf-8")
+
+    js_file = ASSETS_DIR / "lightweight-charts-5.1.0.standalone.production.js"
+    if js_file.exists():
+        debug("Loading Lightweight Charts JS from bundled assets")
+        return js_file.read_text(encoding="utf-8")
+
+    debug("Lightweight Charts JS not bundled")
+    return ""
+
+
+@lru_cache(maxsize=1)
+def get_tvchart_defaults_js() -> str:
+    """Return the concatenated TV chart defaults JS modules."""
+    # Try monolithic file first
+    js_file = SRC_DIR / "tvchart-defaults.js"
+    if js_file.exists():
+        debug("Loading TV chart defaults JS from src")
+        return js_file.read_text(encoding="utf-8")
+
+    # Fall back to modular files in tvchart/ directory (sorted by filename)
+    tvchart_dir = SRC_DIR / "tvchart"
+    if tvchart_dir.is_dir():
+        parts = [f.read_text(encoding="utf-8") for f in sorted(tvchart_dir.glob("*.js"))]
+        if parts:
+            debug(f"Loading TV chart defaults JS from {len(parts)} modular files")
+            return "\n".join(parts)
+
+    debug("TV chart defaults JS not found")
     return ""

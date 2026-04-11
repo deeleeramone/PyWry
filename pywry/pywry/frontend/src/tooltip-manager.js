@@ -9,7 +9,9 @@
     var tooltip = null;
     var currentTarget = null;
     var hideTimeout = null;
+    var showTimeout = null;
     var suppressUntil = 0;
+    var HOVER_DELAY_MS = 650;
 
     function createTooltip() {
         if (tooltip) return tooltip;
@@ -69,6 +71,13 @@
 
         tooltip.style.left = left + 'px';
         tooltip.style.top = top + 'px';
+        var targetCenter = rect.left + (rect.width / 2);
+        var arrowLeft = targetCenter - left;
+        var minArrow = 10;
+        var maxArrow = tooltipRect.width - 10;
+        if (arrowLeft < minArrow) arrowLeft = minArrow;
+        if (arrowLeft > maxArrow) arrowLeft = maxArrow;
+        tooltip.style.setProperty('--pywry-tooltip-arrow-left', arrowLeft + 'px');
         tooltip.style.visibility = '';
         tooltip.style.opacity = '';
         tooltip.classList.add(arrowClass);
@@ -78,6 +87,7 @@
     }
 
     function hideTooltip() {
+        clearTimeout(showTimeout);
         if (tooltip) {
             tooltip.classList.remove('visible');
         }
@@ -91,9 +101,13 @@
         if (target === currentTarget) return;
 
         clearTimeout(hideTimeout);
+        clearTimeout(showTimeout);
         var text = target.getAttribute('data-tooltip');
         if (text) {
-            showTooltip(target, text);
+            showTimeout = setTimeout(function() {
+                if (!target.matches(':hover')) return;
+                showTooltip(target, text);
+            }, HOVER_DELAY_MS);
         }
     }
 
@@ -105,6 +119,7 @@
         var relatedTarget = e.relatedTarget;
         if (relatedTarget && target.contains(relatedTarget)) return;
 
+        clearTimeout(showTimeout);
         currentTarget = null;
         hideTimeout = setTimeout(hideTooltip, 100);
     }

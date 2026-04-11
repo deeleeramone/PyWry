@@ -29,14 +29,14 @@ hide:
 
   <div class="feature-card">
     <svg class="feature-card__icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-    <h3 class="feature-card__title">18 Toolbar Components</h3>
-    <p class="feature-card__desc">Buttons, selects, toggles, sliders, date pickers — all declarative Pydantic models for rapid UI development.</p>
+    <h3 class="feature-card__title">Declarative UI Components</h3>
+    <p class="feature-card__desc">Toolbars, modals, toasts, and inputs — all Pydantic models placed in 7 layout positions for rapid UI development.</p>
   </div>
 
   <div class="feature-card">
     <svg class="feature-card__icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
     <h3 class="feature-card__title">Two-Way Events</h3>
-    <p class="feature-card__desc">Live Python ↔ JavaScript bridged communication, with out-of-the-box support for interactive Plotly and AG Grid.</p>
+    <p class="feature-card__desc">Live Python ↔ JavaScript bridged communication, with out-of-the-box support for interactive AgGrid, Plotly, and TradingView.</p>
   </div>
 
   <div class="feature-card">
@@ -67,7 +67,7 @@ hide:
   </a>
   <a href="components/" class="nav-card">
     <h4>Components</h4>
-    <p>18 toolbar components</p>
+    <p>Toolbars, modals, toasts, and inputs</p>
   </a>
   <a href="mcp/" class="nav-card">
     <h4>MCP Server</h4>

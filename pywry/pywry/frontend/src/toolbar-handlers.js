@@ -13,6 +13,7 @@ function initTooltipManager(container) {
     var hideTimeout = null;
     var showTimeout = null;
     var suppressUntil = 0;
+    var HOVER_DELAY_MS = 650;
     var tooltipRoot = container;
     // Handle document vs Element - document doesn't have .closest()
     var widgetEl;
@@ -80,6 +81,13 @@ function initTooltipManager(container) {
 
         tooltip.style.left = left + 'px';
         tooltip.style.top = top + 'px';
+        var targetCenter = rect.left - containerRect.left + (rect.width / 2);
+        var arrowLeft = targetCenter - left;
+        var minArrow = 10;
+        var maxArrow = tooltipRect.width - 10;
+        if (arrowLeft < minArrow) arrowLeft = minArrow;
+        if (arrowLeft > maxArrow) arrowLeft = maxArrow;
+        tooltip.style.setProperty('--pywry-tooltip-arrow-left', arrowLeft + 'px');
         tooltip.style.visibility = '';
         tooltip.style.opacity = '';
         tooltip.classList.add(arrowClass);
@@ -106,10 +114,11 @@ function initTooltipManager(container) {
         clearTimeout(showTimeout);
         var text = target.getAttribute('data-tooltip');
         if (text) {
-            // Delay tooltip display by 500ms
+            // Delay tooltip display to avoid popups while sweeping across controls
             showTimeout = setTimeout(function() {
+                if (!target.matches(':hover')) return;
                 showTooltip(target, text);
-            }, 500);
+            }, HOVER_DELAY_MS);
         }
     }
 
@@ -335,6 +344,17 @@ function initToolbarHandlers(container, pywry) {
                     Object.assign(data, customData);
                 }
             } catch (err) {}
+            if (eventName && pywry) {
+                pywry.emit(eventName, data);
+            }
+        });
+    });
+
+    // Icon buttons (SVG-based, used by tvchart toolbars)
+    container.querySelectorAll('.pywry-icon-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            var eventName = btn.getAttribute('data-event');
+            var data = { componentId: btn.getAttribute('data-component-id') || btn.id };
             if (eventName && pywry) {
                 pywry.emit(eventName, data);
             }

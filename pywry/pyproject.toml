@@ -1,6 +1,6 @@
 [project]
 name = "pywry"
-version = "2.0.0rc4"
+version = "2.0.0rc5"
 description = "A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python."
 authors = [{ name = "PyWry", email = "pywry2@gmail.com" }]
 license = { text = "Apache 2.0" }
@@ -20,7 +20,7 @@ classifiers = [
     "Topic :: Desktop Environment :: Gnome",
     "Topic :: Internet :: WWW/HTTP"
 ]
-keywords = ["rendering", "frontend", "webview", "tauri", "gui", "plotly", "aggrid", "desktop", "notebook", "ipywidget"]
+keywords = ["rendering", "frontend", "webview", "tauri", "gui", "plotly", "aggrid", "tradingview", "desktop", "notebook", "ipywidget"]
 
 dependencies = [
     "pytauri>=0.8.0",
@@ -148,7 +148,6 @@ module = [
     "plotly.*",
     "anywidget", "anywidget.*",
     "ipywidgets", "ipywidgets.*",
-    "pyinstaller", "pyinstaller.*",
     "mcp.*",
     "traitlets", "traitlets.*",
     "IPython", "IPython.*",

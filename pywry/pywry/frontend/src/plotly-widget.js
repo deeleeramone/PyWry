@@ -122,6 +122,8 @@ function render({ model, el }) {
         emit: function(type, data) {
             model.set('_js_event', JSON.stringify({ type, data, ts: Date.now() }));
             model.save_changes();
+            // Also dispatch locally so JS-side listeners fire immediately
+            this._fire(type, data || {});
         },
         on: function(type, cb) {
             if (!this._handlers[type]) this._handlers[type] = [];

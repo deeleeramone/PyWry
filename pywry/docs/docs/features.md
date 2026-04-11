@@ -18,18 +18,19 @@ One API, three output targets — PyWry automatically selects the right one:
 | **Native Windows** | OS webview (WebView2/WebKit) — a few MBs vs Electron's 150MB+ |
 | **Jupyter Widgets** | anywidget with traitlet sync, IFrame fallback |
 | **Browser Mode** | FastAPI + WebSocket, optional Redis for scaling |
-| **[Toolbar System](guides/toolbars.md)** | 18 Pydantic components, 7 layout positions |
-| **[Two-Way Events](guides/events.md)** | Python↔JS communication, pre-wired Plotly/AG Grid events |
-| **[Plotly Charts](guides/plotly.md)** | Pre-wired plot events, custom modebar buttons |
-| **[AG Grid Tables](guides/aggrid.md)** | Pandas→AG Grid conversion, grid events, editing |
+| **[Toolbar System](components/toolbar/index.md)** | Declarative Pydantic components, 7 layout positions |
+| **[Two-Way Events](guides/events.md)** | Python↔JS communication, pre-wired events for integration |
+| **[TradingView Charts](integrations/tradingview/index.md)** | Advanced Lightweight Charts supporting static content, Datafeed, and UDF adapter.
+| **[Plotly Charts](integrations/plotly/index.md)** | Pre-wired plot events, custom modebar buttons |
+| **[AgGrid Tables](integrations/aggrid/index.md)** | Pandas→AgGrid conversion, grid events, editing |
 | **Toast Notifications** | info, success, warning, error, confirm |
-| **[Theming](guides/theming.md)** | Light/dark modes, 60+ CSS variables |
+| **[Theming](components/theming.md)** | Light/dark modes, 60+ CSS variables |
 | **Secrets** | Server-side storage, never rendered in HTML |
 | **Security** | Token auth, CSP headers, production presets |
 | **[Configuration](guides/configuration.md)** | TOML files, env vars, layered precedence |
 | **[Hot Reload](guides/hot-reload.md)** | Live CSS/JS updates during development |
 | **[Deploy Mode](guides/deploy-mode.md)** | Redis backend for horizontal scaling |
-| **[Tauri Plugins](guides/tauri-plugins.md)** | 19 bundled plugins — clipboard, notifications, HTTP, and more |
+| **[Tauri Plugins](integrations/tauri-plugins.md)** | 19 bundled plugins — clipboard, notifications, HTTP, and more |
 
 ## Platform Support
 

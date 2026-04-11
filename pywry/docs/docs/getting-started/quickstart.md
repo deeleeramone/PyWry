@@ -324,12 +324,46 @@ app.block()
 
 ---
 
+## 8. TradingView Charts with Live UDF Data
+
+PyWry includes a TradingView Lightweight Charts integration with a built-in UDF adapter for connecting to any UDF-compatible data source:
+
+```python
+from pywry import PyWry
+from pywry.tvchart.udf import UDFAdapter
+
+app = PyWry()
+
+udf = UDFAdapter("https://www.bitmex.com/api/udf", poll_interval=60)
+
+udf.connect(
+    app,
+    symbol="XBTUSD",
+    resolution="D",
+    title="BitMEX XBTUSD — Daily",
+    width=1200,
+    height=700,
+)
+
+app.block()
+udf.close()
+```
+
+**TradingView features:**
+
+- `UDFAdapter` connects to any UDF-compatible data server (e.g., BitMEX, TradingView demo)
+- `poll_interval` controls how often to check for new bars (in seconds)
+- Symbol search, resolution switching, and marks are handled automatically
+- For static OHLCV data, use `app.show_tvchart(df)` with a DataFrame instead
+
+---
+
 ## Next Steps
 
 You now understand the basics of PyWry. Continue with:
 
 - [Rendering Paths](rendering-paths.md) — Native windows, notebook widgets, and browser mode
 - [Event System](../guides/events.md) — How callbacks work and common patterns
-- [Event Reference](../reference/events.md) — Complete list of all events and payloads
-- [Toolbar System](../guides/toolbars.md) — Building interactive controls
+- [Event Reference](../reference/events/index.md) — Complete list of all events and payloads
+- [Toolbar System](../components/toolbar/index.md) — Building interactive controls
 - [Configuration](../guides/configuration.md) — TOML files, environment variables, security presets

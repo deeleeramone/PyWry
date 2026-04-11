@@ -87,6 +87,9 @@ window.pywry = {
       }
     }
     this.sendEvent(eventType, data);
+    // Also dispatch locally so JS-side listeners fire immediately
+    // (mirrors the widget bridge behaviour in tvchart-widget.js)
+    this.dispatch(eventType, data || {});
   }
 };
 

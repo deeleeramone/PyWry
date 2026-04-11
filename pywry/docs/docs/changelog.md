@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+- **Plotly dual-theme templates** — `PlotlyConfig` now accepts `template_dark` and `template_light` dicts that are deep-merged on top of the built-in `plotly_dark` / `plotly_white` base templates. User overrides always win; un-set values inherit from the base. Both templates survive theme switches via `pywry:update-theme`.
+
 ## Version 2.0.0
 
 PyWry 2.0 is a major release with a completely redesigned architecture and API.

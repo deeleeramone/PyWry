@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Unit tests for the ChatManager orchestrator.
 
 Tests cover:
@@ -17,6 +18,9 @@ Tests cover:
 - _on_settings_change_event updates internal state
 - _on_slash_command_event handles /clear + delegates to user callback
 """
+
+# pylint: disable=missing-function-docstring,redefined-outer-name,unused-argument
+# pylint: disable=use-implicit-booleaness-not-comparison,too-many-public-methods
 
 from __future__ import annotations
 

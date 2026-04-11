@@ -78,9 +78,9 @@ def http_get(url: str, timeout: float = 5.0) -> tuple[int, str]:
     """Make HTTP GET request, return (status_code, body)."""
     if not url.startswith(("http://", "https://")):
         raise ValueError("URL must use http or https scheme")
-    req = urllib.request.Request(url)  # noqa: S310
+    req = urllib.request.Request(url)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode("utf-8")

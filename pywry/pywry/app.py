@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import threading
 import uuid
 
 from pathlib import Path
@@ -33,6 +34,7 @@ from .notebook import should_use_inline_rendering
 from .runtime import refresh_window as runtime_refresh_window
 from .state_mixins import GridStateMixin, PlotlyStateMixin, ToolbarStateMixin
 from .templates import build_html, build_plotly_init_script
+from .tvchart.mixin import TVChartStateMixin
 from .widget_protocol import NativeWindowHandle
 from .window_manager import (
     BrowserMode,
@@ -45,6 +47,8 @@ from .window_manager import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from .modal import Modal
     from .toolbar import Toolbar
     from .types import MenuConfig
@@ -52,7 +56,7 @@ if TYPE_CHECKING:
     from .window_manager import WindowLifecycle
 
 
-class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: disable=too-many-public-methods
+class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMixin):  # pylint: disable=too-many-public-methods
     """Main PyWry application for displaying content in native windows.
 
     Supports three window modes:
@@ -255,45 +259,13 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
         """Check if the app has a successful authentication result."""
         return self._auth_result is not None and getattr(self._auth_result, "success", False)
 
-    def login(
-        self,
-        provider: Any | None = None,
-        **kwargs: Any,
-    ) -> Any:
-        """Authenticate via OAuth2.
-
-        In native mode, opens a dedicated auth window pointing at the
-        provider's authorize URL. Blocks until authentication completes.
-
-        In deploy mode, returns the login URL for the frontend.
-
-        Parameters
-        ----------
-        provider : OAuthProvider, optional
-            Override the default provider from settings.
-        **kwargs : Any
-            Additional keyword arguments passed to ``AuthFlowManager.run_native()``.
-
-        Returns
-        -------
-        AuthFlowResult
-            The result of the authentication flow.
-
-        Raises
-        ------
-        AuthenticationError
-            If authentication fails.
-        """
-        from .auth.flow import AuthFlowManager
+    def _resolve_provider(self, provider: Any | None) -> Any:
+        """Resolve an OAuth2 provider from argument or settings."""
         from .auth.providers import OAuthProvider, create_provider_from_settings
-        from .auth.session import SessionManager
-        from .auth.token_store import get_token_store
 
-        # Resolve provider
         if provider is None:
             oauth2_settings = self._settings.oauth2
             if oauth2_settings is None:
-                # Try to instantiate from env vars as a fallback
                 from .config import OAuth2Settings
 
                 try:
@@ -309,12 +281,85 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                         "or pass a provider instance."
                     )
                     raise AuthenticationError(msg)
-                # Cache the auto-detected settings
                 self._settings.oauth2 = oauth2_settings
             provider = create_provider_from_settings(oauth2_settings)
         elif not isinstance(provider, OAuthProvider):
-            # Assume it's settings-like
             provider = create_provider_from_settings(provider)
+        return provider
+
+    def login(
+        self,
+        provider: Any | None = None,
+        on_login: Callable[[Any], None] | None = None,
+        on_logout: Callable[[], None] | None = None,
+        show_page: bool = False,
+        page_title: str = "Sign In",
+        auto_alert: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        """Authenticate via OAuth2.
+
+        The library owns the full auth lifecycle. Developers provide
+        ``on_login`` and ``on_logout`` middleware to plug in their
+        business logic (database writes, session setup, etc.).
+
+        In native mode, opens a browser window pointing at the provider's
+        authorize URL. Blocks until authentication completes.
+
+        Parameters
+        ----------
+        provider : OAuthProvider, optional
+            Override the default provider from settings.
+        on_login : callable, optional
+            Called after successful authentication with the ``AuthFlowResult``.
+            Use this to write to your user table, set up sessions, and call
+            ``app.show()`` with the authenticated UI.
+        on_logout : callable, optional
+            Called when the user triggers logout (via ``auth:do-logout`` event).
+            Use this to invalidate DB sessions and clean up app-specific state.
+            Token cleanup is handled automatically by the library.
+            If omitted, only token cleanup is performed.
+        show_page : bool
+            If True, shows a built-in themed login page with a
+            "Sign in with {provider}" button before starting OAuth.
+            After logout, the login page is re-shown automatically.
+        page_title : str
+            Title for the built-in login page (used when ``show_page=True``).
+        auto_alert : bool
+            If True, shows toast notifications for auth status changes
+            (signing in, welcome, error, signed out).
+        **kwargs : Any
+            Additional keyword arguments passed to ``AuthFlowManager.run_native()``.
+
+        Returns
+        -------
+        AuthFlowResult
+            The result of the authentication flow.
+
+        Raises
+        ------
+        AuthenticationError
+            If authentication fails.
+
+        Examples
+        --------
+        >>> app = PyWry(mode=WindowMode.SINGLE_WINDOW)
+        >>> provider = GoogleProvider(client_id=..., client_secret=...)
+        >>>
+        >>> def on_login(result):
+        ...     app.show(build_home(result.user_info), toolbars=toolbars)
+        >>> def on_logout():
+        ...     db.invalidate_session()
+        >>> app.login(
+        ...     provider=provider, on_login=on_login, on_logout=on_logout, show_page=True
+        ... )
+        >>> app.block()
+        """
+        from .auth.flow import AuthFlowManager
+        from .auth.session import SessionManager
+        from .auth.token_store import get_token_store
+
+        resolved_provider = self._resolve_provider(provider)
 
         oauth2_settings = self._settings.oauth2
         use_pkce = getattr(oauth2_settings, "use_pkce", True) if oauth2_settings else True
@@ -330,35 +375,145 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             getattr(oauth2_settings, "refresh_buffer_seconds", 60) if oauth2_settings else 60
         )
 
-        # Create token store
         token_store = get_token_store(backend=token_backend)
 
-        # Create session manager
         self._session_manager = SessionManager(
-            provider=provider,
+            provider=resolved_provider,
             token_store=token_store,
             refresh_buffer_seconds=refresh_buffer,
         )
 
-        # Create flow manager
         flow_manager = AuthFlowManager(
-            provider=provider,
+            provider=resolved_provider,
             token_store=token_store,
             session_manager=self._session_manager,
             use_pkce=use_pkce,
             auth_timeout=auth_timeout,
         )
 
-        # Run the flow
-        result = flow_manager.authenticate(app=self, **kwargs)
+        # Show built-in login page and wait for button click
+        if show_page:
+            self._show_login_page_and_wait(resolved_provider, page_title)
+
+        # Run the OAuth flow (blocking)
+        if auto_alert:
+            self.alert("Opening sign-in\u2026", alert_type="info", duration=3000)
+
+        try:
+            result = flow_manager.authenticate(app=self, **kwargs)
+        except Exception as exc:
+            if auto_alert:
+                self.alert(str(exc), alert_type="error", duration=5000)
+            raise
 
         self._auth_result = result
+
+        if result.success:
+            display_name = ""
+            if result.user_info:
+                display_name = result.user_info.get("name") or result.user_info.get("email") or ""
+            if auto_alert:
+                msg = f"Welcome, {display_name}!" if display_name else "Signed in successfully!"
+                self.alert(msg, alert_type="success", duration=3000)
+
+            # Call developer's on_login middleware
+            if on_login is not None:
+                on_login(result)
+
+            # Wire up the logout handler
+            self._wire_logout_handler(
+                provider=provider,
+                on_login=on_login,
+                on_logout=on_logout,
+                show_page=show_page,
+                page_title=page_title,
+                auto_alert=auto_alert,
+                kwargs=kwargs,
+            )
+        elif auto_alert:
+            self.alert(
+                result.error or "Authentication was not completed.",
+                alert_type="warning",
+                duration=5000,
+            )
+
         return result
 
-    def logout(self) -> None:
+    def _show_login_page_and_wait(self, provider: Any, page_title: str) -> None:
+        """Show the built-in login page and block until the button is clicked."""
+        from .auth.login_page import LOGIN_CLICK_EVENT, build_login_page
+
+        provider_name = provider.__class__.__name__.replace("Provider", "")
+        page = build_login_page(provider_name, title=page_title)
+
+        click_event = threading.Event()
+
+        def _on_click(data: Any) -> None:
+            click_event.set()
+
+        self.show(
+            page,
+            title=page_title,
+            width=460,
+            height=520,
+            callbacks={LOGIN_CLICK_EVENT: _on_click},
+        )
+
+        click_event.wait()
+
+    def _wire_logout_handler(
+        self,
+        provider: Any,
+        on_login: Callable[[Any], None] | None,
+        on_logout: Callable[[], None] | None,
+        show_page: bool,
+        page_title: str,
+        auto_alert: bool,
+        kwargs: dict[str, Any],
+    ) -> None:
+        """Register the internal ``auth:do-logout`` handler.
+
+        Handles: calling ``on_logout`` middleware → clearing tokens →
+        optionally re-showing the login page and restarting the auth cycle.
+        """
+        registry = get_registry()
+
+        def _handle_logout(data: Any, event_type: str, label: str) -> None:
+            # Call developer's on_logout middleware
+            if on_logout is not None:
+                on_logout()
+
+            # Library clears tokens/session
+            self.logout(auto_alert=auto_alert)
+
+            # Re-enter login cycle if show_page is enabled
+            if show_page:
+                self.login(
+                    provider=provider,
+                    on_login=on_login,
+                    on_logout=on_logout,
+                    show_page=show_page,
+                    page_title=page_title,
+                    auto_alert=auto_alert,
+                    **kwargs,
+                )
+
+        # Register on all current labels
+        labels = self._mode.get_labels()
+        if not labels:
+            labels = ["main"]
+        for lbl in labels:
+            registry.register(lbl, "auth:do-logout", _handle_logout)
+
+    def logout(self, auto_alert: bool = True) -> None:
         """Log out and clear authentication state.
 
         Clears stored tokens and cancels any background refresh.
+
+        Parameters
+        ----------
+        auto_alert : bool
+            If True, shows a "Signed out." toast notification.
         """
         if self._session_manager is not None:
             from .state.sync_helpers import run_async
@@ -367,6 +522,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 run_async(self._session_manager.logout())
             self._session_manager = None
         self._auth_result = None
+        if auto_alert:
+            self.alert("Signed out.", alert_type="info", duration=2000)
 
     # ── Builder defaults ──────────────────────────────────────────────
 
@@ -508,6 +665,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
         callbacks: dict[str, CallbackFunc] | None = None,
         include_plotly: bool = False,
         include_aggrid: bool = False,
+        include_tvchart: bool = False,
         aggrid_theme: Literal["quartz", "alpine", "balham", "material"] = "alpine",
         label: str | None = None,
         watch: bool | None = None,
@@ -613,7 +771,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
 
             # For notebook inline: use PyWryWidget (AnyWidget) for plain HTML
             # Use InlineWidget only for Plotly/AG Grid (they need specialized handling)
-            if include_plotly or include_aggrid:
+            if include_plotly or include_aggrid or include_tvchart:
                 from . import inline as pywry_inline
 
                 widget = pywry_inline.show(
@@ -693,6 +851,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
                 "theme": self._theme,
                 "enable_plotly": include_plotly,
                 "enable_aggrid": include_aggrid,
+                "enable_tvchart": include_tvchart,
                 "aggrid_theme": aggrid_theme,
             }
         )
@@ -1175,6 +1334,234 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
             modals=modals,
         )
 
+    def _preload_chart_data(self, user_id: str = "default") -> dict[str, str]:
+        """Fetch all chart layouts and settings from ChartStore for JS preload."""
+        from .state import get_chart_store
+        from .state.sync_helpers import run_async
+
+        store = get_chart_store()
+        preload: dict[str, str] = {}
+        try:
+            index = run_async(store.list_layouts(user_id), timeout=10.0)
+            preload["__pywry_tvchart_layout_index_v1"] = json.dumps(index)
+            for entry in index:
+                lid = entry.get("id", "")
+                if lid:
+                    layout_data = run_async(store.get_layout(user_id, lid), timeout=5.0)
+                    if layout_data:
+                        preload[f"__pywry_tvchart_layout_data_v1_{lid}"] = layout_data
+            tmpl = run_async(store.get_settings_template(user_id), timeout=5.0)
+            if tmpl:
+                preload["__pywry_tvchart_settings_custom_template_v1"] = tmpl
+            def_id = run_async(store.get_settings_default_id(user_id), timeout=5.0)
+            preload["__pywry_tvchart_settings_default_template_v1"] = def_id
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).debug("Chart preload failed", exc_info=True)
+        return preload
+
+    def show_tvchart(
+        self,
+        data: Any = None,
+        title: str | None = None,
+        width: int | None = None,
+        height: int | None = None,
+        callbacks: dict[str, CallbackFunc] | None = None,
+        label: str | None = None,
+        chart_options: dict[str, Any] | None = None,
+        series_options: dict[str, Any] | None = None,
+        symbol_col: str | None = None,
+        max_bars: int = 10_000,
+        toolbars: list[dict[str, Any] | Toolbar] | None = None,
+        modals: list[dict[str, Any] | Modal] | None = None,
+        inline_css: str | None = None,
+        on_click: Any = None,  # pylint: disable=unused-argument
+        on_crosshair: Any = None,  # pylint: disable=unused-argument
+        storage: dict[str, Any] | None = None,
+        use_datafeed: bool = False,
+        symbol: str | None = None,
+        resolution: str = "1D",
+        provider: Any = None,
+    ) -> NativeWindowHandle | BaseWidget:
+        """Show a TradingView Lightweight Chart.
+
+        Parameters
+        ----------
+        data : Any
+            OHLCV data as a DataFrame, list of dicts, or dict of lists.
+        title : str or None
+            Window title.
+        width : int or None
+            Window width.
+        height : int or None
+            Window height.
+        callbacks : dict or None
+            Event callbacks.
+        label : str or None
+            Window label.
+        chart_options : dict or None
+            Chart options (layout, grid, crosshair, etc.).
+        series_options : dict or None
+            Series-specific options.
+        symbol_col : str or None
+            Column name for multi-series grouping.
+        max_bars : int
+            Maximum bars per series.
+        toolbars : list or None
+            Toolbar configurations.
+        modals : list or None
+            Modal configurations.
+        inline_css : str or None
+            Custom CSS to inject.
+        on_click : Callable or None
+            Click callback.
+        on_crosshair : Callable or None
+            Crosshair move callback.
+        storage : dict or None
+            Optional persistence backend config for TVChart layouts/templates.
+            If omitted, defaults to ``settings.tvchart.storage_*`` in non-deploy mode,
+            and ``localStorage`` in deploy mode.
+        provider : DatafeedProvider or None
+            A :class:`~pywry.tvchart.datafeed.DatafeedProvider` instance.
+            When supplied, ``use_datafeed`` is set to ``True`` automatically
+            and all datafeed IPC events are wired to the provider.
+
+        Returns
+        -------
+        NativeWindowHandle or BaseWidget
+        """
+        if provider is not None:
+            use_datafeed = True
+
+        series_payload: list[dict[str, Any]] = []
+        if use_datafeed:
+            series_payload = [
+                {
+                    "seriesId": "main",
+                    "symbol": symbol or "",
+                    "resolution": resolution,
+                    "seriesType": "Candlestick",
+                    "seriesOptions": series_options or {},
+                    "bars": [],
+                    "volume": [],
+                }
+            ]
+        else:
+            from .tvchart import normalize_ohlcv
+
+            chart_data = normalize_ohlcv(data, symbol_col=symbol_col, max_bars=max_bars)
+
+            for s in chart_data.series:
+                series_payload.append(
+                    {
+                        "seriesId": s.series_id,
+                        "bars": s.bars,
+                        "volume": s.volume,
+                        "seriesType": s.series_type.value.capitalize(),
+                        "seriesOptions": series_options or {},
+                    }
+                )
+
+        from .state import is_deploy_mode
+
+        raw_storage = (
+            storage.copy()
+            if isinstance(storage, dict)
+            else {
+                "backend": self._settings.tvchart.storage_backend,
+                "path": self._settings.tvchart.storage_path,
+                "namespace": self._settings.tvchart.storage_namespace,
+                "adapter": self._settings.tvchart.storage_adapter,
+            }
+        )
+        storage_config: dict[str, Any] = {
+            "backend": str(raw_storage.get("backend", "file")),
+            "path": str(raw_storage.get("path", "")) if raw_storage.get("path") is not None else "",
+            "namespace": str(raw_storage.get("namespace", "pywry.tvchart")),
+            "adapter": str(raw_storage.get("adapter", ""))
+            if raw_storage.get("adapter") is not None
+            else "",
+        }
+
+        # Preload from ChartStore for file/server backends (or deploy mode)
+        _use_server_backend = is_deploy_mode() or storage_config["backend"] in (
+            "file",
+            "server",
+        )
+        if _use_server_backend:
+            storage_config["preload"] = self._preload_chart_data()
+            storage_config["backend"] = "server"
+
+        payload_json = json.dumps(
+            {
+                "chartOptions": chart_options or {},
+                "title": title or "",
+                "series": series_payload,
+                "storage": storage_config,
+                "useDatafeed": use_datafeed,
+            }
+        )
+
+        chart_id = f"tvchart_{uuid.uuid4().hex[:8]}"
+
+        chart_html = f"""
+        <div id="{chart_id}" class="pywry-tvchart-container"></div>
+        <script>
+            (function() {{
+                function initChart() {{
+                    if (typeof LightweightCharts === 'undefined') {{
+                        setTimeout(initChart, 50);
+                        return;
+                    }}
+
+                    var payload = {payload_json};
+                    var container = document.getElementById('{chart_id}');
+                    if (!container) {{
+                        setTimeout(initChart, 50);
+                        return;
+                    }}
+
+                    if (window.PYWRY_TVCHART_RENDER) {{
+                        window.PYWRY_TVCHART_RENDER('{chart_id}', container, payload);
+                    }} else if (window.PYWRY_TVCHART_CREATE) {{
+                        window.PYWRY_TVCHART_CREATE('{chart_id}', container, payload);
+                    }}
+                }}
+
+                initChart();
+            }})();
+        </script>
+        """
+
+        content: str | HtmlContent
+        content = HtmlContent(html=chart_html, inline_css=inline_css) if inline_css else chart_html
+
+        handle = self.show(
+            content=content,
+            title=title or "Chart",
+            width=width,
+            height=height,
+            callbacks=callbacks,
+            include_tvchart=True,
+            label=label,
+            toolbars=toolbars,
+            modals=modals,
+        )
+
+        if provider is not None:
+            wire_label: str | None = None
+            if isinstance(handle, str):
+                wire_label = handle
+            elif hasattr(handle, "label"):
+                wire_label = handle.label
+            self._wire_datafeed_provider(provider, label=wire_label)
+
+        if _use_server_backend:
+            self._wire_chart_storage(user_id="default")
+
+        return handle
+
     def emit(self, event_type: str, data: dict[str, Any], label: str | None = None) -> None:
         """Emit an event to the JavaScript side.
 
@@ -1247,18 +1634,28 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
     def on(
         self,
         event_type: str,
-        handler: CallbackFunc,
+        handler: CallbackFunc | None = None,
         label: str | None = None,
         widget_id: str | None = None,
-    ) -> bool:
+    ) -> bool | Callable[[CallbackFunc], CallbackFunc]:
         """Register an event handler.
+
+        Can be used as a direct call or as a decorator::
+
+            # Direct call
+            app.on("view:change", my_handler)
+
+
+            # Decorator
+            @app.on("view:change")
+            def my_handler(data): ...
 
         Parameters
         ----------
         event_type : str
             Event type (namespace:event-name or * for wildcard).
-        handler : CallbackFunc
-            Callback function.
+        handler : CallbackFunc, optional
+            Callback function. If omitted, returns a decorator.
         label : str, optional
             Window label. If None, registers on all active windows.
         widget_id : str, optional
@@ -1266,29 +1663,32 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
 
         Returns
         -------
-        bool
-            True if registered successfully.
+        bool or decorator
+            True if registered successfully (direct call), or a
+            decorator function (when handler is omitted).
         """
-        registry = get_registry()
-        # If widget_id provided, compound the event type
-        if widget_id and ":" not in event_type:
-            # e.g., "plotly_click" -> "plotly_click:my_chart_id"
-            event_type = f"{event_type}:{widget_id}"
 
-        labels = self._mode.get_labels()
+        def _register(fn: CallbackFunc) -> CallbackFunc:
+            evt = event_type
+            registry = get_registry()
+            if widget_id and ":" not in evt:
+                evt = f"{evt}:{widget_id}"
 
-        if label:
-            labels = [label]
-        elif not labels:
-            # No windows yet - register on "main" which will be created later
-            labels = ["main"]
+            labels = self._mode.get_labels()
+            if label:
+                labels = [label]
+            elif not labels:
+                labels = ["main"]
 
-        success = True
-        for lbl in labels:
-            if not registry.register(lbl, event_type, handler):
-                success = False
+            for lbl in labels:
+                registry.register(lbl, evt, fn)
+            return fn
 
-        return success
+        if handler is not None:
+            _register(handler)
+            return True
+
+        return _register
 
     # ------------------------------------------------------------------
     # Custom IPC commands (callable from JS via pyInvoke)
@@ -1410,23 +1810,56 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
 
         return decorator
 
+    def _register_scoped(
+        self,
+        event_type: str,
+        handler: CallbackFunc | None,
+        label: str | None,
+        widget_type: str,
+        widget_id: str,
+    ) -> bool | Callable[[CallbackFunc], CallbackFunc]:
+        """Shared registration logic for widget-scoped event handlers.
+
+        When ``handler`` is provided, registers it directly and returns ``True``.
+        When ``handler`` is ``None``, returns a decorator for ``@app.on_*()`` usage.
+        """
+        registry = get_registry()
+
+        def _register(fn: CallbackFunc) -> CallbackFunc:
+            labels = self._mode.get_labels()
+            if label:
+                labels = [label]
+            elif not labels:
+                labels = ["main"]
+            for lbl in labels:
+                registry.register(lbl, event_type, fn, widget_type=widget_type, widget_id=widget_id)
+            return fn
+
+        if handler is not None:
+            _register(handler)
+            return True
+        return _register
+
     def on_grid(
         self,
         event_type: str,
-        handler: CallbackFunc,
+        handler: CallbackFunc | None = None,
         label: str | None = None,
         grid_id: str = "*",
-    ) -> bool:
+    ) -> bool | Callable[[CallbackFunc], CallbackFunc]:
         """Register an event handler for grid events.
 
-        Convenience method that filters events to only AG Grid widgets.
+        Can be used as a direct call or as a decorator::
+
+            @app.on_grid("grid:cell-click")
+            def handle_click(data): ...
 
         Parameters
         ----------
         event_type : str
             Event type (e.g., "grid:cell-click", "cell_click").
-        handler : CallbackFunc
-            Callback function.
+        handler : CallbackFunc, optional
+            Callback function. If omitted, returns a decorator.
         label : str, optional
             Window label. If None, registers on all active windows.
         grid_id : str, optional
@@ -1434,41 +1867,31 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
 
         Returns
         -------
-        bool
-            True if registered successfully.
+        bool or decorator
+            True if registered (direct call), or decorator (when handler omitted).
         """
-        registry = get_registry()
-        labels = self._mode.get_labels()
-        if label:
-            labels = [label]
-        elif not labels:
-            labels = ["main"]
-
-        success = True
-        for lbl in labels:
-            if not registry.register(
-                lbl, event_type, handler, widget_type="grid", widget_id=grid_id
-            ):
-                success = False
-        return success
+        return self._register_scoped(event_type, handler, label, "grid", grid_id)
 
     def on_chart(
         self,
         event_type: str,
-        handler: CallbackFunc,
+        handler: CallbackFunc | None = None,
         label: str | None = None,
         chart_id: str = "*",
-    ) -> bool:
+    ) -> bool | Callable[[CallbackFunc], CallbackFunc]:
         """Register an event handler for chart (Plotly) events.
 
-        Convenience method that filters events to only Plotly chart widgets.
+        Can be used as a direct call or as a decorator::
+
+            @app.on_chart("plotly:click")
+            def handle_click(data): ...
 
         Parameters
         ----------
         event_type : str
             Event type (e.g., "plotly:click", "plotly:hover").
-        handler : CallbackFunc
-            Callback function.
+        handler : CallbackFunc, optional
+            Callback function. If omitted, returns a decorator.
         label : str, optional
             Window label. If None, registers on all active windows.
         chart_id : str, optional
@@ -1476,41 +1899,31 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
 
         Returns
         -------
-        bool
-            True if registered successfully.
+        bool or decorator
+            True if registered (direct call), or decorator (when handler omitted).
         """
-        registry = get_registry()
-        labels = self._mode.get_labels()
-        if label:
-            labels = [label]
-        elif not labels:
-            labels = ["main"]
-
-        success = True
-        for lbl in labels:
-            if not registry.register(
-                lbl, event_type, handler, widget_type="chart", widget_id=chart_id
-            ):
-                success = False
-        return success
+        return self._register_scoped(event_type, handler, label, "chart", chart_id)
 
     def on_toolbar(
         self,
         event_type: str,
-        handler: CallbackFunc,
+        handler: CallbackFunc | None = None,
         label: str | None = None,
         toolbar_id: str = "*",
-    ) -> bool:
+    ) -> bool | Callable[[CallbackFunc], CallbackFunc]:
         """Register an event handler for toolbar events.
 
-        Convenience method that filters events to only toolbar widgets.
+        Can be used as a direct call or as a decorator::
+
+            @app.on_toolbar("view:change")
+            def handle_change(data): ...
 
         Parameters
         ----------
         event_type : str
             Event type (e.g., "toolbar:change", custom button events).
-        handler : CallbackFunc
-            Callback function.
+        handler : CallbackFunc, optional
+            Callback function. If omitted, returns a decorator.
         label : str, optional
             Window label. If None, registers on all active windows.
         toolbar_id : str, optional
@@ -1518,41 +1931,31 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
 
         Returns
         -------
-        bool
-            True if registered successfully.
+        bool or decorator
+            True if registered (direct call), or decorator (when handler omitted).
         """
-        registry = get_registry()
-        labels = self._mode.get_labels()
-        if label:
-            labels = [label]
-        elif not labels:
-            labels = ["main"]
-
-        success = True
-        for lbl in labels:
-            if not registry.register(
-                lbl, event_type, handler, widget_type="toolbar", widget_id=toolbar_id
-            ):
-                success = False
-        return success
+        return self._register_scoped(event_type, handler, label, "toolbar", toolbar_id)
 
     def on_html(
         self,
         event_type: str,
-        handler: CallbackFunc,
+        handler: CallbackFunc | None = None,
         label: str | None = None,
         element_id: str = "*",
-    ) -> bool:
+    ) -> bool | Callable[[CallbackFunc], CallbackFunc]:
         """Register an event handler for HTML element events.
 
-        Convenience method that filters events to HTML content.
+        Can be used as a direct call or as a decorator::
+
+            @app.on_html("app:custom-event")
+            def handle_event(data): ...
 
         Parameters
         ----------
         event_type : str
             Event type (e.g., custom events from HTML elements).
-        handler : CallbackFunc
-            Callback function.
+        handler : CallbackFunc, optional
+            Callback function. If omitted, returns a decorator.
         label : str, optional
             Window label. If None, registers on all active windows.
         element_id : str, optional
@@ -1560,60 +1963,39 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
 
         Returns
         -------
-        bool
-            True if registered successfully.
+        bool or decorator
+            True if registered (direct call), or decorator (when handler omitted).
         """
-        registry = get_registry()
-        labels = self._mode.get_labels()
-        if label:
-            labels = [label]
-        elif not labels:
-            labels = ["main"]
-
-        success = True
-        for lbl in labels:
-            if not registry.register(
-                lbl, event_type, handler, widget_type="html", widget_id=element_id
-            ):
-                success = False
-        return success
+        return self._register_scoped(event_type, handler, label, "html", element_id)
 
     def on_window(
         self,
         event_type: str,
-        handler: CallbackFunc,
+        handler: CallbackFunc | None = None,
         label: str | None = None,
-    ) -> bool:
+    ) -> bool | Callable[[CallbackFunc], CallbackFunc]:
         """Register an event handler for window-level events.
 
-        Convenience method that filters events to window lifecycle events.
+        Can be used as a direct call or as a decorator::
+
+            @app.on_window("window:close")
+            def handle_close(data): ...
 
         Parameters
         ----------
         event_type : str
             Event type (e.g., "window:close", "window:resize").
-        handler : CallbackFunc
-            Callback function.
+        handler : CallbackFunc, optional
+            Callback function. If omitted, returns a decorator.
         label : str, optional
             Window label. If None, registers on all active windows.
 
         Returns
         -------
-        bool
-            True if registered successfully.
+        bool or decorator
+            True if registered (direct call), or decorator (when handler omitted).
         """
-        registry = get_registry()
-        labels = self._mode.get_labels()
-        if label:
-            labels = [label]
-        elif not labels:
-            labels = ["main"]
-
-        success = True
-        for lbl in labels:
-            if not registry.register(lbl, event_type, handler, widget_type="window", widget_id="*"):
-                success = False
-        return success
+        return self._register_scoped(event_type, handler, label, "window", "*")
 
     def send_event(
         self,
@@ -2178,6 +2560,31 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
         self._aggrid_css.clear()
         self._asset_loader.clear_cache()
 
+    def _shutdown(self) -> None:
+        """Tear down all resources so the process can exit cleanly.
+
+        Called automatically when ``block()`` returns. Destroys windows,
+        cancels auth refresh timers, closes HTTP clients, and stops the
+        subprocess.
+        """
+        self.destroy()
+
+        # Cancel any background token-refresh timer and close provider HTTP client
+        if self._session_manager is not None:
+            self._session_manager._cancel_refresh_timer()
+            provider = getattr(self._session_manager, "provider", None)
+            self._session_manager = None
+            if provider is not None:
+                with contextlib.suppress(Exception):
+                    from .state.sync_helpers import run_async
+
+                    run_async(provider.close(), timeout=3.0)
+
+        # Stop the PyTauri subprocess and its portal
+        from . import runtime
+
+        runtime.stop()
+
     def block(self, label: str | None = None) -> None:
         """Block until window(s) are closed or KeyboardInterrupt.
 
@@ -2209,20 +2616,26 @@ class PyWry(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):  # pylint: dis
 
             pywry_inline.block()
         else:
+            from . import runtime as _rt
+
             # Native mode - wait for window(s) to close
             try:
                 if label:
-                    # Wait for specific window to close
                     while label in self._mode.get_labels():
+                        if not _rt.is_running():
+                            break
                         import time
 
                         time.sleep(0.1)
                 else:
-                    # Wait for all windows to close
                     while self._mode.get_labels():
+                        if not _rt.is_running():
+                            break
                         import time
 
                         time.sleep(0.1)
             except KeyboardInterrupt:
                 info("Interrupted, closing windows...")
-                self.destroy()
+
+        # Clean up so the process can exit immediately
+        self._shutdown()

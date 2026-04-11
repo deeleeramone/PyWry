@@ -145,14 +145,12 @@ def wait_for_server(host: str, port: int, timeout: float = 5.0) -> bool:
                     # Socket is open, try a simple request
                     # Use health with auth header if we have token
                     url = f"http://{host}:{port}/health"
-                    req = urllib.request.Request(url)  # noqa: S310
+                    req = urllib.request.Request(url)
                     auth_header = _get_auth_header()
                     for k, v in auth_header.items():
                         req.add_header(k, v)
                     try:
-                        with urllib.request.urlopen(  # noqa: S310
-                            req, timeout=0.5
-                        ) as resp:
+                        with urllib.request.urlopen(req, timeout=0.5) as resp:
                             if resp.status == 200:
                                 return True
                     except Exception:
@@ -176,12 +174,12 @@ def http_get(url: str, timeout: float = 5.0, auth: bool = False) -> tuple[int, s
     auth : bool, optional
         If True, include internal API auth header (for /health, etc.).
     """
-    req = urllib.request.Request(url)  # noqa: S310
+    req = urllib.request.Request(url)
     if auth:
         for k, v in _get_auth_header().items():
             req.add_header(k, v)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode("utf-8")
@@ -207,14 +205,14 @@ def http_post(url: str, data: dict, timeout: float = 5.0, auth: bool = False) ->
     headers = {"Content-Type": "application/json"}
     if auth:
         headers.update(_get_auth_header())
-    req = urllib.request.Request(  # noqa: S310
+    req = urllib.request.Request(
         url,
         data=json.dumps(data).encode("utf-8"),
         headers=headers,
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode("utf-8")
@@ -558,12 +556,12 @@ class TestCORS:
 
         # Make OPTIONS request to check CORS
         url = f"http://127.0.0.1:{server_port}/health"
-        req = urllib.request.Request(url, method="OPTIONS")  # noqa: S310
+        req = urllib.request.Request(url, method="OPTIONS")
         req.add_header("Origin", "http://localhost:8888")
         req.add_header("Access-Control-Request-Method", "GET")
 
         try:
-            with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
+            with urllib.request.urlopen(req, timeout=5) as resp:
                 headers = dict(resp.headers)
                 # CORS headers should be present
                 assert "Access-Control-Allow-Origin" in headers or resp.status == 200
@@ -587,10 +585,10 @@ class TestContentTypes:
 
         url = f"http://127.0.0.1:{server_port}/health"
         # Health endpoint requires internal auth
-        req = urllib.request.Request(url)  # noqa: S310
+        req = urllib.request.Request(url)
         for k, v in _get_auth_header().items():
             req.add_header(k, v)
-        with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=5) as resp:
             content_type = resp.headers.get("Content-Type", "")
             assert "application/json" in content_type
 
@@ -612,7 +610,7 @@ class TestContentTypes:
         _state.register_widget(widget_id, "<html><body>Test</body></html>", callbacks={})
 
         url = f"http://127.0.0.1:{server_port}/widget/{widget_id}"
-        with urllib.request.urlopen(url, timeout=5) as resp:  # noqa: S310
+        with urllib.request.urlopen(url, timeout=5) as resp:
             content_type = resp.headers.get("Content-Type", "")
             assert "text/html" in content_type
 

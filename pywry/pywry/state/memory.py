@@ -11,7 +11,7 @@ import time
 
 from typing import TYPE_CHECKING, Any
 
-from .base import ChatStore, ConnectionRouter, EventBus, SessionStore, WidgetStore
+from .base import ChartStore, ChatStore, ConnectionRouter, EventBus, SessionStore, WidgetStore
 from .types import ConnectionInfo, EventMessage, UserSession, WidgetData
 
 
@@ -905,6 +905,121 @@ class MemoryChatStore(ChatStore):
         """
         async with self._lock:
             self._threads.pop(widget_id, None)
+
+
+class MemoryChartStore(ChartStore):
+    """In-memory chart layout/settings store.
+
+    No persistence across restarts.  Useful for tests and ephemeral
+    notebook sessions.
+    """
+
+    def __init__(self) -> None:
+        self._layouts: dict[str, str] = {}  # layout_id -> json
+        self._index: list[dict[str, Any]] = []
+        self._template: str | None = None
+        self._default_id: str = "factory"
+        self._lock = asyncio.Lock()
+
+    async def save_layout(
+        self,
+        user_id: str,
+        layout_id: str,
+        name: str,
+        data_json: str,
+        *,
+        summary: str = "",
+    ) -> dict[str, Any]:
+        """Save or update a chart layout."""
+        now = int(time.time() * 1000)
+        entry: dict[str, Any] = {
+            "id": layout_id,
+            "name": name,
+            "savedAt": now,
+            "summary": summary,
+        }
+        async with self._lock:
+            self._layouts[layout_id] = data_json
+            self._index = [e for e in self._index if e.get("id") != layout_id]
+            self._index.insert(0, entry)
+            self._index = self._index[:200]
+        return entry
+
+    async def get_layout(self, user_id: str, layout_id: str) -> str | None:
+        """Get layout data by ID."""
+        async with self._lock:
+            return self._layouts.get(layout_id)
+
+    async def list_layouts(self, user_id: str) -> list[dict[str, Any]]:
+        """List all layout index entries."""
+        async with self._lock:
+            return list(self._index)
+
+    async def delete_layout(self, user_id: str, layout_id: str) -> bool:
+        """Delete a layout."""
+        async with self._lock:
+            if layout_id not in self._layouts:
+                return False
+            del self._layouts[layout_id]
+            self._index = [e for e in self._index if e.get("id") != layout_id]
+            return True
+
+    async def rename_layout(self, user_id: str, layout_id: str, new_name: str) -> bool:
+        """Rename a layout."""
+        async with self._lock:
+            for entry in self._index:
+                if entry.get("id") == layout_id:
+                    entry["name"] = new_name
+                    entry["savedAt"] = int(time.time() * 1000)
+                    self._index.sort(key=lambda e: e.get("savedAt", 0), reverse=True)
+                    return True
+            return False
+
+    async def update_layout_meta(
+        self,
+        user_id: str,
+        layout_id: str,
+        *,
+        name: str = "",
+        summary: str = "",
+    ) -> bool:
+        """Update metadata for an existing layout index entry."""
+        async with self._lock:
+            for entry in self._index:
+                if entry.get("id") == layout_id:
+                    if name:
+                        entry["name"] = name
+                    if summary:
+                        entry["summary"] = summary
+                    return True
+            return False
+
+    async def save_settings_template(self, user_id: str, template_json: str) -> None:
+        """Save a custom settings template."""
+        async with self._lock:
+            self._template = template_json
+
+    async def get_settings_template(self, user_id: str) -> str | None:
+        """Get the custom settings template."""
+        async with self._lock:
+            return self._template
+
+    async def get_settings_default_id(self, user_id: str) -> str:
+        """Get which settings template is active."""
+        async with self._lock:
+            return self._default_id
+
+    async def set_settings_default_id(self, user_id: str, template_id: str) -> None:
+        """Set which settings template is active."""
+        val = template_id if template_id in ("factory", "custom") else "factory"
+        async with self._lock:
+            self._default_id = val
+
+    async def clear_settings_template(self, user_id: str) -> None:
+        """Remove the custom settings template and reset to factory."""
+        async with self._lock:
+            self._template = None
+            self._default_id = "factory"
 
 
 # Factory function for creating memory stores

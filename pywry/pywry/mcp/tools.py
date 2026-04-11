@@ -429,6 +429,37 @@ Strategy options: "set" (replace all), "append" (add rows), "update" (update exi
                 "required": ["data_json"],
             },
         ),
+        Tool(
+            name="show_tvchart",
+            description="""Create a TradingView Lightweight Chart widget from OHLCV data.
+
+Data must be a JSON array of objects with time, open, high, low, close,
+and optional volume fields. Time should be Unix epoch seconds.
+
+**To update the chart later**, use `send_event` with:
+- event_type: `tvchart:update`
+- data: `{"bars": [...], "chartId": "..."}`""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "data_json": {
+                        "type": "string",
+                        "description": "OHLCV data as JSON array of objects",
+                    },
+                    "title": {"type": "string", "default": "Chart"},
+                    "height": {"type": "integer", "default": 500},
+                    "chart_options": {
+                        "type": "object",
+                        "description": "Chart-level options (layout, grid, crosshair)",
+                    },
+                    "series_options": {
+                        "type": "object",
+                        "description": "Series-specific options (colors, etc.)",
+                    },
+                },
+                "required": ["data_json"],
+            },
+        ),
         # =====================================================================
         # Widget Manipulation
         # =====================================================================

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .base import (
+        ChartStore,
         ChatStore,
         ConnectionRouter,
         EventBus,
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
 
 # pylint: disable=wrong-import-position
 from .memory import (
+    MemoryChartStore,
     MemoryChatStore,
     MemoryConnectionRouter,
     MemoryEventBus,
@@ -295,6 +297,41 @@ def get_chat_store() -> ChatStore:
     return MemoryChatStore()
 
 
+@lru_cache(maxsize=1)
+def get_chart_store() -> ChartStore:
+    """Get the configured chart store instance.
+
+    Uses Redis in deploy mode, filesystem by default.
+
+    Returns
+    -------
+    ChartStore
+        The chart store instance.
+    """
+    backend = get_state_backend()
+
+    if backend == StateBackend.REDIS:
+        from .redis import RedisChartStore
+
+        settings = _get_deploy_settings()
+        return RedisChartStore(
+            redis_url=settings.redis_url,
+            prefix=settings.redis_prefix,
+            pool_size=settings.redis_pool_size,
+        )
+
+    # Non-deploy: choose between file and memory based on TVChart config
+    from pywry.config import get_settings
+
+    tvchart = get_settings().tvchart
+    if tvchart.storage_backend == "memory":
+        return MemoryChartStore()
+
+    from .file import FileChartStore
+
+    return FileChartStore(base_path=tvchart.storage_path)
+
+
 def clear_state_caches() -> None:
     """Clear all cached state store instances.
 
@@ -310,3 +347,4 @@ def clear_state_caches() -> None:
     get_connection_router.cache_clear()
     get_session_store.cache_clear()
     get_chat_store.cache_clear()
+    get_chart_store.cache_clear()

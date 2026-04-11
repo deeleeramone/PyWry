@@ -38,7 +38,7 @@ app.show(
 
 ### content — what to render
 
-Accepts either a plain HTML string or an `HtmlContent` object. When you pass a string, PyWry wraps it in a minimal document structure automatically. When you pass `HtmlContent`, you get control over CSS files, JS files, inline styles, JSON data injection, and hot reload watching. See the [HtmlContent guide](html-content.md) for details.
+Accepts either a plain HTML string or an `HtmlContent` object. When you pass a string, PyWry wraps it in a minimal document structure automatically. When you pass `HtmlContent`, you get control over CSS files, JS files, inline styles, JSON data injection, and hot reload watching. See the [HtmlContent guide](../components/htmlcontent/index.md) for details.
 
 ```python
 # Plain string — PyWry wraps it in a full HTML document
@@ -162,7 +162,7 @@ modal = Modal(id="settings", title="Settings", items=[
 app.show(html, toolbars=[toolbar], modals=[modal])
 ```
 
-See the [Toolbar System guide](toolbars.md) for the full component list and layout positions.
+See the [Toolbar System guide](../components/toolbar/index.md) for the full component list and layout positions.
 
 ## Return Value
 
@@ -248,7 +248,7 @@ app = PyWry(mode=WindowMode.BROWSER)
 
 ## Next Steps
 
-- **[HtmlContent](html-content.md)** — Control CSS, JS, and data injection
-- **[Content Assembly](content-assembly.md)** — How PyWry builds the final HTML document
+- **[HtmlContent](../components/htmlcontent/index.md)** — Control CSS, JS, and data injection
+- **[Content Assembly](../components/htmlcontent/content-assembly.md)** — How PyWry builds the final HTML document
 - **[Event System](events.md)** — Two-way Python ↔ JavaScript communication
-- **[Toolbar System](toolbars.md)** — Building interactive controls
+- **[Toolbar System](../components/toolbar/index.md)** — Building interactive controls

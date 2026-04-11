@@ -680,6 +680,7 @@ class GoogleProvider(GenericOIDCProvider):
             client_id=client_id,
             client_secret=client_secret,
             scopes=scopes or ["openid", "email", "profile"],
+            issuer_url="https://accounts.google.com",
             authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
             token_url="https://oauth2.googleapis.com/token",  # noqa: S106
             userinfo_url="https://openidconnect.googleapis.com/v1/userinfo",
@@ -965,12 +966,51 @@ class MicrosoftProvider(GenericOIDCProvider):
             client_id=client_id,
             client_secret=client_secret,
             scopes=scopes or ["openid", "email", "profile", "offline_access"],
+            issuer_url=f"https://login.microsoftonline.com/{tenant_id}/v2.0",
             authorize_url=f"{base}/authorize",
             token_url=f"{base}/token",
             userinfo_url="https://graph.microsoft.com/oidc/userinfo",
             revocation_url="",  # Microsoft doesn't support standard revocation
         )
         self.tenant_id = tenant_id
+
+    async def _discover(self) -> None:
+        """Auto-discover OIDC endpoints for Microsoft.
+
+        Microsoft's ``common`` (and ``organizations``/``consumers``) tenants
+        return ``{tenantid}`` as a literal placeholder in the issuer field of
+        the discovery document.  This override relaxes the issuer check to
+        accept that placeholder.
+        """
+        if self._discovered or not self.issuer_url:
+            return
+        url = f"{self.issuer_url.rstrip('/')}/.well-known/openid-configuration"
+        try:
+            client = await self._get_client()
+            resp = await client.get(url, timeout=10.0)
+            resp.raise_for_status()
+            config = resp.json()
+
+            discovered_issuer = config.get("issuer", "")
+            expected = self.issuer_url.rstrip("/")
+            # Microsoft multi-tenant endpoints use literal {tenantid} placeholder
+            normalised = discovered_issuer.rstrip("/").replace("{tenantid}", self.tenant_id)
+            if normalised != expected:
+                msg = f"OIDC issuer mismatch: expected '{expected}', got '{discovered_issuer}'"
+                raise AuthenticationError(msg, provider=self.__class__.__name__)
+
+            if not self.authorize_url:
+                self.authorize_url = config.get("authorization_endpoint", "")
+            if not self.token_url:
+                self.token_url = config.get("token_endpoint", "")
+            if not self.userinfo_url:
+                self.userinfo_url = config.get("userinfo_endpoint", "")
+            if not self.revocation_url:
+                self.revocation_url = config.get("revocation_endpoint", "")
+            self._jwks_uri = config.get("jwks_uri", "")
+            self._discovered = True
+        except httpx.HTTPError as exc:
+            logger.warning("OIDC discovery failed for %s: %s", self.issuer_url, exc)
 
 
 def create_provider_from_settings(settings: Any) -> OAuthProvider:

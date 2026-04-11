@@ -656,3 +656,219 @@ class ChatStore(ABC):
             The thread ID.
         """
         ...
+
+
+class ChartStore(ABC):
+    """Abstract chart layout/settings storage interface.
+
+    Handles persistence of TradingView chart layouts and settings
+    templates.  Implementations must be thread-safe and support async
+    operations.
+
+    Notes
+    -----
+    Chart stores are scoped by ``user_id``.  In single-user mode the
+    caller passes ``"default"``; in deploy mode the actual user identity
+    is resolved from the session.
+    """
+
+    @abstractmethod
+    async def save_layout(
+        self,
+        user_id: str,
+        layout_id: str,
+        name: str,
+        data_json: str,
+        *,
+        summary: str = "",
+    ) -> dict[str, Any]:
+        """Save or update a chart layout.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner of the layout.
+        layout_id : str
+            Unique layout identifier.
+        name : str
+            Human-readable layout name.
+        data_json : str
+            Serialized layout data (JSON string).
+        summary : str
+            Short description of indicators/drawings in the layout.
+
+        Returns
+        -------
+        dict[str, Any]
+            Index entry with id, name, savedAt, summary.
+        """
+        ...
+
+    @abstractmethod
+    async def get_layout(self, user_id: str, layout_id: str) -> str | None:
+        """Get layout data by ID.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner of the layout.
+        layout_id : str
+            Layout identifier.
+
+        Returns
+        -------
+        str or None
+            Raw JSON string of the layout, or None if not found.
+        """
+        ...
+
+    @abstractmethod
+    async def list_layouts(self, user_id: str) -> list[dict[str, Any]]:
+        """List all layout index entries for a user.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner of the layouts.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            Index entries sorted by savedAt descending.
+        """
+        ...
+
+    @abstractmethod
+    async def delete_layout(self, user_id: str, layout_id: str) -> bool:
+        """Delete a layout.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner of the layout.
+        layout_id : str
+            Layout identifier.
+
+        Returns
+        -------
+        bool
+            True if deleted, False if not found.
+        """
+        ...
+
+    @abstractmethod
+    async def rename_layout(self, user_id: str, layout_id: str, new_name: str) -> bool:
+        """Rename a layout.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner of the layout.
+        layout_id : str
+            Layout identifier.
+        new_name : str
+            New human-readable name.
+
+        Returns
+        -------
+        bool
+            True if renamed, False if not found.
+        """
+        ...
+
+    async def update_layout_meta(
+        self,
+        user_id: str,
+        layout_id: str,
+        *,
+        name: str = "",
+        summary: str = "",
+    ) -> bool:
+        """Update metadata for an existing layout index entry.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner of the layout.
+        layout_id : str
+            Layout identifier.
+        name : str
+            Human-readable name.
+        summary : str
+            Short description of layout contents.
+
+        Returns
+        -------
+        bool
+            True if updated, False if not found.
+        """
+        return await self.rename_layout(user_id, layout_id, name)
+
+    @abstractmethod
+    async def save_settings_template(self, user_id: str, template_json: str) -> None:
+        """Save a custom settings template.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner of the template.
+        template_json : str
+            Serialized template (JSON string).
+        """
+        ...
+
+    @abstractmethod
+    async def get_settings_template(self, user_id: str) -> str | None:
+        """Get the custom settings template.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner of the template.
+
+        Returns
+        -------
+        str or None
+            Raw JSON string, or None if no custom template is set.
+        """
+        ...
+
+    @abstractmethod
+    async def get_settings_default_id(self, user_id: str) -> str:
+        """Get which settings template is active.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner.
+
+        Returns
+        -------
+        str
+            ``"factory"`` or ``"custom"``.
+        """
+        ...
+
+    @abstractmethod
+    async def set_settings_default_id(self, user_id: str, template_id: str) -> None:
+        """Set which settings template is active.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner.
+        template_id : str
+            ``"factory"`` or ``"custom"``.
+        """
+        ...
+
+    @abstractmethod
+    async def clear_settings_template(self, user_id: str) -> None:
+        """Remove the custom settings template and reset to factory.
+
+        Parameters
+        ----------
+        user_id : str
+            Owner.
+        """
+        ...

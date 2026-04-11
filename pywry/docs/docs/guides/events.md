@@ -1,6 +1,6 @@
 # Event System
 
-This guide explains how PyWry's bidirectional event system works and how to use it effectively. For the complete list of all events and their payloads, see the [Event Reference](../reference/events.md).
+This guide explains how PyWry's bidirectional event system works and how to use it effectively. For the complete list of all events and their payloads, see the [Event Reference](../reference/events/index.md).
 
 ## How Events Work
 
@@ -349,6 +349,6 @@ The payload structure is consistent:
 
 ## Next Steps
 
-- **[Event Reference](../reference/events.md)** — Complete list of all events and payloads
+- **[Event Reference](../reference/events/index.md)** — Complete list of all events and payloads
 - **[JavaScript Bridge](javascript-bridge.md)** — Direct JS interaction with `window.pywry`
-- **[Toolbar System](toolbars.md)** — Building interactive controls
+- **[Toolbar System](../components/toolbar/index.md)** — Building interactive controls

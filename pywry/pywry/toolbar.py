@@ -318,6 +318,8 @@ class Option(BaseModel):
 
     label: str
     value: str | None = None
+    description: str = ""
+    data_attrs: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def set_value_from_label(self) -> Option:
@@ -2103,7 +2105,7 @@ class TabGroup(ToolbarItem):
             f"if (window.pywry && window.pywry.emit) {{ "
             f"this.parentElement.querySelectorAll('.pywry-tab').forEach(t => t.classList.remove('pywry-tab-active')); "
             f"this.classList.add('pywry-tab-active'); "
-            f"window.pywry.emit('{self.event}', {{value: this.dataset.value, componentId: '{self.component_id}'}}, this); "
+            f"window.pywry.emit('{self.event}', {{value: this.dataset.value, componentId: '{self.component_id}', targetInterval: this.dataset.targetInterval || '', tooltip: this.dataset.tooltip || ''}}, this); "
             f"}} else {{ console.warn('PyWry not ready'); }}"
         )
 
@@ -2113,9 +2115,17 @@ class TabGroup(ToolbarItem):
             val = html.escape(str(opt.value))
             lbl = html.escape(str(opt.label))
             active_class = " pywry-tab-active" if str(opt.value) == self.selected else ""
+            option_title_attr = (
+                f' data-tooltip="{html.escape(opt.description)}"' if opt.description else ""
+            )
+            option_data_attrs = "".join(
+                f' data-{html.escape(str(attr_name).replace("_", "-"))}="{html.escape(str(attr_value))}"'
+                for attr_name, attr_value in (opt.data_attrs or {}).items()
+            )
             tabs_html_parts.append(
                 f'<button type="button" class="pywry-tab{active_class}" '
-                f'data-value="{val}" onclick="{onclick}"{disabled_attr}>{lbl}</button>'
+                f'data-value="{val}"{option_title_attr}{option_data_attrs} '
+                f'onclick="{onclick}"{disabled_attr}>{lbl}</button>'
             )
         tabs_html = "".join(tabs_html_parts)
 

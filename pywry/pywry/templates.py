@@ -22,6 +22,8 @@ from .assets import (
     get_plotly_templates_js,
     get_pywry_css,
     get_toast_css,
+    get_tvchart_defaults_js,
+    get_tvchart_js,
 )
 from .modal import Modal, wrap_content_with_modals
 from .models import HtmlContent, ThemeMode, WindowConfig
@@ -369,6 +371,24 @@ def build_aggrid_script(config: WindowConfig) -> str:
     return "\n".join(parts)
 
 
+def build_tvchart_script(config: WindowConfig) -> str:
+    """Build the TradingView chart script tags for the given config."""
+    if not config.enable_tvchart:
+        return ""
+
+    tvchart_js = get_tvchart_js()
+    if not tvchart_js:
+        raise RuntimeError("Lightweight Charts JS not found in bundled assets")
+
+    parts = [f"<script>{tvchart_js}</script>"]
+
+    tvchart_defaults = get_tvchart_defaults_js()
+    if tvchart_defaults:
+        parts.append(f"<script>{tvchart_defaults}</script>")
+
+    return "\n".join(parts)
+
+
 def build_custom_css(content: HtmlContent, loader: AssetLoader | None = None) -> str:
     """Build custom CSS from files and inline content.
 
@@ -615,6 +635,7 @@ def _build_head_injection(components: dict[str, str]) -> str:
         {components["custom_css"]}
         {components["plotly_script"]}
         {components["aggrid_script"]}
+        {components["tvchart_script"]}
         {components["json_script"]}
         <script>{components["init_script"]}</script>
         {components["toolbar_script"]}
@@ -669,6 +690,7 @@ def _build_fragment_document(
     {components["custom_css"]}
     {components["plotly_script"]}
     {components["aggrid_script"]}
+    {components["tvchart_script"]}
     {components["json_script"]}
     <script>{components["init_script"]}</script>
     {components["toolbar_script"]}
@@ -741,6 +763,7 @@ def build_html(
         "json_script": build_json_data_script(content.json_data),
         "plotly_script": build_plotly_script(config),
         "aggrid_script": build_aggrid_script(config),
+        "tvchart_script": build_tvchart_script(config),
         "init_script": build_init_script(window_label, enable_hot_reload),
         "toolbar_script": get_toolbar_script() if toolbars else "",
         "modal_scripts": modal_scripts,

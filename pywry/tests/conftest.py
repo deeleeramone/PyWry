@@ -46,7 +46,7 @@ else:
     if blocked:
         filtered: list[str] = []
         for entry in sys.path:
-            resolved = str(Path(entry).absolute()) if entry else str(Path.cwd().absolute())
+            resolved = str(Path(entry).absolute()) if entry else str(Path.cwd().absolute())  # pylint: disable=invalid-name
 
             if resolved in blocked:
                 continue
@@ -344,6 +344,45 @@ def show_dataframe_and_wait_ready(
     raise last_error  # type: ignore[misc]
 
 
+def show_tvchart_and_wait_ready(
+    app: Any,
+    data: Any,
+    timeout: float = DEFAULT_TIMEOUT,
+    retries: int = DEFAULT_RETRIES,
+    **kwargs: Any,
+) -> str:
+    """Show TradingView chart and wait for window to be ready."""
+    last_error: Exception | None = None
+    base_callbacks = (kwargs.get("callbacks") or {}).copy()
+    show_kwargs = {k: v for k, v in kwargs.items() if k != "callbacks"}
+
+    for attempt in range(retries):
+        waiter = ReadyWaiter(timeout=timeout)
+        cb = base_callbacks.copy()
+        cb["pywry:ready"] = waiter.on_ready
+
+        widget = app.show_tvchart(data, callbacks=cb, **show_kwargs)
+        label = widget.label if hasattr(widget, "label") else str(widget)
+
+        if waiter.wait():
+            return label
+
+        ping = wait_for_result(
+            label,
+            "pywry.result({ state: document.readyState, hasBody: !!document.body });",
+            timeout=min(timeout, SHORT_TIMEOUT),
+            retries=1,
+        )
+        if isinstance(ping, dict) and ping.get("hasBody"):
+            return label
+
+        last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
+        if attempt < retries - 1:
+            time.sleep(RETRY_DELAY * (attempt + 1))
+
+    raise last_error  # type: ignore[misc]
+
+
 def wait_for_result(
     label: str,
     script: str,
@@ -606,7 +645,7 @@ def redis_container() -> Generator[str, None, None]:
         return
 
     try:
-        import testcontainers.redis  # noqa: F401
+        import testcontainers.redis  # noqa: F401  # pylint: disable=unused-import
     except ImportError:
         pytest.skip("testcontainers not installed (pip install testcontainers[redis])")
         return
@@ -644,7 +683,7 @@ def redis_container_with_acl() -> Generator[dict, None, None]:
     - users: Dict of user info (username, password, role)
     """
     try:
-        import testcontainers.redis  # noqa: F401
+        import testcontainers.redis  # noqa: F401  # pylint: disable=unused-import
     except ImportError:
         pytest.skip("testcontainers not installed")
         return

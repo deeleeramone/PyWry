@@ -39,7 +39,8 @@
     </div>
 
     {# ── Inline navigation links (replaces the tabs bar) ── #}
-    <nav class="md-header-nav" aria-label="Main navigation">
+    {# data-md-component="tabs" lets Material's instant-loader swap this #}
+    <nav class="md-header-nav" data-md-component="tabs" aria-label="Main navigation">
       {% for nav_item in nav.items %}
         {# Resolve the link URL the same way tabs-item.html does #}
         {% if nav_item.children %}

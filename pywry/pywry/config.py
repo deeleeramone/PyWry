@@ -16,6 +16,7 @@ Example: PYWRY_CSP__CONNECT_SRC, PYWRY_TIMEOUT__STARTUP
 from __future__ import annotations
 
 import os
+import re
 import sys
 
 from functools import lru_cache
@@ -87,7 +88,7 @@ def _load_toml_config() -> dict[str, Any]:
 
             # Deep merge
             merged = _deep_merge(merged, data)
-        except (OSError, TypeError, ValueError, toml_decode_error):  # type: ignore[misc]
+        except (OSError, TypeError, ValueError, toml_decode_error):
             pass  # Silently ignore invalid config files
 
     return merged
@@ -328,6 +329,7 @@ class AssetSettings(BaseSettings):
     # Library versions
     plotly_version: str = "3.3.1"
     aggrid_version: str = "35.0.0"
+    tvchart_version: str = "5.1.0"
 
     # Custom asset directory
     path: str = ""
@@ -444,12 +446,92 @@ class WindowSettings(BaseSettings):
     # Library integration
     enable_plotly: bool = Field(default=False, description="Include Plotly.js in window")
     enable_aggrid: bool = Field(default=False, description="Include AG Grid in window")
+    enable_tvchart: bool = Field(
+        default=False, description="Include TradingView Lightweight Charts in window"
+    )
     plotly_theme: Literal[
         "plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "simple_white"
     ] = Field(default="plotly_dark", description="Default Plotly theme")
     aggrid_theme: Literal["quartz", "alpine", "balham", "material"] = Field(
         default="alpine", description="Default AG Grid theme"
     )
+    tvchart_theme: Literal["dark", "light"] = Field(
+        default="dark", description="Default TradingView chart theme"
+    )
+
+
+class TVChartSettings(BaseSettings):
+    """TradingView Lightweight Charts settings."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="PYWRY_TVCHART__",
+        extra="ignore",
+    )
+
+    default_theme: Literal["dark", "light"] = "dark"
+    default_timeframe: str = "1D"
+    auto_save_interval: int = Field(default=0, ge=0)
+    max_bars: int = Field(default=10_000, ge=100)
+    stream_buffer_size: int = Field(default=50, ge=1)
+    indicator_cache_enabled: bool = True
+    storage_backend: Literal[
+        "file", "localStorage", "memory", "config", "path", "adapter", "server"
+    ] = Field(
+        default="file",
+        description=(
+            "Persistence backend for TVChart layouts/templates. "
+            "Use file (JSON on disk, default), localStorage, memory, config, path, adapter, "
+            "or server (pre-loaded memory + write-through events)."
+        ),
+    )
+    storage_path: str = Field(
+        default="~/.config/pywry/tvchart",
+        description="Path/namespace hint used when storage_backend is 'config' or 'path'.",
+    )
+    storage_namespace: str = Field(
+        default="pywry.tvchart",
+        description="Storage namespace prefix used by non-localStorage backends.",
+    )
+    storage_adapter: str | None = Field(
+        default=None,
+        description="Adapter name in window.__PYWRY_TVCHART_STORAGE_ADAPTERS__ when backend='adapter'.",
+    )
+
+    @field_validator("storage_namespace", "storage_adapter")
+    @classmethod
+    def _validate_storage_identifiers(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        value = str(v).strip()
+        if not value:
+            return value
+        if len(value) > 512:
+            raise ValueError("TVChart storage identifier/path must be <= 512 characters")
+        if re.search(r"[\x00-\x1f\x7f]", value):
+            raise ValueError("TVChart storage identifier/path contains control characters")
+        if not re.match(r"^[A-Za-z0-9._:/\\-]+$", value):
+            raise ValueError(
+                "TVChart storage identifier/path contains unsupported characters; "
+                "allowed: letters, digits, dot, underscore, colon, slash, backslash, dash"
+            )
+        return value
+
+    @field_validator("storage_path")
+    @classmethod
+    def _validate_storage_path(cls, v: str) -> str:
+        value = str(v).strip()
+        if not value:
+            return value
+        if len(value) > 512:
+            raise ValueError("TVChart storage path must be <= 512 characters")
+        if re.search(r"[\x00-\x1f\x7f]", value):
+            raise ValueError("TVChart storage path contains control characters")
+        if not re.match(r"^[A-Za-z0-9._:/\\~\- ]+$", value):
+            raise ValueError(
+                "TVChart storage path contains unsupported characters; "
+                "allowed: letters, digits, space, dot, underscore, colon, slash, backslash, tilde, dash"
+            )
+        return value
 
 
 class HotReloadSettings(BaseSettings):
@@ -1095,6 +1177,7 @@ class PyWrySettings(BaseSettings):
     server: ServerSettings = Field(default_factory=ServerSettings)
     deploy: DeploySettings = Field(default_factory=DeploySettings)
     mcp: MCPSettings = Field(default_factory=MCPSettings)
+    tvchart: TVChartSettings = Field(default_factory=TVChartSettings)
     oauth2: OAuth2Settings | None = Field(
         default=None,
         description="OAuth2 authentication settings (None to disable)",

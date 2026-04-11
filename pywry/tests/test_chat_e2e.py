@@ -27,6 +27,8 @@ These tests verify real properties that matter in production:
    other widgets intact.
 """
 
+# pylint: disable=missing-function-docstring,redefined-outer-name,unused-argument
+
 from __future__ import annotations
 
 import asyncio

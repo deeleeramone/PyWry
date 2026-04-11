@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from ._factory import (
     clear_state_caches,
+    get_chart_store,
     get_chat_store,
     get_connection_router,
     get_event_bus,
@@ -35,13 +36,14 @@ from ._factory import (
     get_worker_id,
     is_deploy_mode,
 )
-from .base import ChatStore, ConnectionRouter, EventBus, SessionStore, WidgetStore
+from .base import ChartStore, ChatStore, ConnectionRouter, EventBus, SessionStore, WidgetStore
 from .callbacks import (
     CallbackRegistry,
     get_callback_registry,
     reset_callback_registry,
 )
 from .memory import (
+    MemoryChartStore,
     MemoryChatStore,
     MemoryConnectionRouter,
     MemoryEventBus,
@@ -60,22 +62,19 @@ from .types import (
 
 
 __all__ = [
-    # Callbacks
     "CallbackRegistry",
-    # Types
+    "ChartStore",
     "ChatStore",
     "ConnectionInfo",
-    # Abstract interfaces
     "ConnectionRouter",
     "EventBus",
     "EventMessage",
-    # Memory implementations
+    "MemoryChartStore",
     "MemoryChatStore",
     "MemoryConnectionRouter",
     "MemoryEventBus",
     "MemorySessionStore",
     "MemoryWidgetStore",
-    # Server state
     "ServerStateManager",
     "SessionStore",
     "StateBackend",
@@ -85,6 +84,7 @@ __all__ = [
     # Factory functions
     "clear_state_caches",
     "get_callback_registry",
+    "get_chart_store",
     "get_chat_store",
     "get_connection_router",
     "get_event_bus",
