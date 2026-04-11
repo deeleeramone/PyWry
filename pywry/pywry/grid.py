@@ -487,10 +487,10 @@ class GridOptions(AGGridModel):
         if isinstance(v, RowSelection):
             return v.to_dict()
         if isinstance(v, dict):
-            return cast(dict[str, Any], v)
+            return cast("dict[str, Any]", v)
         if isinstance(v, bool) or v is None:
             return v
-        return cast(dict[str, Any] | bool | None, v)
+        return cast("dict[str, Any] | bool | None", v)
 
     # === Layout ===
     dom_layout: DomLayoutType = Field(default="normal", alias="domLayout")

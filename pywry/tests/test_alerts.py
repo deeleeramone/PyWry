@@ -1045,7 +1045,7 @@ class TestInlineAlertE2E:
         _state.register_widget(widget_id, test_html, callbacks={})
 
         url = f"http://127.0.0.1:{server_port}/widget/{widget_id}"
-        with urllib.request.urlopen(url, timeout=5) as resp:  # noqa: S310
+        with urllib.request.urlopen(url, timeout=5) as resp:
             _ = resp.read()  # Read response body
 
         # Widget HTML is returned as-is, toast JS is injected by inline module
@@ -1085,7 +1085,7 @@ class TestInlineAlertE2E:
         _state.register_widget(widget_id, html, callbacks={})
 
         url = f"http://127.0.0.1:{server_port}/widget/{widget_id}"
-        with urllib.request.urlopen(url, timeout=5) as resp:  # noqa: S310
+        with urllib.request.urlopen(url, timeout=5) as resp:
             body = resp.read().decode("utf-8")
 
         assert resp.status == 200
@@ -1124,7 +1124,7 @@ class TestInlineAlertE2E:
         _state.register_widget(widget_id, html, callbacks={})
 
         url = f"http://127.0.0.1:{server_port}/widget/{widget_id}"
-        with urllib.request.urlopen(url, timeout=5) as resp:  # noqa: S310
+        with urllib.request.urlopen(url, timeout=5) as resp:
             body = resp.read().decode("utf-8")
 
         assert resp.status == 200

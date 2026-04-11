@@ -748,7 +748,7 @@ def wait_for_server(host: str, port: int, timeout: float = 5.0) -> bool:
 def http_get(url: str, timeout: float = 5.0) -> tuple[int, str]:
     """Make HTTP GET request and return (status, body)."""
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
             return resp.status, resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode("utf-8")

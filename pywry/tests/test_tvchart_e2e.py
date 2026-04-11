@@ -150,8 +150,7 @@ def chart(request) -> dict[str, Any]:
         )
         if not (isinstance(ping, dict) and ping.get("hasBody")):
             raise TimeoutError(
-                f"UDF chart window '{label}' did not become ready "
-                f"within {WINDOW_TIMEOUT}s"
+                f"UDF chart window '{label}' did not become ready within {WINDOW_TIMEOUT}s"
             )
 
     time.sleep(CHART_RENDER_WAIT)
@@ -201,9 +200,7 @@ class TestTVChartFullLifecycle:
         """Theme is 'dark' and chart bg is dark (low-luminance)."""
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var opts = entry.chart.options();"
+            "(function() {" + _cid() + "var opts = entry.chart.options();"
             "var bg = opts.layout.background.color || '';"
             "pywry.result({"
             "  theme: entry.theme,"
@@ -219,9 +216,7 @@ class TestTVChartFullLifecycle:
     # 2. Interval change
     # ------------------------------------------------------------------
 
-    def test_05_interval_change_emits_data_request(
-        self, chart: dict[str, Any]
-    ) -> None:
+    def test_05_interval_change_emits_data_request(self, chart: dict[str, Any]) -> None:
         """Changing interval emits tvchart:data-request to Python."""
         r = _js(
             chart["label"],
@@ -250,9 +245,7 @@ class TestTVChartFullLifecycle:
     def test_06_chart_type_to_line(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "window.pywry._trigger('tvchart:chart-type-change',"
+            "(function() {" + _cid() + "window.pywry._trigger('tvchart:chart-type-change',"
             "  {value: 'Line', chartId: cid});"
             "pywry.result({style: entry._chartDisplayStyle});"
             "})();",
@@ -263,9 +256,7 @@ class TestTVChartFullLifecycle:
         """Cycle: Area -> Baseline -> Bars -> HLC Area -> Candles."""
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var styles = [];"
+            "(function() {" + _cid() + "var styles = [];"
             "var types = ['Area', 'Baseline', 'Bars', 'HLC Area', 'Candles'];"
             "for (var i = 0; i < types.length; i++) {"
             "  window.pywry._trigger('tvchart:chart-type-change',"
@@ -275,9 +266,7 @@ class TestTVChartFullLifecycle:
             "pywry.result({styles: styles});"
             "})();",
         )
-        assert r["styles"] == [
-            "Area", "Baseline", "Bars", "HLC Area", "Candles"
-        ]
+        assert r["styles"] == ["Area", "Baseline", "Bars", "HLC Area", "Candles"]
 
     # ------------------------------------------------------------------
     # 4. Indicators -- add, verify, keep open
@@ -287,9 +276,7 @@ class TestTVChartFullLifecycle:
         """Add SMA overlay -- series count increases, metadata correct."""
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var before = Object.keys(entry.seriesMap).length;"
+            "(function() {" + _cid() + "var before = Object.keys(entry.seriesMap).length;"
             "_tvAddIndicator("
             "  {name: 'SMA', key: 'sma', fullName: 'SMA',"
             "   category: 'Moving Averages', defaultPeriod: 20},"
@@ -318,9 +305,7 @@ class TestTVChartFullLifecycle:
         """SMA line contains non-null values after period warm-up."""
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var indKey = Object.keys(_activeIndicators).filter("
+            "(function() {" + _cid() + "var indKey = Object.keys(_activeIndicators).filter("
             "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
             ")[0];"
             "var series = indKey ? entry.seriesMap[indKey] : null;"
@@ -342,9 +327,7 @@ class TestTVChartFullLifecycle:
     def test_10_change_sma_period_to_50(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var indKey = Object.keys(_activeIndicators).filter("
+            "(function() {" + _cid() + "var indKey = Object.keys(_activeIndicators).filter("
             "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
             ")[0];"
             "_tvApplyIndicatorSettings(indKey, {period: 50});"
@@ -357,9 +340,7 @@ class TestTVChartFullLifecycle:
     def test_11_change_sma_color(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var indKey = Object.keys(_activeIndicators).filter("
+            "(function() {" + _cid() + "var indKey = Object.keys(_activeIndicators).filter("
             "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
             ")[0];"
             "_tvApplyIndicatorSettings(indKey, {color: '#ff6600'});"
@@ -373,9 +354,7 @@ class TestTVChartFullLifecycle:
         """Add EMA(12) -- now two overlay indicators active."""
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "_tvAddIndicator("
+            "(function() {" + _cid() + "_tvAddIndicator("
             "  {name: 'EMA', key: 'ema', fullName: 'EMA',"
             "   category: 'Moving Averages', defaultPeriod: 12},"
             "  cid"
@@ -400,9 +379,7 @@ class TestTVChartFullLifecycle:
     def test_13_add_rsi_subplot(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "_tvAddIndicator("
+            "(function() {" + _cid() + "_tvAddIndicator("
             "  {name: 'RSI', key: 'rsi', fullName: 'Relative Strength Index',"
             "   category: 'Momentum', defaultPeriod: 14},"
             "  cid"
@@ -427,9 +404,7 @@ class TestTVChartFullLifecycle:
     def test_14_rsi_has_computed_values(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var rsiKey = Object.keys(_activeIndicators).filter("
+            "(function() {" + _cid() + "var rsiKey = Object.keys(_activeIndicators).filter("
             "  function(k) { return _activeIndicators[k].name === 'RSI'; }"
             ")[0];"
             "var series = rsiKey ? entry.seriesMap[rsiKey] : null;"
@@ -466,9 +441,7 @@ class TestTVChartFullLifecycle:
         """BB adds 3 grouped series (upper / middle / lower)."""
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var beforeKeys = Object.keys(_activeIndicators);"
+            "(function() {" + _cid() + "var beforeKeys = Object.keys(_activeIndicators);"
             "_tvAddIndicator("
             "  {name: 'Bollinger Bands', fullName: 'Bollinger Bands',"
             "   category: 'Volatility', defaultPeriod: 20},"
@@ -494,9 +467,7 @@ class TestTVChartFullLifecycle:
         """SMA + EMA + RSI + BB(3) = at least 6 indicator series."""
         r = _js(
             chart["label"],
-            "(function() {"
-            "pywry.result({count: Object.keys(_activeIndicators).length});"
-            "})();",
+            "(function() {pywry.result({count: Object.keys(_activeIndicators).length});})();",
         )
         assert r["count"] >= 6
 
@@ -536,9 +507,7 @@ class TestTVChartFullLifecycle:
         """Swap RSI pane up -- pane index decreases."""
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var rsiKey = Object.keys(_activeIndicators).filter("
+            "(function() {" + _cid() + "var rsiKey = Object.keys(_activeIndicators).filter("
             "  function(k) { return _activeIndicators[k].name === 'RSI'; }"
             ")[0];"
             "var before = _activeIndicators[rsiKey]"
@@ -561,9 +530,7 @@ class TestTVChartFullLifecycle:
     def test_20_draw_hline(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "_tvEnsureDrawingLayer(cid);"
+            "(function() {" + _cid() + "_tvEnsureDrawingLayer(cid);"
             "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "if (!ds) { pywry.result({error: 'no drawing state'}); return; }"
             "var d = {type:'hline',color:'#ff0000',lineWidth:2,"
@@ -583,9 +550,7 @@ class TestTVChartFullLifecycle:
     def test_21_draw_trendline(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var d = {type:'trendline',color:'#2962ff',lineWidth:2,"
             "  lineStyle:0,p1:{x:100,y:200},p2:{x:400,y:150}};"
             "ds.drawings.push(d);"
@@ -602,9 +567,7 @@ class TestTVChartFullLifecycle:
     def test_22_draw_rect(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var d = {type:'rect',color:'#089981',lineWidth:1,"
             "  lineStyle:0,filled:true,p1:{x:150,y:100},p2:{x:350,y:300}};"
             "ds.drawings.push(d);"
@@ -619,9 +582,7 @@ class TestTVChartFullLifecycle:
     def test_23_draw_text_annotation(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var d = {type:'text',color:'#d1d4dc',text:'Test Label',"
             "  fontSize:14,p1:{x:200,y:250}};"
             "ds.drawings.push(d);"
@@ -636,9 +597,7 @@ class TestTVChartFullLifecycle:
     def test_24_draw_fibonacci(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var d = {type:'fibonacci',color:'#787b86',lineWidth:1,"
             "  lineStyle:0,p1:{x:100,y:100},p2:{x:400,y:350}};"
             "ds.drawings.push(d);"
@@ -654,9 +613,7 @@ class TestTVChartFullLifecycle:
         """hline + trendline + rect + text + fib = 5."""
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var types = [];"
             "for (var i = 0; i < ds.drawings.length; i++)"
             "  types.push(ds.drawings[i].type);"
@@ -674,9 +631,7 @@ class TestTVChartFullLifecycle:
     def test_26_change_hline_color(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var hline = null;"
             "for (var i = 0; i < ds.drawings.length; i++)"
             "  if (ds.drawings[i].type === 'hline') { hline = ds.drawings[i]; break; }"
@@ -693,9 +648,7 @@ class TestTVChartFullLifecycle:
     def test_27_change_trendline_style(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var tl = null;"
             "for (var i = 0; i < ds.drawings.length; i++)"
             "  if (ds.drawings[i].type === 'trendline') { tl = ds.drawings[i]; break; }"
@@ -716,9 +669,7 @@ class TestTVChartFullLifecycle:
     def test_28_drawing_visibility_toggle(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "if (!ds || !ds.canvas) {"
             "  pywry.result({error:'no canvas'}); return;"
             "}"
@@ -736,9 +687,7 @@ class TestTVChartFullLifecycle:
     def test_29_drawing_lock_toggle(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var before = !!ds._locked;"
             "window.pywry._trigger('tvchart:tool-lock', {});"
             "var locked = !!ds._locked;"
@@ -758,9 +707,7 @@ class TestTVChartFullLifecycle:
     def test_30_undo_removes_last_drawing(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var before = ds.drawings.length;"
             "window.pywry._trigger('tvchart:undo', {});"
             "var after = ds.drawings.length;"
@@ -772,9 +719,7 @@ class TestTVChartFullLifecycle:
     def test_31_redo_restores_drawing(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var before = ds.drawings.length;"
             "window.pywry._trigger('tvchart:redo', {});"
             "var after = ds.drawings.length;"
@@ -793,9 +738,7 @@ class TestTVChartFullLifecycle:
     def test_32_eraser_clears_all(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
             "var before = ds.drawings.length;"
             "window.pywry._trigger('tvchart:tool-eraser', {});"
             "var after = ds.drawings.length;"
@@ -812,9 +755,7 @@ class TestTVChartFullLifecycle:
     def test_33_log_scale_on_off(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "window.pywry._trigger('tvchart:log-scale', {value: true});"
+            "(function() {" + _cid() + "window.pywry._trigger('tvchart:log-scale', {value: true});"
             "var logOn = entry._chartPrefs ? entry._chartPrefs.logScale : null;"
             "window.pywry._trigger('tvchart:log-scale', {value: false});"
             "var logOff = entry._chartPrefs ? entry._chartPrefs.logScale : null;"
@@ -846,9 +787,7 @@ class TestTVChartFullLifecycle:
     def test_35_time_scale_fit_content(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var ts = entry.chart.timeScale();"
+            "(function() {" + _cid() + "var ts = entry.chart.timeScale();"
             "ts.setVisibleLogicalRange({from: 5, to: 10});"
             "setTimeout(function() {"
             "  var narrow = ts.getVisibleLogicalRange();"
@@ -876,9 +815,7 @@ class TestTVChartFullLifecycle:
     def test_36_add_markers_sorted(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "try {"
+            "(function() {" + _cid() + "try {"
             "  window.pywry._trigger('tvchart:add-markers', {"
             "    chartId: cid, seriesId: 'main',"
             "    markers: ["
@@ -897,9 +834,7 @@ class TestTVChartFullLifecycle:
     def test_37_add_price_line(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var error = null;"
+            "(function() {" + _cid() + "var error = null;"
             "try {"
             "  window.pywry._trigger('tvchart:add-price-line', {"
             "    chartId:cid,seriesId:'main',"
@@ -918,9 +853,7 @@ class TestTVChartFullLifecycle:
     def test_38_legend_present(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "pywry.result({"
+            "(function() {" + _cid() + "pywry.result({"
             "  hasContainer: !!document.querySelector('.tvchart-legend-container'),"
             "  hasRow: !!document.querySelector('.tvchart-legend-row'),"
             "  hasUiState: !!entry._legendUiState,"
@@ -937,9 +870,7 @@ class TestTVChartFullLifecycle:
     def test_39_settings_modal_opens(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var lockedBefore = !!entry._interactionLocked;"
+            "(function() {" + _cid() + "var lockedBefore = !!entry._interactionLocked;"
             "window.pywry._trigger('tvchart:show-settings', {chartId: cid});"
             "setTimeout(function() {"
             "  var lockedAfter = !!entry._interactionLocked;"
@@ -974,9 +905,7 @@ class TestTVChartFullLifecycle:
             chart["label"],
             "(function() {"
             "window.pywry._trigger('pywry:update-theme', {theme: 'light'});"
-            "setTimeout(function() {"
-            + _cid()
-            + "  var opts = entry.chart.options();"
+            "setTimeout(function() {" + _cid() + "  var opts = entry.chart.options();"
             "  var cssBg = getComputedStyle(document.documentElement)"
             "    .getPropertyValue('--pywry-tvchart-bg').trim();"
             "  pywry.result({"
@@ -994,9 +923,7 @@ class TestTVChartFullLifecycle:
     def test_41_light_theme_text_color(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "var opts = entry.chart.options();"
+            "(function() {" + _cid() + "var opts = entry.chart.options();"
             "pywry.result({"
             "  textColor: opts.layout.textColor,"
             "  cssText: getComputedStyle(document.documentElement)"
@@ -1012,9 +939,7 @@ class TestTVChartFullLifecycle:
             chart["label"],
             "(function() {"
             "window.pywry._trigger('pywry:update-theme', {theme: 'dark'});"
-            "setTimeout(function() {"
-            + _cid()
-            + "  pywry.result({theme: entry.theme});"
+            "setTimeout(function() {" + _cid() + "  pywry.result({theme: entry.theme});"
             "}, 500);"
             "})();",
         )
@@ -1031,8 +956,7 @@ class TestTVChartFullLifecycle:
             chart["label"],
             "(function() {"
             "  window.pywry._trigger('tvchart:stream', {"
-            "    bar:{time:" + future_ts
-            + ",open:50000,high:51000,low:49000,close:50500},"
+            "    bar:{time:" + future_ts + ",open:50000,high:51000,low:49000,close:50500},"
             "    seriesId:'main'"
             "  });"
             "  setTimeout(function() {"
@@ -1052,8 +976,7 @@ class TestTVChartFullLifecycle:
             chart["label"],
             "(function() {"
             "  window.pywry._trigger('tvchart:stream', {"
-            "    bar:{time:" + future_ts
-            + ",open:50000,high:55000,low:48000,close:54000},"
+            "    bar:{time:" + future_ts + ",open:50000,high:55000,low:48000,close:54000},"
             "    seriesId:'main'"
             "  });"
             "  setTimeout(function() {"
@@ -1136,9 +1059,7 @@ class TestTVChartFullLifecycle:
     def test_48_destroy_cleans_up(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {"
-            + _cid()
-            + "window.pywry._trigger('tvchart:destroy', {chartId: cid});"
+            "(function() {" + _cid() + "window.pywry._trigger('tvchart:destroy', {chartId: cid});"
             "setTimeout(function() {"
             "  pywry.result({destroyed: !window.__PYWRY_TVCHARTS__[cid]});"
             "}, 500);"
@@ -1184,15 +1105,13 @@ def light_chart(request) -> dict[str, Any]:
     if not waiter.wait():
         ping = wait_for_result(
             label,
-            "pywry.result({ state: document.readyState, "
-            "hasBody: !!document.body });",
+            "pywry.result({ state: document.readyState, hasBody: !!document.body });",
             timeout=SHORT_TIMEOUT,
             retries=1,
         )
         if not (isinstance(ping, dict) and ping.get("hasBody")):
             raise TimeoutError(
-                f"Light chart '{label}' did not become ready "
-                f"within {WINDOW_TIMEOUT}s"
+                f"Light chart '{label}' did not become ready within {WINDOW_TIMEOUT}s"
             )
 
     time.sleep(CHART_RENDER_WAIT)
@@ -1211,9 +1130,7 @@ class TestTVChartLightTheme:
     def test_01_light_bg_is_white(self, light_chart: dict[str, Any]) -> None:
         r = _js(
             light_chart["label"],
-            "(function() {"
-            + _cid()
-            + "var opts = entry.chart.options();"
+            "(function() {" + _cid() + "var opts = entry.chart.options();"
             "var cssBg = getComputedStyle(document.documentElement)"
             "  .getPropertyValue('--pywry-tvchart-bg').trim();"
             "pywry.result({"
@@ -1225,22 +1142,16 @@ class TestTVChartLightTheme:
             "})();",
         )
         assert r["theme"] == "light"
-        assert r["cssBg"] == "#ffffff", (
-            f"CSS bg should be #ffffff, got {r['cssBg']}"
-        )
+        assert r["cssBg"] == "#ffffff", f"CSS bg should be #ffffff, got {r['cssBg']}"
         assert "pywry-theme-light" in r["htmlClass"]
         # With the fix, chart options bg must NOT be dark
         bg = (r.get("chartBg") or "").lower()
-        assert "13, 17, 23" not in bg, (
-            f"Chart bg still has hardcoded dark color: {bg}"
-        )
+        assert "13, 17, 23" not in bg, f"Chart bg still has hardcoded dark color: {bg}"
 
     def test_02_light_text_is_dark(self, light_chart: dict[str, Any]) -> None:
         r = _js(
             light_chart["label"],
-            "(function() {"
-            + _cid()
-            + "pywry.result({"
+            "(function() {" + _cid() + "pywry.result({"
             "  cssText: getComputedStyle(document.documentElement)"
             "    .getPropertyValue('--pywry-tvchart-text').trim(),"
             "});"
@@ -1254,9 +1165,7 @@ class TestTVChartLightTheme:
     def test_03_light_grid_colors(self, light_chart: dict[str, Any]) -> None:
         r = _js(
             light_chart["label"],
-            "(function() {"
-            + _cid()
-            + "pywry.result({"
+            "(function() {" + _cid() + "pywry.result({"
             "  cssVert: getComputedStyle(document.documentElement)"
             "    .getPropertyValue('--pywry-tvchart-grid-vert').trim(),"
             "});"
@@ -1309,15 +1218,13 @@ def server_storage_chart(request) -> dict[str, Any]:
     if not waiter.wait():
         ping = wait_for_result(
             label,
-            "pywry.result({ state: document.readyState, "
-            "hasBody: !!document.body });",
+            "pywry.result({ state: document.readyState, hasBody: !!document.body });",
             timeout=SHORT_TIMEOUT,
             retries=1,
         )
         if not (isinstance(ping, dict) and ping.get("hasBody")):
             raise TimeoutError(
-                f"Storage chart '{label}' did not become ready "
-                f"within {WINDOW_TIMEOUT}s"
+                f"Storage chart '{label}' did not become ready within {WINDOW_TIMEOUT}s"
             )
 
     time.sleep(CHART_RENDER_WAIT)
@@ -1336,9 +1243,7 @@ class TestTVChartStorage:
     def test_01_set_and_get(self, server_storage_chart: dict[str, Any]) -> None:
         r = _js(
             server_storage_chart["label"],
-            "(function() {"
-            + _cid()
-            + "var adapter = _tvStorageAdapter(cid);"
+            "(function() {" + _cid() + "var adapter = _tvStorageAdapter(cid);"
             "adapter.setItem('__test_key', 'test_value_123');"
             "var got = adapter.getItem('__test_key');"
             "pywry.result({got: got});"
@@ -1349,9 +1254,7 @@ class TestTVChartStorage:
     def test_02_remove(self, server_storage_chart: dict[str, Any]) -> None:
         r = _js(
             server_storage_chart["label"],
-            "(function() {"
-            + _cid()
-            + "var adapter = _tvStorageAdapter(cid);"
+            "(function() {" + _cid() + "var adapter = _tvStorageAdapter(cid);"
             "adapter.setItem('__rm', 'gone');"
             "adapter.removeItem('__rm');"
             "pywry.result({got: adapter.getItem('__rm')});"
@@ -1359,22 +1262,16 @@ class TestTVChartStorage:
         )
         assert r["got"] is None
 
-    def test_03_server_backend_configured(
-        self, server_storage_chart: dict[str, Any]
-    ) -> None:
+    def test_03_server_backend_configured(self, server_storage_chart: dict[str, Any]) -> None:
         r = _js(
             server_storage_chart["label"],
-            "(function() {"
-            + _cid()
-            + "var cfg = _tvStorageConfig(cid);"
+            "(function() {" + _cid() + "var cfg = _tvStorageConfig(cid);"
             "pywry.result({backend: cfg.backend});"
             "})();",
         )
         assert r["backend"] == "server"
 
-    def test_04_server_set_emits_event(
-        self, server_storage_chart: dict[str, Any]
-    ) -> None:
+    def test_04_server_set_emits_event(self, server_storage_chart: dict[str, Any]) -> None:
         r = _js(
             server_storage_chart["label"],
             "(function() {"
@@ -1383,9 +1280,7 @@ class TestTVChartStorage:
             "window.pywry.emit = function(t, d) {"
             "  if (t === 'tvchart:storage-set') emitted.push(d);"
             "  return orig.apply(this, arguments);"
-            "};"
-            + _cid()
-            + "var adapter = _tvStorageAdapter(cid);"
+            "};" + _cid() + "var adapter = _tvStorageAdapter(cid);"
             "adapter.setItem('__emit_test', 'emit_value');"
             "window.pywry.emit = orig;"
             "pywry.result({"
@@ -1399,9 +1294,7 @@ class TestTVChartStorage:
         assert r["key"] == "__emit_test"
         assert r["value"] == "emit_value"
 
-    def test_05_server_remove_emits_event(
-        self, server_storage_chart: dict[str, Any]
-    ) -> None:
+    def test_05_server_remove_emits_event(self, server_storage_chart: dict[str, Any]) -> None:
         r = _js(
             server_storage_chart["label"],
             "(function() {"
@@ -1410,9 +1303,7 @@ class TestTVChartStorage:
             "window.pywry.emit = function(t, d) {"
             "  if (t === 'tvchart:storage-remove') emitted.push(d);"
             "  return orig.apply(this, arguments);"
-            "};"
-            + _cid()
-            + "var adapter = _tvStorageAdapter(cid);"
+            "};" + _cid() + "var adapter = _tvStorageAdapter(cid);"
             "adapter.setItem('__rm_emit', 'val');"
             "adapter.removeItem('__rm_emit');"
             "window.pywry.emit = orig;"
@@ -1469,23 +1360,14 @@ class TestTVChartInline:
     def test_01_widget_registered(self) -> None:
         from pywry.inline import InlineWidget, _state
 
-        html = (
-            "<html><body>"
-            '<div id="tc" class="pywry-tvchart-container"></div>'
-            "</body></html>"
-        )
+        html = '<html><body><div id="tc" class="pywry-tvchart-container"></div></body></html>'
         widget = InlineWidget(html, browser_only=True)
         assert widget.widget_id in _state.widgets
 
     def test_02_serves_html(self) -> None:
         from pywry.inline import InlineWidget, _state
 
-        html = (
-            "<html><body>"
-            '<div class="pywry-tvchart-container">'
-            "tvchart-marker</div>"
-            "</body></html>"
-        )
+        html = '<html><body><div class="pywry-tvchart-container">tvchart-marker</div></body></html>'
         widget = InlineWidget(html, browser_only=True)
         time.sleep(0.5)
         port = _state.port
@@ -1588,9 +1470,7 @@ class TestTVChartRedisStorage:
             ),
             timeout=5.0,
         )
-        data = run_async(
-            chart_store.get_layout("user1", "layout_a"), timeout=5.0
-        )
+        data = run_async(chart_store.get_layout("user1", "layout_a"), timeout=5.0)
         assert data is not None
         assert "drawings" in data
 
@@ -1608,9 +1488,7 @@ class TestTVChartRedisStorage:
                 timeout=5.0,
             )
             time.sleep(0.05)
-        layouts = run_async(
-            chart_store.list_layouts("user1"), timeout=5.0
-        )
+        layouts = run_async(chart_store.list_layouts("user1"), timeout=5.0)
         assert len(layouts) == 3
         assert layouts[0]["name"] == "Layout 2"
 
@@ -1626,25 +1504,17 @@ class TestTVChartRedisStorage:
             ),
             timeout=5.0,
         )
-        deleted = run_async(
-            chart_store.delete_layout("user1", "to_delete"), timeout=5.0
-        )
+        deleted = run_async(chart_store.delete_layout("user1", "to_delete"), timeout=5.0)
         assert deleted is True
-        data = run_async(
-            chart_store.get_layout("user1", "to_delete"), timeout=5.0
-        )
+        data = run_async(chart_store.get_layout("user1", "to_delete"), timeout=5.0)
         assert data is None
 
     def test_04_settings_template(self, chart_store) -> None:
         from pywry.state.sync_helpers import run_async
 
         tpl = '{"background": "#1a1a2e", "gridLines": false}'
-        run_async(
-            chart_store.save_settings_template("user1", tpl), timeout=5.0
-        )
-        loaded = run_async(
-            chart_store.get_settings_template("user1"), timeout=5.0
-        )
+        run_async(chart_store.save_settings_template("user1", tpl), timeout=5.0)
+        loaded = run_async(chart_store.get_settings_template("user1"), timeout=5.0)
         assert loaded is not None
         assert "background" in loaded
 
@@ -1679,15 +1549,11 @@ class TestTVChartRBACStorage:
             ),
             timeout=5.0,
         )
-        alice = run_async(
-            chart_store.list_layouts("alice"), timeout=5.0
-        )
+        alice = run_async(chart_store.list_layouts("alice"), timeout=5.0)
         assert len(alice) == 1
         bob = run_async(chart_store.list_layouts("bob"), timeout=5.0)
         assert len(bob) == 0
-        data = run_async(
-            chart_store.get_layout("bob", "private"), timeout=5.0
-        )
+        data = run_async(chart_store.get_layout("bob", "private"), timeout=5.0)
         assert data is None
 
     def test_02_admin_full_access(self, chart_store) -> None:
@@ -1702,39 +1568,25 @@ class TestTVChartRBACStorage:
             ),
             timeout=5.0,
         )
-        data = run_async(
-            chart_store.get_layout("admin", "admin_layout"), timeout=5.0
-        )
+        data = run_async(chart_store.get_layout("admin", "admin_layout"), timeout=5.0)
         assert data is not None
-        deleted = run_async(
-            chart_store.delete_layout("admin", "admin_layout"), timeout=5.0
-        )
+        deleted = run_async(chart_store.delete_layout("admin", "admin_layout"), timeout=5.0)
         assert deleted is True
-        after = run_async(
-            chart_store.list_layouts("admin"), timeout=5.0
-        )
+        after = run_async(chart_store.list_layouts("admin"), timeout=5.0)
         assert len(after) == 0
 
     def test_03_settings_per_user(self, chart_store) -> None:
         from pywry.state.sync_helpers import run_async
 
         run_async(
-            chart_store.save_settings_template(
-                "user_x", '{"theme": "custom_x"}'
-            ),
+            chart_store.save_settings_template("user_x", '{"theme": "custom_x"}'),
             timeout=5.0,
         )
         run_async(
-            chart_store.save_settings_template(
-                "user_y", '{"theme": "custom_y"}'
-            ),
+            chart_store.save_settings_template("user_y", '{"theme": "custom_y"}'),
             timeout=5.0,
         )
-        tpl_x = run_async(
-            chart_store.get_settings_template("user_x"), timeout=5.0
-        )
-        tpl_y = run_async(
-            chart_store.get_settings_template("user_y"), timeout=5.0
-        )
+        tpl_x = run_async(chart_store.get_settings_template("user_x"), timeout=5.0)
+        tpl_y = run_async(chart_store.get_settings_template("user_y"), timeout=5.0)
         assert tpl_x is not None and "custom_x" in tpl_x
         assert tpl_y is not None and "custom_y" in tpl_y

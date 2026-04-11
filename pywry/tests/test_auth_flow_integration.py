@@ -64,7 +64,7 @@ def _send_callback_to_server(
         params = urlencode({"code": code, "state": state})
         url = f"http://127.0.0.1:{port}/callback?{params}"
         with contextlib.suppress(Exception):
-            urlopen(url, timeout=5)  # noqa: S310
+            urlopen(url, timeout=5)
 
     t = threading.Thread(target=_send, daemon=True)
     t.start()

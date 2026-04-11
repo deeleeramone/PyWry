@@ -169,12 +169,12 @@ def wait_for_server(host: str, port: int, timeout: float = 5.0) -> bool:
                 if result == 0:
                     # Socket is open, try health with auth if we have token
                     url = f"http://{host}:{port}/health"
-                    req = urllib.request.Request(url)  # noqa: S310
+                    req = urllib.request.Request(url)
                     auth_header = _get_auth_header()
                     for k, v in auth_header.items():
                         req.add_header(k, v)
                     try:
-                        with urllib.request.urlopen(req, timeout=0.5) as resp:  # noqa: S310
+                        with urllib.request.urlopen(req, timeout=0.5) as resp:
                             if resp.status == 200:
                                 return True
                     except Exception:
@@ -198,12 +198,12 @@ def http_get(url: str, timeout: float = 5.0, auth: bool = False) -> tuple[int, s
     auth : bool, optional
         If True, include internal API auth header.
     """
-    req = urllib.request.Request(url)  # noqa: S310
+    req = urllib.request.Request(url)
     if auth:
         for k, v in _get_auth_header().items():
             req.add_header(k, v)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode("utf-8")
@@ -226,14 +226,14 @@ def http_post(url: str, data: dict, timeout: float = 5.0, auth: bool = False) ->
     headers = {"Content-Type": "application/json"}
     if auth:
         headers.update(_get_auth_header())
-    req = urllib.request.Request(  # noqa: S310
+    req = urllib.request.Request(
         url,
         data=json.dumps(data).encode("utf-8"),
         headers=headers,
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode("utf-8")

@@ -60,7 +60,7 @@ class TestOAuthCallbackServer:
             def send_request() -> None:
                 time.sleep(0.1)
                 with contextlib.suppress(Exception):
-                    urlopen(callback_url, timeout=5)  # noqa: S310
+                    urlopen(callback_url, timeout=5)
 
             t = threading.Thread(target=send_request, daemon=True)
             t.start()
@@ -90,7 +90,7 @@ class TestOAuthCallbackServer:
             def send_request() -> None:
                 time.sleep(0.1)
                 with contextlib.suppress(Exception):
-                    urlopen(callback_url, timeout=5)  # noqa: S310
+                    urlopen(callback_url, timeout=5)
 
             t = threading.Thread(target=send_request, daemon=True)
             t.start()
@@ -126,11 +126,11 @@ class TestOAuthCallbackServer:
 
             # Send first callback
             with contextlib.suppress(Exception):
-                urlopen(f"{server.redirect_uri}?{params1}", timeout=5)  # noqa: S310
+                urlopen(f"{server.redirect_uri}?{params1}", timeout=5)
 
             # Send second callback
             with contextlib.suppress(Exception):
-                urlopen(f"{server.redirect_uri}?{params2}", timeout=5)  # noqa: S310
+                urlopen(f"{server.redirect_uri}?{params2}", timeout=5)
 
             result = server.wait_for_callback(timeout=2.0)
             assert result is not None
@@ -173,7 +173,7 @@ class TestOAuthCallbackServer:
             def send_request() -> None:
                 time.sleep(0.1)
                 with contextlib.suppress(Exception):
-                    urlopen(callback_url, timeout=5)  # noqa: S310
+                    urlopen(callback_url, timeout=5)
 
             t = threading.Thread(target=send_request, daemon=True)
             t.start()
@@ -197,7 +197,7 @@ class TestOAuthCallbackServer:
         try:
             # Hit the root waiting page and check CSP header
             req = Request(f"http://127.0.0.1:{server._actual_port}/")
-            resp = urlopen(req, timeout=5)  # noqa: S310
+            resp = urlopen(req, timeout=5)
             csp = resp.headers.get("Content-Security-Policy", "")
             assert "default-src" in csp
             assert "'none'" in csp or "style-src" in csp
