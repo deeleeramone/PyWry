@@ -88,7 +88,7 @@ def _load_toml_config() -> dict[str, Any]:
 
             # Deep merge
             merged = _deep_merge(merged, data)
-        except (OSError, TypeError, ValueError, toml_decode_error):  # type: ignore[misc]
+        except (OSError, TypeError, ValueError, toml_decode_error):
             pass  # Silently ignore invalid config files
 
     return merged
