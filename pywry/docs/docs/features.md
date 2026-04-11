@@ -18,10 +18,11 @@ One API, three output targets — PyWry automatically selects the right one:
 | **Native Windows** | OS webview (WebView2/WebKit) — a few MBs vs Electron's 150MB+ |
 | **Jupyter Widgets** | anywidget with traitlet sync, IFrame fallback |
 | **Browser Mode** | FastAPI + WebSocket, optional Redis for scaling |
-| **[Toolbar System](components/toolbar/index.md)** | 18 Pydantic components, 7 layout positions |
-| **[Two-Way Events](guides/events.md)** | Python↔JS communication, pre-wired Plotly/AG Grid events |
+| **[Toolbar System](components/toolbar/index.md)** | Declarative Pydantic components, 7 layout positions |
+| **[Two-Way Events](guides/events.md)** | Python↔JS communication, pre-wired events for integration |
+| **[TradingView Charts](integrations/tradingview/index.md)** | Advanced Lightweight Charts supporting static content, Datafeed, and UDF adapter.
 | **[Plotly Charts](integrations/plotly/index.md)** | Pre-wired plot events, custom modebar buttons |
-| **[AG Grid Tables](integrations/aggrid/index.md)** | Pandas→AG Grid conversion, grid events, editing |
+| **[AgGrid Tables](integrations/aggrid/index.md)** | Pandas→AgGrid conversion, grid events, editing |
 | **Toast Notifications** | info, success, warning, error, confirm |
 | **[Theming](components/theming.md)** | Light/dark modes, 60+ CSS variables |
 | **Secrets** | Server-side storage, never rendered in HTML |

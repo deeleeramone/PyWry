@@ -33,6 +33,7 @@
   --md-primary-fg-color--light: #222538;
   --md-primary-fg-color--dark:  #131522;
   --md-accent-fg-color:        var(--pywry-teal);
+  --md-sidebar-width:          14rem;
 }
 
 /* ── Dark (slate) ── */
@@ -222,7 +223,6 @@
    ================================================================= */
 
 .md-sidebar--primary {
-  width: 16rem;
   background: var(--pywry-sidebar-bg);
   border-right: 1px solid var(--pywry-sidebar-border);
 }
@@ -253,6 +253,13 @@
   transition: color .12s, background .12s;
   border-left: 2px solid transparent;
   margin: 0;
+}
+
+/* Prevent truncation/wrapping – sidebar is wide enough for all labels */
+.md-sidebar--primary .md-ellipsis {
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
 }
 
 .md-nav__link:hover {
