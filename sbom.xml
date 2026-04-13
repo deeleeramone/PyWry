@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:0a7afe27-3e9a-49e1-a05b-9df4bdda9c95" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:7b2d36c8-47e5-47fd-a1f1-de1c02f0bba8" version="1">
   <metadata>
-    <timestamp>2026-04-11T05:49:10.702761+00:00</timestamp>
+    <timestamp>2026-04-13T04:09:06.300554+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
@@ -82,7 +82,7 @@
     </tools>
     <component type="application" bom-ref="root-component">
       <name>pywry</name>
-      <version>2.0.0rc5</version>
+      <version>2.0.0rc6</version>
       <description>A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python.</description>
       <licenses>
         <license acknowledgement="declared">
@@ -1393,16 +1393,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="fakeredis==2.35.0">
+    <component type="library" bom-ref="fakeredis==2.35.1">
       <name>fakeredis</name>
-      <version>2.35.0</version>
+      <version>2.35.1</version>
       <description>Python implementation of redis API, can be used for testing purposes.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/fakeredis@2.35.0</purl>
+      <purl>pkg:pypi/fakeredis@2.35.1</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://fakeredis.moransoftware.ca/</url>
@@ -2323,16 +2323,16 @@
       </licenses>
       <purl>pkg:pypi/logfire-api@4.32.0</purl>
     </component>
-    <component type="library" bom-ref="lxml==6.0.3">
+    <component type="library" bom-ref="lxml==6.0.4">
       <name>lxml</name>
-      <version>6.0.3</version>
+      <version>6.0.4</version>
       <description>Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/lxml@6.0.3</purl>
+      <purl>pkg:pypi/lxml@6.0.4</purl>
       <externalReferences>
         <reference type="issue-tracker">
           <url>https://bugs.launchpad.net/lxml</url>
@@ -2808,16 +2808,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="mypy==1.20.0">
+    <component type="library" bom-ref="mypy==1.20.1">
       <name>mypy</name>
-      <version>1.20.0</version>
+      <version>1.20.1</version>
       <description>Optional static typing for Python</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/mypy@1.20.0</purl>
+      <purl>pkg:pypi/mypy@1.20.1</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://mypy.readthedocs.io/en/stable/index.html</url>
@@ -4208,16 +4208,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="rich==14.3.4">
+    <component type="library" bom-ref="rich==15.0.0">
       <name>rich</name>
-      <version>14.3.4</version>
+      <version>15.0.0</version>
       <description>Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/rich@14.3.4</purl>
+      <purl>pkg:pypi/rich@15.0.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://rich.readthedocs.io/en/latest/</url>
@@ -5137,7 +5137,7 @@
       <dependency ref="fastmcp==3.2.3"/>
       <dependency ref="mkdocs-material==9.7.6"/>
       <dependency ref="mkdocstrings-python==2.0.3"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="numpy==2.4.4"/>
       <dependency ref="pyinstaller==6.19.0"/>
       <dependency ref="pytest==9.0.3"/>
@@ -5171,7 +5171,7 @@
       <dependency ref="certifi==2026.2.25"/>
       <dependency ref="cffi==2.0.0"/>
       <dependency ref="click==8.3.2"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="pytest==9.0.3"/>
       <dependency ref="ruff==0.15.10"/>
       <dependency ref="typing_extensions==4.15.0"/>
@@ -5186,7 +5186,7 @@
     <dependency ref="cyclonedx-python-lib==11.7.0">
       <dependency ref="jsonschema==4.26.0"/>
       <dependency ref="license-expression==30.4.4"/>
-      <dependency ref="lxml==6.0.3"/>
+      <dependency ref="lxml==6.0.4"/>
       <dependency ref="packageurl-python==0.17.6"/>
       <dependency ref="py-serializable==2.1.0"/>
       <dependency ref="referencing==0.37.0"/>
@@ -5203,7 +5203,7 @@
       <dependency ref="pymdown-extensions==10.21.2"/>
       <dependency ref="pytest==9.0.3"/>
       <dependency ref="rich-rst==1.3.2"/>
-      <dependency ref="rich==14.3.4"/>
+      <dependency ref="rich==15.0.0"/>
       <dependency ref="typing_extensions==4.15.0"/>
     </dependency>
     <dependency ref="debugpy==1.8.20"/>
@@ -5216,7 +5216,7 @@
       <dependency ref="httpcore==1.0.9"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="idna==3.11"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="pylint==4.0.5"/>
       <dependency ref="pytest==9.0.3"/>
     </dependency>
@@ -5243,9 +5243,9 @@
       <dependency ref="asttokens==3.0.1"/>
       <dependency ref="ipython==9.12.0"/>
       <dependency ref="pytest==9.0.3"/>
-      <dependency ref="rich==14.3.4"/>
+      <dependency ref="rich==15.0.0"/>
     </dependency>
-    <dependency ref="fakeredis==2.35.0">
+    <dependency ref="fakeredis==2.35.1">
       <dependency ref="numpy==2.4.4"/>
       <dependency ref="redis==7.4.0"/>
       <dependency ref="sortedcontainers==2.4.0"/>
@@ -5272,7 +5272,7 @@
       <dependency ref="anthropic==0.94.0"/>
       <dependency ref="cyclopts==4.10.2"/>
       <dependency ref="exceptiongroup==1.3.1"/>
-      <dependency ref="fakeredis==2.35.0"/>
+      <dependency ref="fakeredis==2.35.1"/>
       <dependency ref="httpx==0.28.1"/>
       <dependency ref="jsonref==1.1.0"/>
       <dependency ref="jsonschema-path==0.4.5"/>
@@ -5286,7 +5286,7 @@
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="pyperclip==1.11.0"/>
       <dependency ref="python-dotenv==1.2.2"/>
-      <dependency ref="rich==14.3.4"/>
+      <dependency ref="rich==15.0.0"/>
       <dependency ref="uncalled-for==0.3.1"/>
       <dependency ref="uvicorn==0.44.0"/>
       <dependency ref="watchfiles==1.1.1"/>
@@ -5324,16 +5324,16 @@
       <dependency ref="click==8.3.2"/>
       <dependency ref="httpcore==1.0.9"/>
       <dependency ref="idna==3.11"/>
-      <dependency ref="rich==14.3.4"/>
+      <dependency ref="rich==15.0.0"/>
     </dependency>
     <dependency ref="idna==3.11">
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="pytest==9.0.3"/>
       <dependency ref="ruff==0.15.10"/>
     </dependency>
     <dependency ref="importlib_metadata==8.7.1">
       <dependency ref="ipython==9.12.0"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="pytest==9.0.3"/>
       <dependency ref="zipp==3.23.0"/>
@@ -5406,7 +5406,7 @@
     <dependency ref="jaraco.functools==4.4.0">
       <dependency ref="jaraco.classes==3.4.0"/>
       <dependency ref="more-itertools==11.0.2"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="jedi==0.19.2">
@@ -5419,7 +5419,7 @@
       <dependency ref="colorama==0.4.6"/>
       <dependency ref="docutils==0.22.4"/>
       <dependency ref="idna==3.11"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="parso==0.8.6"/>
       <dependency ref="pyparsing==3.3.2"/>
@@ -5463,7 +5463,7 @@
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="ipykernel==7.2.0"/>
       <dependency ref="jupyter_core==5.9.1"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="pytest-timeout==2.4.0"/>
       <dependency ref="pytest==9.0.3"/>
       <dependency ref="python-dateutil==2.9.0.post0"/>
@@ -5496,7 +5496,7 @@
       <dependency ref="ruff==0.15.10"/>
     </dependency>
     <dependency ref="logfire-api==4.32.0"/>
-    <dependency ref="lxml==6.0.3"/>
+    <dependency ref="lxml==6.0.4"/>
     <dependency ref="magentic==0.41.1">
       <dependency ref="anthropic==0.94.0"/>
       <dependency ref="filetype==1.2.0"/>
@@ -5530,7 +5530,7 @@
       <dependency ref="pydantic==2.12.5"/>
       <dependency ref="python-dotenv==1.2.2"/>
       <dependency ref="python-multipart==0.0.26"/>
-      <dependency ref="rich==14.3.4"/>
+      <dependency ref="rich==15.0.0"/>
       <dependency ref="sse-starlette==3.3.4"/>
       <dependency ref="starlette==1.0.0"/>
       <dependency ref="typing-inspection==0.4.2"/>
@@ -5611,9 +5611,9 @@
       <dependency ref="pymdown-extensions==10.21.2"/>
     </dependency>
     <dependency ref="more-itertools==11.0.2"/>
-    <dependency ref="mypy==1.20.0">
+    <dependency ref="mypy==1.20.1">
       <dependency ref="librt==0.9.0"/>
-      <dependency ref="lxml==6.0.3"/>
+      <dependency ref="lxml==6.0.4"/>
       <dependency ref="mypy_extensions==1.1.0"/>
       <dependency ref="pathspec==1.0.4"/>
       <dependency ref="pip==26.0.1"/>
@@ -5625,7 +5625,7 @@
     <dependency ref="narwhals==2.19.0">
       <dependency ref="packaging==26.0"/>
       <dependency ref="pandas==3.0.2"/>
-      <dependency ref="rich==14.3.4"/>
+      <dependency ref="rich==15.0.0"/>
     </dependency>
     <dependency ref="nest-asyncio==1.6.0"/>
     <dependency ref="numpy==2.4.4"/>
@@ -5651,7 +5651,7 @@
     </dependency>
     <dependency ref="packageurl-python==0.17.6">
       <dependency ref="isort==8.0.1"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="pytest==9.0.3"/>
       <dependency ref="setuptools==82.0.1"/>
     </dependency>
@@ -5661,7 +5661,7 @@
     </dependency>
     <dependency ref="pandas==3.0.2">
       <dependency ref="Jinja2==3.1.6"/>
-      <dependency ref="lxml==6.0.3"/>
+      <dependency ref="lxml==6.0.4"/>
       <dependency ref="numpy==2.4.4"/>
       <dependency ref="pytest==9.0.3"/>
       <dependency ref="python-dateutil==2.9.0.post0"/>
@@ -5880,9 +5880,9 @@
     </dependency>
     <dependency ref="rich-rst==1.3.2">
       <dependency ref="docutils==0.22.4"/>
-      <dependency ref="rich==14.3.4"/>
+      <dependency ref="rich==15.0.0"/>
     </dependency>
-    <dependency ref="rich==14.3.4">
+    <dependency ref="rich==15.0.0">
       <dependency ref="Pygments==2.20.0"/>
       <dependency ref="ipywidgets==8.1.8"/>
       <dependency ref="markdown-it-py==4.0.0"/>
@@ -5893,7 +5893,7 @@
       <dependency ref="anyio==4.13.0"/>
       <dependency ref="anywidget==0.10.0"/>
       <dependency ref="cryptography==46.0.7"/>
-      <dependency ref="fakeredis==2.35.0"/>
+      <dependency ref="fakeredis==2.35.1"/>
       <dependency ref="fastapi==0.135.3"/>
       <dependency ref="fastmcp==3.2.3"/>
       <dependency ref="griffe==2.0.2"/>
@@ -5908,7 +5908,7 @@
       <dependency ref="mkdocs-section-index==0.3.11"/>
       <dependency ref="mkdocs==1.6.1"/>
       <dependency ref="mkdocstrings==1.0.3"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="openai==2.31.0"/>
       <dependency ref="pandas==3.0.2"/>
       <dependency ref="plotly==6.7.0"/>
@@ -5938,7 +5938,7 @@
       <dependency ref="importlib_metadata==8.7.1"/>
       <dependency ref="jaraco.functools==4.4.0"/>
       <dependency ref="more-itertools==11.0.2"/>
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="packaging==26.0"/>
       <dependency ref="pip==26.0.1"/>
       <dependency ref="pytest-timeout==2.4.0"/>
@@ -5992,7 +5992,7 @@
       <dependency ref="requests==2.33.1"/>
     </dependency>
     <dependency ref="traitlets==5.14.3">
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
       <dependency ref="pytest==9.0.3"/>
     </dependency>
     <dependency ref="typing-inspection==0.4.2">
@@ -6002,7 +6002,7 @@
     <dependency ref="tzdata==2026.1"/>
     <dependency ref="uncalled-for==0.3.1"/>
     <dependency ref="uri-template==1.3.0">
-      <dependency ref="mypy==1.20.0"/>
+      <dependency ref="mypy==1.20.1"/>
     </dependency>
     <dependency ref="urllib3==2.6.3"/>
     <dependency ref="uvicorn==0.44.0">

@@ -1720,7 +1720,7 @@
       "version": "2.2.1"
     },
     {
-      "bom-ref": "fakeredis==2.35.0",
+      "bom-ref": "fakeredis==2.35.1",
       "description": "Python implementation of redis API, can be used for testing purposes.",
       "externalReferences": [
         {
@@ -1764,9 +1764,9 @@
           "value": "lua"
         }
       ],
-      "purl": "pkg:pypi/fakeredis@2.35.0",
+      "purl": "pkg:pypi/fakeredis@2.35.1",
       "type": "library",
-      "version": "2.35.0"
+      "version": "2.35.1"
     },
     {
       "bom-ref": "fastapi==0.135.3",
@@ -2967,7 +2967,7 @@
       "version": "4.32.0"
     },
     {
-      "bom-ref": "lxml==6.0.3",
+      "bom-ref": "lxml==6.0.4",
       "description": "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API.",
       "externalReferences": [
         {
@@ -2995,9 +2995,9 @@
         }
       ],
       "name": "lxml",
-      "purl": "pkg:pypi/lxml@6.0.3",
+      "purl": "pkg:pypi/lxml@6.0.4",
       "type": "library",
-      "version": "6.0.3"
+      "version": "6.0.4"
     },
     {
       "bom-ref": "magentic==0.41.1",
@@ -3608,7 +3608,7 @@
       "version": "11.0.2"
     },
     {
-      "bom-ref": "mypy==1.20.0",
+      "bom-ref": "mypy==1.20.1",
       "description": "Optional static typing for Python",
       "externalReferences": [
         {
@@ -3646,9 +3646,9 @@
         }
       ],
       "name": "mypy",
-      "purl": "pkg:pypi/mypy@1.20.0",
+      "purl": "pkg:pypi/mypy@1.20.1",
       "type": "library",
-      "version": "1.20.0"
+      "version": "1.20.1"
     },
     {
       "bom-ref": "mypy_extensions==1.1.0",
@@ -5486,7 +5486,7 @@
       "version": "1.1.0"
     },
     {
-      "bom-ref": "rich==14.3.4",
+      "bom-ref": "rich==15.0.0",
       "description": "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal",
       "externalReferences": [
         {
@@ -5509,9 +5509,9 @@
         }
       ],
       "name": "rich",
-      "purl": "pkg:pypi/rich@14.3.4",
+      "purl": "pkg:pypi/rich@15.0.0",
       "type": "library",
-      "version": "14.3.4"
+      "version": "15.0.0"
     },
     {
       "bom-ref": "rich-rst==1.3.2",
@@ -6754,7 +6754,7 @@
         "fastmcp==3.2.3",
         "mkdocs-material==9.7.6",
         "mkdocstrings-python==2.0.3",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "numpy==2.4.4",
         "pyinstaller==6.19.0",
         "pytest==9.0.3",
@@ -6816,7 +6816,7 @@
         "certifi==2026.2.25",
         "cffi==2.0.0",
         "click==8.3.2",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "pytest==9.0.3",
         "ruff==0.15.10",
         "typing_extensions==4.15.0"
@@ -6837,7 +6837,7 @@
       "dependsOn": [
         "jsonschema==4.26.0",
         "license-expression==30.4.4",
-        "lxml==6.0.3",
+        "lxml==6.0.4",
         "packageurl-python==0.17.6",
         "py-serializable==2.1.0",
         "referencing==0.37.0",
@@ -6857,7 +6857,7 @@
         "pymdown-extensions==10.21.2",
         "pytest==9.0.3",
         "rich-rst==1.3.2",
-        "rich==14.3.4",
+        "rich==15.0.0",
         "typing_extensions==4.15.0"
       ],
       "ref": "cyclopts==4.10.2"
@@ -6883,7 +6883,7 @@
         "httpcore==1.0.9",
         "httpx==0.28.1",
         "idna==3.11",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "pylint==4.0.5",
         "pytest==9.0.3"
       ],
@@ -6927,7 +6927,7 @@
         "asttokens==3.0.1",
         "ipython==9.12.0",
         "pytest==9.0.3",
-        "rich==14.3.4"
+        "rich==15.0.0"
       ],
       "ref": "executing==2.2.1"
     },
@@ -6938,7 +6938,7 @@
         "sortedcontainers==2.4.0",
         "typing_extensions==4.15.0"
       ],
-      "ref": "fakeredis==2.35.0"
+      "ref": "fakeredis==2.35.1"
     },
     {
       "dependsOn": [
@@ -6965,7 +6965,7 @@
         "anthropic==0.94.0",
         "cyclopts==4.10.2",
         "exceptiongroup==1.3.1",
-        "fakeredis==2.35.0",
+        "fakeredis==2.35.1",
         "httpx==0.28.1",
         "jsonref==1.1.0",
         "jsonschema-path==0.4.5",
@@ -6979,7 +6979,7 @@
         "pydantic==2.12.5",
         "pyperclip==1.11.0",
         "python-dotenv==1.2.2",
-        "rich==14.3.4",
+        "rich==15.0.0",
         "uncalled-for==0.3.1",
         "uvicorn==0.44.0",
         "watchfiles==1.1.1",
@@ -7043,13 +7043,13 @@
         "click==8.3.2",
         "httpcore==1.0.9",
         "idna==3.11",
-        "rich==14.3.4"
+        "rich==15.0.0"
       ],
       "ref": "httpx==0.28.1"
     },
     {
       "dependsOn": [
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "pytest==9.0.3",
         "ruff==0.15.10"
       ],
@@ -7058,7 +7058,7 @@
     {
       "dependsOn": [
         "ipython==9.12.0",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "packaging==26.0",
         "pytest==9.0.3",
         "zipp==3.23.0"
@@ -7160,7 +7160,7 @@
       "dependsOn": [
         "jaraco.classes==3.4.0",
         "more-itertools==11.0.2",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "pytest==9.0.3"
       ],
       "ref": "jaraco.functools==4.4.0"
@@ -7176,7 +7176,7 @@
         "colorama==0.4.6",
         "docutils==0.22.4",
         "idna==3.11",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "packaging==26.0",
         "parso==0.8.6",
         "pyparsing==3.3.2",
@@ -7241,7 +7241,7 @@
         "anyio==4.13.0",
         "ipykernel==7.2.0",
         "jupyter_core==5.9.1",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "pytest-timeout==2.4.0",
         "pytest==9.0.3",
         "python-dateutil==2.9.0.post0",
@@ -7294,7 +7294,7 @@
       "ref": "logfire-api==4.32.0"
     },
     {
-      "ref": "lxml==6.0.3"
+      "ref": "lxml==6.0.4"
     },
     {
       "dependsOn": [
@@ -7341,7 +7341,7 @@
         "pydantic==2.12.5",
         "python-dotenv==1.2.2",
         "python-multipart==0.0.26",
-        "rich==14.3.4",
+        "rich==15.0.0",
         "sse-starlette==3.3.4",
         "starlette==1.0.0",
         "typing-inspection==0.4.2",
@@ -7462,7 +7462,7 @@
     {
       "dependsOn": [
         "librt==0.9.0",
-        "lxml==6.0.3",
+        "lxml==6.0.4",
         "mypy_extensions==1.1.0",
         "pathspec==1.0.4",
         "pip==26.0.1",
@@ -7470,7 +7470,7 @@
         "setuptools==82.0.1",
         "typing_extensions==4.15.0"
       ],
-      "ref": "mypy==1.20.0"
+      "ref": "mypy==1.20.1"
     },
     {
       "ref": "mypy_extensions==1.1.0"
@@ -7479,7 +7479,7 @@
       "dependsOn": [
         "packaging==26.0",
         "pandas==3.0.2",
-        "rich==14.3.4"
+        "rich==15.0.0"
       ],
       "ref": "narwhals==2.19.0"
     },
@@ -7521,7 +7521,7 @@
     {
       "dependsOn": [
         "isort==8.0.1",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "pytest==9.0.3",
         "setuptools==82.0.1"
       ],
@@ -7539,7 +7539,7 @@
     {
       "dependsOn": [
         "Jinja2==3.1.6",
-        "lxml==6.0.3",
+        "lxml==6.0.4",
         "numpy==2.4.4",
         "pytest==9.0.3",
         "python-dateutil==2.9.0.post0",
@@ -7885,7 +7885,7 @@
     {
       "dependsOn": [
         "docutils==0.22.4",
-        "rich==14.3.4"
+        "rich==15.0.0"
       ],
       "ref": "rich-rst==1.3.2"
     },
@@ -7895,7 +7895,7 @@
         "ipywidgets==8.1.8",
         "markdown-it-py==4.0.0"
       ],
-      "ref": "rich==14.3.4"
+      "ref": "rich==15.0.0"
     },
     {
       "dependsOn": [
@@ -7904,7 +7904,7 @@
         "anyio==4.13.0",
         "anywidget==0.10.0",
         "cryptography==46.0.7",
-        "fakeredis==2.35.0",
+        "fakeredis==2.35.1",
         "fastapi==0.135.3",
         "fastmcp==3.2.3",
         "griffe==2.0.2",
@@ -7919,7 +7919,7 @@
         "mkdocs-section-index==0.3.11",
         "mkdocs==1.6.1",
         "mkdocstrings==1.0.3",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "openai==2.31.0",
         "pandas==3.0.2",
         "plotly==6.7.0",
@@ -7959,7 +7959,7 @@
         "importlib_metadata==8.7.1",
         "jaraco.functools==4.4.0",
         "more-itertools==11.0.2",
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "packaging==26.0",
         "pip==26.0.1",
         "pytest-timeout==2.4.0",
@@ -8041,7 +8041,7 @@
     },
     {
       "dependsOn": [
-        "mypy==1.20.0",
+        "mypy==1.20.1",
         "pytest==9.0.3"
       ],
       "ref": "traitlets==5.14.3"
@@ -8063,7 +8063,7 @@
     },
     {
       "dependsOn": [
-        "mypy==1.20.0"
+        "mypy==1.20.1"
       ],
       "ref": "uri-template==1.3.0"
     },
@@ -8154,9 +8154,9 @@
       ],
       "name": "pywry",
       "type": "application",
-      "version": "2.0.0rc5"
+      "version": "2.0.0rc6"
     },
-    "timestamp": "2026-04-11T05:49:11.596785+00:00",
+    "timestamp": "2026-04-13T04:09:07.281316+00:00",
     "tools": {
       "components": [
         {
@@ -8260,7 +8260,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:5b7d8bd5-774f-4484-b955-a7753e04969c",
+  "serialNumber": "urn:uuid:af6cfa1f-7969-41dd-847f-91e43f8f7bd4",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
