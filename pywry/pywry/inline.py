@@ -4305,6 +4305,7 @@ def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
     use_datafeed: bool = False,
     symbol: str | None = None,
     resolution: str = "1D",
+    provider: Any = None,
 ) -> Any:
     """Show a TradingView Lightweight Chart inline in a notebook.
 
@@ -4467,6 +4468,9 @@ def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
 
     if _use_server_backend and hasattr(widget, "_wire_chart_storage"):
         widget._wire_chart_storage(user_id="default")
+
+    if provider is not None:
+        widget._wire_datafeed_provider(provider)
 
     if is_headless():
         pass

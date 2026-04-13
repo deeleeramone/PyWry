@@ -757,11 +757,12 @@ function _tvOpenLegendItemMenu(anchorEl, actions) {
         })(actions[i]);
     }
     menu.addEventListener('click', function(e) { e.stopPropagation(); });
-    document.body.appendChild(menu);
-    var rect = anchorEl.getBoundingClientRect();
+    var _oc = _tvAppendOverlay(anchorEl, menu);
+    var _cs = _tvContainerSize(_oc);
+    var rect = _tvContainerRect(_oc, anchorEl.getBoundingClientRect());
     var menuRect = menu.getBoundingClientRect();
-    var left = Math.max(6, Math.min(window.innerWidth - menuRect.width - 6, rect.right - menuRect.width));
-    var top = Math.max(6, Math.min(window.innerHeight - menuRect.height - 6, rect.bottom + 4));
+    var left = Math.max(6, Math.min(_cs.width - menuRect.width - 6, rect.right - menuRect.width));
+    var top = Math.max(6, Math.min(_cs.height - menuRect.height - 6, rect.bottom + 4));
     menu.style.left = left + 'px';
     menu.style.top = top + 'px';
     setTimeout(function() {
@@ -2238,7 +2239,7 @@ function _tvShowIndicatorSettings(seriesId) {
     }
 
     renderBody();
-    ds.uiLayer.appendChild(overlay);
+    _tvAppendOverlay(chartId, overlay);
 }
 
 function _tvApplyIndicatorSettings(seriesId, newSettings) {
@@ -2647,7 +2648,7 @@ function _tvShowIndicatorsPanel(chartId) {
     searchInp.addEventListener('input', function() { renderList(searchInp.value); });
     renderList('');
 
-    document.body.appendChild(overlay);
+    _tvAppendOverlay(chartId, overlay);
     searchInp.focus();
 }
 

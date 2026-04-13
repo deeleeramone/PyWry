@@ -200,6 +200,11 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
     // ---- Register entry early so event handlers can find it ----
     window.__PYWRY_TVCHARTS__[chartId] = entry;
 
+    // Store bridge reference for per-widget isolation in notebooks.
+    // Each anywidget stores its bridge on the .pywry-widget container.
+    var _widgetEl = container.closest && container.closest('.pywry-widget');
+    entry.bridge = (_widgetEl && _widgetEl._pywryInstance) ? _widgetEl._pywryInstance : (window.pywry || null);
+
     if (payload.useDatafeed) {
         // Datafeed mode — series populated asynchronously via the Datafeed API
         _tvInitDatafeedMode(entry, seriesList, theme);
@@ -675,77 +680,80 @@ window.PYWRY_TVCHART_DESTROY = function(chartId) {
 /**
  * Re-apply theme to all TV charts (called on pywry:update-theme).
  */
+function _tvApplyThemeToChart(chartId, newTheme) {
+    var entry = window.__PYWRY_TVCHARTS__[chartId];
+    if (!entry || !entry.chart) return;
+
+    entry.theme = newTheme;
+    var palette = TVCHART_THEMES._get(newTheme || 'dark');
+
+    // Update chart layout, grid, and scale borders
+    // Crosshair mode stays Normal (hover readout always active);
+    // only lines visibility respects the user setting.
+    var _chPrefs = (entry._chartPrefs && entry._chartPrefs.settings) || {};
+    var _chEnabled = _chPrefs['Crosshair-Enabled'] === true;
+    var _chColor = palette.crosshair.vertLine ? palette.crosshair.vertLine.color : undefined;
+    entry.chart.applyOptions({
+        layout: {
+            background: { type: LightweightCharts.ColorType.Solid, color: palette.background },
+            textColor: palette.textColor,
+        },
+        grid: palette.grid,
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+            vertLine: { color: _chColor, visible: _chEnabled, labelVisible: true, style: 2, width: 1 },
+            horzLine: { color: _chColor, visible: _chEnabled, labelVisible: _chEnabled, style: 2, width: 1 },
+        },
+        rightPriceScale: { borderColor: palette.grid.vertLines.color },
+        timeScale: { borderColor: palette.grid.vertLines.color },
+    });
+
+    // Update main/compare series with theme colours (skip indicator series)
+    var sKeys = Object.keys(entry.seriesMap);
+    for (var j = 0; j < sKeys.length; j++) {
+        var sid = sKeys[j];
+        // Indicator series have their own colours — don't override them
+        if (typeof _activeIndicators !== 'undefined' && _activeIndicators[sid]) continue;
+        var sType = _tvGuessSeriesType(entry.seriesMap[sid]);
+        var sOpts = _tvBuildSeriesOptions({}, sType, newTheme);
+        entry.seriesMap[sid].applyOptions(sOpts);
+    }
+
+    // Update volume series colours — reset custom color prefs to new theme defaults
+    // but preserve non-color settings (colorBasedOnPrevClose, MA settings, etc.)
+    if (entry._volumeColorPrefs) {
+        delete entry._volumeColorPrefs.upColor;
+        delete entry._volumeColorPrefs.downColor;
+        delete entry._volumeColorPrefs.volumeMAColor;
+        delete entry._volumeColorPrefs.smoothedMAColor;
+    }
+    var vKeys = Object.keys(entry.volumeMap);
+    for (var k = 0; k < vKeys.length; k++) {
+        entry.volumeMap[vKeys[k]].applyOptions({ color: palette.volumeUp });
+    }
+    // Re-colour volume bar data so up/down bars use new theme palette
+    if (entry._rawData && Array.isArray(entry._rawData) && entry._rawData.length > 0) {
+        var volUpC = palette.volumeUp;
+        var volDownC = palette.volumeDown || volUpC;
+        for (var vk = 0; vk < vKeys.length; vk++) {
+            var volS = entry.volumeMap[vKeys[vk]];
+            var volBars = [];
+            for (var vi = 0; vi < entry._rawData.length; vi++) {
+                var vb = entry._rawData[vi];
+                var vv = vb.volume != null ? vb.volume : (vb.Volume != null ? vb.Volume : vb.vol);
+                if (vv == null || isNaN(vv)) continue;
+                var vIsUp = (vb.close != null && vb.open != null) ? vb.close >= vb.open : true;
+                volBars.push({ time: vb.time, value: +vv, color: vIsUp ? volUpC : volDownC });
+            }
+            if (volBars.length > 0) volS.setData(volBars);
+        }
+    }
+}
+
 function _tvApplyThemeToAll(newTheme) {
     var ids = Object.keys(window.__PYWRY_TVCHARTS__);
     for (var i = 0; i < ids.length; i++) {
-        var chartId = ids[i];
-        var entry = window.__PYWRY_TVCHARTS__[chartId];
-        if (!entry || !entry.chart) continue;
-
-        entry.theme = newTheme;
-        var palette = TVCHART_THEMES._get(newTheme || 'dark');
-
-        // Update chart layout, grid, and scale borders
-        // Crosshair mode stays Normal (hover readout always active);
-        // only lines visibility respects the user setting.
-        var _chPrefs = (entry._chartPrefs && entry._chartPrefs.settings) || {};
-        var _chEnabled = _chPrefs['Crosshair-Enabled'] === true;
-        var _chColor = palette.crosshair.vertLine ? palette.crosshair.vertLine.color : undefined;
-        entry.chart.applyOptions({
-            layout: {
-                background: { type: LightweightCharts.ColorType.Solid, color: palette.background },
-                textColor: palette.textColor,
-            },
-            grid: palette.grid,
-            crosshair: {
-                mode: LightweightCharts.CrosshairMode.Normal,
-                vertLine: { color: _chColor, visible: _chEnabled, labelVisible: true, style: 2, width: 1 },
-                horzLine: { color: _chColor, visible: _chEnabled, labelVisible: _chEnabled, style: 2, width: 1 },
-            },
-            rightPriceScale: { borderColor: palette.grid.vertLines.color },
-            timeScale: { borderColor: palette.grid.vertLines.color },
-        });
-
-        // Update main/compare series with theme colours (skip indicator series)
-        var sKeys = Object.keys(entry.seriesMap);
-        for (var j = 0; j < sKeys.length; j++) {
-            var sid = sKeys[j];
-            // Indicator series have their own colours — don't override them
-            if (typeof _activeIndicators !== 'undefined' && _activeIndicators[sid]) continue;
-            var sType = _tvGuessSeriesType(entry.seriesMap[sid]);
-            var sOpts = _tvBuildSeriesOptions({}, sType, newTheme);
-            entry.seriesMap[sid].applyOptions(sOpts);
-        }
-
-        // Update volume series colours — reset custom color prefs to new theme defaults
-        // but preserve non-color settings (colorBasedOnPrevClose, MA settings, etc.)
-        if (entry._volumeColorPrefs) {
-            delete entry._volumeColorPrefs.upColor;
-            delete entry._volumeColorPrefs.downColor;
-            delete entry._volumeColorPrefs.volumeMAColor;
-            delete entry._volumeColorPrefs.smoothedMAColor;
-        }
-        var vKeys = Object.keys(entry.volumeMap);
-        for (var k = 0; k < vKeys.length; k++) {
-            entry.volumeMap[vKeys[k]].applyOptions({ color: palette.volumeUp });
-        }
-        // Re-colour volume bar data so up/down bars use new theme palette
-        if (entry._rawData && Array.isArray(entry._rawData) && entry._rawData.length > 0) {
-            var volUpC = palette.volumeUp;
-            var volDownC = palette.volumeDown || volUpC;
-            for (var vk = 0; vk < vKeys.length; vk++) {
-                var volS = entry.volumeMap[vKeys[vk]];
-                var volBars = [];
-                for (var vi = 0; vi < entry._rawData.length; vi++) {
-                    var vb = entry._rawData[vi];
-                    var vv = vb.volume != null ? vb.volume : (vb.Volume != null ? vb.Volume : vb.vol);
-                    if (vv == null || isNaN(vv)) continue;
-                    var vIsUp = (vb.close != null && vb.open != null) ? vb.close >= vb.open : true;
-                    volBars.push({ time: vb.time, value: +vv, color: vIsUp ? volUpC : volDownC });
-                }
-                if (volBars.length > 0) volS.setData(volBars);
-            }
-        }
+        _tvApplyThemeToChart(ids[i], newTheme);
     }
 }
 
@@ -769,7 +777,8 @@ function _tvGuessSeriesType(seriesApi) {
 // ---------------------------------------------------------------------------
 
 function _tvSetupEventBridge(chartId, chart) {
-    if (!window.pywry) return;
+    var bridge = _tvGetBridge(chartId);
+    if (!bridge) return;
 
     // Crosshair move (throttled)
     var lastCrosshairEmit = 0;
@@ -790,7 +799,7 @@ function _tvSetupEventBridge(chartId, chart) {
             }
         }
 
-        window.pywry.emit('tvchart:crosshair-move', {
+        bridge.emit('tvchart:crosshair-move', {
             chartId: chartId,
             time: param.time,
             point: param.point,
@@ -801,7 +810,7 @@ function _tvSetupEventBridge(chartId, chart) {
     // Click
     chart.subscribeClick(function(param) {
         if (!param.time) return;
-        window.pywry.emit('tvchart:click', {
+        bridge.emit('tvchart:click', {
             chartId: chartId,
             time: param.time,
             point: param.point,
@@ -811,7 +820,7 @@ function _tvSetupEventBridge(chartId, chart) {
     // Visible range change
     chart.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
         if (!range) return;
-        window.pywry.emit('tvchart:visible-range-change', {
+        bridge.emit('tvchart:visible-range-change', {
             chartId: chartId,
             from: range.from,
             to: range.to,

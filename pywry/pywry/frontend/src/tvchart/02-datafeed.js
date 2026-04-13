@@ -5,13 +5,14 @@ function _tvDatafeedNextRequestId(prefix) {
 }
 
 function _tvRequestDatafeedSearch(chartId, query, limit, callback, exchange, symbolType) {
-    if (!window.pywry) {
+    var _bridge = _tvGetBridge(chartId);
+    if (!_bridge) {
         callback({ items: [], error: 'pywry bridge unavailable' });
         return null;
     }
     var requestId = _tvDatafeedNextRequestId('search');
     window.__PYWRY_TVCHART_DATAFEED__.pendingSearch[requestId] = callback;
-    window.pywry.emit('tvchart:datafeed-search-request', {
+    _bridge.emit('tvchart:datafeed-search-request', {
         chartId: chartId,
         requestId: requestId,
         query: String(query || ''),
@@ -23,13 +24,14 @@ function _tvRequestDatafeedSearch(chartId, query, limit, callback, exchange, sym
 }
 
 function _tvRequestDatafeedResolve(chartId, symbol, callback) {
-    if (!window.pywry) {
+    var _bridge = _tvGetBridge(chartId);
+    if (!_bridge) {
         callback({ symbolInfo: null, error: 'pywry bridge unavailable' });
         return null;
     }
     var requestId = _tvDatafeedNextRequestId('resolve');
     window.__PYWRY_TVCHART_DATAFEED__.pendingResolve[requestId] = callback;
-    window.pywry.emit('tvchart:datafeed-resolve-request', {
+    _bridge.emit('tvchart:datafeed-resolve-request', {
         chartId: chartId,
         requestId: requestId,
         symbol: String(symbol || ''),
@@ -42,13 +44,14 @@ function _tvRequestDatafeedResolve(chartId, symbol, callback) {
  * The Python backend responds with tvchart:datafeed-config-response.
  */
 function _tvRequestDatafeedConfig(chartId, callback) {
-    if (!window.pywry) {
+    var _bridge = _tvGetBridge(chartId);
+    if (!_bridge) {
         callback({ config: {}, error: 'pywry bridge unavailable' });
         return null;
     }
     var requestId = _tvDatafeedNextRequestId('config');
     window.__PYWRY_TVCHART_DATAFEED__.pendingConfig[requestId] = callback;
-    window.pywry.emit('tvchart:datafeed-config-request', {
+    _bridge.emit('tvchart:datafeed-config-request', {
         chartId: chartId,
         requestId: requestId,
     });
@@ -60,7 +63,8 @@ function _tvRequestDatafeedConfig(chartId, callback) {
  * The Python backend responds with tvchart:datafeed-history-response.
  */
 function _tvRequestDatafeedHistory(chartId, symbolInfo, resolution, periodParams, callback) {
-    if (!window.pywry) {
+    var _bridge = _tvGetBridge(chartId);
+    if (!_bridge) {
         callback({ bars: [], status: 'error', error: 'pywry bridge unavailable' });
         return null;
     }
@@ -80,7 +84,7 @@ function _tvRequestDatafeedHistory(chartId, symbolInfo, resolution, periodParams
     if (periodParams.countBack != null && periodParams.countBack > 0) {
         payload.countBack = periodParams.countBack;
     }
-    window.pywry.emit('tvchart:datafeed-history-request', payload);
+    _bridge.emit('tvchart:datafeed-history-request', payload);
     return requestId;
 }
 
@@ -180,9 +184,10 @@ function _tvDatafeedSubscribeBars(chartId, symbolInfo, resolution, onTick, liste
         resolution: resolution,
         chartId: chartId,
     };
-    if (window.pywry) {
+    var _bridge = _tvGetBridge(chartId);
+    if (_bridge) {
         var symbol = (symbolInfo && (symbolInfo.ticker || symbolInfo.name || symbolInfo.symbol)) || '';
-        window.pywry.emit('tvchart:datafeed-subscribe', {
+        _bridge.emit('tvchart:datafeed-subscribe', {
             chartId: chartId,
             listenerGuid: listenerGuid,
             symbol: String(symbol),
@@ -198,8 +203,9 @@ function _tvDatafeedUnsubscribeBars(listenerGuid) {
     var df = window.__PYWRY_TVCHART_DATAFEED__;
     var sub = df.subscriptions[listenerGuid];
     delete df.subscriptions[listenerGuid];
-    if (window.pywry) {
-        window.pywry.emit('tvchart:datafeed-unsubscribe', {
+    var _bridge = _tvGetBridge(sub ? sub.chartId : undefined);
+    if (_bridge) {
+        _bridge.emit('tvchart:datafeed-unsubscribe', {
             listenerGuid: listenerGuid,
             chartId: sub ? sub.chartId : undefined,
         });
@@ -211,14 +217,15 @@ function _tvDatafeedUnsubscribeBars(listenerGuid) {
  * Only called if DatafeedConfiguration.supports_marks is true.
  */
 function _tvRequestDatafeedMarks(chartId, symbolInfo, from, to, resolution, callback) {
-    if (!window.pywry) {
+    var _bridge = _tvGetBridge(chartId);
+    if (!_bridge) {
         callback([]);
         return null;
     }
     var requestId = _tvDatafeedNextRequestId('marks');
     window.__PYWRY_TVCHART_DATAFEED__.pendingMarks[requestId] = callback;
     var symbol = (symbolInfo && (symbolInfo.ticker || symbolInfo.name || symbolInfo.symbol)) || '';
-    window.pywry.emit('tvchart:datafeed-marks-request', {
+    _bridge.emit('tvchart:datafeed-marks-request', {
         chartId: chartId,
         requestId: requestId,
         symbol: String(symbol),
@@ -234,14 +241,15 @@ function _tvRequestDatafeedMarks(chartId, symbolInfo, from, to, resolution, call
  * Only called if DatafeedConfiguration.supports_timescale_marks is true.
  */
 function _tvRequestDatafeedTimescaleMarks(chartId, symbolInfo, from, to, resolution, callback) {
-    if (!window.pywry) {
+    var _bridge = _tvGetBridge(chartId);
+    if (!_bridge) {
         callback([]);
         return null;
     }
     var requestId = _tvDatafeedNextRequestId('tsmarks');
     window.__PYWRY_TVCHART_DATAFEED__.pendingTimescaleMarks[requestId] = callback;
     var symbol = (symbolInfo && (symbolInfo.ticker || symbolInfo.name || symbolInfo.symbol)) || '';
-    window.pywry.emit('tvchart:datafeed-timescale-marks-request', {
+    _bridge.emit('tvchart:datafeed-timescale-marks-request', {
         chartId: chartId,
         requestId: requestId,
         symbol: String(symbol),
@@ -257,13 +265,14 @@ function _tvRequestDatafeedTimescaleMarks(chartId, symbolInfo, from, to, resolut
  * Only called if DatafeedConfiguration.supports_time is true.
  */
 function _tvRequestDatafeedServerTime(chartId, callback) {
-    if (!window.pywry) {
+    var _bridge = _tvGetBridge(chartId);
+    if (!_bridge) {
         callback(Math.floor(Date.now() / 1000));
         return null;
     }
     var requestId = _tvDatafeedNextRequestId('time');
     window.__PYWRY_TVCHART_DATAFEED__.pendingServerTime[requestId] = callback;
-    window.pywry.emit('tvchart:datafeed-server-time-request', {
+    _bridge.emit('tvchart:datafeed-server-time-request', {
         chartId: chartId,
         requestId: requestId,
     });
@@ -635,7 +644,7 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
 
                         var _isDaily = function() {
                             var r = entry._currentResolution || '';
-                            return /^[1-9]?[DWM]$/.test(r) || /^\d+[DWM]$/.test(r);
+                            return /^[1-9]?[DWM]$/i.test(r) || /^\d+[DWM]$/i.test(r);
                         };
                         var _isoDate = function(d, tz) {
                             var y = d.toLocaleString('en-US', { timeZone: tz, year: 'numeric' });

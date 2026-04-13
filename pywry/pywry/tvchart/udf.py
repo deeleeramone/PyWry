@@ -352,6 +352,91 @@ def _clamp_from_ts(udf_res: str, from_ts: int, to_ts: int, max_bars: int) -> int
     return max(from_ts, earliest_allowed)
 
 
+def _decompose_resolution(udf_res: str) -> tuple[str, int]:
+    """Split a UDF resolution into (base_resolution, multiplier).
+
+    Returns a base resolution that is more likely to be accepted by
+    servers and the multiplier needed to aggregate bars into the target.
+
+    For example ``"3D"`` → ``("D", 3)``, ``"W"`` → ``("D", 7)``,
+    ``"15"`` → ``("1", 15)``, ``"120"`` → ``("60", 2)``.
+    """
+    suffix = udf_res.lstrip("0123456789")
+    num_str = udf_res[: len(udf_res) - len(suffix)] or "1"
+    num = int(num_str)
+
+    if suffix in ("W",):
+        return "D", 7 * num
+    if suffix in ("D",) and num > 1:
+        return "D", num
+    # Minute resolutions (bare digits like "3", "15", "120"):
+    # decompose to 1-minute base, or 60-minute base for hours.
+    if not suffix and num > 1:
+        if num >= 60 and num % 60 == 0:
+            return "60", num // 60
+        return "1", num
+    return udf_res, 1
+
+
+def _aggregate_bars(bars: list[dict[str, Any]], n: int) -> list[dict[str, Any]]:
+    """Merge every *n* consecutive bars into a single OHLCV bar."""
+    if n <= 1 or not bars:
+        return bars
+    result: list[dict[str, Any]] = []
+    for i in range(0, len(bars), n):
+        chunk = bars[i : i + n]
+        agg: dict[str, Any] = {"time": chunk[0]["time"]}
+        if "open" in chunk[0]:
+            agg["open"] = chunk[0]["open"]
+        if "close" in chunk[-1]:
+            agg["close"] = chunk[-1]["close"]
+        highs = [b["high"] for b in chunk if "high" in b]
+        if highs:
+            agg["high"] = max(highs)
+        lows = [b["low"] for b in chunk if "low" in b]
+        if lows:
+            agg["low"] = min(lows)
+        vols = [b["volume"] for b in chunk if "volume" in b]
+        if vols:
+            agg["volume"] = sum(vols)
+        result.append(agg)
+    return result
+
+
+def _parse_udf_history(data: dict[str, Any]) -> dict[str, Any]:
+    """Parse UDF columnar ``/history`` response into a bars result dict."""
+    timestamps = data.get("t", [])
+    closes = data.get("c", [])
+    opens = data.get("o", [])
+    highs = data.get("h", [])
+    lows = data.get("l", [])
+    volumes = data.get("v", [])
+
+    bars: list[dict[str, Any]] = []
+    for i, ts in enumerate(timestamps):
+        bar: dict[str, Any] = {  # pylint: disable=disallowed-name
+            "time": ts,
+            "close": closes[i] if i < len(closes) else 0,
+        }
+        if opens and i < len(opens):
+            bar["open"] = opens[i]
+        if highs and i < len(highs):
+            bar["high"] = highs[i]
+        if lows and i < len(lows):
+            bar["low"] = lows[i]
+        if volumes and i < len(volumes):
+            bar["volume"] = volumes[i]
+        bars.append(bar)
+
+    no_data = data.get("noData", len(bars) == 0)
+    return {
+        "bars": bars,
+        "status": "ok",
+        "no_data": no_data,
+        "next_time": data.get("nextTime"),
+    }
+
+
 # ---------------------------------------------------------------------------
 # UDFAdapter — extends DatafeedProvider
 # ---------------------------------------------------------------------------
@@ -465,19 +550,38 @@ class UDFAdapter(DatafeedProvider):
     ) -> dict[str, Any]:
         """Fetch bars from ``/history`` and convert to the PyWry response format."""
         udf_res = to_udf_resolution(resolution)
+        max_bars = (self._config or {}).get("max_bars", 10000)
 
-        # When from_ts is 0 (initial load), compute a reasonable value from
-        # countback so servers that require `from` (e.g. BitMEX) get a valid
-        # epoch timestamp instead of 0 (Jan 1 1970).
+        result = await self._fetch_history(symbol, udf_res, from_ts, to_ts, countback, max_bars)
+
+        # If the server rejected the resolution, try fetching a base
+        # resolution and aggregating client-side.
+        if result["status"] == "error" and "resolution" in result.get("error", "").lower():
+            base_res, multiplier = _decompose_resolution(udf_res)
+            if multiplier > 1:
+                base_cb = (countback or 300) * multiplier
+                result = await self._fetch_history(
+                    symbol, base_res, from_ts, to_ts, base_cb, max_bars
+                )
+                if result["status"] == "ok" and result["bars"]:
+                    result["bars"] = _aggregate_bars(result["bars"], multiplier)
+
+        return result
+
+    async def _fetch_history(
+        self,
+        symbol: str,
+        udf_res: str,
+        from_ts: int,
+        to_ts: int,
+        countback: int | None,
+        max_bars: int,
+    ) -> dict[str, Any]:
+        """Low-level ``/history`` fetch with timestamp adjustment."""
         if (not from_ts or from_ts <= 0) and countback and to_ts:
             from_ts = _estimate_from_ts(udf_res, to_ts, countback)
 
-        # Clamp the from-to range so it doesn't exceed the server's max_bars
-        # worth of data.  When switching from a coarse resolution (e.g. daily)
-        # to a fine one (e.g. 1m), the JS may send the same from-to range that
-        # covered years of daily bars — far too many bars at 1m granularity.
         if from_ts and to_ts and from_ts < to_ts:
-            max_bars = (self._config or {}).get("max_bars", 10000)
             cb = countback or max_bars
             from_ts = _clamp_from_ts(udf_res, from_ts, to_ts, min(cb, max_bars))
 
@@ -488,12 +592,17 @@ class UDFAdapter(DatafeedProvider):
             "to": to_ts,
         }
         if countback is not None:
-            params["countback"] = countback
+            params["countback"] = min(countback, max_bars)
 
         resp = await self._client.get("/history", params=params)
         logger.debug("UDF /history request: %s → %s", params, resp.status_code)
-        resp.raise_for_status()
-        data = resp.json()
+
+        # Parse body even on 4xx — UDF servers return JSON error details.
+        try:
+            data = resp.json()
+        except Exception:
+            resp.raise_for_status()
+            return {"bars": [], "status": "error", "no_data": True, "error": "Bad response"}
 
         status = data.get("s", "ok")
         if status == "error":
@@ -505,48 +614,18 @@ class UDFAdapter(DatafeedProvider):
                 "error": data.get("errmsg", "Unknown error"),
             }
         if status == "no_data":
-            next_time = data.get("nextTime")
             return {
                 "bars": [],
                 "status": "no_data",
                 "no_data": True,
-                "next_time": next_time,
+                "next_time": data.get("nextTime"),
             }
 
-        # Parse UDF columnar bar data
-        timestamps = data.get("t", [])
-        closes = data.get("c", [])
-        opens = data.get("o", [])
-        highs = data.get("h", [])
-        lows = data.get("l", [])
-        volumes = data.get("v", [])
+        # For non-error, non-UDF 4xx responses, raise normally
+        if resp.status_code >= 400:
+            resp.raise_for_status()
 
-        bars: list[dict[str, Any]] = []
-        for i, ts in enumerate(timestamps):
-            bar: dict[str, Any] = {
-                "time": ts,  # Both UDF and Lightweight Charts use Unix seconds
-                "close": closes[i] if i < len(closes) else 0,
-            }
-            if opens and i < len(opens):
-                bar["open"] = opens[i]
-            if highs and i < len(highs):
-                bar["high"] = highs[i]
-            if lows and i < len(lows):
-                bar["low"] = lows[i]
-            if volumes and i < len(volumes):
-                bar["volume"] = volumes[i]
-            bars.append(bar)
-
-        # UDF spec: noData can be true even when bars are returned,
-        # signalling "this is the oldest data, don't request further back".
-        no_data = data.get("noData", len(bars) == 0)
-
-        return {
-            "bars": bars,
-            "status": "ok",
-            "no_data": no_data,
-            "next_time": data.get("nextTime"),
-        }
+        return _parse_udf_history(data)
 
     async def get_marks(
         self,

@@ -3,6 +3,23 @@
 function render({ model, el }) {
     el.innerHTML = '';
 
+    // Inject CSS into the main document to fix Jupyter output cell backgrounds
+    // This must be done here because _css only applies inside the widget shadow DOM
+    var JUPYTER_FIX_ID = 'pywry-jupyter-fix-css';
+    if (!document.getElementById(JUPYTER_FIX_ID)) {
+        var style = document.createElement('style');
+        style.id = JUPYTER_FIX_ID;
+        style.textContent = [
+            '.cell-output-ipywidget-background {',
+            '    background-color: transparent !important;',
+            '}',
+            '.jp-OutputArea-output {',
+            '    background-color: transparent !important;',
+            '}'
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
     var isDarkInitial = model.get('theme') === 'dark';
     el.classList.add(isDarkInitial ? 'pywry-theme-dark' : 'pywry-theme-light');
 
@@ -48,10 +65,56 @@ function render({ model, el }) {
             } else {
                 for (var i = 0; i < handlers.length; i++) handlers[i](data);
             }
+        },
+        // sendEvent — Python-only notification (no local _fire).
+        // Used by theme toggle to notify Python without re-dispatching locally.
+        sendEvent: function(type, data) {
+            model.set('_js_event', JSON.stringify({ type: type, data: data, ts: Date.now() }));
+            model.save_changes();
         }
     };
 
     container._pywryInstance = pywry;
+
+    // Store this widget's chart ID on the bridge so event handlers can
+    // resolve the correct chart without falling back to keys[0].
+    var _widgetChartId = model.get('chart_id') || undefined;
+    pywry._chartId = _widgetChartId;
+
+    // Bridge dispatcher for inline onclick/onchange handlers in toolbar HTML.
+    // Toolbar components (TabGroup, Toggle, Checkbox, etc.) generate inline
+    // handlers that call window.pywry.emit(eventName, data, this).  In native
+    // desktop mode window.pywry is a real bridge set by scripts.py.  In widget
+    // mode there is no global bridge — each widget stores its bridge on its
+    // container element.  This proxy walks up the DOM from the source element
+    // (the 3rd argument) to find the correct widget's bridge.
+    if (!window.pywry) {
+        window.pywry = {
+            emit: function(type, data, sourceEl) {
+                var el = sourceEl;
+                while (el) {
+                    if (el._pywryInstance) {
+                        el._pywryInstance.emit(type, data);
+                        return;
+                    }
+                    el = el.parentElement;
+                }
+                console.warn('[PyWry] No bridge found for event:', type);
+            },
+            on: function() {},
+            off: function() {},
+            _fire: function() {}
+        };
+    }
+
+    // Expose module-scoped tvchart functions to window so onclick attributes
+    // in toolbar HTML work.  In native windows these are global (loaded via
+    // <script> tags), but in the ESM/anywidget context they are module-scoped.
+    if (typeof _tvToggleLogScale === 'function') window._tvToggleLogScale = _tvToggleLogScale;
+    if (typeof _tvToggleAutoScale === 'function') window._tvToggleAutoScale = _tvToggleAutoScale;
+    if (typeof _tvTogglePctScale === 'function') window._tvTogglePctScale = _tvTogglePctScale;
+    if (typeof _tvToggleTimezoneMenu === 'function') window._tvToggleTimezoneMenu = _tvToggleTimezoneMenu;
+    if (typeof _tvToggleSessionMenu === 'function') window._tvToggleSessionMenu = _tvToggleSessionMenu;
 
     // Toolbar handlers placeholder (injected by widget builder)
     __TOOLBAR_HANDLERS__
@@ -87,10 +150,11 @@ function render({ model, el }) {
         container.classList.remove('pywry-theme-dark', 'pywry-theme-light');
         container.classList.add(isDark ? 'pywry-theme-dark' : 'pywry-theme-light');
 
-        // Update existing TV charts via the defaults theme switcher
+        // Only update THIS widget's chart — never touch other charts
         var newTheme = isDark ? 'dark' : 'light';
-        if (typeof _tvApplyThemeToAll === 'function') {
-            _tvApplyThemeToAll(newTheme);
+        var myChartId = model.get('chart_id');
+        if (myChartId && typeof _tvApplyThemeToChart === 'function') {
+            _tvApplyThemeToChart(myChartId, newTheme);
         }
     }
 
@@ -103,14 +167,10 @@ function render({ model, el }) {
             return;
         }
 
-        // Set window.pywry to our local bridge BEFORE injecting content
-        // so inline onclick handlers route through the widget immediately.
-        window.pywry = pywry;
-
-        // Register tvchart-defaults event handlers now that pywry is available.
-        // In ESM context, the IIFE may have run before pywry existed.
+        // Register tvchart-defaults event handlers with THIS widget's bridge.
+        // Each widget instance gets its own bridge — never touch window.pywry.
         if (typeof window._tvRegisterEventHandlers === 'function') {
-            window._tvRegisterEventHandlers();
+            window._tvRegisterEventHandlers(pywry);
         }
 
         container.innerHTML = content;

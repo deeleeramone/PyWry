@@ -82,6 +82,23 @@ if (!window.__pywryStripThemeColors) {
 function render({ model, el }) {
     el.innerHTML = '';
 
+    // Inject CSS into the main document to fix Jupyter output cell backgrounds
+    // This must be done here because _css only applies inside the widget shadow DOM
+    const JUPYTER_FIX_ID = 'pywry-jupyter-fix-css';
+    if (!document.getElementById(JUPYTER_FIX_ID)) {
+        const style = document.createElement('style');
+        style.id = JUPYTER_FIX_ID;
+        style.textContent = `
+            .cell-output-ipywidget-background {
+                background-color: transparent !important;
+            }
+            .jp-OutputArea-output {
+                background-color: transparent !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     // Apply theme class to el (AnyWidget container) for proper theming
     // CSS rule on .pywry-theme-dark/.pywry-theme-light applies background-color
     const isDarkInitial = model.get('theme') === 'dark';

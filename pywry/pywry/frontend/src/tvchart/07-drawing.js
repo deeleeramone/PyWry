@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 window.__PYWRY_DRAWINGS__ = window.__PYWRY_DRAWINGS__ || {};
-var _drawActiveTool = 'cursor';
+// _activeTool is stored per chart on ds (drawing state), not as a global
 var _drawPending = null;
 var _drawSelectedIdx = -1;      // index into ds.drawings
 var _drawSelectedChart = null;  // chartId of selected drawing
@@ -296,72 +296,81 @@ function _tvShowToolGroupFlyout(groupBtn) {
             var iconSpan = document.createElement('span');
             iconSpan.className = 'pywry-tool-flyout-icon';
             iconSpan.innerHTML = tool.icon;
+            iconSpan.style.pointerEvents = 'none';
             item.appendChild(iconSpan);
 
             var nameSpan = document.createElement('span');
             nameSpan.className = 'pywry-tool-flyout-name';
             nameSpan.textContent = tool.name;
+            nameSpan.style.pointerEvents = 'none';
             item.appendChild(nameSpan);
 
             if (tool.shortcut) {
                 var shortcutSpan = document.createElement('span');
                 shortcutSpan.className = 'pywry-tool-flyout-shortcut';
                 shortcutSpan.textContent = tool.shortcut;
+                shortcutSpan.style.pointerEvents = 'none';
                 item.appendChild(shortcutSpan);
             }
+
+            // Direct click handler on each item — no event delegation
+            (function(itemEl, toolId, group) {
+                itemEl.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+
+                    _toolGroupActive[group] = toolId;
+
+                    // Update the group button icon
+                    var def = _tvFindToolDef(toolId);
+                    if (def) {
+                        var iconEl = groupBtn.querySelector('.pywry-tool-group-icon');
+                        if (iconEl) iconEl.innerHTML = def.icon;
+                    }
+
+                    // Highlight group button as active, deactivate others
+                    var cId = _tvResolveChartIdFromElement(groupBtn);
+                    var allIcons = _tvScopedQueryAll(cId, '.pywry-toolbar-left .pywry-icon-btn');
+                    if (allIcons) allIcons.forEach(function(el) { el.classList.remove('active'); });
+                    groupBtn.classList.add('active');
+
+                    _tvSetDrawTool(cId, toolId);
+                    _tvHideToolGroupFlyout();
+                });
+            })(item, tool.id, groupName);
 
             flyout.appendChild(item);
         }
     }
 
     // Position to the right of the left toolbar
+    var _oc = _tvOverlayContainer(groupBtn);
+    var _isWidget = (_oc !== document.body);
     var rect = groupBtn.getBoundingClientRect();
     var toolbar = groupBtn.closest('.tvchart-left');
     var toolbarRect = toolbar ? toolbar.getBoundingClientRect() : rect;
-    flyout.style.position = 'fixed';
-    flyout.style.left = (toolbarRect.right + 1) + 'px';
-    flyout.style.top = rect.top + 'px';
+    flyout.style.position = _isWidget ? 'absolute' : 'fixed';
+    var _cRect = _tvContainerRect(_oc, toolbarRect);
+    var _bRect = _tvContainerRect(_oc, rect);
+    flyout.style.left = (_cRect.right + 1) + 'px';
+    flyout.style.top = _bRect.top + 'px';
 
-    document.body.appendChild(flyout);
+    _oc.appendChild(flyout);
     _activeGroupFlyout = flyout;
     _activeGroupBtn = groupBtn;
 
-    // Clamp to viewport bottom
+    // Clamp to container bottom
+    var _cs = _tvContainerSize(_oc);
     var flyRect = flyout.getBoundingClientRect();
-    if (flyRect.bottom > window.innerHeight - 8) {
-        flyout.style.top = Math.max(8, window.innerHeight - flyRect.height - 8) + 'px';
+    var flyH = flyRect.height;
+    if (_bRect.top + flyH > _cs.height - 8) {
+        flyout.style.top = Math.max(8, _cs.height - flyH - 8) + 'px';
     }
 
-    // Click handler for flyout items
-    flyout.addEventListener('mousedown', function(e) {
-        var item = e.target.closest('.pywry-tool-flyout-item');
-        if (!item) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        var toolId = item.getAttribute('data-tool-id');
-        var group = item.getAttribute('data-tool-group');
-
-        _toolGroupActive[group] = toolId;
-
-        // Update the group button icon
-        var def = _tvFindToolDef(toolId);
-        if (def) {
-            var iconEl = groupBtn.querySelector('.pywry-tool-group-icon');
-            if (iconEl) iconEl.innerHTML = def.icon;
-        }
-
-        // Highlight group button as active, deactivate others
-        var allIcons = document.querySelectorAll('.pywry-toolbar-left .pywry-icon-btn');
-        allIcons.forEach(function(el) { el.classList.remove('active'); });
-        groupBtn.classList.add('active');
-
-        _tvSetDrawTool(toolId);
-        _tvHideToolGroupFlyout();
-    });
-
-    // Prevent click-through
+    // Block all flyout-level events from propagating to document handlers
     flyout.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+    flyout.addEventListener('click', function(e) { e.stopPropagation(); });
 }
 
 function _tvHideToolGroupFlyout() {
@@ -746,9 +755,10 @@ var _DRAW_WIDTHS = [1, 2, 3, 4];
 
 function _tvApplyDrawingInteractionMode(ds) {
     if (!ds || !ds.canvas) return;
-    if (_drawActiveTool === 'crosshair' || _drawActiveTool === 'cursor') {
+    var tool = ds._activeTool || 'cursor';
+    if (tool === 'crosshair' || tool === 'cursor') {
         ds.canvas.style.pointerEvents = 'none';
-        ds.canvas.style.cursor = _drawActiveTool === 'crosshair' ? 'crosshair' : 'default';
+        ds.canvas.style.cursor = tool === 'crosshair' ? 'crosshair' : 'default';
         return;
     }
     ds.canvas.style.pointerEvents = 'auto';
@@ -865,6 +875,7 @@ function _tvEnsureDrawingLayer(chartId) {
         chartId: chartId,
         drawings: [],
         priceLines: [],
+        _activeTool: 'cursor',
     };
     window.__PYWRY_DRAWINGS__[chartId] = state;
     _tvApplyDrawingInteractionMode(state);
@@ -1020,9 +1031,9 @@ function _tvRefreshLegendVisibility(chartId) {
 }
 
 function _tvRefreshLegendTitle(chartId) {
-    var resolved = _tvResolveChartEntry(chartId || 'main');
+    var resolved = _tvResolveChartEntry(chartId);
     var entry = resolved ? resolved.entry : null;
-    var effectiveChartId = resolved ? resolved.chartId : (chartId || 'main');
+    var effectiveChartId = resolved ? resolved.chartId : chartId;
     if (!entry) return;
 
     var titleEl = _tvScopedById(effectiveChartId, 'tvchart-legend-title');
@@ -1059,8 +1070,16 @@ function _tvRefreshLegendTitle(chartId) {
         }
         // 'Ticker' mode keeps base as-is
     }
-    if (ds && ds.interval && base) {
-        base = base + ' · ' + ds.interval;
+    if (ds && base) {
+        var intervalText = ds.interval || '';
+        // If no explicit interval set, read from toolbar label
+        if (!intervalText) {
+            var intervalLabel = _tvScopedById(effectiveChartId, 'tvchart-interval-label');
+            if (intervalLabel) intervalText = (intervalLabel.textContent || '').trim();
+        }
+        if (intervalText) {
+            base = base + ' · ' + intervalText;
+        }
     }
 
     titleEl.textContent = base;
@@ -1071,7 +1090,7 @@ function _tvEmitLegendRefresh(chartId) {
     try {
         if (typeof window.CustomEvent === 'function') {
             window.dispatchEvent(new CustomEvent('pywry:legend-refresh', {
-                detail: { chartId: chartId || 'main' },
+                detail: { chartId: chartId },
             }));
         }
     } catch (e) {}
@@ -1122,7 +1141,7 @@ function _tvLegendNormalizeTimeValue(value) {
 
 function _tvLegendMainKey(entry) {
     var keys = Object.keys((entry && entry.seriesMap) || {});
-    return keys.indexOf('main') >= 0 ? 'main' : (keys[0] || 'main');
+    return keys.indexOf('main') >= 0 ? 'main' : (keys[0] || null);
 }
 
 function _tvLegendResolvePoint(entry, seriesId, seriesApi, param) {
@@ -1254,9 +1273,9 @@ function _tvRenderLegendSeriesRows(chartId, entry, param) {
 }
 
 function _tvRenderHoverLegend(chartId, param) {
-    var resolved = _tvResolveChartEntry(chartId || 'main');
+    var resolved = _tvResolveChartEntry(chartId);
     var entry = resolved ? resolved.entry : null;
-    var effectiveChartId = resolved ? resolved.chartId : (chartId || 'main');
+    var effectiveChartId = resolved ? resolved.chartId : chartId;
     if (!entry) return;
 
     var titleEl = _tvScopedById(effectiveChartId, 'tvchart-legend-title');
@@ -4958,11 +4977,12 @@ function _tvToggleWidthPicker(chartId, drawIdx, anchor) {
         })(_DRAW_WIDTHS[i]);
     }
 
-    document.body.appendChild(picker);
+    var _oc = _tvAppendOverlay(chartId, picker);
 
-    // Position the picker relative to the anchor using fixed coordinates
+    // Position the picker relative to the anchor
     requestAnimationFrame(function() {
-        var aRect = anchor.getBoundingClientRect();
+        var _cs = _tvContainerSize(_oc);
+        var aRect = _tvContainerRect(_oc, anchor.getBoundingClientRect());
         var pH = picker.offsetHeight;
         var pW = picker.offsetWidth;
         var top = aRect.top - pH - 6;
@@ -4970,8 +4990,8 @@ function _tvToggleWidthPicker(chartId, drawIdx, anchor) {
         if (top < 0) {
             top = aRect.bottom + 6;
         }
-        if (left + pW > window.innerWidth - 4) {
-            left = window.innerWidth - pW - 4;
+        if (left + pW > _cs.width - 4) {
+            left = _cs.width - pW - 4;
         }
         if (left < 4) left = 4;
         picker.style.top = top + 'px';
@@ -5282,7 +5302,7 @@ function _tvEnableDrawing(chartId) {
         }
 
         // Hover detection (cursor mode only)
-        if (_drawActiveTool === 'cursor') {
+        if (ds._activeTool === 'cursor') {
             var rect = canvas.getBoundingClientRect();
             var mx = e.clientX - rect.left;
             var my = e.clientY - rect.top;
@@ -5410,7 +5430,7 @@ function _tvEnableDrawing(chartId) {
         if (e.button !== 0) return;
         // When a modal is open (interaction locked), never start drawing drag
         if (entry._interactionLocked) return;
-        if (_drawActiveTool !== 'cursor') return;
+        if (ds._activeTool !== 'cursor') return;
         var rect = canvas.getBoundingClientRect();
         var mx = e.clientX - rect.left;
         var my = e.clientY - rect.top;
@@ -5549,7 +5569,7 @@ function _tvEnableDrawing(chartId) {
     // --- Double-click: open drawing settings (cursor mode) ---
     container.addEventListener('dblclick', function(e) {
         if (entry._interactionLocked) return;
-        if (_drawActiveTool !== 'cursor') return;
+        if (ds._activeTool !== 'cursor') return;
         var rect = canvas.getBoundingClientRect();
         var mx = e.clientX - rect.left;
         var my = e.clientY - rect.top;
@@ -5567,7 +5587,7 @@ function _tvEnableDrawing(chartId) {
     // --- Click: select/deselect drawing (cursor mode) ---
     container.addEventListener('click', function(e) {
         if (entry._interactionLocked) return;
-        if (_drawActiveTool !== 'cursor') return;
+        if (ds._activeTool !== 'cursor') return;
         // Skip click if a drag just completed
         if (_drawDidDrag) {
             _drawDidDrag = false;
@@ -5590,7 +5610,7 @@ function _tvEnableDrawing(chartId) {
     // --- Right-click: context menu (cursor mode) ---
     container.addEventListener('contextmenu', function(e) {
         if (entry._interactionLocked) return;
-        if (_drawActiveTool !== 'cursor') return;
+        if (ds._activeTool !== 'cursor') return;
         var rect = canvas.getBoundingClientRect();
         var mx = e.clientX - rect.left;
         var my = e.clientY - rect.top;
@@ -5634,8 +5654,9 @@ function _tvEnableDrawing(chartId) {
 
     // --- Click on canvas: place drawing (drawing tool mode) ---
     canvas.addEventListener('click', function(e) {
+        var _tool = ds._activeTool;
         // Drawing tools only — cursor mode is handled on container
-        if (_drawActiveTool === 'cursor' || _drawActiveTool === 'crosshair') return;
+        if (_tool === 'cursor' || _tool === 'crosshair') return;
 
         var rect = canvas.getBoundingClientRect();
         var mx = e.clientX - rect.left;
@@ -5643,7 +5664,7 @@ function _tvEnableDrawing(chartId) {
         var coord = _tvFromPixel(chartId, mx, my);
         if (!coord || coord.time === null || coord.price === null) return;
 
-        if (_drawActiveTool === 'hline') {
+        if (_tool === 'hline') {
             var hlD = {
                 _id: ++_drawIdCounter, type: 'hline', price: coord.price,
                 chartId: chartId, color: _drawDefaults.color,
@@ -5670,7 +5691,7 @@ function _tvEnableDrawing(chartId) {
             return;
         }
 
-        if (_drawActiveTool === 'text') {
+        if (_tool === 'text') {
             var txtD = {
                 _id: ++_drawIdCounter, type: 'text', t1: coord.time, p1: coord.price,
                 text: 'Text', chartId: chartId, color: _drawDefaults.color,
@@ -5689,11 +5710,11 @@ function _tvEnableDrawing(chartId) {
 
         // Single-click text/notes tools
         var _singleClickTextTools = ['anchored_text', 'note', 'price_note', 'pin', 'comment', 'price_label', 'signpost', 'flag_mark'];
-        if (_singleClickTextTools.indexOf(_drawActiveTool) !== -1) {
+        if (_singleClickTextTools.indexOf(_tool) !== -1) {
             var _sctDefText = { anchored_text: 'Text', note: 'Note', price_note: 'Price Note', pin: '', comment: 'Comment', price_label: 'Label', signpost: 'Signpost', flag_mark: '' };
             var sctD = {
-                _id: ++_drawIdCounter, type: _drawActiveTool, t1: coord.time, p1: coord.price,
-                text: _sctDefText[_drawActiveTool] || '', chartId: chartId,
+                _id: ++_drawIdCounter, type: _tool, t1: coord.time, p1: coord.price,
+                text: _sctDefText[_tool] || '', chartId: chartId,
                 color: _drawDefaults.color, fontSize: 14,
                 bold: false, italic: false,
                 bgEnabled: true, bgColor: '#2a2e39',
@@ -5711,7 +5732,7 @@ function _tvEnableDrawing(chartId) {
         }
 
         // Vertical Line — single-click, anchored by time only
-        if (_drawActiveTool === 'vline') {
+        if (_tool === 'vline') {
             var vlD = {
                 _id: ++_drawIdCounter, type: 'vline', t1: coord.time,
                 chartId: chartId, color: _drawDefaults.color,
@@ -5727,7 +5748,7 @@ function _tvEnableDrawing(chartId) {
         }
 
         // Cross Line — single-click, crosshair-style
-        if (_drawActiveTool === 'crossline') {
+        if (_tool === 'crossline') {
             var clD = {
                 _id: ++_drawIdCounter, type: 'crossline', t1: coord.time, p1: coord.price,
                 chartId: chartId, color: _drawDefaults.color,
@@ -5744,9 +5765,9 @@ function _tvEnableDrawing(chartId) {
 
         // Arrow mark single-click tools
         var arrowMarks = ['arrow_mark_up', 'arrow_mark_down', 'arrow_mark_left', 'arrow_mark_right'];
-        if (arrowMarks.indexOf(_drawActiveTool) !== -1) {
+        if (arrowMarks.indexOf(_tool) !== -1) {
             var amD = {
-                _id: ++_drawIdCounter, type: _drawActiveTool, t1: coord.time, p1: coord.price,
+                _id: ++_drawIdCounter, type: _tool, t1: coord.time, p1: coord.price,
                 chartId: chartId, color: _drawDefaults.color,
                 fillColor: _drawDefaults.color, borderColor: _drawDefaults.color, textColor: _drawDefaults.color,
                 lineWidth: _drawDefaults.lineWidth, size: 30,
@@ -5762,7 +5783,7 @@ function _tvEnableDrawing(chartId) {
         }
 
         // Anchored VWAP — single-click anchor point
-        if (_drawActiveTool === 'anchored_vwap') {
+        if (_tool === 'anchored_vwap') {
             var avD = {
                 _id: ++_drawIdCounter, type: 'anchored_vwap', t1: coord.time, p1: coord.price,
                 chartId: chartId, color: _drawDefaults.color || '#2962FF',
@@ -5791,11 +5812,11 @@ function _tvEnableDrawing(chartId) {
         // Three-point tools (A→B, then C on second click)
         var threePointTools = ['fib_extension', 'fib_channel', 'fib_wedge', 'pitchfan', 'fib_time',
                                'rotated_rect', 'triangle', 'shape_arc', 'double_curve'];
-        if (threePointTools.indexOf(_drawActiveTool) !== -1) {
+        if (threePointTools.indexOf(_tool) !== -1) {
             if (!_drawPending || _drawPending.chartId !== chartId) {
                 // First click: set A
                 _drawPending = {
-                    _id: ++_drawIdCounter, type: _drawActiveTool,
+                    _id: ++_drawIdCounter, type: _tool,
                     t1: coord.time, p1: coord.price,
                     t2: coord.time, p2: coord.price,
                     chartId: chartId, color: _drawDefaults.color,
@@ -5825,10 +5846,10 @@ function _tvEnableDrawing(chartId) {
             }
             return;
         }
-        if (twoPointTools.indexOf(_drawActiveTool) !== -1) {
+        if (twoPointTools.indexOf(_tool) !== -1) {
             if (!_drawPending || _drawPending.chartId !== chartId) {
                 _drawPending = {
-                    _id: ++_drawIdCounter, type: _drawActiveTool,
+                    _id: ++_drawIdCounter, type: _tool,
                     t1: coord.time, p1: coord.price,
                     t2: coord.time, p2: coord.price,
                     chartId: chartId, color: _drawDefaults.color,
@@ -5842,7 +5863,7 @@ function _tvEnableDrawing(chartId) {
                     statsPosition: 'right',
                     alwaysShowStats: false,
                 };
-                if (_drawActiveTool === 'arrow_marker' || _drawActiveTool === 'arrow') {
+                if (_tool === 'arrow_marker' || _tool === 'arrow') {
                     _drawPending.text = '';
                     _drawPending.fontSize = 16;
                     _drawPending.bold = false;
@@ -5851,7 +5872,7 @@ function _tvEnableDrawing(chartId) {
                     _drawPending.borderColor = _drawDefaults.color;
                     _drawPending.textColor = _drawDefaults.color;
                 }
-                if (_drawActiveTool === 'callout') {
+                if (_tool === 'callout') {
                     _drawPending.text = 'Callout';
                     _drawPending.fontSize = 14;
                     _drawPending.bold = false;
@@ -5878,23 +5899,23 @@ function _tvEnableDrawing(chartId) {
         }
 
         // Brush / Highlighter — free-form drawing, collect points on drag
-        if (_drawActiveTool === 'brush' || _drawActiveTool === 'highlighter') {
+        if (_tool === 'brush' || _tool === 'highlighter') {
             _drawPending = {
-                _id: ++_drawIdCounter, type: _drawActiveTool,
+                _id: ++_drawIdCounter, type: _tool,
                 points: [{ t: coord.time, p: coord.price }],
                 chartId: chartId, color: _drawDefaults.color,
-                lineWidth: _drawActiveTool === 'highlighter' ? 10 : _drawDefaults.lineWidth,
-                opacity: _drawActiveTool === 'highlighter' ? 0.4 : 1,
+                lineWidth: _tool === 'highlighter' ? 10 : _drawDefaults.lineWidth,
+                opacity: _tool === 'highlighter' ? 0.4 : 1,
             };
             _tvRenderDrawings(chartId);
             return;
         }
 
         // Path / Polyline — click-per-point, double-click or right-click to finish
-        if (_drawActiveTool === 'path' || _drawActiveTool === 'polyline') {
+        if (_tool === 'path' || _tool === 'polyline') {
             if (!_drawPending || _drawPending.chartId !== chartId) {
                 _drawPending = {
-                    _id: ++_drawIdCounter, type: _drawActiveTool,
+                    _id: ++_drawIdCounter, type: _tool,
                     points: [{ t: coord.time, p: coord.price }],
                     chartId: chartId, color: _drawDefaults.color,
                     lineWidth: _drawDefaults.lineWidth, lineStyle: _drawDefaults.lineStyle,
@@ -5931,10 +5952,10 @@ function _tvEnableDrawing(chartId) {
             e.preventDefault();
             _drawPending = null;
             _tvRenderDrawings(chartId);
-            _tvRevertToCursor();
-        } else if (_drawActiveTool !== 'cursor' && _drawActiveTool !== 'crosshair') {
+            _tvRevertToCursor(chartId);
+        } else if (ds._activeTool !== 'cursor' && ds._activeTool !== 'crosshair') {
             e.preventDefault();
-            _tvRevertToCursor();
+            _tvRevertToCursor(chartId);
         }
     });
 
@@ -5947,8 +5968,8 @@ function _tvEnableDrawing(chartId) {
                 _tvRenderDrawings(chartId);
             }
             // If a drawing tool is active, revert to cursor
-            if (_drawActiveTool !== 'cursor' && _drawActiveTool !== 'crosshair') {
-                _tvRevertToCursor();
+            if (ds._activeTool !== 'cursor' && ds._activeTool !== 'crosshair') {
+                _tvRevertToCursor(chartId);
                 return;
             }
             // Otherwise deselect any selected drawing
@@ -5975,17 +5996,15 @@ function _tvDeselectAll(chartId) {
 }
 
 // Revert to cursor mode and update the left toolbar UI
-function _tvRevertToCursor() {
-    if (_drawActiveTool === 'cursor') return;
-    _tvSetDrawTool('cursor');
-    // Update left toolbar: remove active from all tool icons, highlight cursor
-    var allIcons = document.querySelectorAll('.pywry-toolbar-left .pywry-icon-btn');
-    allIcons.forEach(function(el) { el.classList.remove('active'); });
-    var ids = Object.keys(window.__PYWRY_TVCHARTS__);
-    for (var i = 0; i < ids.length; i++) {
-        var cBtn = _tvScopedById(ids[i], 'tvchart-tool-cursor');
-        if (cBtn) cBtn.classList.add('active');
-    }
+function _tvRevertToCursor(chartId) {
+    var ds = window.__PYWRY_DRAWINGS__[chartId];
+    if (!ds || ds._activeTool === 'cursor') return;
+    _tvSetDrawTool(chartId, 'cursor');
+    // Update left toolbar scoped to this chart
+    var allIcons = _tvScopedQueryAll(chartId, '.pywry-toolbar-left .pywry-icon-btn');
+    if (allIcons) allIcons.forEach(function(el) { el.classList.remove('active'); });
+    var cursorBtn = _tvScopedById(chartId, 'tvchart-tool-cursor');
+    if (cursorBtn) cursorBtn.classList.add('active');
 }
 
 function _emitDrawingAdded(chartId, d) {
@@ -6044,39 +6063,30 @@ function _emitDrawingAdded(chartId, d) {
 }
 
 // ---- Tool switching ----
-function _tvSetDrawTool(tool) {
-    _drawActiveTool = tool;
-    _drawPending = null;
-
-    var ids = Object.keys(window.__PYWRY_TVCHARTS__);
-    for (var i = 0; i < ids.length; i++) {
-        var ds = window.__PYWRY_DRAWINGS__[ids[i]];
-        if (!ds) {
-            _tvEnsureDrawingLayer(ids[i]);
-            _tvEnableDrawing(ids[i]);
-            ds = window.__PYWRY_DRAWINGS__[ids[i]];
-        }
-        if (!ds) continue;
-
-        if (tool === 'cursor') {
-            // Cursor mode: canvas captures for selection
-            _tvApplyDrawingInteractionMode(ds);
-        } else if (tool === 'crosshair') {
-            _tvApplyDrawingInteractionMode(ds);
-        } else {
-            _tvApplyDrawingInteractionMode(ds);
-        }
-
-        // Toggle chart crosshair lines based on tool selection
-        var entry = window.__PYWRY_TVCHARTS__[ids[i]];
-        if (entry && entry._chartPrefs) {
-            entry._chartPrefs.crosshairEnabled = (tool === 'crosshair');
-            _tvApplyHoverReadoutMode(entry);
-        }
-
-        // Deselect when switching tools
-        _tvDeselectAll(ids[i]);
+function _tvSetDrawTool(chartId, tool) {
+    var ds = window.__PYWRY_DRAWINGS__[chartId];
+    if (!ds) {
+        _tvEnsureDrawingLayer(chartId);
+        ds = window.__PYWRY_DRAWINGS__[chartId];
     }
+    if (!ds) return;
+
+    ds._activeTool = tool;
+    if (_drawPending && _drawPending.chartId === chartId) {
+        _drawPending = null;
+    }
+
+    _tvApplyDrawingInteractionMode(ds);
+
+    // Toggle chart crosshair lines based on tool selection
+    var entry = window.__PYWRY_TVCHARTS__[chartId];
+    if (entry && entry._chartPrefs) {
+        entry._chartPrefs.crosshairEnabled = (tool === 'crosshair');
+        _tvApplyHoverReadoutMode(entry);
+    }
+
+    // Deselect when switching tools
+    _tvDeselectAll(chartId);
 }
 
 // ---- Clear all drawings ----
@@ -6093,7 +6103,7 @@ function _tvClearDrawings(chartId) {
     }
     ds.priceLines = [];
     ds.drawings   = [];
-    _drawPending  = null;
+    if (_drawPending && _drawPending.chartId === chartId) _drawPending = null;
     _drawSelectedIdx   = -1;
     _drawSelectedChart = null;
     _tvHideFloatingToolbar();

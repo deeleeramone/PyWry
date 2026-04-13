@@ -193,11 +193,12 @@ function _tvSetupLegendControls(chartId) {
             })(actions[mi]);
         }
         menu.addEventListener('click', function(e) { e.stopPropagation(); });
-        document.body.appendChild(menu);
-        var rect = anchorEl.getBoundingClientRect();
+        var _oc = _tvAppendOverlay(chartId, menu);
+        var _cs = _tvContainerSize(_oc);
+        var rect = _tvContainerRect(_oc, anchorEl.getBoundingClientRect());
         var menuRect = menu.getBoundingClientRect();
-        var left = Math.max(6, Math.min(window.innerWidth - menuRect.width - 6, rect.right - menuRect.width));
-        var top = Math.max(6, Math.min(window.innerHeight - menuRect.height - 6, rect.bottom + 4));
+        var left = Math.max(6, Math.min(_cs.width - menuRect.width - 6, rect.right - menuRect.width));
+        var top = Math.max(6, Math.min(_cs.height - menuRect.height - 6, rect.bottom + 4));
         menu.style.left = left + 'px';
         menu.style.top = top + 'px';
         legendMenuEl = menu;
@@ -555,7 +556,7 @@ function _tvSetupLegendControls(chartId) {
         panel.appendChild(footer);
 
         overlay.appendChild(panel);
-        document.body.appendChild(overlay);
+        _tvAppendOverlay(chartId, overlay);
     }
 
     function _legendCloseObjectTree() {
@@ -625,8 +626,9 @@ function _tvSetupLegendControls(chartId) {
                 rm.style.padding = '4px 10px';
                 rm.textContent = 'Remove';
                 rm.addEventListener('click', function() {
-                    if (window.pywry && typeof window.pywry.emit === 'function') {
-                        window.pywry.emit('tvchart:remove-series', { chartId: chartId, seriesId: sid });
+                    var _bridge = _tvGetBridge(chartId);
+                    if (_bridge && typeof _bridge.emit === 'function') {
+                        _bridge.emit('tvchart:remove-series', { chartId: chartId, seriesId: sid });
                     }
                     _legendCloseObjectTree();
                 });
@@ -637,7 +639,7 @@ function _tvSetupLegendControls(chartId) {
 
         panel.appendChild(body);
         overlay.appendChild(panel);
-        document.body.appendChild(overlay);
+        _tvAppendOverlay(chartId, overlay);
         legendObjectTreeOverlayEl = overlay;
     }
 
@@ -1001,7 +1003,7 @@ function _tvSetupLegendControls(chartId) {
 
         panel.appendChild(body);
         overlay.appendChild(panel);
-        document.body.appendChild(overlay);
+        _tvAppendOverlay(chartId, overlay);
         legendSecurityInfoOverlayEl = overlay;
     }
 
@@ -1357,8 +1359,9 @@ function _tvSetupLegendControls(chartId) {
                     return;
                 }
                 if (action === 'remove') {
-                    if (window.pywry && typeof window.pywry.emit === 'function') {
-                        window.pywry.emit('tvchart:remove-series', { chartId: chartId, seriesId: targetSeriesId });
+                    var _bridge = _tvGetBridge(chartId);
+                    if (_bridge && typeof _bridge.emit === 'function') {
+                        _bridge.emit('tvchart:remove-series', { chartId: chartId, seriesId: targetSeriesId });
                     }
                     return;
                 }
@@ -1487,8 +1490,9 @@ function _tvSetupLegendControls(chartId) {
                             icon: removeSvg,
                             meta: 'Del',
                             run: function() {
-                                if (window.pywry && typeof window.pywry.emit === 'function') {
-                                    window.pywry.emit('tvchart:remove-series', { chartId: chartId, seriesId: targetSeriesId });
+                                var _bridge = _tvGetBridge(chartId);
+                                if (_bridge && typeof _bridge.emit === 'function') {
+                                    _bridge.emit('tvchart:remove-series', { chartId: chartId, seriesId: targetSeriesId });
                                 }
                             },
                         },

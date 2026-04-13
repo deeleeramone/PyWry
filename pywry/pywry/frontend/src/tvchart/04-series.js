@@ -300,11 +300,11 @@ function _tvBuildPeriodParams(entry, seriesId) {
     var from = 0;
     var to = 0;
     if (bars.length) {
-        from = Math.floor(_tvTimeToMs(bars[0].time) / 1000);
-        var lastSec = Math.floor(_tvTimeToMs(bars[bars.length - 1].time) / 1000);
+        from = _tvTimeToSec(bars[0].time);
+        var lastSec = _tvTimeToSec(bars[bars.length - 1].time);
         var stepSec = 60;
         if (bars.length > 1) {
-            var prevSec = Math.floor(_tvTimeToMs(bars[bars.length - 2].time) / 1000);
+            var prevSec = _tvTimeToSec(bars[bars.length - 2].time);
             stepSec = Math.max(1, lastSec - prevSec);
         }
         to = lastSec + stepSec;
@@ -356,7 +356,9 @@ function _tvIntervalShortLabel(interval) {
     var labels = {
         '1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','45m':'45m',
         '1h':'1H','2h':'2H','3h':'3H','4h':'4H',
-        '1d':'D','1w':'W','1M':'M','3M':'3M','6M':'6M','12M':'12M'
+        '1d':'D','2d':'2D','3d':'3D',
+        '1w':'W','2w':'2W','3w':'3W',
+        '1M':'M','2M':'2M','3M':'3M','6M':'6M','12M':'12M'
     };
     return labels[interval] || interval;
 }
@@ -372,21 +374,41 @@ function _tvTimeToMs(timeValue) {
     return isFinite(parsed) ? parsed : NaN;
 }
 
-function _tvResolveRangeSpanMs(rangeValue) {
-    var dayMs = 24 * 60 * 60 * 1000;
+function _tvResolveRangeSpanDays(rangeValue) {
     var spans = {
-        '1d': 1 * dayMs,
-        '5d': 5 * dayMs,
-        '1m': 30 * dayMs,
-        '3m': 91 * dayMs,
-        '6m': 182 * dayMs,
-        '1y': 365 * dayMs,
-        '3y': 365 * 3 * dayMs,
-        '5y': 365 * 5 * dayMs,
-        '10y': 365 * 10 * dayMs,
-        '20y': 365 * 20 * dayMs
+        '1d': 1,
+        '5d': 5,
+        '1m': 30,
+        '3m': 91,
+        '6m': 182,
+        '1y': 365,
+        '3y': 365 * 3,
+        '5y': 365 * 5,
+        '10y': 365 * 10,
+        '20y': 365 * 20,
     };
     return spans[rangeValue] || spans['1y'];
+}
+
+/**
+ * Return the number of seconds one bar represents for a given interval string.
+ */
+function _tvIntervalToSeconds(interval) {
+    var m = String(interval || '1d').match(/^(\d+)?([smhdwM])$/i);
+    if (!m) return 86400; // default daily
+    var n = parseInt(m[1] || '1', 10) || 1;
+    var unit = m[2];
+    switch (unit) {
+        case 's': return n;
+        case 'm': return n * 60;
+        case 'h': return n * 3600;
+        case 'd':
+        case 'D': return n * 86400;
+        case 'w':
+        case 'W': return n * 7 * 86400;
+        case 'M': return n * 30 * 86400;
+        default:  return 86400;
+    }
 }
 
 function _tvCurrentInterval(chartId) {
@@ -417,21 +439,53 @@ function _tvSetIntervalUi(chartId, interval) {
 
 function _tvResolvePrimaryBars(entry) {
     if (!entry) return [];
-    // When session filtering is active, return the displayed (filtered) bars
-    // so that logical indices match what the chart series actually has.
-    if (entry._seriesDisplayData && entry._seriesDisplayData.main && entry._seriesDisplayData.main.length) {
-        return entry._seriesDisplayData.main;
+
+    // Best source: ask the actual chart series for its current data.
+    // This is always in sync — includes scrollback, real-time updates, etc.
+    var series = _tvResolvePrimarySeries(entry);
+    if (series && typeof series.data === 'function') {
+        try {
+            var seriesData = series.data();
+            if (seriesData && seriesData.length) return seriesData;
+        } catch (e) {}
     }
+
+    // Resolve the primary series ID — may be 'main' or 'series-0' depending
+    // on whether the payload specified an explicit seriesId.
+    var primaryId = 'main';
     var payload = entry.payload || {};
     var seriesList = payload.series;
-    if (seriesList && Array.isArray(seriesList) && seriesList[0] && seriesList[0].bars && seriesList[0].bars.length) {
+    if (seriesList && Array.isArray(seriesList) && seriesList.length > 0) {
+        primaryId = seriesList[0].seriesId || 'series-0';
+    }
+
+    // When session filtering is active, return the displayed (filtered) bars
+    // so that logical indices match what the chart series actually has.
+    if (entry._seriesDisplayData) {
+        var displayBars = entry._seriesDisplayData[primaryId] || entry._seriesDisplayData.main;
+        if (displayBars && displayBars.length) return displayBars;
+    }
+
+    // _seriesRawData fallback
+    if (entry._seriesRawData) {
+        var rawBars = entry._seriesRawData[primaryId] || entry._seriesRawData.main;
+        if (rawBars && rawBars.length) return rawBars;
+    }
+
+    if (seriesList && seriesList[0] && seriesList[0].bars && seriesList[0].bars.length) {
         return seriesList[0].bars;
     }
     if (payload.bars && payload.bars.length) return payload.bars;
-    if (entry._seriesRawData && entry._seriesRawData.main && entry._seriesRawData.main.length) {
-        return entry._seriesRawData.main;
-    }
     return [];
+}
+
+function _tvResolvePrimarySeries(entry) {
+    if (!entry || !entry.seriesMap) return null;
+    // Try 'main' first, then 'series-0', then first key
+    if (entry.seriesMap.main) return entry.seriesMap.main;
+    if (entry.seriesMap['series-0']) return entry.seriesMap['series-0'];
+    var keys = Object.keys(entry.seriesMap);
+    return keys.length > 0 ? entry.seriesMap[keys[0]] : null;
 }
 
 function _tvApplyTimeRangeSelection(entry, range) {
@@ -445,41 +499,79 @@ function _tvApplyTimeRangeSelection(entry, range) {
         return true;
     }
 
-    var lastBarTime = _tvTimeToMs(bars[totalBars - 1].time);
-    if (!isFinite(lastBarTime)) {
+    var lastIndex = totalBars - 1;
+
+    // Get the last bar's timestamp in seconds
+    var lastBarSec = _tvTimeToSec(bars[lastIndex].time);
+    if (!isFinite(lastBarSec)) {
         entry.chart.timeScale().fitContent();
-        return true;
+        return false;
     }
 
-    var fromMs;
+    // Compute the cutoff timestamp: last bar minus the requested range
+    var cutoffSec;
     if (range === 'ytd') {
-        var lastDate = new Date(lastBarTime);
-        fromMs = Date.UTC(lastDate.getUTCFullYear(), 0, 1);
+        var lastDate = new Date(lastBarSec * 1000);
+        cutoffSec = Math.floor(Date.UTC(lastDate.getUTCFullYear(), 0, 1) / 1000);
     } else {
-        var spanMs = _tvResolveRangeSpanMs(range);
-        if (!isFinite(spanMs)) {
-            entry.chart.timeScale().fitContent();
-            return true;
-        }
-        fromMs = lastBarTime - spanMs;
+        var spanDays = _tvResolveRangeSpanDays(range);
+        cutoffSec = lastBarSec - (spanDays * 86400);
     }
 
-    return _tvApplyAbsoluteDateRange(entry, fromMs, lastBarTime, true);
+    // Walk the bars to find the first one at or after the cutoff
+    var fromIndex = 0;
+    for (var i = 0; i < totalBars; i++) {
+        var barSec = _tvTimeToSec(bars[i].time);
+        if (isFinite(barSec) && barSec >= cutoffSec) {
+            fromIndex = i;
+            break;
+        }
+    }
+
+    if (fromIndex >= lastIndex) {
+        entry.chart.timeScale().fitContent();
+        return false;
+    }
+
+    entry.chart.timeScale().setVisibleLogicalRange({
+        from: fromIndex,
+        to: lastIndex,
+    });
+    return true;
 }
 
-function _tvApplyAbsoluteDateRange(entry, fromMs, toMs, fallbackFit) {
+/**
+ * Normalise any time value to seconds.  Accepts unix seconds, unix ms,
+ * or {year,month,day} business-day objects.
+ */
+function _tvTimeToSec(timeValue) {
+    if (typeof timeValue === 'number' && isFinite(timeValue)) {
+        return timeValue > 1e12 ? Math.floor(timeValue / 1000) : timeValue;
+    }
+    if (timeValue && typeof timeValue === 'object' && timeValue.year && timeValue.month && timeValue.day) {
+        return Math.floor(Date.UTC(timeValue.year, timeValue.month - 1, timeValue.day) / 1000);
+    }
+    var parsed = Date.parse(String(timeValue));
+    return isFinite(parsed) ? Math.floor(parsed / 1000) : NaN;
+}
+
+function _tvApplyAbsoluteDateRange(entry, fromSec, toSec, fallbackFit) {
     if (!entry || !entry.chart) return false;
     var bars = _tvResolvePrimaryBars(entry);
     var totalBars = bars.length;
     if (!totalBars) return false;
 
+    // Normalise inputs — callers may pass ms or seconds
+    var fromS = fromSec > 1e12 ? Math.floor(fromSec / 1000) : fromSec;
+    var toS = toSec > 1e12 ? Math.floor(toSec / 1000) : toSec;
+
     var fromIndex = -1;
     var toIndex = -1;
     for (var index = 0; index < totalBars; index++) {
-        var pointMs = _tvTimeToMs(bars[index].time);
-        if (!isFinite(pointMs)) continue;
-        if (fromIndex === -1 && pointMs >= fromMs) fromIndex = index;
-        if (pointMs <= toMs) toIndex = index;
+        var barSec = _tvTimeToSec(bars[index].time);
+        if (!isFinite(barSec)) continue;
+        if (fromIndex === -1 && barSec >= fromS) fromIndex = index;
+        if (barSec <= toS) toIndex = index;
     }
 
     if (fromIndex === -1 || toIndex === -1 || fromIndex > toIndex) {
@@ -499,10 +591,10 @@ function _tvPromptDateRangeAndApply(entry) {
     var bars = _tvResolvePrimaryBars(entry);
     if (!bars.length) return;
 
-    var lastMs = _tvTimeToMs(bars[bars.length - 1].time);
-    if (!isFinite(lastMs)) return;
-    var defaultEnd = new Date(lastMs).toISOString().slice(0, 10);
-    var defaultStart = new Date(lastMs - (90 * 24 * 60 * 60 * 1000)).toISOString().slice(0, 10);
+    var lastSec = _tvTimeToSec(bars[bars.length - 1].time);
+    if (!isFinite(lastSec)) return;
+    var defaultEnd = new Date(lastSec * 1000).toISOString().slice(0, 10);
+    var defaultStart = new Date((lastSec - 90 * 86400) * 1000).toISOString().slice(0, 10);
 
     var previous = document.querySelector('.tv-date-range-overlay');
     if (previous && previous.parentNode) previous.parentNode.removeChild(previous);
@@ -514,10 +606,10 @@ function _tvPromptDateRangeAndApply(entry) {
 
     function parseIsoDate(dateValue) {
         var parsed = Date.parse(String(dateValue || '').trim() + 'T00:00:00Z');
-        return isFinite(parsed) ? parsed : NaN;
+        return isFinite(parsed) ? Math.floor(parsed / 1000) : NaN;
     }
 
-    function parseTimeToMs(timeValue) {
+    function parseTimeToSec(timeValue) {
         var raw = String(timeValue || '').trim();
         var parts = raw.split(':');
         if (parts.length !== 2) return NaN;
@@ -525,16 +617,16 @@ function _tvPromptDateRangeAndApply(entry) {
         var mm = Number(parts[1]);
         if (!isFinite(hh) || !isFinite(mm)) return NaN;
         if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return NaN;
-        return ((hh * 60) + mm) * 60 * 1000;
+        return (hh * 60 + mm) * 60;
     }
 
-    function findNearestBarIndex(targetMs) {
+    function findNearestBarIndex(targetSec) {
         var nearest = -1;
         var nearestDiff = Infinity;
         for (var i = 0; i < bars.length; i++) {
-            var barMs = _tvTimeToMs(bars[i].time);
-            if (!isFinite(barMs)) continue;
-            var diff = Math.abs(barMs - targetMs);
+            var barSec = _tvTimeToSec(bars[i].time);
+            if (!isFinite(barSec)) continue;
+            var diff = Math.abs(barSec - targetSec);
             if (diff < nearestDiff) {
                 nearestDiff = diff;
                 nearest = i;
@@ -543,8 +635,8 @@ function _tvPromptDateRangeAndApply(entry) {
         return nearest;
     }
 
-    function applyGoToDate(targetMs) {
-        var index = findNearestBarIndex(targetMs);
+    function applyGoToDate(targetSec) {
+        var index = findNearestBarIndex(targetSec);
         if (index < 0) {
             entry.chart.timeScale().fitContent();
             return;
@@ -740,35 +832,35 @@ function _tvPromptDateRangeAndApply(entry) {
 
     var activeTab = 'date';
     var calendarView = 'day';
-    var selectedMs = parseIsoDate(defaultEnd);
-    var viewDate = new Date(selectedMs);
-    var customStartMs = parseIsoDate(defaultStart);
-    var customEndMs = parseIsoDate(defaultEnd);
+    var selectedSec = parseIsoDate(defaultEnd);
+    var viewDate = new Date(selectedSec * 1000);
+    var customStartSec = parseIsoDate(defaultStart);
+    var customEndSec = parseIsoDate(defaultEnd);
     var customSelectPhase = 'start';
 
     function _syncCustomInputsFromState() {
-        if (isFinite(customStartMs)) customStartRow.dateInput.value = toIsoDate(customStartMs);
-        if (isFinite(customEndMs)) customEndRow.dateInput.value = toIsoDate(customEndMs);
+        if (isFinite(customStartSec)) customStartRow.dateInput.value = toIsoDate(customStartSec * 1000);
+        if (isFinite(customEndSec)) customEndRow.dateInput.value = toIsoDate(customEndSec * 1000);
     }
 
     function _parseDateTime(dateVal, timeVal) {
-        var dayMs = parseIsoDate(dateVal);
-        if (!isFinite(dayMs)) return NaN;
-        var timeMs = parseTimeToMs(timeVal);
-        if (!isFinite(timeMs)) timeMs = 0;
-        return dayMs + timeMs;
+        var daySec = parseIsoDate(dateVal);
+        if (!isFinite(daySec)) return NaN;
+        var timeSec = parseTimeToSec(timeVal);
+        if (!isFinite(timeSec)) timeSec = 0;
+        return daySec + timeSec;
     }
 
     function _recalcCustomRangeFromInputs() {
         var s = parseIsoDate(customStartRow.dateInput.value);
         var e = parseIsoDate(customEndRow.dateInput.value);
         if (!isFinite(s) || !isFinite(e)) return;
-        customStartMs = s;
-        customEndMs = e;
-        if (customEndMs < customStartMs) {
-            var t = customStartMs;
-            customStartMs = customEndMs;
-            customEndMs = t;
+        customStartSec = s;
+        customEndSec = e;
+        if (customEndSec < customStartSec) {
+            var t = customStartSec;
+            customStartSec = customEndSec;
+            customEndSec = t;
             _syncCustomInputsFromState();
         }
     }
@@ -842,8 +934,8 @@ function _tvPromptDateRangeAndApply(entry) {
             btn.textContent = String(dayNumber);
             if (activeTab === 'custom') {
                 var dayKey = toIsoDate(dayMs);
-                var startKey = isFinite(customStartMs) ? toIsoDate(customStartMs) : '';
-                var endKey = isFinite(customEndMs) ? toIsoDate(customEndMs) : '';
+                var startKey = isFinite(customStartSec) ? toIsoDate(customStartSec * 1000) : '';
+                var endKey = isFinite(customEndSec) ? toIsoDate(customEndSec * 1000) : '';
                 var minKey = startKey;
                 var maxKey = endKey;
                 if (startKey && endKey && startKey > endKey) {
@@ -855,28 +947,29 @@ function _tvPromptDateRangeAndApply(entry) {
                 }
                 if (dayKey === minKey) btn.classList.add('range-start');
                 if (dayKey === maxKey) btn.classList.add('range-end');
-            } else if (toIsoDate(dayMs) === toIsoDate(selectedMs)) {
+            } else if (toIsoDate(dayMs) === toIsoDate(selectedSec * 1000)) {
                 btn.classList.add('selected');
             }
             btn.addEventListener('click', function(ms) {
                 return function() {
+                    var sec = Math.floor(ms / 1000);
                     if (activeTab === 'custom') {
                         if (customSelectPhase === 'start') {
-                            customStartMs = ms;
-                            if (!isFinite(customEndMs) || customEndMs < customStartMs) customEndMs = customStartMs;
+                            customStartSec = sec;
+                            if (!isFinite(customEndSec) || customEndSec < customStartSec) customEndSec = customStartSec;
                             customSelectPhase = 'end';
                         } else {
-                            customEndMs = ms;
-                            if (customEndMs < customStartMs) {
-                                var tmp = customStartMs;
-                                customStartMs = customEndMs;
-                                customEndMs = tmp;
+                            customEndSec = sec;
+                            if (customEndSec < customStartSec) {
+                                var tmp = customStartSec;
+                                customStartSec = customEndSec;
+                                customEndSec = tmp;
                             }
                             customSelectPhase = 'start';
                         }
                         _syncCustomInputsFromState();
                     } else {
-                        selectedMs = ms;
+                        selectedSec = sec;
                         dateInput.value = toIsoDate(ms);
                     }
                     viewDate = new Date(ms);
@@ -901,21 +994,21 @@ function _tvPromptDateRangeAndApply(entry) {
 
     function applySelection() {
         if (activeTab === 'custom') {
-            var startMs = _parseDateTime(customStartRow.dateInput.value, customStartRow.timeInput.value);
-            var endMs = _parseDateTime(customEndRow.dateInput.value, customEndRow.timeInput.value);
-            if (!isFinite(startMs) || !isFinite(endMs)) return;
-            var fromMs = Math.min(startMs, endMs);
-            var toMs = Math.max(startMs, endMs);
-            _tvApplyAbsoluteDateRange(entry, fromMs, toMs, true);
+            var startSec = _parseDateTime(customStartRow.dateInput.value, customStartRow.timeInput.value);
+            var endSec = _parseDateTime(customEndRow.dateInput.value, customEndRow.timeInput.value);
+            if (!isFinite(startSec) || !isFinite(endSec)) return;
+            var fromSec = Math.min(startSec, endSec);
+            var toSec = Math.max(startSec, endSec);
+            _tvApplyAbsoluteDateRange(entry, fromSec, toSec, true);
             closeDialog();
             return;
         }
 
-        var chosenDateMs = parseIsoDate(dateInput.value);
-        if (!isFinite(chosenDateMs)) return;
-        var chosenTimeMs = parseTimeToMs(timeInput.value);
-        if (!isFinite(chosenTimeMs)) chosenTimeMs = 0;
-        applyGoToDate(chosenDateMs + chosenTimeMs);
+        var chosenDateSec = parseIsoDate(dateInput.value);
+        if (!isFinite(chosenDateSec)) return;
+        var chosenTimeSec = parseTimeToSec(timeInput.value);
+        if (!isFinite(chosenTimeSec)) chosenTimeSec = 0;
+        applyGoToDate(chosenDateSec + chosenTimeSec);
         closeDialog();
     }
 
@@ -956,15 +1049,15 @@ function _tvPromptDateRangeAndApply(entry) {
     dateInput.addEventListener('change', function() {
         var parsed = parseIsoDate(dateInput.value);
         if (!isFinite(parsed)) return;
-        selectedMs = parsed;
-        viewDate = new Date(parsed);
+        selectedSec = parsed;
+        viewDate = new Date(parsed * 1000);
         renderCalendar();
     });
     dateInput.addEventListener('input', function() {
         var parsed = parseIsoDate(dateInput.value);
         if (!isFinite(parsed)) return;
-        selectedMs = parsed;
-        viewDate = new Date(parsed);
+        selectedSec = parsed;
+        viewDate = new Date(parsed * 1000);
         renderCalendar();
     });
     dateInput.addEventListener('keydown', function(evt) {
@@ -994,7 +1087,7 @@ function _tvPromptDateRangeAndApply(entry) {
 
     renderCalendar();
     setTab('date');
-    document.body.appendChild(overlay);
+    _tvAppendOverlay(entry.chartId, overlay);
     dateInput.focus();
 }
 

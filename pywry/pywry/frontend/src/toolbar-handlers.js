@@ -471,9 +471,9 @@ function initToolbarHandlers(container, pywry) {
                 toolbar.setAttribute('aria-expanded', !isCollapsed);
                 var storageKey = 'pywry-toolbar-collapsed-' + toolbarId;
                 sessionStorage.setItem(storageKey, isCollapsed);
-                if (window.pywry && window.pywry.emit) {
+                if (pywry && pywry.emit) {
                     var eventName = isCollapsed ? 'toolbar:collapse' : 'toolbar:expand';
-                    window.pywry.emit(eventName, { componentId: toolbarId, collapsed: isCollapsed }, toolbar);
+                    pywry.emit(eventName, { componentId: toolbarId, collapsed: isCollapsed }, toolbar);
                 }
             }
         });
@@ -523,8 +523,8 @@ function initToolbarHandlers(container, pywry) {
         var position = resizeState.position;
         if (position === 'left' || position === 'right') sessionStorage.setItem('pywry-toolbar-width-' + componentId, toolbar.style.width);
         if (position === 'top' || position === 'bottom') sessionStorage.setItem('pywry-toolbar-height-' + componentId, toolbar.style.height);
-        if (window.pywry && window.pywry.emit) {
-            window.pywry.emit('toolbar:resize', { componentId: componentId, position: position, width: toolbar.offsetWidth, height: toolbar.offsetHeight }, toolbar);
+        if (pywry && pywry.emit) {
+            pywry.emit('toolbar:resize', { componentId: componentId, position: position, width: toolbar.offsetWidth, height: toolbar.offsetHeight }, toolbar);
         }
         resizeState.active = false;
         resizeState.toolbar = null;

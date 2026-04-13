@@ -252,8 +252,7 @@ class FileChartStore(ChartStore):
                 val = path.read_text(encoding="utf-8").strip()
             except OSError:
                 return "factory"
-            else:
-                return val if val in ("factory", "custom") else "factory"
+            return val if val in ("factory", "custom") else "factory"
 
     async def set_settings_default_id(self, user_id: str, template_id: str) -> None:
         """Set which settings template is active."""

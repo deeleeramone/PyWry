@@ -1476,8 +1476,11 @@ if HAS_ANYWIDGET:
 
                 traceback.print_exc()
 
-        def on(
-            self, event_type: str, callback: Callable[[dict[str, Any], str, str], Any]
+        def on(  # pylint: disable=unused-argument
+            self,
+            event_type: str,
+            callback: Callable[[dict[str, Any], str, str], Any],
+            label: str | None = None,
         ) -> PyWryWidget:
             """Register a callback for events from JavaScript.
 
@@ -1487,6 +1490,9 @@ if HAS_ANYWIDGET:
                 Event name (e.g., 'toggle', 'custom_event').
             callback : Callable[[dict[str, Any], str, str], Any]
                 Handler function receiving (data, event_type, label).
+            label : str or None, optional
+                Ignored for widgets (accepted for API compatibility with
+                ``PyWry.on()``).
 
             Returns
             -------
@@ -1908,9 +1914,13 @@ if HAS_ANYWIDGET:
             chart_id: str = "",
             **kwargs,
         ):
+            # Set traits BEFORE super().__init__() so they're available when render() fires
+            kwargs["chart_config"] = chart_config
+            if chart_id:
+                kwargs["chart_id"] = chart_id
             super().__init__(content=content, theme=theme, width=width, height=height, **kwargs)
-            self.chart_config = chart_config
-            self.chart_id = chart_id or self._label
+            if not self.chart_id:
+                self.chart_id = self._label
             self.observe(self._handle_js_event, names=["_js_event"])
 
         def emit(self, event_type: str, data: dict[str, Any] | None = None) -> None:
@@ -1945,7 +1955,12 @@ else:
             """Get widget label."""
             return self._label
 
-        def on(self, event_type: str, callback: Callable[..., Any]) -> None:
+        def on(
+            self,
+            event_type: str,
+            callback: Callable[..., Any],
+            label: str | None = None,
+        ) -> None:
             """Register an event handler.
 
             Parameters
@@ -1954,6 +1969,8 @@ else:
                 Event name to subscribe to.
             callback : Callable[..., Any]
                 Callback that would handle the event in a real anywidget runtime.
+            label : str or None, optional
+                Ignored (accepted for API compatibility with ``PyWry.on()``).
 
             Notes
             -----

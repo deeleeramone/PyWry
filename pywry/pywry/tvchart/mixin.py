@@ -871,6 +871,7 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
                     "seriesId": series_id,
                     "bars": bars,
                     "interval": interval,
+                    "symbol": symbol,
                     "fitContent": True,
                 },
             )

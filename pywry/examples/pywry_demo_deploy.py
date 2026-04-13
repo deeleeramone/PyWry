@@ -483,7 +483,7 @@ class HomePage:
             </div>
 
             <p class="demo-footer">
-                Built with <a href="https://github.com/OpenBB-finance/OpenBB">PyWry 2.0</a>
+                Built with <a href="https://github.com/deeleeramone/PyWry">PyWry 2.0</a>
             </p>
         </div>
         """

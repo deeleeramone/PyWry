@@ -3,20 +3,22 @@
 // ---------------------------------------------------------------------------
 
 (function() {
-    function onReady() {
-        if (!window.pywry || typeof window.pywry.on !== 'function') {
-            setTimeout(onReady, 50);
+    function onReady(bridge) {
+        // Accept explicit bridge parameter (per-widget in notebook mode).
+        // Falls back to window.pywry for native-window mode.
+        bridge = bridge || window.pywry;
+        if (!bridge || typeof bridge.on !== 'function') {
+            setTimeout(function() { onReady(bridge); }, 50);
             return;
         }
-        // Re-register bridge handlers whenever window.pywry changes.
-        // Each anywidget render creates a fresh pywry bridge object, so the
-        // pywry.on() handlers must be attached to the *current* bridge for
-        // toolbar events to reach the chart.
-        if (window.__PYWRY_TVCHART_BRIDGE__ === window.pywry) return;
-        window.__PYWRY_TVCHART_BRIDGE__ = window.pywry;
+
+        // Chart ID owned by THIS bridge.  In notebook mode each widget sets
+        // bridge._chartId to its unique chart identifier.  Used as fallback
+        // instead of 'main' (which is a SERIES id, not a chart id).
+        var _cid = bridge._chartId || null;
 
         // Python → JS: create chart
-        window.pywry.on('tvchart:create', function(data) {
+        bridge.on('tvchart:create', function(data) {
             var container = data.containerId
                 ? document.getElementById(data.containerId)
                 : document.querySelector('.pywry-tvchart-container');
@@ -24,13 +26,13 @@
                 console.error('[pywry:tvchart] container not found:', data.containerId || '.pywry-tvchart-container');
                 return;
             }
-            var chartId = data.chartId || 'main';
+            var chartId = data.chartId || _cid;
             window.PYWRY_TVCHART_CREATE(chartId, container, data);
         });
 
         // Python → JS: update data
-        window.pywry.on('tvchart:data-response', function(data) {
-            var chartId = data.chartId || 'main';
+        bridge.on('tvchart:data-response', function(data) {
+            var chartId = data.chartId || _cid;
             var resolved = _tvResolveChartEntry(chartId);
             var entry = resolved ? resolved.entry : null;
             if (!entry || !entry.chart) return;
@@ -48,6 +50,24 @@
                     var container = entry.container;
                     var oldPayload = entry.payload || {};
                     var savedDisplayStyle = entry._chartDisplayStyle || null;
+
+                    // Save compare symbols and indicators before destroy
+                    var savedCompareSymbols = entry._compareSymbols ? _tvMerge(entry._compareSymbols, {}) : null;
+                    var savedCompareLabels = entry._compareLabels ? _tvMerge(entry._compareLabels, {}) : null;
+                    var savedCompareSymbolInfo = entry._compareSymbolInfo ? _tvMerge(entry._compareSymbolInfo, {}) : null;
+                    var savedCompareModes = {};
+                    var savedIndicators = [];
+                    var cid = resolved ? resolved.chartId : chartId;
+
+                    // Capture active indicators for this chart
+                    var indKeys = Object.keys(_activeIndicators);
+                    for (var ik = 0; ik < indKeys.length; ik++) {
+                        var indInfo = _activeIndicators[indKeys[ik]];
+                        if (indInfo && indInfo.chartId === cid) {
+                            savedIndicators.push(_tvMerge(indInfo, {}));
+                        }
+                    }
+
                     // Merge new bars into the rebuilt payload
                     var newPayload = _tvMerge(oldPayload, {});
                     newPayload.interval = data.interval;
@@ -70,7 +90,6 @@
                         }
                     }
                     // Destroy then recreate
-                    var cid = resolved ? resolved.chartId : chartId;
                     window.PYWRY_TVCHART_DESTROY(cid);
                     container.innerHTML = '';
                     window.PYWRY_TVCHART_CREATE(cid, container, newPayload);
@@ -79,10 +98,60 @@
 
                     // Re-apply chart display style if user changed it from default
                     if (savedDisplayStyle) {
-                        window.pywry.emit('tvchart:chart-type-change', {
+                        bridge.emit('tvchart:chart-type-change', {
                             value: savedDisplayStyle,
                             chartId: cid,
                         });
+                    }
+
+                    // Re-request compare symbols at the new interval
+                    if (savedCompareSymbols) {
+                        var newEntry = window.__PYWRY_TVCHARTS__[cid];
+                        if (newEntry) {
+                            newEntry._pendingCompareModes = savedCompareModes;
+                        }
+                        var cmpIds = Object.keys(savedCompareSymbols);
+                        for (var ci = 0; ci < cmpIds.length; ci++) {
+                            var cmpSid = cmpIds[ci];
+                            var cmpSym = savedCompareSymbols[cmpSid];
+                            if (!cmpSym) continue;
+                            bridge.emit('tvchart:data-request', {
+                                chartId: cid,
+                                symbol: cmpSym,
+                                symbolInfo: savedCompareSymbolInfo ? savedCompareSymbolInfo[cmpSid] : null,
+                                seriesId: cmpSid,
+                                interval: data.interval,
+                                resolution: data.interval,
+                                periodParams: {
+                                    from: 0,
+                                    to: Math.floor(Date.now() / 1000),
+                                    countBack: 300,
+                                    firstDataRequest: true,
+                                },
+                            });
+                        }
+                    }
+
+                    // Re-add indicators after a short delay to allow main series
+                    // data to be set (indicators compute from raw bar data)
+                    if (savedIndicators.length > 0) {
+                        setTimeout(function() {
+                            var reEntry = window.__PYWRY_TVCHARTS__[cid];
+                            if (!reEntry) return;
+                            for (var si = 0; si < savedIndicators.length; si++) {
+                                var ind = savedIndicators[si];
+                                _tvAddIndicator({
+                                    name: ind.name,
+                                    key: ind.type,
+                                    defaultPeriod: ind.period,
+                                    _color: ind.color,
+                                    _source: ind.source,
+                                    _method: ind.method,
+                                    _multiplier: ind.multiplier,
+                                    requiresSecondary: !!ind.secondarySeriesId,
+                                }, cid);
+                            }
+                        }, 100);
                     }
 
                     _tvRefreshLegendTitle(cid);
@@ -195,26 +264,26 @@
             _tvRenderHoverLegend(resolved ? resolved.chartId : chartId, null);
         });
 
-        window.pywry.on('tvchart:update', function(data) {
-            var chartId = data.chartId || 'main';
+        bridge.on('tvchart:update', function(data) {
+            var chartId = data.chartId || _cid;
             window.PYWRY_TVCHART_UPDATE(chartId, data);
         });
 
         // Python → JS: stream single bar
-        window.pywry.on('tvchart:stream', function(data) {
-            var chartId = data.chartId || 'main';
+        bridge.on('tvchart:stream', function(data) {
+            var chartId = data.chartId || _cid;
             window.PYWRY_TVCHART_STREAM(chartId, data);
         });
 
         // Python → JS: destroy chart
-        window.pywry.on('tvchart:destroy', function(data) {
-            var chartId = data.chartId || 'main';
+        bridge.on('tvchart:destroy', function(data) {
+            var chartId = data.chartId || _cid;
             window.PYWRY_TVCHART_DESTROY(chartId);
         });
 
         // Python → JS: apply chart options
-        window.pywry.on('tvchart:apply-options', function(data) {
-            var resolved = _tvResolveChartEntry(data.chartId || 'main');
+        bridge.on('tvchart:apply-options', function(data) {
+            var resolved = _tvResolveChartEntry(data.chartId || _cid);
             var entry = resolved ? resolved.entry : null;
             if (!entry || !entry.chart) return;
             if (data.chartOptions) {
@@ -227,8 +296,8 @@
         });
 
         // Python → JS: add an overlay/indicator series
-        window.pywry.on('tvchart:add-series', function(data) {
-            var resolved = _tvResolveChartEntry(data.chartId || 'main');
+        bridge.on('tvchart:add-series', function(data) {
+            var resolved = _tvResolveChartEntry(data.chartId || _cid);
             var entry = resolved ? resolved.entry : null;
             if (!entry || !entry.chart) return;
             var sType = data.seriesType || 'Line';
@@ -291,15 +360,15 @@
                 seriesType: sType,
                 seriesOptions: data.seriesOptions || {},
             });
-            _tvRecomputeIndicatorsForChart(resolved ? resolved.chartId : (data.chartId || 'main'), seriesId);
-            _tvRefreshLegendTitle(resolved ? resolved.chartId : (data.chartId || 'main'));
-            _tvEmitLegendRefresh(resolved ? resolved.chartId : (data.chartId || 'main'));
-            _tvRenderHoverLegend(resolved ? resolved.chartId : (data.chartId || 'main'), null);
+            _tvRecomputeIndicatorsForChart(resolved ? resolved.chartId : (data.chartId || _cid), seriesId);
+            _tvRefreshLegendTitle(resolved ? resolved.chartId : (data.chartId || _cid));
+            _tvEmitLegendRefresh(resolved ? resolved.chartId : (data.chartId || _cid));
+            _tvRenderHoverLegend(resolved ? resolved.chartId : (data.chartId || _cid), null);
         });
 
         // Python → JS: remove a series
-        window.pywry.on('tvchart:remove-series', function(data) {
-            var entry = window.__PYWRY_TVCHARTS__[data.chartId || 'main'];
+        bridge.on('tvchart:remove-series', function(data) {
+            var entry = window.__PYWRY_TVCHARTS__[data.chartId || _cid];
             if (!entry || !entry.chart) return;
             var seriesId = data.seriesId;
             if (seriesId && entry.seriesMap[seriesId]) {
@@ -349,16 +418,16 @@
             }
 
             if (seriesId) {
-                _tvRecomputeIndicatorsForChart(data.chartId || 'main', seriesId);
+                _tvRecomputeIndicatorsForChart(data.chartId || _cid, seriesId);
             }
-            _tvRefreshLegendTitle(data.chartId || 'main');
-            _tvEmitLegendRefresh(data.chartId || 'main');
-            _tvRenderHoverLegend(data.chartId || 'main', null);
+            _tvRefreshLegendTitle(data.chartId || _cid);
+            _tvEmitLegendRefresh(data.chartId || _cid);
+            _tvRenderHoverLegend(data.chartId || _cid, null);
         });
 
         // Python → JS: add markers to a series
-        window.pywry.on('tvchart:add-markers', function(data) {
-            var entry = window.__PYWRY_TVCHARTS__[data.chartId || 'main'];
+        bridge.on('tvchart:add-markers', function(data) {
+            var entry = window.__PYWRY_TVCHARTS__[data.chartId || _cid];
             if (!entry) return;
             var seriesId = data.seriesId || 'main';
             var series = entry.seriesMap[seriesId];
@@ -370,8 +439,8 @@
         });
 
         // Python → JS: add a horizontal price line
-        window.pywry.on('tvchart:add-price-line', function(data) {
-            var entry = window.__PYWRY_TVCHARTS__[data.chartId || 'main'];
+        bridge.on('tvchart:add-price-line', function(data) {
+            var entry = window.__PYWRY_TVCHARTS__[data.chartId || _cid];
             if (!entry) return;
             var seriesId = data.seriesId || 'main';
             var series = entry.seriesMap[seriesId];
@@ -388,8 +457,8 @@
         });
 
         // Python → JS: fit content / scroll to position
-        window.pywry.on('tvchart:time-scale', function(data) {
-            var entry = window.__PYWRY_TVCHARTS__[data.chartId || 'main'];
+        bridge.on('tvchart:time-scale', function(data) {
+            var entry = window.__PYWRY_TVCHARTS__[data.chartId || _cid];
             if (!entry || !entry.chart) return;
             if (data.fitContent) {
                 entry.chart.timeScale().fitContent();
@@ -403,18 +472,18 @@
         });
 
         // Python → JS: request state export
-        window.pywry.on('tvchart:request-state', function(data) {
-            var chartId = data.chartId || 'main';
+        bridge.on('tvchart:request-state', function(data) {
+            var chartId = data.chartId || _cid;
             var state = _tvExportState(chartId);
             var response = state || { chartId: chartId, error: 'not found' };
             if (data && data.context) {
                 response = Object.assign({}, response, { context: data.context });
             }
-            window.pywry.emit('tvchart:state-response', response);
+            bridge.emit('tvchart:state-response', response);
         });
 
         // Theme switching (global event from PyWry framework)
-        window.pywry.on('pywry:update-theme', function(data) {
+        bridge.on('pywry:update-theme', function(data) {
             var newTheme = (data && data.theme === 'light') ? 'light' : 'dark';
             var isDark = newTheme === 'dark';
 
@@ -424,7 +493,13 @@
             htmlEl.classList.add(newTheme);
             htmlEl.classList.add(isDark ? 'pywry-theme-dark' : 'pywry-theme-light');
 
-            _tvApplyThemeToAll(newTheme);
+            // Only update THIS widget's chart
+            var chartId = (data && data.chartId) || _cid;
+            if (chartId) {
+                _tvApplyThemeToChart(chartId, newTheme);
+            } else {
+                _tvApplyThemeToAll(newTheme);
+            }
         });
 
         // -----------------------------------------------------------------
@@ -432,11 +507,11 @@
         // -----------------------------------------------------------------
 
         // Chart type change (Select dropdown)
-        window.pywry.on('tvchart:chart-type-change', function(data) {
+        bridge.on('tvchart:chart-type-change', function(data) {
             var displayName = data.value || data.selected || 'Candles';
             var styleCfg = _tvResolveChartStyle(displayName);
             var baseType = styleCfg.seriesType;
-            var resolved = _tvResolveChartEntry((data && data.chartId) || 'main');
+            var resolved = _tvResolveChartEntry((data && data.chartId) || _cid);
             if (!resolved || !resolved.entry) return;
             var entry = resolved.entry;
 
@@ -638,38 +713,51 @@
             _tvRenderHoverLegend(resolved.chartId, null);
         });
 
-        // Dark mode toggle — updates the entire UI (charts, toolbars, modals)
-        // and notifies Python of the theme change.
-        window.pywry.on('tvchart:toggle-dark-mode', function(data) {
+        // Dark mode toggle — updates THIS widget's UI only.
+        bridge.on('tvchart:toggle-dark-mode', function(data) {
             var isDark = data.value === true || data.checked === true;
             var newTheme = isDark ? 'dark' : 'light';
 
-            // Update documentElement theme classes FIRST so CSS variables resolve correctly
+            // Update documentElement theme classes so CSS variables resolve correctly
             var htmlEl = document.documentElement;
             htmlEl.classList.remove('dark', 'light', 'pywry-theme-dark', 'pywry-theme-light');
             htmlEl.classList.add(newTheme);
             htmlEl.classList.add(isDark ? 'pywry-theme-dark' : 'pywry-theme-light');
 
-            // Update all widget/theme containers
-            var containers = document.querySelectorAll('.pywry-widget, .pywry-container, .pywry-theme-dark, .pywry-theme-light');
-            containers.forEach(function(el) {
-                el.classList.remove('pywry-theme-dark', 'pywry-theme-light');
-                el.classList.add(isDark ? 'pywry-theme-dark' : 'pywry-theme-light');
-            });
+            // Only update THIS widget's container — not all widgets on the page
+            var chartId = (data && data.chartId) || _cid;
+            var uiRoot = chartId ? _tvResolveUiRoot(chartId) : null;
+            if (uiRoot && uiRoot !== document) {
+                var containers = uiRoot.querySelectorAll('.pywry-widget, .pywry-container, .pywry-theme-dark, .pywry-theme-light');
+                containers.forEach(function(el) {
+                    el.classList.remove('pywry-theme-dark', 'pywry-theme-light');
+                    el.classList.add(isDark ? 'pywry-theme-dark' : 'pywry-theme-light');
+                });
+                // Walk up to .pywry-widget ancestor too
+                var widgetEl = uiRoot.closest && uiRoot.closest('.pywry-widget');
+                if (widgetEl) {
+                    widgetEl.classList.remove('pywry-theme-dark', 'pywry-theme-light');
+                    widgetEl.classList.add(isDark ? 'pywry-theme-dark' : 'pywry-theme-light');
+                }
+            }
 
-            // Now apply theme to charts (CSS variables are correct at this point)
-            _tvApplyThemeToAll(newTheme);
+            // Only apply theme to THIS widget's chart
+            if (chartId) {
+                _tvApplyThemeToChart(chartId, newTheme);
+            } else {
+                _tvApplyThemeToAll(newTheme);
+            }
 
             // Notify Python (sendEvent only — no local re-dispatch to avoid
             // double-firing the pywry:update-theme listener).
-            if (window.pywry && window.pywry.sendEvent) {
-                window.pywry.sendEvent('pywry:update-theme', { theme: newTheme });
+            if (bridge && bridge.sendEvent) {
+                bridge.sendEvent('pywry:update-theme', { theme: newTheme });
             }
         });
 
         // Settings button
-        window.pywry.on('tvchart:show-settings', function(data) {
-            var chartId = _tvResolveChartId(data.chartId || 'main');
+        bridge.on('tvchart:show-settings', function(data) {
+            var chartId = _tvResolveChartId(data.chartId || _cid);
             var ds = chartId ? window.__PYWRY_DRAWINGS__[chartId] : null;
             if (chartId && ds && _drawSelectedIdx >= 0 && _drawSelectedChart === chartId) {
                 _tvShowDrawingSettings(chartId, _drawSelectedIdx);
@@ -679,55 +767,88 @@
         });
 
         // Indicators button
-        window.pywry.on('tvchart:show-indicators', function(data) {
-            var chartId = data.chartId || 'main';
+        bridge.on('tvchart:show-indicators', function(data) {
+            var chartId = data.chartId || _cid;
             _tvShowIndicatorsPanel(chartId);
         });
 
         // Log scale toggle (legacy event fallback)
-        window.pywry.on('tvchart:log-scale', function(data) {
+        bridge.on('tvchart:log-scale', function(data) {
             var isLog = data.value === true || data.checked === true;
-            _tvApplyLogScale(isLog);
+            _tvApplyLogScale(isLog, data.chartId || _cid);
         });
 
         // Auto scale toggle (legacy event fallback)
-        window.pywry.on('tvchart:auto-scale', function(data) {
+        bridge.on('tvchart:auto-scale', function(data) {
             var isAuto = data.value === true || data.checked === true;
-            _tvApplyAutoScale(isAuto);
+            _tvApplyAutoScale(isAuto, data.chartId || _cid);
         });
 
         // Data interval/frequency change (top bar) — emits to Python for data re-fetch
-        window.pywry.on('tvchart:interval-change', function(data) {
+        bridge.on('tvchart:interval-change', function(data) {
             var interval = data.value || '1d';
             // Deselect all time-range tabs — interval change always shows ALL data
             var tabs = document.querySelectorAll('.pywry-tab[data-target-interval]');
             for (var t = 0; t < tabs.length; t++) {
                 tabs[t].classList.remove('pywry-tab-active');
             }
-            var chartId = _tvResolveChartId((data && data.chartId) || 'main');
+            var chartId = _tvResolveChartId((data && data.chartId) || _cid);
 
-            // In datafeed mode, request bars from Python which calls
-            // provider.get_bars() (e.g. UDF server).  The response arrives
-            // via tvchart:data-response which handles the chart destroy/recreate
-            // with the fetched bars.
+            // In datafeed mode, ask Python to fetch bars at the new
+            // resolution (with aggregation for unsupported intervals like
+            // 3d, 2w).  The tvchart:data-response handler will destroy
+            // and recreate the chart with the pre-fetched bars so
+            // getBars is bypassed entirely.
             var resolved = _tvResolveChartEntry(chartId);
             var entry = resolved ? resolved.entry : null;
             if (entry && entry.payload && entry.payload.useDatafeed) {
                 var currentInterval = (entry.payload && entry.payload.interval) || '';
                 if (interval === currentInterval) return; // no-op if same interval
 
-                // Clean up old datafeed subscriptions before requesting new data
-                if (entry._datafeedSubscriptions && entry.datafeed) {
-                    var subKeys = Object.keys(entry._datafeedSubscriptions);
-                    for (var si = 0; si < subKeys.length; si++) {
-                        var guid = entry._datafeedSubscriptions[subKeys[si]];
-                        if (guid && entry.datafeed.unsubscribeBars) {
-                            entry.datafeed.unsubscribeBars(guid);
-                        }
-                    }
+                var mainSymbol = '';
+                if (entry.payload.series && entry.payload.series[0] && entry.payload.series[0].symbol) {
+                    mainSymbol = String(entry.payload.series[0].symbol);
+                } else if (entry._resolvedSymbolInfo && entry._resolvedSymbolInfo.main) {
+                    mainSymbol = String(entry._resolvedSymbolInfo.main.symbol || entry._resolvedSymbolInfo.main.ticker || '');
                 }
 
-                _tvEmitIntervalDataRequests(chartId, interval);
+                bridge.emit('tvchart:data-request', {
+                    chartId: resolved ? resolved.chartId : chartId,
+                    symbol: mainSymbol,
+                    seriesId: 'main',
+                    interval: interval,
+                    resolution: interval,
+                    periodParams: {
+                        from: 0,
+                        to: Math.floor(Date.now() / 1000),
+                        countBack: 300,
+                        firstDataRequest: true,
+                    },
+                });
+
+                // Also request data for compare symbols at the new interval
+                if (entry._compareSymbols) {
+                    var cmpKeys = Object.keys(entry._compareSymbols);
+                    for (var ci = 0; ci < cmpKeys.length; ci++) {
+                        var cmpSid = cmpKeys[ci];
+                        var cmpSym = entry._compareSymbols[cmpSid];
+                        if (!cmpSym) continue;
+                        bridge.emit('tvchart:data-request', {
+                            chartId: resolved ? resolved.chartId : chartId,
+                            symbol: cmpSym,
+                            symbolInfo: entry._compareSymbolInfo ? entry._compareSymbolInfo[cmpSid] : null,
+                            seriesId: cmpSid,
+                            interval: interval,
+                            resolution: interval,
+                            periodParams: {
+                                from: 0,
+                                to: Math.floor(Date.now() / 1000),
+                                countBack: 300,
+                                firstDataRequest: true,
+                            },
+                        });
+                    }
+                }
                 return;
             }
 
@@ -736,31 +857,29 @@
         });
 
         // Time range preset (TabGroup) — zoom only, never changes interval.
-        window.pywry.on('tvchart:time-range', function(data) {
+        bridge.on('tvchart:time-range', function(data) {
             var range = data.value || data.selected || '1y';
-
-            var ids = Object.keys(window.__PYWRY_TVCHARTS__);
-            for (var i = 0; i < ids.length; i++) {
-                var entry = window.__PYWRY_TVCHARTS__[ids[i]];
-                if (!entry || !entry.chart) continue;
+            var chartId = data.chartId || _cid;
+            var resolved = _tvResolveChartEntry(chartId);
+            var entry = resolved ? resolved.entry : null;
+            if (entry && entry.chart) {
                 _tvApplyTimeRangeSelection(entry, range);
             }
         });
 
-        window.pywry.on('tvchart:time-range-picker', function() {
-            var ids = Object.keys(window.__PYWRY_TVCHARTS__);
-            if (!ids.length) return;
-            var selectedId = ids[0];
-            var entry = window.__PYWRY_TVCHARTS__[selectedId];
+        bridge.on('tvchart:time-range-picker', function(data) {
+            var chartId = (data && data.chartId) || _cid;
+            var resolved = _tvResolveChartEntry(chartId);
+            var entry = resolved ? resolved.entry : null;
             if (!entry || !entry.chart) return;
             _tvPromptDateRangeAndApply(entry);
         });
 
         // Screenshot
-        window.pywry.on('tvchart:screenshot', function(data) {
-            var ids = Object.keys(window.__PYWRY_TVCHARTS__);
-            if (ids.length === 0) return;
-            var entry = window.__PYWRY_TVCHARTS__[ids[0]];
+        bridge.on('tvchart:screenshot', function(data) {
+            var chartId = (data && data.chartId) || _cid;
+            var resolved = _tvResolveChartEntry(chartId);
+            var entry = resolved ? resolved.entry : null;
             if (!entry || !entry.chart) return;
 
             // Use the chart's takeScreenshot method
@@ -777,28 +896,28 @@
         });
 
         // Undo — revert last chart action (drawing, indicator, etc.)
-        window.pywry.on('tvchart:undo', function() {
+        bridge.on('tvchart:undo', function() {
             _tvPerformUndo();
         });
 
         // Redo — re-apply last undone action
-        window.pywry.on('tvchart:redo', function() {
+        bridge.on('tvchart:redo', function() {
             _tvPerformRedo();
         });
 
         // Compare — open symbol entry panel and emit compare-request to host
-        window.pywry.on('tvchart:compare', function(data) {
-            var chartId = _tvResolveChartId(data.chartId || 'main');
+        bridge.on('tvchart:compare', function(data) {
+            var chartId = _tvResolveChartId(data.chartId || _cid);
             if (chartId) _tvShowComparePanel(chartId);
         });
 
         // Symbol search — open the symbol search dialog
-        window.pywry.on('tvchart:symbol-search', function(data) {
-            var chartId = _tvResolveChartId((data && data.chartId) || 'main');
+        bridge.on('tvchart:symbol-search', function(data) {
+            var chartId = _tvResolveChartId((data && data.chartId) || _cid);
             if (chartId) _tvShowSymbolSearchDialog(chartId);
         });
 
-        window.pywry.on('tvchart:datafeed-search-response', function(data) {
+        bridge.on('tvchart:datafeed-search-response', function(data) {
             data = data || {};
             var requestId = data.requestId;
             if (!requestId) return;
@@ -808,7 +927,7 @@
             cb(data);
         });
 
-        window.pywry.on('tvchart:datafeed-resolve-response', function(data) {
+        bridge.on('tvchart:datafeed-resolve-response', function(data) {
             data = data || {};
             var requestId = data.requestId;
             if (!requestId) return;
@@ -818,7 +937,7 @@
             cb(data);
         });
 
-        window.pywry.on('tvchart:datafeed-history-response', function(data) {
+        bridge.on('tvchart:datafeed-history-response', function(data) {
             data = data || {};
             var requestId = data.requestId;
             if (!requestId) return;
@@ -829,7 +948,7 @@
         });
 
         // Datafeed — config response (onReady)
-        window.pywry.on('tvchart:datafeed-config-response', function(data) {
+        bridge.on('tvchart:datafeed-config-response', function(data) {
             data = data || {};
             var requestId = data.requestId;
             if (!requestId) return;
@@ -840,7 +959,7 @@
         });
 
         // Datafeed — real-time bar update (subscribeBars push)
-        window.pywry.on('tvchart:datafeed-bar-update', function(data) {
+        bridge.on('tvchart:datafeed-bar-update', function(data) {
             data = data || {};
             var guid = data.listenerGuid;
             if (!guid) return;
@@ -853,7 +972,7 @@
         });
 
         // Datafeed — reset cache signal
-        window.pywry.on('tvchart:datafeed-reset-cache', function(data) {
+        bridge.on('tvchart:datafeed-reset-cache', function(data) {
             data = data || {};
             var guid = data.listenerGuid;
             if (!guid) return;
@@ -864,7 +983,7 @@
         });
 
         // Datafeed — marks response (getMarks)
-        window.pywry.on('tvchart:datafeed-marks-response', function(data) {
+        bridge.on('tvchart:datafeed-marks-response', function(data) {
             data = data || {};
             var requestId = data.requestId;
             if (!requestId) return;
@@ -875,7 +994,7 @@
         });
 
         // Datafeed — timescale marks response (getTimescaleMarks)
-        window.pywry.on('tvchart:datafeed-timescale-marks-response', function(data) {
+        bridge.on('tvchart:datafeed-timescale-marks-response', function(data) {
             data = data || {};
             var requestId = data.requestId;
             if (!requestId) return;
@@ -886,7 +1005,7 @@
         });
 
         // Datafeed — server time response (getServerTime)
-        window.pywry.on('tvchart:datafeed-server-time-response', function(data) {
+        bridge.on('tvchart:datafeed-server-time-response', function(data) {
             data = data || {};
             var requestId = data.requestId;
             if (!requestId) return;
@@ -897,9 +1016,12 @@
         });
 
         // Fullscreen — toggle fullscreen on the chart wrapper
-        window.pywry.on('tvchart:fullscreen', function() {
-            var el = document.querySelector('.pywry-wrapper-inside') ||
-                     document.querySelector('.pywry-tvchart-container');
+        bridge.on('tvchart:fullscreen', function() {
+            var resolved = _tvResolveChartEntry(_cid);
+            var entry = resolved ? resolved.entry : null;
+            var el = (entry && entry.container)
+                ? entry.container.closest('.pywry-wrapper-inside') || entry.container
+                : document.querySelector('.pywry-wrapper-inside') || document.querySelector('.pywry-tvchart-container');
             if (!el) return;
             if (!document.fullscreenElement) {
                 el.requestFullscreen().catch(function() {});
@@ -909,59 +1031,47 @@
         });
 
         // Show/Hide drawings
-        window.pywry.on('tvchart:tool-visibility', function() {
-            var ids = Object.keys(window.__PYWRY_DRAWINGS__);
-            for (var i = 0; i < ids.length; i++) {
-                var ds = window.__PYWRY_DRAWINGS__[ids[i]];
-                if (ds && ds.canvas) {
-                    var vis = ds.canvas.style.display !== 'none';
-                    ds.canvas.style.display = vis ? 'none' : '';
-                    if (ds.uiLayer) ds.uiLayer.style.display = vis ? 'none' : '';
-                }
+        bridge.on('tvchart:tool-visibility', function() {
+            var chartId = _cid;
+            var ds = chartId ? window.__PYWRY_DRAWINGS__[chartId] : null;
+            if (ds && ds.canvas) {
+                var vis = ds.canvas.style.display !== 'none';
+                ds.canvas.style.display = vis ? 'none' : '';
+                if (ds.uiLayer) ds.uiLayer.style.display = vis ? 'none' : '';
             }
         });
 
         // Lock drawings (disable interaction)
-        window.pywry.on('tvchart:tool-lock', function() {
-            var ids = Object.keys(window.__PYWRY_DRAWINGS__);
-            for (var i = 0; i < ids.length; i++) {
-                var ds = window.__PYWRY_DRAWINGS__[ids[i]];
-                if (ds) {
-                    ds._locked = !ds._locked;
-                }
+        bridge.on('tvchart:tool-lock', function() {
+            var chartId = _cid;
+            var ds = chartId ? window.__PYWRY_DRAWINGS__[chartId] : null;
+            if (ds) {
+                ds._locked = !ds._locked;
             }
         });
 
         // Save state → emit back to Python with full chart data + raw bars
-        window.pywry.on('tvchart:save-state', function(data) {
-            var ids = Object.keys(window.__PYWRY_TVCHARTS__);
-            for (var i = 0; i < ids.length; i++) {
-                var state = _tvExportState(ids[i]);
-                if (state) {
-                    window.pywry.emit('tvchart:state-response', state);
-                }
+        bridge.on('tvchart:save-state', function(data) {
+            var chartId = (data && data.chartId) || _cid;
+            var state = _tvExportState(chartId);
+            if (state) {
+                bridge.emit('tvchart:state-response', state);
             }
         });
 
         // Save layout → emit layout-only (annotations + indicators, no raw data)
-        window.pywry.on('tvchart:save-layout', function(data) {
-            var ids = Object.keys(window.__PYWRY_TVCHARTS__);
-            if (!ids.length) return;
-
-            var targetId = _tvResolveChartId(data && data.chartId ? data.chartId : ids[0]);
+        bridge.on('tvchart:save-layout', function(data) {
+            var targetId = _tvResolveChartId(data && data.chartId ? data.chartId : _cid);
+            if (!targetId) return;
             var layout = _tvExportLayout(targetId);
             if (!layout) return;
 
             var explicitName = data && data.name ? String(data.name) : '';
             if (explicitName) {
-                for (var i = 0; i < ids.length; i++) {
-                    layout = _tvExportLayout(ids[i]);
-                    if (!layout) continue;
-                    var saveName = explicitName || _tvDefaultLayoutName(ids[i]);
-                    var persistedNamed = _tvLayoutPersist(ids[i], saveName, layout);
-                    if (persistedNamed) _tvLayoutSetActive(ids[i], persistedNamed);
-                    window.pywry.emit('tvchart:layout-response', layout);
-                }
+                var saveName = explicitName || _tvDefaultLayoutName(targetId);
+                var persistedNamed = _tvLayoutPersist(targetId, saveName, layout);
+                if (persistedNamed) _tvLayoutSetActive(targetId, persistedNamed);
+                bridge.emit('tvchart:layout-response', layout);
                 return;
             }
 
@@ -980,7 +1090,7 @@
                     overwriteExisting: true,
                 });
                 if (persistedActive) _tvLayoutSetActive(targetId, persistedActive);
-                window.pywry.emit('tvchart:layout-response', layout);
+                bridge.emit('tvchart:layout-response', layout);
                 return;
             }
 
@@ -990,20 +1100,20 @@
                     overwriteExisting: true,
                 });
                 if (persisted) _tvLayoutSetActive(targetId, persisted);
-                window.pywry.emit('tvchart:layout-response', layout);
+                bridge.emit('tvchart:layout-response', layout);
             });
         });
 
         // Open layout → open local layout picker and apply selection.
-        window.pywry.on('tvchart:open-layout', function(data) {
-            var cid = _tvResolveChartId(data && data.chartId ? data.chartId : 'main');
+        bridge.on('tvchart:open-layout', function(data) {
+            var cid = _tvResolveChartId(data && data.chartId ? data.chartId : _cid);
             _tvPromptOpenLayout(cid);
-            window.pywry.emit('tvchart:open-layout-request', {});
+            bridge.emit('tvchart:open-layout-request', {});
         });
 
         // Document-level handlers (click/keydown on menus, tool groups) must
-        // only be registered once — they use window.pywry dynamically so they
-        // work regardless of which bridge is active.
+        // only be registered once — they use _tvGetBridge(chartId) to resolve
+        // the correct per-widget bridge dynamically.
         if (!window.__PYWRY_TVCHART_DOC_HANDLERS__) {
         window.__PYWRY_TVCHART_DOC_HANDLERS__ = true;
 
@@ -1035,7 +1145,7 @@
                         componentId: item.getAttribute('data-component-id') || '',
                     };
                     if (action === 'save-layout') {
-                        window.pywry.emit('tvchart:save-layout', payload);
+                        _tvGetBridge(chartId).emit('tvchart:save-layout', payload);
                     } else if (action === 'make-copy') {
                         var st = _tvLayoutActiveState(chartId);
                         var fallback = (st.name ? st.name + ' copy' : _tvDefaultLayoutName(chartId));
@@ -1047,7 +1157,7 @@
                                     overwriteExisting: false,
                                 });
                                 if (persisted) _tvLayoutSetActive(chartId, persisted);
-                                window.pywry.emit('tvchart:layout-response', layoutCopy);
+                                _tvGetBridge(chartId).emit('tvchart:layout-response', layoutCopy);
                             });
                         }
                     } else if (action === 'rename-layout') {
@@ -1059,7 +1169,7 @@
                             });
                         }
                     } else if (action === 'open-layout') {
-                        window.pywry.emit('tvchart:open-layout', payload);
+                        _tvGetBridge(chartId).emit('tvchart:open-layout', payload);
                     }
                     if (menu) menu.classList.remove('open');
                     _tvRefreshLegendVisibility(chartId);
@@ -1075,9 +1185,11 @@
             document.addEventListener('keydown', function(e) {
                 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                     e.preventDefault();
-                    if (window.pywry) {
-                        window.pywry.emit('tvchart:save-layout', {
-                            chartId: _tvResolveChartIdFromElement(document.activeElement),
+                    var _saveChartId = _tvResolveChartIdFromElement(document.activeElement);
+                    var _saveBridge = _tvGetBridge(_saveChartId);
+                    if (_saveBridge) {
+                        _saveBridge.emit('tvchart:save-layout', {
+                            chartId: _saveChartId,
                         });
                     }
                 }
@@ -1123,8 +1235,9 @@
                     menu.classList.remove('open');
                     menu.style.display = 'none';
                     _tvRefreshLegendVisibility(chartId);
-                    if (window.pywry) {
-                        window.pywry.emit('tvchart:chart-type-change', {
+                    var _ctBridge = _tvGetBridge(chartId);
+                    if (_ctBridge) {
+                        _ctBridge.emit('tvchart:chart-type-change', {
                             value: type,
                             chartId: chartId,
                             seriesId: 'main',
@@ -1169,8 +1282,9 @@
                     menu.style.display = 'none';
                     _tvRefreshLegendVisibility(chartId);
                     _tvSetIntervalUi(chartId, iv);
-                    if (window.pywry) {
-                        window.pywry.emit('tvchart:interval-change', { value: iv, componentId: 'tvchart-interval-btn' });
+                    var _ivBridge = _tvGetBridge(chartId);
+                    if (_ivBridge) {
+                        _ivBridge.emit('tvchart:interval-change', { value: iv, chartId: chartId, componentId: 'tvchart-interval-btn' });
                     }
                     return;
                 }
@@ -1194,56 +1308,43 @@
         };
         var drawingToolEvents = Object.keys(toolNameMap);
         drawingToolEvents.forEach(function(evtName) {
-            window.pywry.on(evtName, function(data) {
+            bridge.on(evtName, function(data) {
                 _tvHideToolGroupFlyout();
-                // Remove active class from all drawing tool icons
-                var allIcons = document.querySelectorAll(
-                    '.pywry-toolbar-left .pywry-icon-btn'
-                );
-                allIcons.forEach(function(el) {
-                    el.classList.remove('active');
-                });
-                // Add active class to clicked icon
                 var clicked = data.componentId
-                    ? document.getElementById(data.componentId)
+                    ? _tvScopedById(data.chartId || _cid, data.componentId)
                     : null;
-                if (clicked) {
-                    clicked.classList.add('active');
-                }
+                var chartId = _tvResolveChartIdFromElement(clicked || document.activeElement);
+                var ds = window.__PYWRY_DRAWINGS__[chartId];
+
+                // Remove active class from this chart's toolbar icons
+                var allIcons = _tvScopedQueryAll(chartId, '.pywry-toolbar-left .pywry-icon-btn');
+                if (allIcons) allIcons.forEach(function(el) { el.classList.remove('active'); });
+                if (clicked) clicked.classList.add('active');
 
                 var toolName = toolNameMap[evtName] || 'cursor';
 
-                // Eraser: clear all drawings
+                // Eraser: clear this chart's drawings
                 if (toolName === 'eraser') {
-                    var ids = Object.keys(window.__PYWRY_TVCHARTS__);
-                    for (var i = 0; i < ids.length; i++) {
-                        _tvClearDrawings(ids[i]);
-                    }
-                    _tvSetDrawTool('cursor');
-                    // Reset UI — auto-select cursor
-                    allIcons.forEach(function(el) {
-                        el.classList.remove('active');
-                    });
-                    var chartId = _tvResolveChartIdFromElement(clicked || document.activeElement);
+                    _tvClearDrawings(chartId);
+                    _tvSetDrawTool(chartId, 'cursor');
+                    if (allIcons) allIcons.forEach(function(el) { el.classList.remove('active'); });
                     var cursorBtn = _tvScopedById(chartId, 'tvchart-tool-cursor');
                     if (cursorBtn) cursorBtn.classList.add('active');
                     return;
                 }
 
                 // Toggle: pressing same tool again reverts to cursor
-                if (toolName === _drawActiveTool) {
-                    _tvSetDrawTool('cursor');
-                    allIcons.forEach(function(el) {
-                        el.classList.remove('active');
-                    });
-                    var cId = _tvResolveChartIdFromElement(clicked || document.activeElement);
-                    var cBtn = _tvScopedById(cId, 'tvchart-tool-cursor');
+                var currentTool = ds ? ds._activeTool : 'cursor';
+                if (toolName === currentTool) {
+                    _tvSetDrawTool(chartId, 'cursor');
+                    if (allIcons) allIcons.forEach(function(el) { el.classList.remove('active'); });
+                    var cBtn = _tvScopedById(chartId, 'tvchart-tool-cursor');
                     if (cBtn) cBtn.classList.add('active');
                     return;
                 }
 
                 // Activate the selected drawing tool
-                _tvSetDrawTool(toolName);
+                _tvSetDrawTool(chartId, toolName);
             });
         });
 
@@ -1253,9 +1354,16 @@
         if (!window.__PYWRY_TVCHART_DOC_HANDLERS_FLYOUT__) {
         window.__PYWRY_TVCHART_DOC_HANDLERS_FLYOUT__ = true;
         document.addEventListener('click', function(e) {
+            // Ignore clicks that originated from within a flyout item —
+            // the flyout's own mousedown handler already processed the selection
+            // and removed the flyout from the DOM.
+            if (e.target.closest('.pywry-tool-flyout-item') || e.target.closest('.pywry-tool-flyout')) {
+                return;
+            }
             var groupBtn = e.target.closest('.pywry-tool-group');
             if (groupBtn) {
                 e.stopPropagation();
+                var chartId = _tvResolveChartIdFromElement(groupBtn);
                 if (groupBtn.classList.contains('active')) {
                     _tvShowToolGroupFlyout(groupBtn);
                 } else {
@@ -1263,11 +1371,11 @@
                     var groupName = groupBtn.getAttribute('data-tool-group');
                     var toolId = _toolGroupActive[groupName];
 
-                    var allIcons = document.querySelectorAll('.pywry-toolbar-left .pywry-icon-btn');
-                    allIcons.forEach(function(el) { el.classList.remove('active'); });
+                    var allIcons = _tvScopedQueryAll(chartId, '.pywry-toolbar-left .pywry-icon-btn');
+                    if (allIcons) allIcons.forEach(function(el) { el.classList.remove('active'); });
                     groupBtn.classList.add('active');
 
-                    _tvSetDrawTool(toolId);
+                    _tvSetDrawTool(chartId, toolId);
                 }
                 return;
             }
@@ -1279,15 +1387,18 @@
         } // end __PYWRY_TVCHART_DOC_HANDLERS_FLYOUT__ guard
     }
 
-    // Expose globally so the widget render function can call it after
-    // setting window.pywry (in ESM/anywidget context pywry may not
-    // exist when this script first evaluates).
+    // Expose globally so the widget render function can call it with
+    // an explicit bridge argument (in ESM/anywidget context).
     window._tvRegisterEventHandlers = onReady;
 
-    // Register when ready (native window flow where pywry exists early)
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', onReady);
-    } else {
-        onReady();
+    // Register when ready (native window flow where window.pywry exists).
+    // In widget mode, window.pywry is never set — registration happens
+    // via the explicit _tvRegisterEventHandlers(bridge) call instead.
+    if (window.pywry) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() { onReady(window.pywry); });
+        } else {
+            onReady(window.pywry);
+        }
     }
 })();

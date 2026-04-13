@@ -218,8 +218,8 @@ def _get_pywry_css_bundled() -> str:
 
 
 @lru_cache(maxsize=1)
-def get_openbb_icon() -> bytes:
-    """Get the bundled OpenBB icon.
+def get_pywry_icon() -> bytes:
+    """Get the bundled PyWry icon.
 
     Returns
     -------
@@ -273,8 +273,8 @@ def get_aggrid_defaults_js() -> str:
     return ""
 
 
-def get_openbb_icon_path() -> Path | None:
-    """Get the path to the bundled OpenBB icon.
+def get_pywry_icon_path() -> Path | None:
+    """Get the path to the bundled PyWry icon.
 
     Returns
     -------
@@ -294,7 +294,7 @@ def clear_cache() -> None:
     get_aggrid_css.cache_clear()
     get_aggrid_defaults_js.cache_clear()
     get_pywry_css.cache_clear()
-    get_openbb_icon.cache_clear()
+    get_pywry_icon.cache_clear()
     get_toast_notifications_js.cache_clear()
     get_toast_css.cache_clear()
     get_modal_handlers_js.cache_clear()

@@ -205,6 +205,7 @@ _INTERVAL_LABELS: dict[str, str] = {
     "1m": "1m",
     "3m": "3m",
     "5m": "5m",
+    "10m": "10m",
     "15m": "15m",
     "30m": "30m",
     "45m": "45m",
@@ -212,9 +213,16 @@ _INTERVAL_LABELS: dict[str, str] = {
     "2h": "2H",
     "3h": "3H",
     "4h": "4H",
+    "6h": "6H",
+    "12h": "12H",
     "1d": "D",
+    "2d": "2D",
+    "3d": "3D",
     "1w": "W",
+    "2w": "2W",
+    "3w": "3W",
     "1M": "M",
+    "2M": "2M",
     "3M": "3M",
     "6M": "6M",
     "12M": "12M",
@@ -224,6 +232,7 @@ _INTERVAL_DAYS: dict[str, float] = {
     "1m": 1 / 1440,
     "3m": 3 / 1440,
     "5m": 5 / 1440,
+    "10m": 10 / 1440,
     "15m": 15 / 1440,
     "30m": 30 / 1440,
     "45m": 45 / 1440,
@@ -231,9 +240,16 @@ _INTERVAL_DAYS: dict[str, float] = {
     "2h": 2 / 24,
     "3h": 3 / 24,
     "4h": 4 / 24,
+    "6h": 6 / 24,
+    "12h": 12 / 24,
     "1d": 1,
+    "2d": 2,
+    "3d": 3,
     "1w": 7,
+    "2w": 14,
+    "3w": 21,
     "1M": 30,
+    "2M": 61,
     "3M": 91,
     "6M": 182,
     "12M": 365,
@@ -259,6 +275,7 @@ _INTERVAL_DISPLAY: dict[str, str] = {
     "1m": "1 minute",
     "3m": "3 minutes",
     "5m": "5 minutes",
+    "10m": "10 minutes",
     "15m": "15 minutes",
     "30m": "30 minutes",
     "45m": "45 minutes",
@@ -266,9 +283,16 @@ _INTERVAL_DISPLAY: dict[str, str] = {
     "2h": "2 hours",
     "3h": "3 hours",
     "4h": "4 hours",
+    "6h": "6 hours",
+    "12h": "12 hours",
     "1d": "1 day",
+    "2d": "2 days",
+    "3d": "3 days",
     "1w": "1 week",
+    "2w": "2 weeks",
+    "3w": "3 weeks",
     "1M": "1 month",
+    "2M": "2 months",
     "3M": "3 months",
     "6M": "6 months",
     "12M": "12 months",
@@ -471,21 +495,24 @@ def _interval_selector(
         "days": "DAYS",
     }
     ordered_intervals_by_category: dict[str, list[str]] = {
-        "minutes": ["1m", "3m", "5m", "15m", "30m", "45m"],
-        "hours": ["1h", "2h", "3h", "4h"],
-        "days": ["1d", "1w", "1M", "3M", "6M", "12M"],
+        "minutes": ["1m", "3m", "5m", "10m", "15m", "30m", "45m"],
+        "hours": ["1h", "2h", "3h", "4h", "6h", "12h"],
+        "days": ["1d", "2d", "3d", "1w", "2w", "3w", "1M", "2M", "3M", "6M", "12M"],
     }
 
     menu_parts: list[str] = []
     for category_key in ["minutes", "hours", "days"]:
+        # Only include category if it has at least one available interval
+        category_intervals = [
+            iv for iv in ordered_intervals_by_category[category_key] if iv in available_intervals
+        ]
+        if not category_intervals:
+            continue
         menu_parts.append(f'<div class="tvchart-interval-section">{categories[category_key]}</div>')
-        for interval in ordered_intervals_by_category[category_key]:
-            is_available = interval in available_intervals
+        for interval in category_intervals:
             item_classes = ["tvchart-interval-item"]
             if interval == sel:
                 item_classes.append("selected")
-            if not is_available:
-                item_classes.append("disabled")
             menu_parts.append(
                 f'<div class="{" ".join(item_classes)}" '
                 f'data-interval="{interval}">{_INTERVAL_DISPLAY.get(interval, interval)}</div>'

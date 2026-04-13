@@ -2999,6 +2999,47 @@ html.light,
     font: 500 16px/1.2 var(--pywry-font-family);
 }
 
+/* -----------------------------------------------------------------------
+   Widget-scoped overrides — when the chart is inside a .pywry-widget
+   (anywidget / inline mode), overlays must use position:absolute so they
+   are contained within the widget rather than escaping to the viewport.
+   These rules intentionally do NOT fire in native-window mode where
+   document.body is the only container and position:fixed is correct.
+   ----------------------------------------------------------------------- */
+.pywry-widget .tv-settings-overlay,
+.pywry-widget .tv-indicators-overlay,
+.pywry-widget .tv-date-range-overlay {
+    position: absolute;
+    inset: 0;
+}
+
+.pywry-widget .tv-settings-panel,
+.pywry-widget .tv-indicators-panel,
+.pywry-widget .tv-symbol-search-panel,
+.pywry-widget .tv-compare-panel {
+    max-height: calc(100% - 32px);
+}
+
+.pywry-widget .tv-symbol-search-results {
+    max-height: none;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.pywry-widget .tvchart-legend-menu,
+.pywry-widget .tvchart-tz-menu {
+    position: absolute;
+}
+
+.pywry-widget .pywry-draw-width-picker {
+    position: absolute;
+}
+
+.pywry-widget .pywry-tool-flyout {
+    position: absolute;
+}
+
 .tvchart-layout-modal-panel-open .tvchart-layout-search-input {
     font-size: 16px;
     line-height: 1.2;

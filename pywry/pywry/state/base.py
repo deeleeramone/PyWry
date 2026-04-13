@@ -776,7 +776,7 @@ class ChartStore(ABC):
         """
         ...
 
-    async def update_layout_meta(
+    async def update_layout_meta(  # pylint: disable=unused-argument
         self,
         user_id: str,
         layout_id: str,

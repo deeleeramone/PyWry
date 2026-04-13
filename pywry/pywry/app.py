@@ -16,8 +16,8 @@ from .asset_loader import AssetLoader
 from .assets import (
     get_aggrid_css,
     get_aggrid_js,
-    get_openbb_icon,
     get_plotly_js,
+    get_pywry_icon,
 )
 from .callbacks import CallbackFunc, get_registry
 from .config import PyWrySettings
@@ -448,7 +448,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
 
         click_event = threading.Event()
 
-        def _on_click(data: Any) -> None:
+        def _on_click(data: Any) -> None:  # pylint: disable=unused-argument
             click_event.set()
 
         self.show(
@@ -478,7 +478,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         """
         registry = get_registry()
 
-        def _handle_logout(data: Any, event_type: str, label: str) -> None:
+        def _handle_logout(data: Any, event_type: str, label: str) -> None:  # pylint: disable=unused-argument
             # Call developer's on_logout middleware
             if on_logout is not None:
                 on_logout()
@@ -1434,9 +1434,47 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         if provider is not None:
             use_datafeed = True
 
-        series_payload: list[dict[str, Any]] = []
+        # In notebook/browser mode, delegate to inline.show_tvchart() which
+        # creates a PyWryTVChartWidget with the LightweightCharts library
+        # bundled in the ESM.  The generic inline.show() path does not include
+        # tvchart assets, so the chart would never initialise.
+        is_browser_mode = isinstance(self._mode, BrowserMode)
+        if should_use_inline_rendering() or is_browser_mode:
+            from . import inline as pywry_inline
+
+            plain_callbacks: dict[str, Any] | None = None
+            if callbacks:
+                plain_callbacks = {
+                    event: (cb.func if hasattr(cb, "func") else cb)
+                    for event, cb in callbacks.items()
+                }
+
+            widget_width = "100%" if width is None else f"{width}px"
+
+            widget = pywry_inline.show_tvchart(
+                data=data,
+                callbacks=plain_callbacks,
+                title=title or "Chart",
+                width=widget_width,
+                height=height or 700,
+                theme="dark" if self._theme == ThemeMode.DARK else "light",
+                chart_options=chart_options,
+                series_options=series_options,
+                symbol_col=symbol_col,
+                max_bars=max_bars,
+                toolbars=toolbars,
+                modals=modals,
+                open_browser=is_browser_mode,
+                storage=storage,
+                use_datafeed=use_datafeed,
+                symbol=symbol,
+                resolution=resolution,
+                provider=provider,
+            )
+            self._register_inline_widget(widget)
+            return widget  # type: ignore[no-any-return]
         if use_datafeed:
-            series_payload = [
+            series_payload: list[dict[str, Any]] = [
                 {
                     "seriesId": "main",
                     "symbol": symbol or "",
@@ -1452,16 +1490,17 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
 
             chart_data = normalize_ohlcv(data, symbol_col=symbol_col, max_bars=max_bars)
 
-            for s in chart_data.series:
-                series_payload.append(
-                    {
-                        "seriesId": s.series_id,
-                        "bars": s.bars,
-                        "volume": s.volume,
-                        "seriesType": s.series_type.value.capitalize(),
-                        "seriesOptions": series_options or {},
-                    }
-                )
+            series_payload = []
+            series_payload.extend(
+                {
+                    "seriesId": s.series_id,
+                    "bars": s.bars,
+                    "volume": s.volume,
+                    "seriesType": s.series_type.value.capitalize(),
+                    "seriesOptions": series_options or {},
+                }
+                for s in chart_data.series
+            )
 
         from .state import is_deploy_mode
 
@@ -2524,7 +2563,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         bytes
             Icon bytes.
         """
-        return get_openbb_icon()
+        return get_pywry_icon()
 
     def get_lifecycle(self) -> WindowLifecycle:
         """Get the window lifecycle manager.

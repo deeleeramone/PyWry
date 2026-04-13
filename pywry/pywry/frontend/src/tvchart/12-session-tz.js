@@ -64,7 +64,15 @@ function _tvCurrentUtcOffset(tz) {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function _tvGetFirstEntry() {
+// Track which chart's menu is currently active — set by toggle functions,
+// consumed by menu open/select functions so they scope to the right chart.
+var _tvActiveMenuChartId = null;
+
+function _tvGetFirstEntry(chartId) {
+    var cid = chartId || _tvActiveMenuChartId;
+    if (cid && window.__PYWRY_TVCHARTS__[cid]) {
+        return window.__PYWRY_TVCHARTS__[cid];
+    }
     var ids = Object.keys(window.__PYWRY_TVCHARTS__ || {});
     if (!ids.length) return null;
     return window.__PYWRY_TVCHARTS__[ids[0]];
@@ -261,11 +269,17 @@ function _tvApplySessionFilter() {
     }
 
     if (entry.chart) entry.chart.timeScale().fitContent();
-    var chartId = Object.keys(window.__PYWRY_TVCHARTS__ || {})[0] || 'main';
-    _tvRenderHoverLegend(chartId, null);
+    // Find the chartId for the given entry from the registry
+    var _sessIds = Object.keys(window.__PYWRY_TVCHARTS__ || {});
+    var _sessChartId = null;
+    for (var _si = 0; _si < _sessIds.length; _si++) {
+        if (window.__PYWRY_TVCHARTS__[_sessIds[_si]] === entry) { _sessChartId = _sessIds[_si]; break; }
+    }
+    if (_sessChartId) _tvRenderHoverLegend(_sessChartId, null);
 }
 
 function _tvToggleSessionMenu() {
+    _tvActiveMenuChartId = _tvResolveChartIdFromElement(event ? event.target : null);
     if (_tvSessionMenu) {
         _tvCloseSessionMenu();
         return;
@@ -331,14 +345,17 @@ function _tvOpenSessionMenu() {
     }
 
     // Position above the session button
-    var btn = document.getElementById('tvchart-session-btn');
+    var btn = _tvScopedById(_tvActiveMenuChartId, 'tvchart-session-btn');
+    var _oc = _tvOverlayContainer(btn || menu);
+    if (_oc !== document.body) menu.style.position = 'absolute';
     if (btn) {
-        var rect = btn.getBoundingClientRect();
+        var _cs = _tvContainerSize(_oc);
+        var rect = _tvContainerRect(_oc, btn.getBoundingClientRect());
         menu.style.left = Math.max(0, rect.left) + 'px';
-        menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        menu.style.bottom = (_cs.height - rect.top + 4) + 'px';
     }
 
-    document.body.appendChild(menu);
+    _oc.appendChild(menu);
 
     // Close on click-away
     _tvSessionMenuClickAway = function(e) {
@@ -358,7 +375,7 @@ function _tvSelectSessionMode(value) {
     _tvPersistedSessionMode = value;
 
     // Update button label
-    var btn = document.getElementById('tvchart-session-btn');
+    var btn = _tvScopedById(_tvActiveMenuChartId, 'tvchart-session-btn');
     if (btn) {
         var lbl = btn.querySelector('.tvchart-bottom-btn-label');
         if (lbl) lbl.textContent = value;
@@ -371,7 +388,8 @@ function _tvSelectSessionMode(value) {
 
 /** Show/hide the session button based on: is intraday interval. */
 function _tvUpdateSessionBtnVisibility() {
-    var btn = document.getElementById('tvchart-session-btn');
+    var chartId = _tvActiveMenuChartId;
+    var btn = _tvScopedById(chartId, 'tvchart-session-btn');
     if (!btn) return;
 
     var entry = _tvGetFirstEntry();
@@ -383,6 +401,7 @@ function _tvUpdateSessionBtnVisibility() {
 // ── Timezone selector ──────────────────────────────────────────────────────
 
 function _tvToggleTimezoneMenu() {
+    _tvActiveMenuChartId = _tvResolveChartIdFromElement(event ? event.target : null);
     if (_tvTimezoneMenu) {
         _tvCloseTimezoneMenu();
         return;
@@ -446,14 +465,17 @@ function _tvOpenTimezoneMenu() {
     }
 
     // Position above the tz button
-    var btn = document.getElementById('tvchart-tz-btn');
+    var btn = _tvScopedById(_tvActiveMenuChartId, 'tvchart-tz-btn');
+    var _oc = _tvOverlayContainer(btn || menu);
+    if (_oc !== document.body) menu.style.position = 'absolute';
     if (btn) {
-        var rect = btn.getBoundingClientRect();
+        var _cs = _tvContainerSize(_oc);
+        var rect = _tvContainerRect(_oc, btn.getBoundingClientRect());
         menu.style.left = Math.max(0, rect.left) + 'px';
-        menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        menu.style.bottom = (_cs.height - rect.top + 4) + 'px';
     }
 
-    document.body.appendChild(menu);
+    _oc.appendChild(menu);
 
     // Close on click-away
     _tvTzMenuClickAway = function(e) {
@@ -470,7 +492,7 @@ function _tvSelectTimezone(value) {
     entry._selectedTimezone = value;
 
     // Update button label
-    var btn = document.getElementById('tvchart-tz-btn');
+    var btn = _tvScopedById(_tvActiveMenuChartId, 'tvchart-tz-btn');
     if (btn) {
         var lbl = btn.querySelector('.tvchart-bottom-btn-label');
         if (lbl) lbl.textContent = _tvTzButtonLabel(value);
@@ -486,7 +508,7 @@ function _tvSelectTimezone(value) {
 }
 
 function _tvUpdateExchangeClock(entry, tz) {
-    var clockEl = document.getElementById('tvchart-exchange-clock');
+    var clockEl = _tvScopedById(_tvActiveMenuChartId, 'tvchart-exchange-clock');
     if (!clockEl) return;
 
     function updateClock() {
@@ -563,33 +585,30 @@ function _tvApplyTimezoneToChart(entry, tz) {
 })();
 
 // ── Interval-change hook: update session button visibility ────────────────
+// In widget mode, these handlers are registered per-bridge via
+// _tvRegisterEventHandlers.  The global fallback here covers native-window
+// mode only.
 (function() {
-    if (!window.pywry || !window.pywry.on) {
-        // Re-attempt once DOM is ready
-        var _tzReady = function() {
-            if (window.pywry && window.pywry.on) {
-                window.pywry.on('tvchart:interval-change', function() {
-                    _tvUpdateSessionBtnVisibility();
-                });
-            }
-        };
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', _tzReady);
-        } else {
-            setTimeout(_tzReady, 0);
-        }
-    } else {
-        window.pywry.on('tvchart:interval-change', function() {
+    function _registerSessionHook() {
+        var _bridge = window.pywry;
+        if (!_bridge || !_bridge.on) return;
+        _bridge.on('tvchart:interval-change', function() {
             _tvUpdateSessionBtnVisibility();
         });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _registerSessionHook);
+    } else {
+        setTimeout(_registerSessionHook, 0);
     }
 })();
 
 // ── Symbol-change hook: reset session/tz for new symbol ───────────────────
 (function() {
     var _hookReady = function() {
-        if (!window.pywry || !window.pywry.on) return;
-        window.pywry.on('tvchart:data-response', function() {
+        var _bridge = window.pywry;
+        if (!_bridge || !_bridge.on) return;
+        _bridge.on('tvchart:data-response', function() {
             // After data arrives, refresh session button visibility
             _tvUpdateSessionBtnVisibility();
             // Restore persisted session mode and re-apply filter
@@ -597,7 +616,7 @@ function _tvApplyTimezoneToChart(entry, tz) {
                 var _entry = _tvGetFirstEntry();
                 if (_entry) {
                     _entry._sessionMode = _tvPersistedSessionMode;
-                    var _btn = document.getElementById('tvchart-session-btn');
+                    var _btn = _tvScopedById(_tvActiveMenuChartId, 'tvchart-session-btn');
                     if (_btn) {
                         var _lbl = _btn.querySelector('.tvchart-bottom-btn-label');
                         if (_lbl) _lbl.textContent = _tvPersistedSessionMode;
@@ -640,8 +659,8 @@ function _tvApplyTimezoneToChart(entry, tz) {
 // Scale-mode toggle buttons (%, log, auto) — bottom toolbar
 // ---------------------------------------------------------------------------
 
-function _tvApplyLogScale(isLog) {
-    var ids = Object.keys(window.__PYWRY_TVCHARTS__);
+function _tvApplyLogScale(isLog, chartId) {
+    var ids = chartId ? [chartId] : Object.keys(window.__PYWRY_TVCHARTS__);
     for (var i = 0; i < ids.length; i++) {
         var entry = window.__PYWRY_TVCHARTS__[ids[i]];
         if (!entry || !entry.chart) continue;
@@ -655,8 +674,8 @@ function _tvApplyLogScale(isLog) {
     }
 }
 
-function _tvApplyAutoScale(isAuto) {
-    var ids = Object.keys(window.__PYWRY_TVCHARTS__);
+function _tvApplyAutoScale(isAuto, chartId) {
+    var ids = chartId ? [chartId] : Object.keys(window.__PYWRY_TVCHARTS__);
     for (var i = 0; i < ids.length; i++) {
         var entry = window.__PYWRY_TVCHARTS__[ids[i]];
         if (!entry || !entry.chart) continue;
@@ -668,8 +687,8 @@ function _tvApplyAutoScale(isAuto) {
     }
 }
 
-function _tvApplyPctScale(isPct) {
-    var ids = Object.keys(window.__PYWRY_TVCHARTS__);
+function _tvApplyPctScale(isPct, chartId) {
+    var ids = chartId ? [chartId] : Object.keys(window.__PYWRY_TVCHARTS__);
     for (var i = 0; i < ids.length; i++) {
         var entry = window.__PYWRY_TVCHARTS__[ids[i]];
         if (!entry || !entry.chart) continue;
@@ -684,35 +703,38 @@ function _tvApplyPctScale(isPct) {
 }
 
 function _tvToggleLogScale() {
-    var btn = document.getElementById('tvchart-log-scale-btn');
+    var chartId = _tvResolveChartIdFromElement(event ? event.target : null);
+    var btn = _tvScopedById(chartId, 'tvchart-log-scale-btn');
     var isActive = btn && btn.classList.contains('active');
     var newState = !isActive;
-    _tvApplyLogScale(newState);
+    _tvApplyLogScale(newState, chartId);
     if (btn) btn.classList.toggle('active', newState);
     // Deactivate % if log is turned on (mutually exclusive)
     if (newState) {
-        var pctBtn = document.getElementById('tvchart-pct-scale-btn');
+        var pctBtn = _tvScopedById(chartId, 'tvchart-pct-scale-btn');
         if (pctBtn) pctBtn.classList.remove('active');
     }
 }
 
 function _tvToggleAutoScale() {
-    var btn = document.getElementById('tvchart-auto-scale-btn');
+    var chartId = _tvResolveChartIdFromElement(event ? event.target : null);
+    var btn = _tvScopedById(chartId, 'tvchart-auto-scale-btn');
     var isActive = btn && btn.classList.contains('active');
     var newState = !isActive;
-    _tvApplyAutoScale(newState);
+    _tvApplyAutoScale(newState, chartId);
     if (btn) btn.classList.toggle('active', newState);
 }
 
 function _tvTogglePctScale() {
-    var btn = document.getElementById('tvchart-pct-scale-btn');
+    var chartId = _tvResolveChartIdFromElement(event ? event.target : null);
+    var btn = _tvScopedById(chartId, 'tvchart-pct-scale-btn');
     var isActive = btn && btn.classList.contains('active');
     var newState = !isActive;
-    _tvApplyPctScale(newState);
+    _tvApplyPctScale(newState, chartId);
     if (btn) btn.classList.toggle('active', newState);
     // Deactivate log if % is turned on (mutually exclusive)
     if (newState) {
-        var logBtn = document.getElementById('tvchart-log-scale-btn');
+        var logBtn = _tvScopedById(chartId, 'tvchart-log-scale-btn');
         if (logBtn) logBtn.classList.remove('active');
     }
 }
