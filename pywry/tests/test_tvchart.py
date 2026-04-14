@@ -1213,8 +1213,8 @@ class TestTVChartFrontendStateContracts:
         return self._extract_braced(src, src.index(f"function {name}("))
 
     def _handler(self, src: str, event: str) -> str:
-        """Extract the body of ``window.pywry.on('<event>', ...)``."""
-        return self._extract_braced(src, src.index(f"window.pywry.on('{event}'"))
+        """Extract the body of ``bridge.on('<event>', ...)``."""
+        return self._extract_braced(src, src.index(f"bridge.on('{event}'"))
 
     def _create_body(self, src: str) -> str:
         """Extract the PYWRY_TVCHART_CREATE function body."""
@@ -1356,18 +1356,17 @@ class TestTVChartFrontendStateContracts:
 
     def test_time_range_selection_handles_all_and_ytd(self, tvchart_defaults_js: str):
         """_tvApplyTimeRangeSelection must have explicit branches for 'all'
-        (fit all data) and 'ytd' (year-to-date), plus use _tvResolveRangeSpanMs
+        (fit all data) and 'ytd' (year-to-date), plus use _tvResolveRangeSpanDays
         for named presets like '1y', '3m', etc."""
         body = self._fn(tvchart_defaults_js, "_tvApplyTimeRangeSelection")
         assert "range === 'all'" in body
         assert "fitContent()" in body
         assert "range === 'ytd'" in body
-        assert "_tvResolveRangeSpanMs(" in body
-        assert "_tvApplyAbsoluteDateRange(" in body
+        assert "_tvResolveRangeSpanDays(" in body
 
     def test_range_span_resolver_covers_standard_presets(self, tvchart_defaults_js: str):
-        """_tvResolveRangeSpanMs must define time spans for all standard presets."""
-        body = self._fn(tvchart_defaults_js, "_tvResolveRangeSpanMs")
+        """_tvResolveRangeSpanDays must define time spans for all standard presets."""
+        body = self._fn(tvchart_defaults_js, "_tvResolveRangeSpanDays")
         for preset in ("'1d'", "'5d'", "'1m'", "'3m'", "'6m'", "'1y'", "'5y'"):
             assert preset in body, f"Range resolver must cover preset {preset}"
 

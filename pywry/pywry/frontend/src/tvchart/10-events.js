@@ -27,6 +27,9 @@
                 return;
             }
             var chartId = data.chartId || _cid;
+            // In native mode bridge._chartId is null, so capture the first
+            // chartId from the create payload for subsequent handlers.
+            if (!_cid && chartId) _cid = chartId;
             window.PYWRY_TVCHART_CREATE(chartId, container, data);
         });
 
