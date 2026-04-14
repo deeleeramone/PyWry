@@ -644,7 +644,7 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
 
                         var _isDaily = function() {
                             var r = entry._currentResolution || '';
-                            return /^[1-9]?[DWM]$/i.test(r) || /^\d+[DWM]$/i.test(r);
+                            return /^[1-9]?[DWM]$/.test(r) || /^\d+[DWM]$/.test(r);
                         };
                         var _isoDate = function(d, tz) {
                             var y = d.toLocaleString('en-US', { timeZone: tz, year: 'numeric' });

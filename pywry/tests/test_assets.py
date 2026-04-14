@@ -12,9 +12,9 @@ from pywry.assets import (
     clear_cache,
     get_aggrid_css,
     get_aggrid_js,
-    get_openbb_icon,
-    get_openbb_icon_path,
     get_plotly_js,
+    get_pywry_icon,
+    get_pywry_icon_path,
 )
 from pywry.models import ThemeMode
 
@@ -359,33 +359,33 @@ class TestGetOpenbbIcon:
 
     def test_returns_bytes(self):
         """Returns bytes."""
-        result = get_openbb_icon()
+        result = get_pywry_icon()
         assert isinstance(result, bytes)
 
     def test_returns_non_empty(self):
         """Returns non-empty content."""
-        result = get_openbb_icon()
+        result = get_pywry_icon()
         assert len(result) > 0
 
     def test_is_png_format(self):
         """Content is PNG format (starts with PNG magic bytes)."""
-        result = get_openbb_icon()
+        result = get_pywry_icon()
         # PNG magic bytes: 89 50 4E 47
         assert result[:4] == b"\x89PNG"
 
     def test_caching_works(self):
         """Same content is returned on multiple calls (cached)."""
-        result1 = get_openbb_icon()
-        result2 = get_openbb_icon()
+        result1 = get_pywry_icon()
+        result2 = get_pywry_icon()
         assert result1 is result2
 
 
-class TestGetOpenbbIconPath:
-    """Tests for get_openbb_icon_path function."""
+class TestGetPyWryIconPath:
+    """Tests for get_pywry_icon_path function."""
 
     def test_returns_path(self):
         """Returns a Path object."""
-        result = get_openbb_icon_path()
+        result = get_pywry_icon_path()
         assert result is not None
         from pathlib import Path
 
@@ -393,13 +393,13 @@ class TestGetOpenbbIconPath:
 
     def test_path_exists(self):
         """Returned path exists."""
-        result = get_openbb_icon_path()
+        result = get_pywry_icon_path()
         assert result is not None
         assert result.exists()
 
     def test_path_is_png(self):
         """Returned path is icon.png."""
-        result = get_openbb_icon_path()
+        result = get_pywry_icon_path()
         assert result is not None
         assert result.name == "icon.png"
 
@@ -433,9 +433,9 @@ class TestClearCache:
 
     def test_clears_icon_cache(self):
         """Clears icon cache."""
-        get_openbb_icon()
+        get_pywry_icon()
         clear_cache()
-        result = get_openbb_icon()
+        result = get_pywry_icon()
         assert len(result) > 0
 
 

@@ -1918,7 +1918,7 @@ function _tvShowSeriesSettings(chartId, seriesId) {
     panel.appendChild(footer);
 
     renderBody();
-    document.body.appendChild(overlay);
+    _tvOverlayContainer(chartId).appendChild(overlay);
 }
 
 function _tvShowVolumeSettings(chartId) {
@@ -2380,7 +2380,7 @@ function _tvShowVolumeSettings(chartId) {
     footer.appendChild(okBtn);
     panel.appendChild(footer);
 
-    document.body.appendChild(overlay);
+    _tvOverlayContainer(chartId).appendChild(overlay);
 }
 
 function _tvShowChartSettings(chartId) {
@@ -3523,7 +3523,7 @@ function _tvShowChartSettings(chartId) {
         if (target.tagName === 'INPUT' || target.tagName === 'SELECT') scheduleSettingsPreview();
     });
 
-    document.body.appendChild(overlay);
+    _tvOverlayContainer(chartId).appendChild(overlay);
 }
 
 // ---------------------------------------------------------------------------

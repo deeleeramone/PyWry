@@ -15,6 +15,15 @@ function _tvSetupLegendControls(chartId) {
     var entry = resolved.entry;
     if (!entry.chart) return;
 
+    // Live entry accessor — always returns the current chart entry from the
+    // global registry.  The closure-captured `entry` can go stale when the
+    // chart is destroyed and recreated (e.g. on interval change).  Functions
+    // that read symbol metadata must use _liveEntry() to stay in sync.
+    function _liveEntry() {
+        var r = _tvResolveChartEntry(chartId);
+        return (r && r.entry) ? r.entry : entry;
+    }
+
     function scopedById(id) {
         return _tvScopedById(chartId, id);
     }
@@ -710,13 +719,14 @@ function _tvSetupLegendControls(chartId) {
         _legendCloseSecurityInfo();
         var sid = String(seriesId || '');
         if (!sid) return;
-        var info = (entry && entry._compareSymbolInfo && entry._compareSymbolInfo[sid])
-            ? entry._compareSymbolInfo[sid]
-            : (entry && entry._resolvedSymbolInfo && entry._resolvedSymbolInfo[sid])
-                ? entry._resolvedSymbolInfo[sid]
+        var e = _liveEntry();
+        var info = (e && e._compareSymbolInfo && e._compareSymbolInfo[sid])
+            ? e._compareSymbolInfo[sid]
+            : (e && e._resolvedSymbolInfo && e._resolvedSymbolInfo[sid])
+                ? e._resolvedSymbolInfo[sid]
                 : {};
         var label = _legendSeriesLabel(sid);
-        var rawSymbol = (entry && entry._compareSymbols && entry._compareSymbols[sid]) ? entry._compareSymbols[sid] : label;
+        var rawSymbol = (e && e._compareSymbols && e._compareSymbols[sid]) ? e._compareSymbols[sid] : label;
 
         var name = String(info.ticker || info.displaySymbol || label || '').trim() || 'Unknown';
         var description = String(info.fullName || info.description || '').trim() || 'Unavailable';
@@ -1203,23 +1213,25 @@ function _tvSetupLegendControls(chartId) {
     }
 
     function _legendTitleBase(ds) {
+        var e = _liveEntry();
         var base = (ds && ds.baseTitle) ? ds.baseTitle : '';
-        if (!base && entry && entry.payload && entry.payload.useDatafeed && entry.payload.series && entry.payload.series[0] && entry.payload.series[0].symbol) {
-            base = String(entry.payload.series[0].symbol);
+        if (!base && e && e.payload && e.payload.useDatafeed && e.payload.series && e.payload.series[0] && e.payload.series[0].symbol) {
+            base = String(e.payload.series[0].symbol);
         }
-        if (!base && entry && entry.payload && entry.payload.title) {
-            base = String(entry.payload.title);
+        if (!base && e && e.payload && e.payload.title) {
+            base = String(e.payload.title);
         }
-        if (!base && entry && entry.payload && entry.payload.series && entry.payload.series[0] && entry.payload.series[0].seriesId) {
-            var s0 = String(entry.payload.series[0].seriesId);
+        if (!base && e && e.payload && e.payload.series && e.payload.series[0] && e.payload.series[0].seriesId) {
+            var s0 = String(e.payload.series[0].seriesId);
             if (s0 && s0 !== 'main') base = s0;
         }
         if (!base) base = (mainKey === 'main' ? '' : mainKey);
         // Description mode replaces the base title with resolved symbol info
         if (ds && ds.description && ds.description !== 'Off') {
             var descMode = ds.description;
-            var symInfo = (entry && entry._resolvedSymbolInfo && entry._resolvedSymbolInfo.main)
-                || (entry && entry._mainSymbolInfo) || {};
+            var le = _liveEntry();
+            var symInfo = (le && le._resolvedSymbolInfo && le._resolvedSymbolInfo.main)
+                || (le && le._mainSymbolInfo) || {};
             var ticker = String(symInfo.ticker || symInfo.displaySymbol || symInfo.symbol || base || '').trim();
             var descText = String(symInfo.description || symInfo.fullName || '').trim();
             if (descMode === 'Description' && descText) {
@@ -1524,22 +1536,23 @@ function _tvSetupLegendControls(chartId) {
 
     function _legendSeriesLabel(seriesId) {
         var sid = String(seriesId || 'main');
+        var e = _liveEntry();
         if (sid === 'main') {
             var ds = _legendDataset() || {};
             var base = (ds && ds.baseTitle) ? String(ds.baseTitle) : '';
-            if (!base && entry && entry.payload && entry.payload.useDatafeed && entry.payload.series && entry.payload.series[0] && entry.payload.series[0].symbol) {
-                base = String(entry.payload.series[0].symbol);
+            if (!base && e && e.payload && e.payload.useDatafeed && e.payload.series && e.payload.series[0] && e.payload.series[0].symbol) {
+                base = String(e.payload.series[0].symbol);
             }
-            if (!base && entry && entry.payload && entry.payload.title) {
-                base = String(entry.payload.title);
+            if (!base && e && e.payload && e.payload.title) {
+                base = String(e.payload.title);
             }
             return base || 'Main';
         }
-        if (entry && entry._compareLabels && entry._compareLabels[sid]) {
-            return String(entry._compareLabels[sid]);
+        if (e && e._compareLabels && e._compareLabels[sid]) {
+            return String(e._compareLabels[sid]);
         }
-        if (entry && entry._compareSymbolInfo && entry._compareSymbolInfo[sid]) {
-            var info = entry._compareSymbolInfo[sid] || {};
+        if (e && e._compareSymbolInfo && e._compareSymbolInfo[sid]) {
+            var info = e._compareSymbolInfo[sid] || {};
             var display = String(info.displaySymbol || info.ticker || '').trim();
             if (display) return display.toUpperCase();
             var full = String(info.fullName || '').trim();
@@ -1551,8 +1564,8 @@ function _tvSetupLegendControls(chartId) {
                     : infoSymbol.toUpperCase();
             }
         }
-        if (entry && entry._compareSymbols && entry._compareSymbols[sid]) {
-            var raw = String(entry._compareSymbols[sid]);
+        if (e && e._compareSymbols && e._compareSymbols[sid]) {
+            var raw = String(e._compareSymbols[sid]);
             return raw.indexOf(':') >= 0 ? raw.split(':').pop().trim().toUpperCase() : raw.toUpperCase();
         }
         return sid;
@@ -1571,7 +1584,8 @@ function _tvSetupLegendControls(chartId) {
     }
 
     function _legendGetTimezone() {
-        var info = entry && entry._resolvedSymbolInfo && entry._resolvedSymbolInfo.main;
+        var e = _liveEntry();
+        var info = e && e._resolvedSymbolInfo && e._resolvedSymbolInfo.main;
         return (info && info.timezone) ? String(info.timezone).trim() : 'America/New_York';
     }
 

@@ -807,6 +807,8 @@ class RealtimeStreamer:
         self._stop = threading.Event()
         # symbol → delay in minutes (from exchangeDataDelayedBy)
         self._delay: dict[str, int] = {}
+        # Active marquee symbol — only this symbol may update the marquee.
+        self._active_marquee_symbol: str = ""
         # Periodic backfill timers (symbol → Timer)
         self._backfill_timers: dict[str, threading.Timer] = {}
 
@@ -830,7 +832,13 @@ class RealtimeStreamer:
             self._subs[guid] = {"symbol": symbol, "resolution": resolution}
             symbols = list({s["symbol"] for s in self._subs.values()})
 
-        if self._ws is None:
+        # (Re)create WebSocket if not running or if the listener died.
+        ws_alive = self._ws is not None and self._thread is not None and self._thread.is_alive()
+        if not ws_alive:
+            # Close stale handle if it exists
+            if self._ws is not None:
+                with contextlib.suppress(Exception):
+                    self._ws.close()
             self._ws = yf.WebSocket(verbose=False)
             self._ws.subscribe(symbols)
             self._stop.clear()
@@ -932,6 +940,9 @@ class RealtimeStreamer:
         except Exception as exc:
             if not self._stop.is_set():
                 print(f"[websocket] Connection closed: {exc}")
+        finally:
+            # Mark WebSocket as dead so subscribe() recreates it.
+            self._ws = None
 
     def _on_message(self, msg: dict[str, Any]) -> None:
         """Handle a WebSocket tick message from Yahoo Finance.
@@ -991,8 +1002,11 @@ class RealtimeStreamer:
             if not _is_overnight(bar_time, symbol):
                 self._cache.append_bar(symbol, "1m", bar)
 
-        # Push live fields to the marquee ticker strip
-        self._update_marquee(symbol, msg)
+        # Only update the marquee for the currently active symbol so that
+        # stale ticks from a previously subscribed symbol don't overwrite
+        # the freshly seeded marquee after a symbol change.
+        if symbol.upper() == self._active_marquee_symbol:
+            self._update_marquee(symbol, msg)
 
     def _update_marquee(self, symbol: str, msg: dict[str, Any]) -> None:
         """Emit marquee-set-item events for each live data field."""
@@ -1123,6 +1137,24 @@ def _seed_marquee(app: PyWry, symbol: str) -> None:
             payload["styles"] = styles
         app.emit("toolbar:marquee-set-item", payload)
 
+    # -- Reset ALL marquee slots so stale data from the prior symbol
+    #    never persists (e.g. Mkt Cap from a stock showing on a future).
+    for slot in (
+        "ws-price",
+        "ws-change",
+        "ws-session",
+        "ws-ext-price",
+        "ws-ext-change",
+        "ws-open",
+        "ws-high",
+        "ws-low",
+        "ws-volume",
+        "ws-mktcap",
+        "ws-vol24",
+        "ws-symbol",
+    ):
+        _emit(slot, "")
+
     # Always show regular session close in the primary slots.
     reg_price = info.get("regularMarketPrice")
     reg_change = info.get("regularMarketChange")
@@ -1190,8 +1222,10 @@ def _seed_marquee(app: PyWry, symbol: str) -> None:
         _emit("ws-volume", _fmt_volume(float(volume)))
 
     mkt_cap = info.get("marketCap")
-    if mkt_cap is not None:
+    if mkt_cap is not None and mkt_cap > 0:
         _emit("ws-mktcap", _fmt_number(float(mkt_cap), 2))
+    else:
+        _emit("ws-mktcap", "—")
 
     # Crypto-specific 24h volume
     is_crypto = (info.get("quoteType") or "").lower() == "cryptocurrency"
@@ -1290,6 +1324,9 @@ def make_callbacks(
                 symbol_info=info,
                 chart_id=chart_id,
             )
+            # Mark this symbol as the active marquee target BEFORE seeding
+            # so that stale WebSocket ticks for the old symbol are filtered.
+            streamer._active_marquee_symbol = symbol.upper()
             # Seed the marquee with snapshot data from ticker.info
             _seed_marquee(app, symbol)
 

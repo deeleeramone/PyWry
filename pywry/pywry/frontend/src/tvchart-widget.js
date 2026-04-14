@@ -99,6 +99,28 @@ function render({ model, el }) {
                     }
                     el = el.parentElement;
                 }
+                // No sourceEl or DOM walk failed — resolve from data.chartId
+                // via the chart registry (covers tvchart emit calls that don't
+                // pass a source element, e.g. compare, symbol-change, intervals).
+                var chartId = data && data.chartId;
+                if (chartId && window.__PYWRY_TVCHARTS__) {
+                    var entry = window.__PYWRY_TVCHARTS__[chartId];
+                    if (entry) {
+                        if (entry.bridge) { entry.bridge.emit(type, data); return; }
+                        if (entry.container) {
+                            var w = entry.container.closest && entry.container.closest('.pywry-widget');
+                            if (w && w._pywryInstance) { w._pywryInstance.emit(type, data); return; }
+                        }
+                    }
+                }
+                // Last resort: find any widget instance on the page
+                var widgets = document.querySelectorAll('.pywry-widget');
+                for (var i = 0; i < widgets.length; i++) {
+                    if (widgets[i]._pywryInstance) {
+                        widgets[i]._pywryInstance.emit(type, data);
+                        return;
+                    }
+                }
                 console.warn('[PyWry] No bridge found for event:', type);
             },
             on: function() {},
@@ -131,7 +153,15 @@ function render({ model, el }) {
             if (event.type) {
                 pywry._fire(event.type, event.data);
             }
-        } catch(e) { /* ignore */ }
+        } catch(e) { console.error('[PyWry] change:_py_event parse error:', e); }
+    });
+
+    // Custom comm messages bypass trait sync/batching — primary delivery
+    // for Python→JS events when emit() runs inside a traitlets observer.
+    model.on('msg:custom', function(msg) {
+        if (msg && msg.type) {
+            pywry._fire(msg.type, msg.data || {});
+        }
     });
 
     // Alert/toast support

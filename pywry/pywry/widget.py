@@ -675,6 +675,14 @@ function render({ model, el }) {
         }
     });
 
+    // Custom comm messages bypass trait sync/batching — primary delivery
+    // for Python→JS events when emit() runs inside a traitlets observer.
+    model.on('msg:custom', function(msg) {
+        if (msg && msg.type) {
+            pywry._fire(msg.type, msg.data || {});
+        }
+    });
+
     __TOOLBAR_HANDLERS__
 
     function renderContent(retryCount = 0) {
@@ -1265,6 +1273,14 @@ function render({ model, el }) {
         }
     });
 
+    // Custom comm messages bypass trait sync/batching — primary delivery
+    // for Python→JS events when emit() runs inside a traitlets observer.
+    model.on('msg:custom', function(msg) {
+        if (msg && msg.type) {
+            pywry._fire(msg.type, msg.data || {});
+        }
+    });
+
     function runScripts(parent) {
         const scripts = Array.from(parent.querySelectorAll('script'));
         scripts.forEach(oldScript => {
@@ -1446,6 +1462,7 @@ if HAS_ANYWIDGET:
             super().__init__(**kwargs)
             self._label = f"w-{uuid.uuid4().hex[:8]}"
             self._handlers: dict[str, list[Callable[[dict[str, Any], str, str], Any]]] = {}
+
             self.observe(self._handle_js_event, names=["_js_event"])
 
         @property
@@ -1467,6 +1484,7 @@ if HAS_ANYWIDGET:
                 event = json.loads(change["new"])
                 event_type = event.get("type", "")
                 event_data = event.get("data", {})
+
                 handlers = self._handlers.get(event_type, [])
                 for handler in handlers:
                     handler(event_data, event_type, self._label)
@@ -1519,9 +1537,16 @@ if HAS_ANYWIDGET:
             The event is pushed through the ``_py_event`` synchronized trait so the
             anywidget frontend receives it immediately.
             """
-            event = json.dumps({"type": event_type, "data": data or {}, "ts": uuid.uuid4().hex})
+            payload = {"type": event_type, "data": data or {}, "ts": uuid.uuid4().hex}
+            event = json.dumps(payload)
             self._py_event = event
-            self.send_state("_py_event")  # Force sync to frontend
+            try:
+                self.send(payload)
+            except Exception:  # noqa: BLE001
+                try:
+                    self.send_state("_py_event")
+                except Exception:  # noqa: BLE001
+                    pass
 
         def update(self, html: str) -> None:
             """Update the widget's HTML content.
@@ -1921,7 +1946,7 @@ if HAS_ANYWIDGET:
             super().__init__(content=content, theme=theme, width=width, height=height, **kwargs)
             if not self.chart_id:
                 self.chart_id = self._label
-            self.observe(self._handle_js_event, names=["_js_event"])
+            # NOTE: do NOT observe _js_event here — PyWryWidget.__init__ already does it
 
         def emit(self, event_type: str, data: dict[str, Any] | None = None) -> None:
             """Send an event from Python to JavaScript."""
