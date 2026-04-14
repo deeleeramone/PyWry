@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import pathlib
 import uuid
@@ -1542,11 +1543,9 @@ if HAS_ANYWIDGET:
             self._py_event = event
             try:
                 self.send(payload)
-            except Exception:  # noqa: BLE001
-                try:
+            except Exception:
+                with contextlib.suppress(Exception):
                     self.send_state("_py_event")
-                except Exception:  # noqa: BLE001
-                    pass
 
         def update(self, html: str) -> None:
             """Update the widget's HTML content.

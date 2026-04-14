@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - 'pywry/pyproject.toml'
+      - 'pywry/build_assets.py'
     branches:
       - main
       - master
@@ -57,7 +58,85 @@ jobs:
           
       - name: Generate SBOM JSON (additional format)
         run: cyclonedx-py environment --pyproject pyproject.toml --output-format JSON --output-file ../sbom.json
-          
+
+      - name: Inject bundled JS libraries into SBOM
+        run: |
+          python -c "
+          import json, re, uuid
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+
+          # Parse JS library versions from build_assets.py
+          src = Path('build_assets.py').read_text()
+          url_pattern = re.compile(r'(?:plotly|ag-grid-community|lightweight-charts)[@/\-](\d+\.\d+\.\d+)')
+          npm_map = {
+              'PLOTLY_JS_URL': 'plotly.js',
+              'AGGRID_JS_URL': 'ag-grid-community',
+              'TVCHART_JS_URL': 'lightweight-charts',
+          }
+          JS_LIBS = []
+          for line in src.splitlines():
+              for const, npm_name in npm_map.items():
+                  if line.strip().startswith(const):
+                      m = url_pattern.search(line)
+                      if m:
+                          JS_LIBS.append({'name': npm_name, 'version': m.group(1), 'purl': f'pkg:npm/{npm_name}@{m.group(1)}'})
+          # AGGRID_JS_URL spans two lines - check the next line too
+          lines = src.splitlines()
+          for i, line in enumerate(lines):
+              for const, npm_name in npm_map.items():
+                  if line.strip().startswith(const) and not url_pattern.search(line) and i + 1 < len(lines):
+                      m = url_pattern.search(lines[i + 1])
+                      if m and not any(l['name'] == npm_name for l in JS_LIBS):
+                          JS_LIBS.append({'name': npm_name, 'version': m.group(1), 'purl': f'pkg:npm/{npm_name}@{m.group(1)}'})
+
+          assert JS_LIBS, 'Failed to parse any JS libraries from build_assets.py'
+
+          # --- JSON ---
+          sbom_json = Path('../sbom.json')
+          data = json.loads(sbom_json.read_text())
+          existing = {(c['name'], c['version']) for c in data.get('components', [])}
+          for lib in JS_LIBS:
+              if (lib['name'], lib['version']) not in existing:
+                  data.setdefault('components', []).append({
+                      'type': 'library',
+                      'name': lib['name'],
+                      'version': lib['version'],
+                      'purl': lib['purl'],
+                      'bom-ref': lib['purl'],
+                  })
+          data['serialNumber'] = f'urn:uuid:{uuid.uuid4()}'
+          sbom_json.write_text(json.dumps(data, indent=2) + '\n')
+
+          # --- XML ---
+          sbom_xml = Path('../sbom.xml')
+          tree = ET.parse(sbom_xml)
+          root = tree.getroot()
+          ns_match = re.match(r'\{(.+?)\}', root.tag)
+          ns = ns_match.group(1) if ns_match else 'http://cyclonedx.org/schema/bom/1.6'
+          ET.register_namespace('', ns)
+          components = root.find(f'{{{ns}}}components')
+          if components is None:
+              components = ET.SubElement(root, f'{{{ns}}}components')
+          existing_xml = set()
+          for c in components.findall(f'{{{ns}}}component'):
+              n = c.findtext(f'{{{ns}}}name')
+              v = c.findtext(f'{{{ns}}}version')
+              if n and v:
+                  existing_xml.add((n, v))
+          for lib in JS_LIBS:
+              if (lib['name'], lib['version']) not in existing_xml:
+                  comp = ET.SubElement(components, f'{{{ns}}}component', type='library')
+                  comp.set('bom-ref', lib['purl'])
+                  ET.SubElement(comp, f'{{{ns}}}name').text = lib['name']
+                  ET.SubElement(comp, f'{{{ns}}}version').text = lib['version']
+                  ET.SubElement(comp, f'{{{ns}}}purl').text = lib['purl']
+          if root.get('serialNumber'):
+              root.set('serialNumber', f'urn:uuid:{uuid.uuid4()}')
+          tree.write(sbom_xml, xml_declaration=True, encoding='unicode')
+          print('Injected JS libraries: ' + ', '.join(l['name'] + '@' + l['version'] for l in JS_LIBS))
+          "
+
       - name: Display SBOM summary
         run: |
           echo "## SBOM Generated Successfully" >> $GITHUB_STEP_SUMMARY
