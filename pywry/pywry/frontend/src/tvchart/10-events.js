@@ -17,6 +17,19 @@
         // instead of 'main' (which is a SERIES id, not a chart id).
         var _cid = bridge._chartId || null;
 
+        // In native mode, bridge._chartId is undefined at onReady time
+        // because the chart is created later via a direct call to
+        // PYWRY_TVCHART_CREATE (bypassing the tvchart:create event).
+        // Wire a property accessor so that when PYWRY_TVCHART_CREATE sets
+        // bridge._chartId, the closure variable _cid updates automatically.
+        if (!_cid) {
+            Object.defineProperty(bridge, '_chartId', {
+                get: function() { return _cid; },
+                set: function(v) { _cid = v; },
+                configurable: true,
+            });
+        }
+
         // Python → JS: create chart
         bridge.on('tvchart:create', function(data) {
             var container = data.containerId

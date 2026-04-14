@@ -205,6 +205,13 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
     var _widgetEl = container.closest && container.closest('.pywry-widget');
     entry.bridge = (_widgetEl && _widgetEl._pywryInstance) ? _widgetEl._pywryInstance : (window.pywry || null);
 
+    // In native mode the chart is created directly (not via tvchart:create
+    // event), so bridge._chartId is never set.  Set it here so that event
+    // handlers in 10-events.js which rely on _cid resolve correctly.
+    if (entry.bridge && !entry.bridge._chartId) {
+        entry.bridge._chartId = chartId;
+    }
+
     if (payload.useDatafeed) {
         // Datafeed mode — series populated asynchronously via the Datafeed API
         _tvInitDatafeedMode(entry, seriesList, theme);
