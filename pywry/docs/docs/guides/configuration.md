@@ -194,6 +194,6 @@ pywry init
 ## Next Steps
 
 - **[Configuration Reference](../reference/config.md)** — Complete `PyWrySettings` API
-- **[Tauri Plugins](../integrations/tauri-plugins.md)** — Enable clipboard, notifications, HTTP & more
+- **[Tauri Plugins](../integrations/pytauri/tauri-plugins.md)** — Enable clipboard, notifications, HTTP & more
 - **[Deploy Mode](deploy-mode.md)** — Production server configuration
 - **[Browser Mode](browser-mode.md)** — Server settings for browser mode

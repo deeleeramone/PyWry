@@ -691,7 +691,7 @@ _chat_message_store: dict[str, dict[str, list[dict[str, Any]]]] = {}
 
 
 def _handle_create_chat_widget(ctx: HandlerContext) -> HandlerResult:
-    from ..chat import ChatThread, _default_slash_commands, build_chat_html
+    from ..chat import ChatThread, build_chat_html
     from .builders import build_chat_widget_config, build_toolbars as _build_toolbars
 
     app = get_app()
@@ -729,15 +729,11 @@ def _handle_create_chat_widget(ctx: HandlerContext) -> HandlerResult:
     _chat_thread_store.setdefault(widget_id, {})[thread_id] = default_thread
     _chat_message_store.setdefault(widget_id, {})[thread_id] = []
 
-    # Register default slash commands
-    for cmd in _default_slash_commands():
-        widget.emit(
-            "chat:register-command",
-            {
-                "name": cmd.name,
-                "description": cmd.description,
-            },
-        )
+    # Register default slash command
+    widget.emit(
+        "chat:register-command",
+        {"name": "/clear", "description": "Clear the conversation"},
+    )
 
     # Register custom slash commands
     if widget_config.chat_config.slash_commands:

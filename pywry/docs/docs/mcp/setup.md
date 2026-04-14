@@ -318,10 +318,10 @@ curl http://127.0.0.1:8001/sse
 
 ```bash
 # Verify Python and pywry are accessible
-python -c "import pywry.mcp; print('OK')"
+python -c "import pywry.mcp"
 
 # Check MCP is installed
-python -c "import mcp; print(mcp.__version__)"
+python -c "import mcp"
 ```
 
 ### Tools Not Available in Claude

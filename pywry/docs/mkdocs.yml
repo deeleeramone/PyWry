@@ -160,6 +160,7 @@ nav:
       - Event System: guides/events.md
       - Hot Reload: guides/hot-reload.md
       - JavaScript Bridge: guides/javascript-bridge.md
+      - Multi-Widget Composition: guides/multi-widget.md
       - OAuth2 Authentication: guides/oauth2.md
       - State, Redis & RBAC: guides/state-and-auth.md
       - Window Modes: guides/window-management.md
@@ -218,15 +219,17 @@ nav:
     - AgGrid:
       - integrations/aggrid/index.md
       - Grid API: integrations/aggrid/grid.md
-    - Anywidget: integrations/anywidget.md
+    - Anywidget Transport: integrations/anywidget.md
     - Chat:
       - integrations/chat/index.md
       - Chat Providers API: integrations/chat/chat-providers.md
-    - Multi-Widget: integrations/multi-widget.md
+    - IFrame + WebSocket Transport: integrations/inline-widget/index.md
+    - PyTauri:
+      - integrations/pytauri/index.md
+      - Tauri Plugins: integrations/pytauri/tauri-plugins.md
     - Plotly:
       - integrations/plotly/index.md
       - PlotlyConfig API: integrations/plotly/plotly-config.md
-    - Tauri Plugins: integrations/tauri-plugins.md
     - TradingView:
       - integrations/tradingview/index.md
       - Config: integrations/tradingview/tvchart-config.md

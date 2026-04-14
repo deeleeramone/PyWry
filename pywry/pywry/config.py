@@ -619,12 +619,18 @@ class DeploySettings(BaseSettings):
     )
 
     # State backend configuration
-    state_backend: Literal["memory", "redis"] = Field(
+    state_backend: Literal["memory", "redis", "sqlite"] = Field(
         default="memory",
         description=(
-            "State storage backend: 'memory' (single process) or 'redis' (distributed). "
-            "Redis enables multi-worker horizontal scaling."
+            "State storage backend: 'memory' (single process), "
+            "'sqlite' (local persistent with encryption), or "
+            "'redis' (distributed multi-worker)."
         ),
+    )
+
+    sqlite_path: str = Field(
+        default="~/.config/pywry/pywry.db",
+        description="Path to the SQLite database file (used when state_backend='sqlite')",
     )
 
     # Redis connection settings

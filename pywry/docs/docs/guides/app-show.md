@@ -86,10 +86,11 @@ A dictionary mapping event names to Python callback functions. These are registe
 
 ```python
 def on_click(data, event_type, label):
-    print(f"Clicked: {data}")
+    selected_point = data.get("points", [{}])[0]
+    app.emit("pywry:set-content", {"id": "info", "text": f"x={selected_point.get('x')}"}, label)
 
 def on_save(data, event_type, label):
-    print("Saving...")
+    app.emit("pywry:download", {"filename": "data.json", "content": "{}"}, label)
 
 app.show(html, callbacks={
     "plotly:click": on_click,

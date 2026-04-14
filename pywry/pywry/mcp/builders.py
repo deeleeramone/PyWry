@@ -358,9 +358,8 @@ def build_chat_config(cfg: dict[str, Any]) -> Any:
     ChatConfig
         Built chat configuration.
     """
-    from pywry.chat import ChatConfig, SlashCommand
+    from pywry.chat import ChatConfig
 
-    cmds_data = cfg.get("slash_commands")
     kwargs: dict[str, Any] = {
         "system_prompt": cfg.get("system_prompt", ""),
         "model": cfg.get("model", "gpt-4"),
@@ -368,16 +367,7 @@ def build_chat_config(cfg: dict[str, Any]) -> Any:
         "max_tokens": cfg.get("max_tokens", 4096),
         "streaming": cfg.get("streaming", True),
         "persist": cfg.get("persist", False),
-        "provider": cfg.get("provider"),
     }
-    if cmds_data:
-        kwargs["slash_commands"] = [
-            SlashCommand(
-                name=c["name"],
-                description=c.get("description", ""),
-            )
-            for c in cmds_data
-        ]
 
     return ChatConfig(**kwargs)
 

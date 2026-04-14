@@ -1,10 +1,22 @@
-# Plotly Charts
+# Plotly
 
-PyWry provides first-class Plotly support — pass a Plotly figure to `show_plotly()` and get a fully interactive chart with pre-wired events, automatic theming, and programmatic update capabilities.
+PyWry integrates [Plotly.js](https://plotly.com/javascript/) to render interactive charts — scatter plots, bar charts, line graphs, heatmaps, 3D surfaces, and every other Plotly chart type. The integration handles figure serialization, event bridging, theme synchronization, and programmatic updates automatically.
 
-For the complete Plotly configuration API, see [`PlotlyConfig`](plotly-config.md). For all Plotly events and payloads, see the [Event Reference](../../reference/events/plotly.md).
+Plotly.js runs entirely in the browser. PyWry's role is to serialize your Python Plotly figure into JSON, inject the Plotly library into the page, wire up events so clicks, hovers, and selections flow back to Python, and keep the chart's template in sync with PyWry's dark/light mode.
 
-## Basic Usage
+## How It Works
+
+1. You pass a Plotly `Figure` (or figure dict) to `show_plotly()` or `PlotlyArtifact`
+2. PyWry converts the figure to a JSON dict via `fig.to_json()` (or uses it directly if already a dict)
+3. The Plotly.js library (~1MB gzipped) is injected into the page
+4. `plotly-defaults.js` registers event listeners on the chart element that call `pywry.emit()` when the user clicks, hovers, selects, or zooms
+5. Your Python callbacks receive these events through the same `on()`/`emit()` protocol used by all PyWry components
+
+Charts render in all three environments — native windows, notebooks (anywidget or IFrame), and browser tabs — using the same code.
+
+## Displaying a Chart
+
+### From a Plotly Figure
 
 ```python
 import plotly.express as px
@@ -12,18 +24,56 @@ from pywry import PyWry
 
 app = PyWry()
 
+df = px.data.gapminder().query("year == 2007")
 fig = px.scatter(
-    x=[1, 2, 3, 4, 5],
-    y=[1, 4, 9, 16, 25],
-    title="Quadratic Function"
+    df,
+    x="gdpPercap",
+    y="lifeExp",
+    size="pop",
+    color="continent",
+    hover_name="country",
+    log_x=True,
+    title="GDP vs Life Expectancy (2007)",
 )
 
 handle = app.show_plotly(fig)
 ```
 
-## Plotly Configuration
+### From a Figure Dict
 
-Use `PlotlyConfig` to customize chart behavior:
+```python
+figure = {
+    "data": [
+        {"type": "bar", "x": ["Q1", "Q2", "Q3", "Q4"], "y": [120, 180, 150, 210], "name": "Revenue"},
+        {"type": "bar", "x": ["Q1", "Q2", "Q3", "Q4"], "y": [80, 90, 110, 130], "name": "Costs"},
+    ],
+    "layout": {
+        "barmode": "group",
+        "title": {"text": "Quarterly Financials"},
+    },
+}
+
+handle = app.show_plotly(figure)
+```
+
+### Inside a Chat Response
+
+```python
+from pywry.chat.artifacts import PlotlyArtifact
+
+def handler(messages, ctx):
+    yield PlotlyArtifact(
+        title="Revenue Trend",
+        figure=fig.to_dict(),
+        height="360px",
+    )
+```
+
+The Plotly library is loaded lazily in chat — it's only injected when the first `PlotlyArtifact` is emitted.
+
+## Chart Configuration
+
+`PlotlyConfig` controls chart behavior — responsiveness, mode bar, scroll zoom, and custom toolbar buttons:
 
 ```python
 from pywry import PlotlyConfig
@@ -31,18 +81,31 @@ from pywry import PlotlyConfig
 config = PlotlyConfig(
     responsive=True,
     scroll_zoom=True,
-    display_mode_bar=True,  # True, False, or "hover"
-    mode_bar_buttons_to_remove=["lasso2d", "select2d"],
+    display_mode_bar="hover",
+    mode_bar_buttons_to_remove=["lasso2d", "select2d", "toImage"],
 )
 
 handle = app.show_plotly(fig, config=config)
 ```
 
-For the full list of `PlotlyConfig` properties, see the [API Reference](plotly-config.md).
+Key `PlotlyConfig` fields:
 
-## Custom Mode Bar Buttons
+| Field | Type | Default | Effect |
+|-------|------|---------|--------|
+| `responsive` | `bool` | `True` | Chart resizes with container |
+| `scroll_zoom` | `bool` | `True` | Mouse wheel zooms chart |
+| `display_mode_bar` | `bool` or `str` | `True` | Mode bar visibility (`True`, `False`, `"hover"`) |
+| `display_logo` | `bool` | `False` | Show Plotly logo in mode bar |
+| `mode_bar_buttons_to_remove` | `list[str]` | `[]` | Remove standard buttons by name |
+| `mode_bar_buttons_to_add` | `list[ModeBarButton]` | `[]` | Add custom buttons |
+| `template_dark` | `dict` | `None` | Custom template overrides for dark mode |
+| `template_light` | `dict` | `None` | Custom template overrides for light mode |
 
-Add custom buttons to the chart toolbar:
+For the complete API, see [`PlotlyConfig`](plotly-config.md).
+
+### Custom Mode Bar Buttons
+
+Add buttons that fire events back to Python:
 
 ```python
 from pywry import PlotlyConfig, ModeBarButton, SvgIcon
@@ -50,66 +113,118 @@ from pywry import PlotlyConfig, ModeBarButton, SvgIcon
 config = PlotlyConfig(
     mode_bar_buttons_to_add=[
         ModeBarButton(
-            name="custom",
-            title="Custom Action",
-            icon=SvgIcon(path="M10 10 L90 90", width=100, height=100),
-            click="function(gd) { window.pywry.emit('app:custom', {}); }"
-        )
+            name="export-csv",
+            title="Export Data as CSV",
+            icon=SvgIcon(
+                path="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
+                width=24,
+                height=24,
+            ),
+            event="chart:export-csv",
+        ),
     ],
 )
+
+def on_export_csv(data, event_type, label):
+    handle.emit("pywry:download", {
+        "filename": "chart_data.csv",
+        "content": df.to_csv(index=False),
+        "mimeType": "text/csv",
+    })
+
+handle = app.show_plotly(fig, config=config, callbacks={"chart:export-csv": on_export_csv})
 ```
+
+When `event` is set on a `ModeBarButton`, clicking the button calls `pywry.emit(event, {})` instead of requiring a raw JavaScript click handler.
 
 ## Chart Events
 
-Plotly charts emit events for user interactions:
+Plotly interactions produce events that your Python callbacks receive:
 
 ```python
 def on_click(data, event_type, label):
     point = data["points"][0]
-    x, y = point["x"], point["y"]
-    app.emit("pywry:alert", {"message": f"Clicked: ({x}, {y})"}, label)
-
-def on_hover(data, event_type, label):
-    point = data["points"][0]
+    country = point.get("hovertext", point.get("text", ""))
+    x_val = point["x"]
+    y_val = point["y"]
     app.emit("pywry:set-content", {
-        "id": "status",
-        "text": f"Hovering: {point['x']}, {point['y']}"
+        "id": "detail",
+        "html": f"<b>{country}</b><br/>GDP: ${x_val:,.0f}<br/>Life Exp: {y_val:.1f}",
     }, label)
 
-def on_select(data, event_type, label):
-    points = data.get("points", [])
-    app.emit("pywry:alert", {"message": f"Selected {len(points)} points"}, label)
+def on_selection(data, event_type, label):
+    selected = data.get("points", [])
+    countries = [p.get("hovertext", "") for p in selected]
+    filtered_df = df[df["country"].isin(countries)]
+    handle.emit("pywry:set-content", {
+        "id": "count",
+        "text": f"{len(selected)} countries selected",
+    })
+
+def on_relayout(data, event_type, label):
+    zoom_range = data.get("xaxis.range", [])
+    if zoom_range:
+        min_gdp, max_gdp = zoom_range
+        # React to zoom changes
 
 handle = app.show_plotly(
     fig,
     callbacks={
         "plotly:click": on_click,
-        "plotly:hover": on_hover,
-        "plotly:selected": on_select,
+        "plotly:selected": on_selection,
+        "plotly:relayout": on_relayout,
     },
 )
 ```
 
-For the complete list of Plotly events and payload structures, see the [Event Reference](../../reference/events/plotly.md).
+Available Plotly events:
+
+| Event | Payload Fields | When It Fires |
+|-------|---------------|---------------|
+| `plotly:click` | `points` (list of clicked point dicts) | User clicks a data point |
+| `plotly:hover` | `points` (list of hovered point dicts) | Mouse enters a data point |
+| `plotly:unhover` | `points` | Mouse leaves a data point |
+| `plotly:selected` | `points` (list of selected point dicts) | User completes a box/lasso selection |
+| `plotly:deselect` | `{}` | User clears selection |
+| `plotly:relayout` | Layout changes (axis ranges, etc.) | User zooms, pans, or resizes |
+| `plotly:restyle` | Trace style changes | Trace visibility or style changes |
+
+Each point dict in the `points` array contains `x`, `y`, `curveNumber`, `pointNumber`, `pointIndex`, and any custom `hovertext` or `text` fields from your traces.
+
+For complete payload structures, see the [Event Reference](../../reference/events/plotly.md).
 
 ## Updating Charts
 
-### Update Layout
+After the chart is displayed, update it from Python without re-rendering the entire page:
+
+### Replace the Entire Figure
+
+```python
+new_fig = px.scatter(updated_df, x="gdpPercap", y="lifeExp")
+handle.emit("plotly:update-figure", {"figure": new_fig.to_dict()})
+```
+
+This calls `Plotly.react()` under the hood — it diffs the old and new figures and applies only the changes, preserving zoom state when possible.
+
+### Update Layout Only
 
 ```python
 handle.emit("plotly:update-layout", {
     "layout": {
-        "title": "Updated Title",
+        "title": {"text": "Updated Title"},
+        "xaxis": {"type": "log"},
         "showlegend": False,
     }
 })
 ```
 
-### Update Traces
+This calls `Plotly.relayout()` — it only touches layout properties, leaving trace data untouched.
+
+### Update Trace Styles
 
 ```python
 handle.emit("plotly:update-traces", {
-    "update": {"marker.color": "red"},
+    "update": {"marker.color": "red", "marker.size": 12},
     "traceIndices": [0],
 })
 ```
@@ -120,9 +235,72 @@ handle.emit("plotly:update-traces", {
 handle.emit("plotly:reset-zoom", {})
 ```
 
-## With Toolbars
+## Theming
 
-Add interactive controls:
+Charts automatically adapt to PyWry's dark/light mode. PyWry applies the built-in `plotly_dark` or `plotly_white` template based on the active theme.
+
+To switch dynamically:
+
+```python
+handle.emit("pywry:update-theme", {"theme": "light"})
+```
+
+The chart re-renders with the appropriate Plotly template.
+
+### Custom Per-Theme Templates
+
+Override specific layout properties while keeping automatic theme switching:
+
+```python
+config = PlotlyConfig(
+    template_dark={
+        "layout": {
+            "paper_bgcolor": "#1a1a2e",
+            "plot_bgcolor": "#16213e",
+            "font": {"color": "#e0e0e0"},
+            "colorway": ["#89b4fa", "#a6e3a1", "#f9e2af", "#f38ba8"],
+        }
+    },
+    template_light={
+        "layout": {
+            "paper_bgcolor": "#ffffff",
+            "plot_bgcolor": "#f8f9fa",
+            "font": {"color": "#222222"},
+            "colorway": ["#1971c2", "#2f9e44", "#e8590c", "#c2255c"],
+        }
+    },
+)
+
+handle = app.show_plotly(fig, config=config)
+```
+
+Your overrides are deep-merged on top of the built-in base template. Values you set take precedence; everything else is inherited. Both templates are stored on the chart and automatically selected when the theme toggles.
+
+Set only one side (e.g. `template_dark` alone) and the other theme uses the unmodified base.
+
+## Embedding in Multi-Widget Pages
+
+To place a chart alongside other components, generate the chart HTML directly:
+
+```python
+import json
+from pywry.templates import build_plotly_init_script
+
+chart_html = build_plotly_init_script(
+    figure=json.loads(fig.to_json()),
+    chart_id="revenue-chart",
+)
+```
+
+Then compose with `Div` and pass `include_plotly=True` to `app.show()`. The `chart_id` lets you target the specific chart when multiple charts share a page:
+
+```python
+handle.emit("plotly:update-figure", {"figure": new_fig_dict, "chartId": "revenue-chart"})
+```
+
+See [Multi-Widget Composition](../../guides/multi-widget.md) for the full pattern.
+
+## With Toolbars
 
 ```python
 from pywry import Toolbar, Button, Select, Option
@@ -131,21 +309,23 @@ toolbar = Toolbar(
     position="top",
     items=[
         Select(
-            event="chart:dataset",
-            label="Dataset",
+            event="chart:metric",
+            label="Metric",
             options=[
-                Option(label="Dataset A", value="a"),
-                Option(label="Dataset B", value="b"),
+                Option(label="GDP per Capita", value="gdpPercap"),
+                Option(label="Population", value="pop"),
+                Option(label="Life Expectancy", value="lifeExp"),
             ],
-            selected="a",
+            selected="gdpPercap",
         ),
         Button(event="chart:reset", label="Reset Zoom"),
     ],
 )
 
-def on_dataset_change(data, event_type, label):
-    dataset = data.get("value")
-    # Load new data and update chart
+def on_metric_change(data, event_type, label):
+    metric = data["value"]
+    new_fig = px.scatter(df, x=metric, y="lifeExp", color="continent")
+    handle.emit("plotly:update-figure", {"figure": new_fig.to_dict()})
 
 def on_reset(data, event_type, label):
     handle.emit("plotly:reset-zoom", {})
@@ -154,100 +334,15 @@ handle = app.show_plotly(
     fig,
     toolbars=[toolbar],
     callbacks={
-        "chart:dataset": on_dataset_change,
+        "chart:metric": on_metric_change,
         "chart:reset": on_reset,
     },
 )
 ```
 
-## Multiple Charts
-
-Display multiple charts using HTML layout:
-
-```python
-import plotly.express as px
-from pywry import PyWry
-
-app = PyWry()
-
-fig1 = px.line(x=[1, 2, 3], y=[1, 2, 3], title="Linear")
-fig2 = px.scatter(x=[1, 2, 3], y=[1, 4, 9], title="Quadratic")
-
-html = f"""
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px;">
-    <div id="chart1"></div>
-    <div id="chart2"></div>
-</div>
-<script>
-    Plotly.newPlot('chart1', {fig1.to_json()});
-    Plotly.newPlot('chart2', {fig2.to_json()});
-</script>
-"""
-
-app.show(html, include_plotly=True)
-```
-
-## Theming
-
-Charts automatically adapt to PyWry's theme:
-
-```python
-from pywry import PyWry, ThemeMode
-
-app = PyWry(theme=ThemeMode.LIGHT)  # or ThemeMode.DARK
-
-fig = px.scatter(x=[1, 2, 3], y=[1, 4, 9])
-app.show_plotly(fig)  # Uses appropriate Plotly template
-```
-
-To change theme dynamically:
-
-```python
-handle.emit("pywry:update-theme", {"theme": "light"})
-```
-
-### Custom Per-Theme Templates
-
-By default, PyWry applies the built-in `plotly_dark` or `plotly_white` template based on the current theme. To customize chart colors *per theme* while preserving automatic switching, use `template_dark` and `template_light` on `PlotlyConfig`:
-
-```python
-from pywry import PlotlyConfig
-
-config = PlotlyConfig(
-    template_dark={
-        "layout": {
-            "paper_bgcolor": "#1a1a2e",
-            "plot_bgcolor": "#16213e",
-            "font": {"color": "#e0e0e0"},
-        }
-    },
-    template_light={
-        "layout": {
-            "paper_bgcolor": "#ffffff",
-            "plot_bgcolor": "#f0f0f0",
-            "font": {"color": "#222222"},
-        }
-    },
-)
-
-handle = app.show_plotly(fig, config=config)
-```
-
-**How it works:**
-
-- Your overrides are **deep-merged** on top of the built-in base template (`plotly_dark` or `plotly_white`).
-- **User values always win** on conflict. Anything you don't set is inherited from the base.
-- Both templates are stored on the chart and automatically selected when the theme toggles.
-- Arrays (e.g., colorways) are replaced entirely, not element-merged.
-
-You can also set only one side — e.g., `template_dark` alone — and the other theme will use the unmodified base.
-
-!!! tip
-    Use `template_dark` / `template_light` instead of setting `fig.update_layout(template=...)` directly. The latter gets overwritten on theme switch; the former survives toggles.
-
 ## Next Steps
 
 - **[`PlotlyConfig` Reference](plotly-config.md)** — All configuration options
 - **[Event Reference](../../reference/events/plotly.md)** — Plotly event payloads
-- **[Toolbar System](../../components/toolbar/index.md)** — Adding controls to your charts
+- **[Multi-Widget Composition](../../guides/multi-widget.md)** — Embedding charts in dashboards
 - **[Theming & CSS](../../components/theming.md)** — Visual customization

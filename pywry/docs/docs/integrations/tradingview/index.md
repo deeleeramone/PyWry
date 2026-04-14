@@ -70,11 +70,13 @@ handle = app.show_tvchart(
 Listen for chart interactions:
 
 ```python
-def on_click(data):
-    print(f"Clicked at time={data['time']}")
+def on_click(data, event_type, label):
+    selected_time = data["time"]
+    handle.emit("chart:select-bar", {"time": selected_time})
 
-def on_crosshair(data):
-    print(f"Crosshair at {data['prices']}")
+def on_crosshair(data, event_type, label):
+    prices = data["prices"]
+    handle.emit("chart:crosshair-update", {"prices": prices})
 
 handle = app.show_tvchart(
     df,

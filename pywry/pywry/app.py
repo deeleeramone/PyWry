@@ -769,8 +769,33 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 self._register_inline_widget(widget)
                 return widget
 
-            # For notebook inline: use PyWryWidget (AnyWidget) for plain HTML
-            # Use InlineWidget only for Plotly/AG Grid (they need specialized handling)
+            # For notebook inline: prefer PyWryChatWidget when chat toolbar is present.
+            # The chat widget bundles chat-handlers.js and supports lazy asset
+            # injection via traits, so it doesn't need the InlineWidget HTTP path.
+            from .widget import HAS_ANYWIDGET as _HAS_AW
+
+            _has_chat_toolbar = toolbars and any(
+                any(
+                    getattr(item, "component_id", "") == "chat-container"
+                    for item in getattr(tb, "items", [])
+                )
+                for tb in toolbars
+            )
+            if _HAS_AW and _has_chat_toolbar:
+                from .widget import PyWryChatWidget
+
+                widget = PyWryChatWidget.from_html(
+                    html_str,
+                    plain_callbacks,
+                    theme="dark" if self._theme == ThemeMode.DARK else "light",
+                    toolbars=toolbars,
+                    modals=modals,
+                )
+                widget.display()
+                self._register_inline_widget(widget)
+                return widget
+
+            # For Plotly/AG Grid/TradingView without chat: use InlineWidget
             if include_plotly or include_aggrid or include_tvchart:
                 from . import inline as pywry_inline
 

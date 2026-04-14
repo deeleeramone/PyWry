@@ -1,14 +1,14 @@
-# pywry.chat_providers
+# pywry.chat.providers
 
-LLM provider adapters for PyWry chat.
+ACP-conformant provider adapters for PyWry chat.
 
-These classes expose a common interface over optional provider SDKs and user-defined callables. They operate on `ChatMessage` histories and `ChatConfig` settings from `pywry.chat`.
+These classes implement the ACP session lifecycle (`initialize`, `new_session`, `prompt`, `cancel`) over optional provider SDKs and user-defined callables. They operate on `ContentBlock` lists from `pywry.chat.models` and yield `SessionUpdate` notifications from `pywry.chat.updates`.
 
 ---
 
 ## Base Provider
 
-::: pywry.chat_providers.ChatProvider
+::: pywry.chat.providers.ChatProvider
     options:
       show_root_heading: true
       heading_level: 2
@@ -18,25 +18,31 @@ These classes expose a common interface over optional provider SDKs and user-def
 
 ## Provider Implementations
 
-::: pywry.chat_providers.OpenAIProvider
+::: pywry.chat.providers.openai.OpenAIProvider
     options:
       show_root_heading: true
       heading_level: 2
       members: true
 
-::: pywry.chat_providers.AnthropicProvider
+::: pywry.chat.providers.anthropic.AnthropicProvider
     options:
       show_root_heading: true
       heading_level: 2
       members: true
 
-::: pywry.chat_providers.CallbackProvider
+::: pywry.chat.providers.callback.CallbackProvider
     options:
       show_root_heading: true
       heading_level: 2
       members: true
 
-::: pywry.chat_providers.MagenticProvider
+::: pywry.chat.providers.magentic.MagenticProvider
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
+::: pywry.chat.providers.stdio.StdioProvider
     options:
       show_root_heading: true
       heading_level: 2
@@ -46,7 +52,7 @@ These classes expose a common interface over optional provider SDKs and user-def
 
 ## Factory
 
-::: pywry.chat_providers.get_provider
+::: pywry.chat.providers.get_provider
     options:
       show_root_heading: true
       heading_level: 2

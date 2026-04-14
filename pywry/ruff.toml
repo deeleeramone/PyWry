@@ -91,6 +91,10 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "D104",
 ]
 
+"pywry/chat/providers/callback.py" = [
+    "TC003",
+]
+
 "pywry/__main__.py" = [
     "W293",  # Trailing whitespace in JS template strings
     "S110",  # try-except-pass in window cleanup

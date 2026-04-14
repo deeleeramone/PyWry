@@ -105,7 +105,7 @@ All 19 plugins bundled in the `pytauri_wheel` binary are listed below. Each plug
 
 ## Using Plugin APIs in JavaScript
 
-Once a plugin is enabled, its JavaScript API is available through the Tauri bridge. Use the [JavaScript Bridge](../guides/javascript-bridge.md) to interact:
+Once a plugin is enabled, its JavaScript API is available through the Tauri bridge. Use the [JavaScript Bridge](../../guides/javascript-bridge.md) to interact:
 
 ```python
 from pywry import PyWry, PyWrySettings
@@ -245,7 +245,7 @@ If you get a `PanicException` mentioning `UnknownManifest`, you've added a capab
 
 ## Next Steps
 
-- **[Configuration Guide](../guides/configuration.md)** — Full settings reference
-- **[JavaScript Bridge](../guides/javascript-bridge.md)** — Calling Tauri APIs from JS
-- **[Events](../guides/events.md)** — Python↔JS event system
+- **[Configuration Guide](../../guides/configuration.md)** — Full settings reference
+- **[JavaScript Bridge](../../guides/javascript-bridge.md)** — Calling Tauri APIs from JS
+- **[Events](../../guides/events.md)** — Python↔JS event system
 - **[PyTauri Plugin Docs](https://pytauri.github.io/pytauri/latest/usage/tutorial/using-plugins/)** — Upstream plugin tutorial

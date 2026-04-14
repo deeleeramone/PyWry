@@ -3814,10 +3814,10 @@ class TestSecretInput:  # pylint: disable=too-many-public-methods
         assert "SecretStr" in model_repr
 
     def test_secret_never_rendered_in_html(self) -> None:
-        """Test secret value is NEVER rendered in HTML for security."""
+        """Test secret value is not rendered in HTML."""
         si = SecretInput(event="settings:api-key", value="super-secret-api-key")
         html = si.build_html()
-        # The actual secret must NEVER appear in HTML
+        # The actual secret does not appear in HTML
         assert "super-secret-api-key" not in html
         # HTML should have mask value when secret exists (not the actual secret)
         assert (
@@ -4814,9 +4814,9 @@ class TestSecretInputStateProtection:
 
     def test_state_getter_js_protects_secret(self) -> None:
         """getToolbarState JS should return has_value, not the actual value."""
-        from pywry.scripts import TOOLBAR_BRIDGE_JS
+        from pywry.scripts import _get_toolbar_bridge_js
 
-        js = TOOLBAR_BRIDGE_JS
+        js = _get_toolbar_bridge_js()
 
         # Should check for pywry-input-secret class
         assert "pywry-input-secret" in js
@@ -4827,18 +4827,18 @@ class TestSecretInputStateProtection:
 
     def test_component_value_getter_js_protects_secret(self) -> None:
         """getComponentValue JS should return has_value for secrets."""
-        from pywry.scripts import TOOLBAR_BRIDGE_JS
+        from pywry.scripts import _get_toolbar_bridge_js
 
-        js = TOOLBAR_BRIDGE_JS
+        js = _get_toolbar_bridge_js()
 
         # getComponentValue should also check for secret inputs
-        assert "// SECURITY: Never expose secret values via state getter" in js
+        assert "// Never expose secret values via state getter" in js
 
     def test_set_value_js_blocks_secret(self) -> None:
         """setComponentValue JS should block setting secret values."""
-        from pywry.scripts import TOOLBAR_BRIDGE_JS
+        from pywry.scripts import _get_toolbar_bridge_js
 
-        js = TOOLBAR_BRIDGE_JS
+        js = _get_toolbar_bridge_js()
 
         # Should check for secret input and warn
         assert "Cannot set SecretInput value via toolbar:set-value" in js

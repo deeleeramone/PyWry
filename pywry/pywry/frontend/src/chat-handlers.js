@@ -1892,6 +1892,56 @@ function initChatHandlers(container, pywry) {
     el.appendChild(body);
   }
 
+  function renderTradingViewArtifact(el, data) {
+    var chartId = 'pywry-chat-tv-' + (++__artifactCounter);
+    var chartDiv = document.createElement('div');
+    chartDiv.id = chartId;
+    chartDiv.className = 'pywry-tradingview';
+    chartDiv.style.height = data.height || '400px';
+    chartDiv.style.width = '100%';
+    el.appendChild(chartDiv);
+
+    function tryInit() {
+      if (typeof LightweightCharts === 'undefined') {
+        setTimeout(tryInit, 100);
+        return;
+      }
+      var opts = Object.assign({
+        layout: { background: { color: '#1e1e2e' }, textColor: '#cdd6f4' },
+        grid: { vertLines: { color: '#313244' }, horzLines: { color: '#313244' } },
+        crosshair: { mode: 0 },
+        timeScale: { borderColor: '#45475a', timeVisible: true },
+        rightPriceScale: { borderColor: '#45475a' }
+      }, data.options || {});
+
+      var chart = LightweightCharts.createChart(chartDiv, opts);
+
+      (data.series || []).forEach(function (s) {
+        var series;
+        switch (s.type) {
+          case 'candlestick': series = chart.addCandlestickSeries(s.options || {}); break;
+          case 'line':        series = chart.addLineSeries(s.options || {}); break;
+          case 'area':        series = chart.addAreaSeries(s.options || {}); break;
+          case 'bar':         series = chart.addBarSeries(s.options || {}); break;
+          case 'baseline':    series = chart.addBaselineSeries(s.options || {}); break;
+          case 'histogram':   series = chart.addHistogramSeries(s.options || {}); break;
+          default:            series = chart.addLineSeries(s.options || {}); break;
+        }
+        if (series) {
+          series.setData(s.data || []);
+          if (s.markers) series.setMarkers(s.markers);
+        }
+      });
+
+      chart.timeScale().fitContent();
+
+      new ResizeObserver(function () {
+        chart.applyOptions({ width: chartDiv.clientWidth });
+      }).observe(chartDiv);
+    }
+    tryInit();
+  }
+
   // Artifact — multi-type artifact rendering (collapsible)
   pywry.on('chat:artifact', function (data) {
     if (!chatArea) return;
@@ -1921,6 +1971,7 @@ function initChatHandlers(container, pywry) {
     else if (type === 'plotly') renderPlotlyArtifact(bodyWrap, data);
     else if (type === 'image') renderImageArtifact(bodyWrap, data);
     else if (type === 'json') renderJsonArtifact(bodyWrap, data);
+    else if (type === 'tradingview') renderTradingViewArtifact(bodyWrap, data);
     else renderCodeArtifact(bodyWrap, data);
 
     // Toggle collapse on header click
@@ -2567,6 +2618,78 @@ function initChatHandlers(container, pywry) {
   // --- Context sources from backend ---
   pywry.on('chat:context-sources', function (data) {
     state.contextSources = data.sources || [];
+  });
+
+  // --- ACP: Permission request ---
+  pywry.on('chat:permission-request', function (data) {
+    if (!chatArea) return;
+    var el = document.createElement('div');
+    el.className = 'pywry-chat-permission-request';
+    el.innerHTML =
+      '<div class="pywry-chat-permission-title">' + escapeHtml(data.title || 'Permission required') + '</div>' +
+      '<div class="pywry-chat-permission-actions"></div>';
+    var actions = el.querySelector('.pywry-chat-permission-actions');
+    (data.options || []).forEach(function (opt) {
+      var btn = document.createElement('button');
+      btn.className = 'pywry-chat-permission-btn pywry-chat-permission-btn-' + (opt.id || '').replace(/[^a-z_]/gi, '');
+      btn.textContent = opt.label || opt.id;
+      btn.addEventListener('click', function () {
+        pywry.emit('chat:permission-response', {
+          requestId: data.requestId,
+          optionId: opt.id,
+          threadId: data.threadId
+        });
+        el.remove();
+      });
+      actions.appendChild(btn);
+    });
+    chatArea.appendChild(el);
+    maybeAutoScroll();
+  });
+
+  // --- ACP: Plan update ---
+  pywry.on('chat:plan-update', function (data) {
+    if (!todoEl) return;
+    var entries = data.entries || [];
+    if (entries.length === 0) {
+      todoEl.innerHTML = '';
+      todoEl.style.display = 'none';
+      return;
+    }
+    todoEl.style.display = 'block';
+    var html = '<div class="pywry-chat-plan-header">Plan</div><ul class="pywry-chat-plan-list">';
+    entries.forEach(function (e) {
+      var icon = e.status === 'completed' ? '&#10003;' : e.status === 'in_progress' ? '&#9654;' : '&#9675;';
+      var priorityClass = 'pywry-chat-plan-priority-' + (e.priority || 'medium');
+      html += '<li class="pywry-chat-plan-item pywry-chat-plan-' + (e.status || 'pending') + ' ' + priorityClass + '">' +
+        '<span class="pywry-chat-plan-icon">' + icon + '</span>' +
+        '<span class="pywry-chat-plan-content">' + escapeHtml(e.content) + '</span>' +
+        '</li>';
+    });
+    html += '</ul>';
+    todoEl.innerHTML = html;
+  });
+
+  // --- ACP: Mode update ---
+  pywry.on('chat:mode-update', function (data) {
+    // Store mode state for settings panel rendering
+    state.currentModeId = data.currentModeId || '';
+    state.availableModes = data.availableModes || [];
+  });
+
+  // --- ACP: Config option update ---
+  pywry.on('chat:config-update', function (data) {
+    // Store config options for settings panel rendering
+    state.configOptions = data.options || [];
+  });
+
+  // --- ACP: Commands update ---
+  pywry.on('chat:commands-update', function (data) {
+    var commands = data.commands || [];
+    state.slashCommands = [];
+    commands.forEach(function (cmd) {
+      state.slashCommands.push({ name: '/' + cmd.name, description: cmd.description || '' });
+    });
   });
 
   // =========================================================================

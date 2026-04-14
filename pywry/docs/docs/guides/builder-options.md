@@ -157,12 +157,12 @@ The `builder_kwargs()` method returns a dict of only the non-default builder fie
 from pywry.models import WindowConfig
 
 config = WindowConfig(transparent=True, user_agent="test/1.0")
-print(config.builder_kwargs())
-# {'transparent': True, 'user_agent': 'test/1.0'}
+kwargs = config.builder_kwargs()
+# kwargs == {'transparent': True, 'user_agent': 'test/1.0'}
 
 config2 = WindowConfig()  # all defaults
-print(config2.builder_kwargs())
-# {}
+kwargs2 = config2.builder_kwargs()
+# kwargs2 == {} — only non-default values are included
 ```
 
 This is used internally by the runtime to avoid sending unnecessary data over IPC.

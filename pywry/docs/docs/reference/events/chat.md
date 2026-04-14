@@ -12,7 +12,7 @@ The `chat:*` namespace handles all communication between the Python `ChatManager
 | `chat:user-message` | `{text, threadId, timestamp, attachments?}` | User sends a message. Triggers handler execution and response streaming. |
 | `chat:stop-generation` | `{threadId, messageId}` | User clicks stop button to cancel in-progress generation. Sets cooperative cancel event. |
 | `chat:slash-command` | `{command, args, threadId}` | User submits a `/command` from the input bar (e.g., `/clear`, `/export`). |
-| `chat:input-response` | `{text, requestId, threadId}` | User responds to an `InputRequiredResponse` prompt mid-stream. |
+| `chat:input-response` | `{text, requestId, threadId}` | User responds to an `PermissionRequestUpdate` prompt mid-stream. |
 | `chat:request-state` | `{}` | Frontend requests full state snapshot on initialization. |
 | `chat:request-history` | `{threadId, limit}` | Frontend requests message history for a thread. |
 
@@ -82,7 +82,7 @@ Handler pattern:
 ```python
 def my_handler(message, ctx):
     yield "Which file should I process?"
-    yield InputRequiredResponse(placeholder="Enter filename...")
+    yield PermissionRequestUpdate(placeholder="Enter filename...")
     filename = ctx.wait_for_input()  # Blocks until user responds
     yield f"Processing {filename}..."
 ```

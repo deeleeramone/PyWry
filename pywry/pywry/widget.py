@@ -242,7 +242,7 @@ function render({ model, el }) {
 
     console.log('[PyWry AG Grid] render() called, renderId:', myRenderId);
 
-    // CRITICAL: Clear el completely to avoid stale content from re-renders
+    // Clear el to avoid stale content from re-renders
     el.innerHTML = '';
 
     // Apply theme class to el (AnyWidget container) for proper theming
@@ -687,7 +687,7 @@ function render({ model, el }) {
     __TOOLBAR_HANDLERS__
 
     function renderContent(retryCount = 0) {
-        // CRITICAL: Check if this render is stale (a newer render has started)
+        // Bail if a newer render has started
         if (myRenderId !== currentRenderId) {
             console.log('[PyWry AG Grid] Stale render detected, aborting. myId:', myRenderId, 'current:', currentRenderId);
             return;
@@ -763,7 +763,7 @@ function render({ model, el }) {
 
     // Wait for AG Grid to be ready before first render (poll every 50ms, max 100 attempts = 5s)
     function waitAndRender(attempt) {
-        // CRITICAL: Check if this render is stale (a newer render has started)
+        // Bail if a newer render has started
         if (myRenderId !== currentRenderId) {
             console.log('[PyWry AG Grid] Stale waitAndRender detected, aborting. myId:', myRenderId, 'current:', currentRenderId);
             return;
@@ -847,7 +847,7 @@ function ensureAgGrid() {{
 if (!getAgGrid()) {{
     console.log('[PyWry AG Grid ESM] AG Grid not found, loading library...');
 
-    // CRITICAL: AG Grid UMD checks for AMD define() first.
+    // AG Grid UMD checks for AMD define() first.
     // If define exists, it registers as AMD module instead of setting self.agGrid.
     // We must temporarily hide define to force the global export path.
     var _originalDefine = typeof define !== 'undefined' ? define : undefined;
@@ -952,7 +952,7 @@ function render({ model, el }) {
     modelHeight = toCss(modelHeight);
     modelWidth = toCss(modelWidth);
 
-    // CRITICAL: Set height on el (AnyWidget's container) to constrain output size
+    // Set height on el to constrain output size
     if (modelHeight) {
         el.style.height = modelHeight;
         // Ensure el is displayed as block/inline-block to respect height
@@ -1379,6 +1379,68 @@ if (typeof LightweightCharts === 'undefined') {{
 {tvchart_defaults_js}
 
 {widget_js}
+"""
+
+
+def _get_chat_widget_esm() -> str:
+    """Build the chat widget ESM with chat-handlers.js and asset injection.
+
+    Returns
+    -------
+    str
+        JavaScript ESM module containing the base widget render function,
+        chat-handlers.js, toolbar handlers, and trait-based asset injection
+        listeners for lazy-loading Plotly/AG Grid/TradingView.
+    """
+    from .assets import get_scrollbar_js, get_toast_notifications_js
+
+    toolbar_handlers_js = _get_toolbar_handlers_js()
+    toast_js = get_toast_notifications_js() or ""
+    scrollbar_js = get_scrollbar_js() or ""
+
+    chat_handlers_file = _SRC_DIR / "chat-handlers.js"
+    chat_handlers_js = (
+        chat_handlers_file.read_text(encoding="utf-8") if chat_handlers_file.exists() else ""
+    )
+
+    # Start with the base widget ESM (content rendering, theme, events)
+    base_esm = _WIDGET_ESM.replace("__TOOLBAR_HANDLERS__", toolbar_handlers_js)
+
+    return f"""
+{toast_js}
+
+{scrollbar_js}
+
+{base_esm}
+
+// --- Chat handlers ---
+{chat_handlers_js}
+
+// --- Trait-based asset injection for lazy-loaded artifact libraries ---
+// When ChatManager pushes JS/CSS via _asset_js/_asset_css traits,
+// inject them into the document head so artifact renderers work.
+(function() {{
+    if (typeof model !== 'undefined') {{
+        model.on("change:_asset_js", function() {{
+            var js = model.get("_asset_js");
+            if (js) {{
+                var script = document.createElement("script");
+                script.textContent = js;
+                document.head.appendChild(script);
+                console.log("[PyWry Chat] Injected asset JS via trait (" + js.length + " chars)");
+            }}
+        }});
+        model.on("change:_asset_css", function() {{
+            var css = model.get("_asset_css");
+            if (css) {{
+                var style = document.createElement("style");
+                style.textContent = css;
+                document.head.appendChild(style);
+                console.log("[PyWry Chat] Injected asset CSS via trait (" + css.length + " chars)");
+            }}
+        }});
+    }}
+}})();
 """
 
 
@@ -1906,12 +1968,20 @@ if HAS_ANYWIDGET:
     class PyWryChatWidget(PyWryWidget, ChatStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
         """Widget for inline notebook rendering with chat UI.
 
-        This class extends :class:`PyWryWidget` with chat-specific state mixins so
-        notebook renders can emit the same chat protocol events as native windows.
+        This class extends :class:`PyWryWidget` with chat-specific state
+        mixins and bundles chat-handlers.js in the ESM. Artifact libraries
+        (Plotly, AG Grid, TradingView) are lazy-loaded via the
+        ``_asset_js`` / ``_asset_css`` traits when the first artifact of
+        that type is yielded by the provider.
         """
+
+        _esm = _get_chat_widget_esm()
+        _css = _get_pywry_base_css()
 
         content = traitlets.Unicode("").tag(sync=True)
         theme = traitlets.Unicode("dark").tag(sync=True)
+        _asset_js = traitlets.Unicode("").tag(sync=True)
+        _asset_css = traitlets.Unicode("").tag(sync=True)
 
     class PyWryTVChartWidget(PyWryWidget, TVChartStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
         """Widget for inline notebook rendering with TradingView Lightweight Charts."""

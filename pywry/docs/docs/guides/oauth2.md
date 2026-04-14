@@ -176,12 +176,14 @@ app = PyWry()
 
 try:
     result = app.login()  # blocks — see "User experience" below
+    access_token = result.access_token
+    # Proceed with authenticated app.show(...) using access_token
 except AuthFlowTimeout:
-    print("User took too long to authenticate")
+    app.show("<h1>Login timed out</h1><p>Please restart the app and try again.</p>")
 except AuthFlowCancelled:
-    print("User closed the login window")
+    app.show("<h1>Login cancelled</h1><p>You can retry from the menu.</p>")
 except AuthenticationError as e:
-    print(f"Authentication failed: {e}")
+    app.show(f"<h1>Login failed</h1><pre>{e}</pre>")
 ```
 
 After a successful login:

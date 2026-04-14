@@ -657,6 +657,98 @@ class ChatStore(ABC):
         """
         ...
 
+    async def log_tool_call(
+        self,
+        message_id: str,
+        tool_call_id: str,
+        name: str,
+        kind: str = "other",
+        status: str = "pending",
+        arguments: dict[str, Any] | None = None,
+        result: str | None = None,
+        error: str | None = None,
+    ) -> None:
+        """Log a tool call for audit trail. No-op by default."""
+
+    async def log_artifact(
+        self,
+        message_id: str,
+        artifact_type: str,
+        title: str = "",
+        content: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Log an artifact for audit trail. No-op by default."""
+
+    async def log_token_usage(
+        self,
+        message_id: str,
+        model: str | None = None,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        total_tokens: int = 0,
+        cost_usd: float | None = None,
+    ) -> None:
+        """Log token usage for audit trail. No-op by default."""
+
+    async def log_resource(
+        self,
+        thread_id: str,
+        uri: str,
+        name: str = "",
+        mime_type: str | None = None,
+        content: str | None = None,
+        size: int | None = None,
+    ) -> None:
+        """Log a resource reference for audit trail. No-op by default."""
+
+    async def log_skill(
+        self,
+        thread_id: str,
+        name: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Log a skill activation for audit trail. No-op by default."""
+
+    async def get_tool_calls(self, message_id: str) -> list[dict[str, Any]]:
+        """Get tool calls for a message. Returns empty list by default."""
+        return []
+
+    async def get_artifacts(self, message_id: str) -> list[dict[str, Any]]:
+        """Get artifacts for a message. Returns empty list by default."""
+        return []
+
+    async def get_usage_stats(
+        self,
+        thread_id: str | None = None,
+        widget_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Get aggregated token usage. Returns zeros by default."""
+        return {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0,
+            "count": 0,
+        }
+
+    async def get_total_cost(
+        self,
+        thread_id: str | None = None,
+        widget_id: str | None = None,
+    ) -> float:
+        """Get total cost in USD. Returns 0.0 by default."""
+        return 0.0
+
+    async def search_messages(
+        self,
+        query: str,
+        widget_id: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Search messages by content. Returns empty list by default."""
+        return []
+
 
 class ChartStore(ABC):
     """Abstract chart layout/settings storage interface.

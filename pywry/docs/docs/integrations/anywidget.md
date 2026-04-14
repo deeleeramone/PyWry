@@ -1,159 +1,269 @@
-# Anywidget & Widget Protocol
+# Anywidget Transport
 
-PyWry supports three rendering paths — native desktop windows, anywidget-based Jupyter widgets, and IFrame + FastAPI server. All three implement the same `BaseWidget` protocol, so your application code works identically regardless of environment.
+PyWry's event system uses a unified protocol — `on()`, `emit()`, `update()`, `display()` — that works identically across native windows, IFrame+WebSocket, and anywidget. This page explains how that protocol is implemented over the anywidget transport, so you can build reusable components or introduce new integrations that work seamlessly in all three environments.
 
-For the protocol and widget API reference, see [`BaseWidget`](../reference/widget-protocol.md), [`PyWryWidget`](../reference/widget.md), and [`InlineWidget`](../reference/inline-widget.md).
+For the IFrame+WebSocket transport, see [IFrame + WebSocket Transport](../inline-widget/index.md).
 
-## Rendering Path Auto-Detection
+## The Unified Protocol
 
-`PyWry.show()` automatically selects the best rendering path:
-
-```
-Script / Terminal  ──→  Native OS window (PyTauri subprocess)
-Notebook + anywidget ──→  PyWryWidget (traitlet sync, no server)
-Notebook + Plotly/Grid ──→  InlineWidget (FastAPI + IFrame)
-Notebook without anywidget ──→  InlineWidget (FastAPI fallback)
-Browser / SSH / headless ──→  InlineWidget (opens system browser)
-```
-
-No configuration needed — the right path is chosen at `show()` time.
-
-## The BaseWidget Protocol
-
-Every rendering backend implements this protocol:
+Every PyWry widget — regardless of rendering path — implements `BaseWidget`:
 
 ```python
-from pywry.widget_protocol import BaseWidget
-
-def use_widget(widget: BaseWidget):
-    # Register a JS → Python event handler
-    widget.on("app:click", lambda data, event_type, label: print(data))
-
-    # Send a Python → JS event
-    widget.emit("app:update", {"key": "value"})
-
-    # Replace the widget HTML
-    widget.update("<h1>New Content</h1>")
-
-    # Show the widget in the current context
-    widget.display()
+class BaseWidget(Protocol):
+    def on(self, event_type: str, callback: Callable[[dict, str, str], Any]) -> BaseWidget: ...
+    def emit(self, event_type: str, data: dict[str, Any]) -> None: ...
+    def update(self, html: str) -> None: ...
+    def display(self) -> None: ...
 ```
 
-| Method | Description |
-|--------|-------------|
-| `on(event_type, callback)` | Register callback for JS → Python events. Callback receives `(data, event_type, label)`. Returns self for chaining. |
-| `emit(event_type, data)` | Send Python → JS event with a JSON-serializable payload. |
-| `update(html)` | Replace the widget's HTML content. |
-| `display()` | Show the widget (native window, notebook cell, or browser tab). |
+A reusable component only calls these four methods. It never knows whether it's running in a native window, a notebook widget, or a browser tab. The transport handles everything else.
 
-## Level 1: PyWryWidget (anywidget)
+## How Anywidget Implements the Protocol
 
-The best notebook experience. Uses anywidget's traitlet sync — no server needed, instant bidirectional communication through the Jupyter kernel.
+In anywidget mode, `PyWryWidget` extends `anywidget.AnyWidget` and implements `BaseWidget` by mapping each method to traitlet synchronization:
 
-**Requirements:** `pip install anywidget traitlets`
+| BaseWidget Method | Anywidget Implementation |
+|-------------------|--------------------------|
+| `emit(type, data)` | Serialize `{type, data, ts}` to JSON → set `_py_event` traitlet → `send_state()` |
+| `on(type, callback)` | Store callback in `_handlers[type]` dict → `_handle_js_event` observer dispatches |
+| `update(html)` | Set `content` traitlet → JS `model.on('change:content')` re-renders |
+| `display()` | Call `IPython.display.display(self)` |
+
+### Traitlets
+
+Six traitlets carry all state between Python and JavaScript:
+
+| Traitlet | Direction | Purpose |
+|----------|-----------|---------|
+| `content` | Python → JS | HTML markup to render |
+| `theme` | Bidirectional | `"dark"` or `"light"` |
+| `width` | Python → JS | CSS width |
+| `height` | Python → JS | CSS height |
+| `_js_event` | JS → Python | Serialized event from browser |
+| `_py_event` | Python → JS | Serialized event from Python |
+
+### Event Wire Format
+
+Both `_js_event` and `_py_event` carry JSON strings:
+
+```json
+{"type": "namespace:event-name", "data": {"key": "value"}, "ts": "unique-id"}
+```
+
+The `ts` field ensures every event is a unique traitlet value. Jupyter only syncs on change — identical consecutive events would be dropped without unique timestamps.
+
+### JS → Python Path
+
+```
+pywry.emit("form:submit", {name: "x"})
+  → JSON.stringify({type: "form:submit", data: {name: "x"}, ts: Date.now()})
+  → model.set("_js_event", json_string)
+  → model.save_changes()
+  → Jupyter kernel syncs traitlet
+  → Python observer _handle_js_event fires
+  → json.loads(change["new"])
+  → callback(data, "form:submit", widget_label)
+```
+
+### Python → JS Path
+
+```
+widget.emit("pywry:set-content", {"id": "status", "text": "Done"})
+  → json.dumps({"type": ..., "data": ..., "ts": uuid.hex})
+  → self._py_event = json_string
+  → self.send_state("_py_event")
+  → Jupyter kernel syncs traitlet
+  → JS model.on("change:_py_event") fires
+  → JSON.parse(model.get("_py_event"))
+  → pywry._fire(type, data)
+  → registered on() listeners execute
+```
+
+## The ESM Render Function
+
+The widget frontend is an ESM module with a `render({model, el})` function. This function must:
+
+1. Create a `.pywry-widget` container div inside `el`
+2. Render `model.get("content")` as innerHTML
+3. Create a local `pywry` bridge object with `emit()`, `on()`, and `_fire()`
+4. Also set `window.pywry` for HTML `onclick` handlers to access
+5. Listen for `change:_py_event` and dispatch to `pywry._fire()`
+6. Listen for `change:content` and re-render
+7. Listen for `change:theme` and update CSS classes
+
+The `pywry` bridge in the ESM implements the JavaScript side of the protocol:
+
+```javascript
+const pywry = {
+    _handlers: {},
+    emit: function(type, data) {
+        // Write to _js_event traitlet → triggers Python observer
+        model.set('_js_event', JSON.stringify({type, data: data || {}, ts: Date.now()}));
+        model.save_changes();
+        // Also dispatch locally so JS listeners fire immediately
+        this._fire(type, data || {});
+    },
+    on: function(type, callback) {
+        if (!this._handlers[type]) this._handlers[type] = [];
+        this._handlers[type].push(callback);
+    },
+    _fire: function(type, data) {
+        (this._handlers[type] || []).forEach(function(h) { h(data); });
+    }
+};
+```
+
+## Building a Reusable Component
+
+A reusable component is a Python class that takes a `BaseWidget` and registers event handlers. Because it only calls `on()` and `emit()`, it works on all three rendering paths without modification.
+
+### Python Side: State Mixin Pattern
+
+PyWry's built-in components (`GridStateMixin`, `PlotlyStateMixin`, `ChatStateMixin`, `ToolbarStateMixin`) all follow the same pattern — they inherit from `EmittingWidget` and call `self.emit()`:
 
 ```python
-from pywry import PyWry
+from pywry.state_mixins import EmittingWidget
+
+
+class CounterMixin(EmittingWidget):
+    """Adds a counter widget that syncs between Python and JavaScript."""
+
+    def increment(self, amount: int = 1):
+        self.emit("counter:increment", {"amount": amount})
+
+    def reset(self):
+        self.emit("counter:reset", {})
+
+    def set_value(self, value: int):
+        self.emit("counter:set", {"value": value})
+```
+
+Any widget class that mixes this in and provides `emit()` gets counter functionality:
+
+```python
+class MyWidget(PyWryWidget, CounterMixin):
+    pass
+
+widget = MyWidget(content=counter_html)
+widget.increment(5)   # Works in notebooks (anywidget traitlets)
+widget.reset()        # Works in browser (WebSocket)
+                      # Works in native windows (Tauri IPC)
+```
+
+### JavaScript Side: Event Handlers
+
+The JavaScript side registers listeners through `pywry.on()` — this works identically in all rendering paths because every transport creates the same `pywry` bridge object:
+
+```javascript
+// This code works in ESM (anywidget), ws-bridge.js (IFrame), and bridge.js (native)
+pywry.on('counter:increment', function(data) {
+    var el = document.getElementById('counter-value');
+    var current = parseInt(el.textContent) || 0;
+    el.textContent = current + data.amount;
+});
+
+pywry.on('counter:reset', function() {
+    document.getElementById('counter-value').textContent = '0';
+});
+
+pywry.on('counter:set', function(data) {
+    document.getElementById('counter-value').textContent = data.value;
+});
+
+// User clicks emit events back to Python — same pywry.emit() everywhere
+document.getElementById('inc-btn').onclick = function() {
+    pywry.emit('counter:clicked', {action: 'increment'});
+};
+```
+
+### Wiring It Together
+
+To use the component with `ChatManager`, `app.show()`, or any other entry point:
+
+```python
+from pywry import HtmlContent, PyWry
 
 app = PyWry()
-widget = app.show("<h1>Hello from anywidget!</h1>")
 
-# Events work identically
-widget.on("app:ready", lambda d, e, l: print("Widget ready"))
-widget.emit("app:update", {"count": 42})
+counter_html = """
+<div style="text-align:center; padding:20px">
+    <h1 id="counter-value">0</h1>
+    <button onclick="pywry.emit('counter:clicked', {action:'increment'})">+1</button>
+    <button onclick="pywry.emit('counter:clicked', {action:'reset'})">Reset</button>
+</div>
+<script>
+pywry.on('counter:increment', function(d) {
+    var el = document.getElementById('counter-value');
+    el.textContent = parseInt(el.textContent || 0) + d.amount;
+});
+pywry.on('counter:reset', function() {
+    document.getElementById('counter-value').textContent = '0';
+});
+</script>
+"""
+
+def on_counter_click(data, event_type, label):
+    if data["action"] == "increment":
+        app.emit("counter:increment", {"amount": 1}, label)
+    elif data["action"] == "reset":
+        app.emit("counter:reset", {}, label)
+
+widget = app.show(
+    HtmlContent(html=counter_html),
+    callbacks={"counter:clicked": on_counter_click},
+)
 ```
 
-**How it works:**
+This works in native windows, notebooks with anywidget, notebooks with IFrame fallback, and browser mode — the same HTML, the same callbacks, the same `pywry.emit()`/`pywry.on()` contract.
 
-1. Python creates a `PyWryWidget` (extends `anywidget.AnyWidget`)
-2. An ESM module is bundled as the widget frontend
-3. Traitlets (`content`, `theme`, `_js_event`, `_py_event`) sync bidirectionally via Jupyter comms
-4. `widget.emit()` → sets `_py_event` traitlet → JS receives change → dispatches to JS listeners
-5. JS `pywry.emit()` → sets `_js_event` traitlet → Python `_handle_js_event()` → dispatches to callbacks
+## Specialized Widget Subclasses
 
-**When it's used:** Notebook environment + anywidget installed + no Plotly/AG Grid/TradingView content.
+When a component needs its own bundled JavaScript library (like Plotly, AG Grid, or TradingView), it defines a widget subclass with a custom `_esm`:
 
-## Level 2: InlineWidget (IFrame + FastAPI)
+| Subclass | Mixin | Bundled Library | Extra Traitlets |
+|----------|-------|-----------------|-----------------|
+| `PyWryWidget` | `EmittingWidget` | Base bridge only | — |
+| `PyWryPlotlyWidget` | `PlotlyStateMixin` | Plotly.js | `figure_json`, `chart_id` |
+| `PyWryAgGridWidget` | `GridStateMixin` | AG Grid | `grid_config`, `grid_id`, `aggrid_theme` |
+| `PyWryChatWidget` | `ChatStateMixin` | Chat handlers | `_asset_js`, `_asset_css` |
+| `PyWryTVChartWidget` | `TVChartStateMixin` | Lightweight-charts | `chart_config`, `chart_id` |
 
-Used for Plotly, AG Grid, and TradingView content in notebooks, or when anywidget isn't installed. Starts a local FastAPI server and renders via an IFrame.
+Each subclass overrides `_esm` with an ESM module that includes both the library code and the domain-specific event handlers. The extra traitlets carry domain state (chart data, grid config, etc.) alongside the standard `content`/`theme`/`_js_event`/`_py_event` protocol.
 
-**Requirements:** `pip install fastapi uvicorn`
+### Lazy Asset Loading
+
+`PyWryChatWidget` uses two additional traitlets — `_asset_js` and `_asset_css` — for on-demand library loading. When `ChatManager` first encounters a `PlotlyArtifact`, it pushes the Plotly library source through `_asset_js`:
 
 ```python
-from pywry import PyWry
-
-app = PyWry()
-
-# Plotly/Grid/TradingView automatically use InlineWidget
-handle = app.show_plotly(fig)
-handle = app.show_dataframe(df)
-handle = app.show_tvchart(ohlcv_data)
+# ChatManager detects anywidget and uses trait instead of HTTP
+self._widget.set_trait("_asset_js", plotly_source_code)
 ```
 
-**How it works:**
+The ESM listens for the trait change and injects the code:
 
-1. A singleton FastAPI server starts in a background thread (one per kernel)
-2. Each widget gets a URL (`/widget/{widget_id}`) and a WebSocket (`/ws/{widget_id}`)
-3. An IFrame in the notebook cell points to the widget URL
-4. `widget.emit()` → enqueues event → WebSocket send loop pushes to browser
-5. JS `pywry.emit()` → sends over WebSocket → FastAPI handler dispatches to Python callbacks
-
-**Multiple widgets share one server** — efficient for dashboards with many components.
-
-**Browser-only mode:**
-
-```python
-widget = app.show("<h1>Dashboard</h1>")
-widget.open_in_browser()  # Opens system browser instead of notebook
+```javascript
+model.on("change:_asset_js", function() {
+    var js = model.get("_asset_js");
+    if (js) {
+        var script = document.createElement("script");
+        script.textContent = js;
+        document.head.appendChild(script);
+    }
+});
 ```
 
-## Level 3: NativeWindowHandle (Desktop)
+This replaces the `chat:load-assets` HTTP-based injection used in the IFrame transport, keeping the protocol uniform while adapting to the transport's capabilities.
 
-Used in scripts and terminals. The PyTauri subprocess manages native OS webview windows.
+## Transport Comparison
 
-```python
-from pywry import PyWry
+| Aspect | Anywidget | IFrame+WebSocket | Native Window |
+|--------|-----------|------------------|---------------|
+| `pywry.emit()` | Traitlet `_js_event` | WebSocket send | Tauri IPC `pyInvoke` |
+| `pywry.on()` | Local handler dict | Local handler dict | Local handler dict |
+| Python `emit()` | Traitlet `_py_event` | Async queue → WS send | Tauri event emit |
+| Python `on()` | Traitlet observer | Callback dict lookup | Callback dict lookup |
+| Asset loading | Bundled in `_esm` or `_asset_js` trait | HTTP `<script>` injection | Bundled in page HTML |
+| Server required | No | Yes (FastAPI) | No (subprocess IPC) |
+| Multiple widgets | Each is an independent anywidget | Shared server, per-widget WS | Each is a window |
 
-app = PyWry(title="My App", width=800, height=600)
-handle = app.show("<h1>Native Window</h1>")
-
-# Same API as notebook widgets
-handle.on("app:click", lambda d, e, l: print("Clicked!", d))
-handle.emit("app:update", {"status": "ready"})
-
-# Additional native-only features
-handle.close()
-handle.hide()
-handle.eval_js("document.title = 'Updated'")
-print(handle.label)  # Window label
-```
-
-**How it works:** JSON-over-stdin/stdout IPC to the PyTauri Rust subprocess. The subprocess manages the OS webview (WKWebView on macOS, WebView2 on Windows, WebKitGTK on Linux).
-
-## Writing Portable Code
-
-Since all three backends share the `BaseWidget` protocol, write code against the protocol:
-
-```python
-def setup_dashboard(widget):
-    """Works with any widget type."""
-    widget.on("app:ready", lambda d, e, l: print("Ready in", l))
-    widget.on("app:click", handle_click)
-    widget.emit("app:config", {"theme": "dark"})
-
-# Works everywhere
-handle = app.show(my_html)
-setup_dashboard(handle)
-```
-
-## Fallback Behavior
-
-If `anywidget` is not installed, `PyWryWidget` becomes a stub that shows an error message with install instructions. The `InlineWidget` fallback handles all notebook rendering in that case.
-
-| Scenario | Widget Used | Fallback |
-|----------|-------------|----------|
-| Notebook + anywidget + simple HTML | `PyWryWidget` | — |
-| Notebook + anywidget + Plotly | `InlineWidget` | — |
-| Notebook, no anywidget | `InlineWidget` | IFrame server |
-| Desktop script | `NativeWindowHandle` | — |
-| SSH / headless | `InlineWidget` | Opens browser |
+The Python-facing API (`on`, `emit`, `update`, `display`) and the JavaScript-facing API (`pywry.emit`, `pywry.on`, `pywry._fire`) are identical in every column. A component built against these interfaces works everywhere.

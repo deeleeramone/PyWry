@@ -19,15 +19,10 @@ import random
 import time
 
 from pywry import Button, Div, HtmlContent, PyWry, Toolbar
-from pywry.chat_manager import (
-    ChatManager,
-    InputRequiredResponse,
-    SettingsItem,
-    SlashCommandDef,
-    ThinkingResponse,
-    TodoItem,
-    TodoUpdateResponse,
-)
+from pywry.chat.manager import ChatManager, SettingsItem
+from pywry.chat.models import ACPCommand
+from pywry.chat.session import PlanEntry
+from pywry.chat.updates import PlanUpdate, ThinkingUpdate
 
 
 # ---------------------------------------------------------------------------
@@ -42,8 +37,8 @@ RESPONSES = [
     "3. A bit of creative thinking\n\n"
     "Hope that helps!",
     "Interesting! Here's what I know:\n\n"
-    "```python\ndef hello(name):\n    return f'Hello, {name}!'\n\n"
-    "print(hello('World'))\n```\n\n"
+    "```python\ndef greet(name: str) -> str:\n    return f'Hello, {name}!'\n\n"
+    "message = greet('World')  # 'Hello, World!'\n```\n\n"
     "A simple Python greeting function.",
     "Let me break this down:\n\n"
     "**Step 1:** Understand the problem\n"
@@ -59,81 +54,18 @@ JOKES = [
 ]
 
 
-def _handle_confirm(ctx):
-    """Handle confirm/approve input flow."""
-    yield "I'd like to proceed, but I need your confirmation first."
-    yield InputRequiredResponse(
-        prompt="Do you approve this action?",
-        input_type="buttons",
-    )
-    answer = ctx.wait_for_input()
-    if not answer or answer.lower().startswith("n"):
-        yield "\n\nOk, action **cancelled**."
-        return
-    yield "\n\nGreat — confirmed! Proceeding with the action.\n\n"
-    yield "Done! The operation completed successfully."
-
-
-def _handle_choose(ctx):
-    """Handle choose/pick/select input flow."""
-    yield "Let me know which option you'd like:"
-    yield InputRequiredResponse(
-        prompt="Select a model:",
-        input_type="radio",
-        options=["GPT-4o", "Claude Sonnet", "Gemini Pro", "Llama 3"],
-    )
-    choice = ctx.wait_for_input()
-    if not choice:
-        yield "\n\nSelection cancelled."
-        return
-    yield f"\n\nYou selected **{choice}**. Switching to that model now.\n\n"
-    yield f"Now using {choice} for all subsequent responses."
-
-
-def _handle_filename(ctx):
-    """Handle filename/input/path input flow."""
-    yield "I need a bit more information to continue."
-    yield InputRequiredResponse(
-        prompt="Which file should I modify?",
-        placeholder="Enter filename or path...",
-    )
-    filename = ctx.wait_for_input()
-    if not filename:
-        yield "\n\nNo file specified — aborting."
-        return
-    yield f"\n\nModifying **{filename}**...\n\n"
-    yield "Done! Changes applied successfully."
-
-
 def my_handler(messages, ctx):
     """Handle a user message by streaming a fake LLM response.
 
     This is where you'd call your real LLM API.  The ChatManager handles
     everything else — threading, cancellation, UI events, etc.
     """
-    user_text = messages[-1]["text"].lower()
-
-    # If the user mentions "confirm" or "approve", demonstrate buttons input
-    if any(word in user_text for word in ("confirm", "approve", "permission")):
-        yield from _handle_confirm(ctx)
-        return
-
-    # If the user mentions "choose" or "pick", demonstrate radio input
-    if any(word in user_text for word in ("choose", "pick", "select", "model")):
-        yield from _handle_choose(ctx)
-        return
-
-    # If the user mentions "filename" or "input", demonstrate text input
-    if any(word in user_text for word in ("filename", "input", "path", "file")):
-        yield from _handle_filename(ctx)
-        return
-
-    # Push todo list — agent tracks its own progress
-    yield TodoUpdateResponse(
-        items=[
-            TodoItem(id=1, title="Analyze user request", status="in-progress"),
-            TodoItem(id=2, title="Generate response", status="not-started"),
-            TodoItem(id=3, title="Stream to user", status="not-started"),
+    # Push plan — agent tracks its own progress
+    yield PlanUpdate(
+        entries=[
+            PlanEntry(content="Analyze user request", status="in_progress"),
+            PlanEntry(content="Generate response", status="pending"),
+            PlanEntry(content="Stream to user", status="pending"),
         ]
     )
 
@@ -149,24 +81,24 @@ def my_handler(messages, ctx):
     for line in thinking_text.split("\n"):
         if ctx.cancel_event.is_set():
             return
-        yield ThinkingResponse(text=line + "\n")
+        yield ThinkingUpdate(text=line + "\n")
         time.sleep(random.uniform(0.05, 0.15))
 
     # Update progress
-    yield TodoUpdateResponse(
-        items=[
-            TodoItem(id=1, title="Analyze user request", status="completed"),
-            TodoItem(id=2, title="Generate response", status="in-progress"),
-            TodoItem(id=3, title="Stream to user", status="not-started"),
+    yield PlanUpdate(
+        entries=[
+            PlanEntry(content="Analyze user request", status="completed"),
+            PlanEntry(content="Generate response", status="in_progress"),
+            PlanEntry(content="Stream to user", status="pending"),
         ]
     )
     time.sleep(0.2)
 
-    yield TodoUpdateResponse(
-        items=[
-            TodoItem(id=1, title="Analyze user request", status="completed"),
-            TodoItem(id=2, title="Generate response", status="completed"),
-            TodoItem(id=3, title="Stream to user", status="in-progress"),
+    yield PlanUpdate(
+        entries=[
+            PlanEntry(content="Analyze user request", status="completed"),
+            PlanEntry(content="Generate response", status="completed"),
+            PlanEntry(content="Stream to user", status="in_progress"),
         ]
     )
 
@@ -180,11 +112,11 @@ def my_handler(messages, ctx):
         time.sleep(random.uniform(0.02, 0.08))
 
     # All done
-    yield TodoUpdateResponse(
-        items=[
-            TodoItem(id=1, title="Analyze user request", status="completed"),
-            TodoItem(id=2, title="Generate response", status="completed"),
-            TodoItem(id=3, title="Stream to user", status="completed"),
+    yield PlanUpdate(
+        entries=[
+            PlanEntry(content="Analyze user request", status="completed"),
+            PlanEntry(content="Generate response", status="completed"),
+            PlanEntry(content="Stream to user", status="completed"),
         ]
     )
 
@@ -195,19 +127,6 @@ def on_slash(command, args, thread_id):
         chat.send_message(random.choice(JOKES), thread_id)
     elif command == "/time":
         chat.send_message(f"Current time: **{time.strftime('%H:%M:%S')}**", thread_id)
-    elif command == "/confirm":
-        # Demonstrate InputRequiredResponse via a programmatic handler call
-        import threading
-
-        def _confirm_flow():
-            time.sleep(0.1)
-            chat.send_message(
-                "Try sending a message — the handler will ask for confirmation "
-                "mid-stream using `InputRequiredResponse`.",
-                thread_id,
-            )
-
-        threading.Thread(target=_confirm_flow, daemon=True).start()
 
 
 # ---------------------------------------------------------------------------
@@ -218,18 +137,15 @@ chat = ChatManager(
     handler=my_handler,
     welcome_message=(
         "Welcome to **PyWry Chat**!\n\n"
-        "Try typing a message, `/joke`, `/time`, `/confirm`, or `/clear`.\n"
-        "Say **confirm** for Yes/No buttons, **choose** for radio select, "
-        "or **filename** for text input.\n"
+        "Try typing a message, `/joke`, `/time`, or `/clear`.\n"
         "Click **Stop** mid-stream to cancel generation."
     ),
     system_prompt="You are a helpful assistant.",
     model="gpt-4",
     temperature=0.7,
     slash_commands=[
-        SlashCommandDef(name="/joke", description="Tell a programming joke"),
-        SlashCommandDef(name="/time", description="Show current time"),
-        SlashCommandDef(name="/confirm", description="Demonstrate input_required flow"),
+        ACPCommand(name="/joke", description="Tell a programming joke"),
+        ACPCommand(name="/time", description="Show current time"),
     ],
     on_slash_command=on_slash,
     settings=[

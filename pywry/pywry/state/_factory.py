@@ -73,7 +73,7 @@ def get_state_backend() -> StateBackend:
     Returns
     -------
     StateBackend
-        The configured backend (MEMORY or REDIS).
+        The configured backend (MEMORY, REDIS, or SQLITE).
 
     Notes
     -----
@@ -83,6 +83,8 @@ def get_state_backend() -> StateBackend:
     backend = os.environ.get("PYWRY_DEPLOY__STATE_BACKEND", "memory").lower()
     if backend == "redis":
         return StateBackend.REDIS
+    if backend == "sqlite":
+        return StateBackend.SQLITE
     return StateBackend.MEMORY
 
 
@@ -168,6 +170,12 @@ def get_widget_store() -> WidgetStore:
             pool_size=settings.redis_pool_size,
         )
 
+    if backend == StateBackend.SQLITE:
+        from .sqlite import SqliteWidgetStore
+
+        settings = _get_deploy_settings()
+        return SqliteWidgetStore(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
+
     return MemoryWidgetStore()
 
 
@@ -199,6 +207,12 @@ def get_event_bus() -> EventBus:
             pool_size=settings.redis_pool_size,
         )
 
+    if backend == StateBackend.SQLITE:
+        from .sqlite import SqliteEventBus
+
+        settings = _get_deploy_settings()
+        return SqliteEventBus(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
+
     return MemoryEventBus()
 
 
@@ -229,6 +243,12 @@ def get_connection_router() -> ConnectionRouter:
             connection_ttl=settings.connection_ttl,
             pool_size=settings.redis_pool_size,
         )
+
+    if backend == StateBackend.SQLITE:
+        from .sqlite import SqliteConnectionRouter
+
+        settings = _get_deploy_settings()
+        return SqliteConnectionRouter(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
 
     return MemoryConnectionRouter()
 
@@ -262,6 +282,12 @@ def get_session_store() -> SessionStore:
             pool_size=settings.redis_pool_size,
         )
 
+    if backend == StateBackend.SQLITE:
+        from .sqlite import SqliteSessionStore
+
+        settings = _get_deploy_settings()
+        return SqliteSessionStore(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
+
     return MemorySessionStore()
 
 
@@ -293,6 +319,12 @@ def get_chat_store() -> ChatStore:
             chat_ttl=settings.widget_ttl,
             pool_size=settings.redis_pool_size,
         )
+
+    if backend == StateBackend.SQLITE:
+        from .sqlite import SqliteChatStore
+
+        settings = _get_deploy_settings()
+        return SqliteChatStore(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
 
     return MemoryChatStore()
 
