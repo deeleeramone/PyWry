@@ -2677,7 +2677,7 @@ def generate_plotly_html(
         delete plotlyConfig.templateDark;
         delete plotlyConfig.templateLight;
 
-        // Extract single legacy template from layout
+        // Extract single template from layout
         let userTemplate = null;
         const templates = window.PYWRY_PLOTLY_TEMPLATES || {{}};
         const themeTemplate = '{"plotly_dark" if theme == "dark" else "plotly_white"}';

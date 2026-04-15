@@ -619,8 +619,8 @@ class TestCancelPropagation:
         assert len(done_chunks) >= 1
 
 
-class TestLegacyHandlerWithNewUpdates:
-    """Verify legacy handler functions can yield new SessionUpdate types."""
+class TestHandlerWithSessionUpdates:
+    """Verify handler functions can yield SessionUpdate types alongside strings."""
 
     def test_handler_yields_mixed_strings_and_updates(self):
         def handler(messages, ctx):

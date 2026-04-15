@@ -630,7 +630,7 @@ class TestTVChartDatafeedModels:
         assert len(dumped["price_sources"]) == 2
         assert dumped["price_source_id"] == "1"
 
-    def test_symbol_info_legacy_alias(self):
+    def test_symbol_info_alias(self):
         info = TVChartSymbolInfo(
             name="X", description="", exchange="", listed_exchange="", symbol_type="futures"
         )
@@ -1563,11 +1563,11 @@ class TestTVChartFrontendStateContracts:
     def test_scales_settings_uses_full_value_label(self, tvchart_defaults_js: str):
         """The scales tab must use the full 'Value according to scale' label.
         A truncated 'Value according to sc...' label broke the settings key
-        mapping.  Backward compat fallback must also exist."""
+        mapping.  Fallback for the truncated key must also exist."""
         assert "'Value according to scale'" in tvchart_defaults_js
-        # The old truncated key must NOT be used in addSelectRow calls
+        # The truncated key must NOT be used in addSelectRow calls
         assert "addSelectRow(scalesSection, 'Value according to sc...'" not in tvchart_defaults_js
-        # Backward-compatible fallback for layouts saved with the old key
+        # Fallback for layouts saved with the truncated key
         assert "'Value according to sc...'" in tvchart_defaults_js
 
     # ------------------------------------------------------------------

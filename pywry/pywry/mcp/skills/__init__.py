@@ -140,7 +140,7 @@ def list_skills() -> list[dict[str, str]]:
 
 
 def get_all_skills() -> dict[str, dict[str, str]]:
-    """Get all skills with full guidance (for backward compatibility).
+    """Get all skills with full guidance.
 
     Returns
     -------

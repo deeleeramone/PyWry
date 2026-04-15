@@ -206,7 +206,7 @@ class AuthStateStore:
 # For multi-worker deploy, this should be replaced with a Redis-backed store.
 _auth_state_store = AuthStateStore()
 
-# Legacy alias kept for test compatibility
+# Alias used by tests
 _pending_auth_states = _auth_state_store._get_store_for_testing()
 
 

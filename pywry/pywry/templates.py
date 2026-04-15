@@ -251,7 +251,7 @@ def build_plotly_init_script(
             delete config.templateDark;
             delete config.templateLight;
 
-            // Extract single legacy template overrides from layout.template
+            // Extract single template overrides from layout.template
             var userTemplate = null;
             if (typeof layout.template === 'string' && templates[layout.template]) {{
                 // User specified a named template - resolve it

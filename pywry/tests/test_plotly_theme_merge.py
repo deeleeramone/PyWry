@@ -446,7 +446,7 @@ class TestMergeThemeTemplateJS:
         assert result["layout"]["paper_bgcolor"] == "#CUSTOM_LIGHT"
         assert result["layout"]["font"]["color"] == "#333"  # base light font
 
-    def test_fallback_to_legacy_template_when_no_dual(self) -> None:
+    def test_fallback_to_single_template_when_no_dual(self) -> None:
         """When only a single template is provided, it applies to both modes."""
         result = _run_js_json("""
             PYWRY_PLOTLY_TEMPLATES = {
@@ -455,21 +455,21 @@ class TestMergeThemeTemplateJS:
             var plotDiv = {};
             var merged = mergeThemeTemplate(
                 plotDiv, 'plotly_dark',
-                {layout: {paper_bgcolor: '#LEGACY'}},  // single/legacy
+                {layout: {paper_bgcolor: '#SINGLE'}},  // single template
                 null, null  // no dual templates
             );
             console.log(JSON.stringify(merged));
         """)
-        assert result["layout"]["paper_bgcolor"] == "#LEGACY"
+        assert result["layout"]["paper_bgcolor"] == "#SINGLE"
 
-    def test_legacy_fallback_also_applies_on_light(self) -> None:
-        """Single/legacy template also works for light mode."""
+    def test_single_template_fallback_also_applies_on_light(self) -> None:
+        """Single template also works for light mode."""
         result = _run_js_json("""
             PYWRY_PLOTLY_TEMPLATES = {
                 plotly_white: {layout: {paper_bgcolor: '#fff'}}
             };
             var plotDiv = {};
-            // First call with legacy template
+            // First call with single template
             mergeThemeTemplate(plotDiv, 'plotly_white', {layout: {font: {size: 20}}}, null, null);
             // Second call: theme toggle (no new templates — reads from stored)
             var merged = mergeThemeTemplate(plotDiv, 'plotly_white', null, null, null);
@@ -527,7 +527,7 @@ class TestMergeThemeTemplateJS:
             console.log(JSON.stringify(merged));
         """)
         # "nonexistent_theme" doesn't contain 'dark', so it's treated as light
-        # No light template provided, no legacy template -> base is empty
+        # No light template provided, no single template -> base is empty
         assert result == {}
 
     def test_dark_override_with_complex_nested_values(self) -> None:

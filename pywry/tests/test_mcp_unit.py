@@ -782,7 +782,7 @@ class TestResourcesModule:
         resources = get_resources()
         uris = [str(r.uri) for r in resources]
 
-        # Verify no legacy pywry://skill/ URIs remain
+        # Verify no pywry://skill/ URIs remain
         assert not any("pywry://skill/" in uri for uri in uris)
 
     def test_get_resource_templates(self) -> None:

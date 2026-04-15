@@ -184,7 +184,7 @@ def parse_udf_columns(data: dict[str, Any], count: int | None = None) -> list[di
 
 
 def _map_symbol_keys(raw: dict[str, Any]) -> dict[str, Any]:
-    """Map UDF hyphen-case / legacy keys to TVChartSymbolInfo field names."""
+    """Map UDF hyphen-case keys to TVChartSymbolInfo field names."""
     mapped: dict[str, Any] = {}
     for key, val in raw.items():
         canonical = _UDF_SYMBOL_KEY_MAP.get(key, key.replace("-", "_"))

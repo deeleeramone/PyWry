@@ -280,14 +280,14 @@ class ChatManager:
 
     Handles event wiring, thread management, streaming, cancellation,
     and state synchronization. Accepts either a ``ChatProvider`` instance
-    (ACP session lifecycle) or a handler function (legacy interface).
+    (ACP session lifecycle) or a handler function.
 
     Parameters
     ----------
     provider : ChatProvider | None
         ACP-conformant provider instance.
     handler : callable | None
-        Legacy handler function ``(messages, ctx) -> str | Iterator``.
+        Handler function ``(messages, ctx) -> str | Iterator``.
         Exactly one of ``provider`` or ``handler`` must be supplied.
     system_prompt : str
         System prompt prepended to every request.
@@ -918,16 +918,16 @@ class ChatManager:
             if isinstance(update.artifact, _ArtifactBase):
                 self._dispatch_artifact(update.artifact, state.message_id, thread_id)
 
-    def _process_legacy_item(
+    def _process_handler_item(
         self,
         item: Any,
         state: _StreamState,
         thread_id: str,
         ctx: ChatContext | None,
     ) -> None:
-        """Dispatch a legacy handler yield item.
+        """Dispatch a handler yield item.
 
-        Handles plain strings, old-style response types, and artifacts.
+        Handles plain strings, SessionUpdate objects, and artifacts.
         """
         # Check if it's a SessionUpdate first (new-style)
         if hasattr(item, "session_update"):
@@ -1020,7 +1020,7 @@ class ChatManager:
             if cancel.is_set():
                 self._handle_cancel(state, thread_id)
                 return
-            self._process_legacy_item(item, state, thread_id, ctx)
+            self._process_handler_item(item, state, thread_id, ctx)
         if cancel.is_set():
             self._handle_cancel(state, thread_id)
         else:
@@ -1048,7 +1048,7 @@ class ChatManager:
             if cancel.is_set():
                 self._handle_cancel(state, thread_id)
                 return
-            self._process_legacy_item(item, state, thread_id, ctx)
+            self._process_handler_item(item, state, thread_id, ctx)
         if not typing_hidden:
             self._emit(
                 "chat:typing-indicator",

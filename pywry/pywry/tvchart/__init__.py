@@ -1,7 +1,7 @@
 """TradingView chart package — models, normalization, toolbars, mixin, datafeed.
 
-All public symbols are re-exported here for backward compatibility so that
-``from pywry.tvchart import ...`` continues to work.
+All public symbols are re-exported here so that
+``from pywry.tvchart import ...`` works.
 """
 
 from __future__ import annotations
