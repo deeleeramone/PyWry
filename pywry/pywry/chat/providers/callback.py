@@ -111,6 +111,7 @@ class CallbackProvider(ChatProvider):
             return
 
         result = self._prompt_fn(session_id, content, cancel_event)
+
         if asyncio.iscoroutine(result):
             result = await result
 
@@ -118,8 +119,12 @@ class CallbackProvider(ChatProvider):
             yield AgentMessageUpdate(text=result)
             return
 
-        async for update in self._iter_result(result, cancel_event):
-            yield update
+        if hasattr(result, "__aiter__") or hasattr(result, "__next__"):
+            async for update in self._iter_result(result, cancel_event):
+                yield update
+            return
+
+        yield AgentMessageUpdate(text=str(result))
 
     @staticmethod
     async def _iter_result(result: Any, cancel_event: Any) -> AsyncIterator[SessionUpdate]:
