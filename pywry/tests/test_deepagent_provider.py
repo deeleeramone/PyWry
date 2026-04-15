@@ -76,18 +76,19 @@ class TestDeepagentProviderInitialize:
     @pytest.mark.asyncio
     async def test_initialize_returns_capabilities(self):
         agent = FakeAgent([])
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         caps = await provider.initialize(ClientCapabilities())
         assert caps.prompt_capabilities is not None
         assert caps.prompt_capabilities.image is True
 
     @pytest.mark.asyncio
     async def test_initialize_with_checkpointer_enables_load(self):
+        langgraph = pytest.importorskip("langgraph")
         from langgraph.checkpoint.memory import MemorySaver
 
         agent = FakeAgent([])
         provider = DeepagentProvider(
-            agent=agent, checkpointer=MemorySaver(), auto_checkpointer=False
+            agent=agent, checkpointer=MemorySaver(), auto_checkpointer=False, auto_store=False
         )
         caps = await provider.initialize(ClientCapabilities())
         assert caps.load_session is True
@@ -95,7 +96,7 @@ class TestDeepagentProviderInitialize:
     @pytest.mark.asyncio
     async def test_initialize_without_checkpointer_disables_load(self):
         agent = FakeAgent([])
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         caps = await provider.initialize(ClientCapabilities())
         assert caps.load_session is False
 
@@ -104,7 +105,7 @@ class TestDeepagentProviderSessions:
     @pytest.mark.asyncio
     async def test_new_session_returns_id(self):
         agent = FakeAgent([])
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         sid = await provider.new_session("/tmp")
         assert sid.startswith("da_")
@@ -112,7 +113,7 @@ class TestDeepagentProviderSessions:
     @pytest.mark.asyncio
     async def test_load_nonexistent_session_raises(self):
         agent = FakeAgent([])
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         with pytest.raises(ValueError, match="not found"):
             await provider.load_session("nonexistent", "/tmp")
@@ -126,7 +127,7 @@ class TestDeepagentProviderStreaming:
             make_event("on_chat_model_stream", data={"chunk": FakeChunk("world")}),
         ]
         agent = FakeAgent(events)
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         sid = await provider.new_session("/tmp")
 
@@ -146,7 +147,7 @@ class TestDeepagentProviderStreaming:
             make_event("on_tool_end", name="read_file", run_id="tc1", data={"output": "contents"}),
         ]
         agent = FakeAgent(events)
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         sid = await provider.new_session("/tmp")
 
@@ -168,7 +169,7 @@ class TestDeepagentProviderStreaming:
             make_event("on_tool_error", name="execute", run_id="tc2"),
         ]
         agent = FakeAgent(events)
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         sid = await provider.new_session("/tmp")
 
@@ -192,7 +193,7 @@ class TestDeepagentProviderStreaming:
                        data={"output": json.dumps(todos)}),
         ]
         agent = FakeAgent(events)
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         sid = await provider.new_session("/tmp")
 
@@ -214,7 +215,7 @@ class TestDeepagentProviderStreaming:
             for i in range(100)
         ]
         agent = FakeAgent(events)
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         sid = await provider.new_session("/tmp")
 
@@ -236,7 +237,7 @@ class TestDeepagentProviderStreaming:
             make_event("on_chat_model_stream", data={"chunk": FakeChunk("answer")}),
         ]
         agent = FakeAgent(events)
-        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         sid = await provider.new_session("/tmp")
 

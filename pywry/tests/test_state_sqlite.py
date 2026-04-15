@@ -291,47 +291,61 @@ class TestSqliteSessionStore:
 
 class TestSqliteWidgetStore:
     @pytest.mark.asyncio
-    async def test_save_and_get_widget(self, widget_store):
-        await widget_store.save_widget("w1", "<h1>hi</h1>", token="tok1")
-        widget = await widget_store.get_widget("w1")
+    async def test_register_and_get(self, widget_store):
+        await widget_store.register("w1", "<h1>hi</h1>", token="tok1")
+        widget = await widget_store.get("w1")
         assert widget is not None
         assert widget.html == "<h1>hi</h1>"
         assert widget.token == "tok1"
 
     @pytest.mark.asyncio
-    async def test_list_widgets(self, widget_store):
-        await widget_store.save_widget("w1", "<h1>a</h1>")
-        await widget_store.save_widget("w2", "<h1>b</h1>")
-        widgets = await widget_store.list_widgets()
+    async def test_list_active(self, widget_store):
+        await widget_store.register("w1", "<h1>a</h1>")
+        await widget_store.register("w2", "<h1>b</h1>")
+        widgets = await widget_store.list_active()
         assert "w1" in widgets
         assert "w2" in widgets
 
     @pytest.mark.asyncio
-    async def test_delete_widget(self, widget_store):
-        await widget_store.save_widget("w1", "<h1>a</h1>")
-        deleted = await widget_store.delete_widget("w1")
+    async def test_delete(self, widget_store):
+        await widget_store.register("w1", "<h1>a</h1>")
+        deleted = await widget_store.delete("w1")
         assert deleted is True
-        assert await widget_store.get_widget("w1") is None
+        assert await widget_store.get("w1") is None
+
+    @pytest.mark.asyncio
+    async def test_exists_and_count(self, widget_store):
+        assert await widget_store.exists("w1") is False
+        assert await widget_store.count() == 0
+        await widget_store.register("w1", "<h1>a</h1>")
+        assert await widget_store.exists("w1") is True
+        assert await widget_store.count() == 1
+
+    @pytest.mark.asyncio
+    async def test_update_html(self, widget_store):
+        await widget_store.register("w1", "<h1>old</h1>")
+        updated = await widget_store.update_html("w1", "<h1>new</h1>")
+        assert updated is True
+        assert (await widget_store.get_html("w1")) == "<h1>new</h1>"
+
+    @pytest.mark.asyncio
+    async def test_update_token(self, widget_store):
+        await widget_store.register("w1", "<h1>a</h1>", token="old")
+        updated = await widget_store.update_token("w1", "new")
+        assert updated is True
+        assert (await widget_store.get_token("w1")) == "new"
 
 
 class TestSqliteEventBusAndRouter:
-    @pytest.mark.asyncio
-    async def test_event_bus_publish_subscribe(self, db_path):
-        bus = SqliteEventBus(db_path=db_path, encrypted=False)
-        received = []
-        await bus.subscribe("test-channel", received.append)
-        await bus.publish("test-channel", {"data": "hello"})
-        assert len(received) == 1
-        assert received[0]["data"] == "hello"
+    def test_event_bus_is_memory(self):
+        from pywry.state.memory import MemoryEventBus
 
-    @pytest.mark.asyncio
-    async def test_connection_router(self, db_path):
-        router = SqliteConnectionRouter(db_path=db_path, encrypted=False)
-        await router.register("w1", "worker-1")
-        worker = await router.get_worker("w1")
-        assert worker == "worker-1"
-        await router.unregister("w1")
-        assert await router.get_worker("w1") is None
+        assert SqliteEventBus is MemoryEventBus
+
+    def test_connection_router_is_memory(self):
+        from pywry.state.memory import MemoryConnectionRouter
+
+        assert SqliteConnectionRouter is MemoryConnectionRouter
 
 
 class TestSqliteFactoryIntegration:
@@ -340,13 +354,8 @@ class TestSqliteFactoryIntegration:
         from pywry.state._factory import get_state_backend
         from pywry.state.types import StateBackend
 
-        get_state_backend.cache_clear()
-        try:
-            backend = get_state_backend()
-            assert backend == StateBackend.SQLITE
-        finally:
-            get_state_backend.cache_clear()
-            monkeypatch.delenv("PYWRY_DEPLOY__STATE_BACKEND", raising=False)
+        backend = get_state_backend()
+        assert backend == StateBackend.SQLITE
 
 
 class TestAuditTrailDefaultNoOps:

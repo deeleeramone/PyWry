@@ -22,7 +22,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from .base import ChatStore, ConnectionRouter, EventBus, SessionStore, WidgetStore
+from .base import ChatStore, SessionStore, WidgetStore
+from .memory import MemoryConnectionRouter, MemoryEventBus
 from .types import UserSession, WidgetData
 
 
@@ -290,20 +291,22 @@ class SqliteStateBackend:
 class SqliteWidgetStore(SqliteStateBackend, WidgetStore):
     """SQLite-backed widget store."""
 
-    async def save_widget(
+    async def register(
         self,
         widget_id: str,
         html: str,
         token: str | None = None,
+        owner_worker_id: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
         await self._execute(
-            "INSERT OR REPLACE INTO widgets (widget_id, html, token, created_at, metadata) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (widget_id, html, token, time.time(), json.dumps(metadata or {})),
+            "INSERT OR REPLACE INTO widgets "
+            "(widget_id, html, token, owner_worker_id, created_at, metadata) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (widget_id, html, token, owner_worker_id, time.time(), json.dumps(metadata or {})),
         )
 
-    async def get_widget(self, widget_id: str) -> WidgetData | None:
+    async def get(self, widget_id: str) -> WidgetData | None:
         rows = await self._execute(
             "SELECT * FROM widgets WHERE widget_id = ?", (widget_id,), commit=False
         )
@@ -315,21 +318,57 @@ class SqliteWidgetStore(SqliteStateBackend, WidgetStore):
             html=r["html"],
             token=r["token"],
             created_at=r["created_at"],
+            owner_worker_id=r["owner_worker_id"],
             metadata=json.loads(r["metadata"] or "{}"),
         )
 
-    async def delete_widget(self, widget_id: str) -> bool:
+    async def get_html(self, widget_id: str) -> str | None:
         rows = await self._execute(
-            "DELETE FROM widgets WHERE widget_id = ? RETURNING widget_id", (widget_id,)
+            "SELECT html FROM widgets WHERE widget_id = ?", (widget_id,), commit=False
+        )
+        return rows[0]["html"] if rows else None
+
+    async def get_token(self, widget_id: str) -> str | None:
+        rows = await self._execute(
+            "SELECT token FROM widgets WHERE widget_id = ?", (widget_id,), commit=False
+        )
+        return rows[0]["token"] if rows else None
+
+    async def exists(self, widget_id: str) -> bool:
+        rows = await self._execute(
+            "SELECT 1 FROM widgets WHERE widget_id = ?", (widget_id,), commit=False
         )
         return len(rows) > 0
 
-    async def list_widgets(self) -> list[str]:
+    async def delete(self, widget_id: str) -> bool:
+        before = await self.exists(widget_id)
+        if before:
+            await self._execute("DELETE FROM widgets WHERE widget_id = ?", (widget_id,))
+        return before
+
+    async def list_active(self) -> list[str]:
         rows = await self._execute("SELECT widget_id FROM widgets", commit=False)
         return [r["widget_id"] for r in rows]
 
-    async def cleanup_widget(self, widget_id: str) -> None:
-        await self.delete_widget(widget_id)
+    async def update_html(self, widget_id: str, html: str) -> bool:
+        if not await self.exists(widget_id):
+            return False
+        await self._execute(
+            "UPDATE widgets SET html = ? WHERE widget_id = ?", (html, widget_id)
+        )
+        return True
+
+    async def update_token(self, widget_id: str, token: str) -> bool:
+        if not await self.exists(widget_id):
+            return False
+        await self._execute(
+            "UPDATE widgets SET token = ? WHERE widget_id = ?", (token, widget_id)
+        )
+        return True
+
+    async def count(self) -> int:
+        rows = await self._execute("SELECT COUNT(*) as cnt FROM widgets", commit=False)
+        return rows[0]["cnt"] if rows else 0
 
 
 class SqliteSessionStore(SqliteStateBackend, SessionStore):
@@ -830,54 +869,8 @@ class SqliteChatStore(SqliteStateBackend, ChatStore):
         return [dict(r) for r in rows]
 
 
-class SqliteEventBus(SqliteStateBackend, EventBus):
-    """In-process event dispatch for SQLite backend.
+SqliteEventBus = MemoryEventBus
+"""SQLite mode reuses the in-memory event bus — single-process, no pub/sub needed."""
 
-    SQLite is single-process, so pub/sub is handled in-memory
-    identically to MemoryEventBus.
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._subscribers: dict[str, list[Any]] = {}
-
-    async def publish(self, channel: str, message: dict[str, Any]) -> None:
-        for callback in self._subscribers.get(channel, []):
-            try:
-                callback(message)
-            except Exception:
-                logger.exception("Event bus subscriber error on channel %s", channel)
-
-    async def subscribe(self, channel: str, callback: Any) -> None:
-        if channel not in self._subscribers:
-            self._subscribers[channel] = []
-        self._subscribers[channel].append(callback)
-
-    async def unsubscribe(self, channel: str, callback: Any) -> None:
-        if channel in self._subscribers:
-            self._subscribers[channel] = [
-                cb for cb in self._subscribers[channel] if cb != callback
-            ]
-
-
-class SqliteConnectionRouter(SqliteStateBackend, ConnectionRouter):
-    """In-process connection routing for SQLite backend.
-
-    Single-process, so routing is trivial.
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._routes: dict[str, str] = {}
-
-    async def register(self, widget_id: str, worker_id: str) -> None:
-        self._routes[widget_id] = worker_id
-
-    async def get_worker(self, widget_id: str) -> str | None:
-        return self._routes.get(widget_id)
-
-    async def unregister(self, widget_id: str) -> None:
-        self._routes.pop(widget_id, None)
-
-    async def get_all_routes(self) -> dict[str, str]:
-        return dict(self._routes)
+SqliteConnectionRouter = MemoryConnectionRouter
+"""SQLite mode reuses the in-memory connection router — single-process, routing is trivial."""

@@ -243,14 +243,22 @@ class DeepagentProvider(ChatProvider):
         except Exception:
             logger.debug("Could not auto-configure checkpointer from state backend", exc_info=True)
 
-        from langgraph.checkpoint.memory import MemorySaver
+        try:
+            from langgraph.checkpoint.memory import MemorySaver
 
-        return MemorySaver()
+            return MemorySaver()
+        except ImportError:
+            logger.debug("langgraph not installed, skipping checkpointer")
+            return None
 
     def _create_store(self) -> Any:
-        from langgraph.store.memory import InMemoryStore
+        try:
+            from langgraph.store.memory import InMemoryStore
 
-        return InMemoryStore()
+            return InMemoryStore()
+        except ImportError:
+            logger.debug("langgraph not installed, skipping memory store")
+            return None
 
     def _build_agent(self) -> Any:
         from deepagents import create_deep_agent
