@@ -228,3 +228,22 @@ class TestDeepagentProviderStreaming:
                 cancel.set()
 
         assert len(updates) < 100
+
+    @pytest.mark.asyncio
+    async def test_chat_model_start_yields_status(self):
+        events = [
+            make_event("on_chat_model_start", name="ChatOpenAI"),
+            make_event("on_chat_model_stream", data={"chunk": FakeChunk("answer")}),
+        ]
+        agent = FakeAgent(events)
+        provider = DeepagentProvider(agent=agent, auto_checkpointer=False)
+        await provider.initialize(ClientCapabilities())
+        sid = await provider.new_session("/tmp")
+
+        updates = []
+        async for u in provider.prompt(sid, [TextPart(text="hi")]):
+            updates.append(u)
+
+        assert isinstance(updates[0], StatusUpdate)
+        assert "ChatOpenAI" in updates[0].text
+        assert isinstance(updates[1], AgentMessageUpdate)

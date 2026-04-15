@@ -6,8 +6,6 @@ encryption, auto-setup, and interchangeability with MemoryChatStore.
 
 from __future__ import annotations
 
-import time
-
 import pytest
 
 from pywry.chat.models import ChatMessage, ChatThread

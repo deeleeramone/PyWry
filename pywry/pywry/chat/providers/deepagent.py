@@ -14,9 +14,6 @@ import uuid
 
 from typing import TYPE_CHECKING, Any
 
-
-logger = logging.getLogger(__name__)
-
 from . import ChatProvider
 
 if TYPE_CHECKING:
@@ -27,6 +24,8 @@ if TYPE_CHECKING:
     from ..session import AgentCapabilities, ClientCapabilities
     from ..updates import SessionUpdate
 
+
+logger = logging.getLogger(__name__)
 
 PYWRY_SYSTEM_PROMPT = """\
 You are operating inside a PyWry chat interface — a rich desktop/notebook/browser \
@@ -352,13 +351,7 @@ class DeepagentProvider(ChatProvider):
             Typed update notifications.
         """
         from ..models import TextPart
-        from ..session import PlanEntry
-        from ..updates import (
-            AgentMessageUpdate,
-            PlanUpdate,
-            StatusUpdate,
-            ToolCallUpdate,
-        )
+        from ..updates import AgentMessageUpdate, StatusUpdate, ToolCallUpdate
 
         thread_id = self._sessions.get(session_id, session_id)
         user_text = "".join(p.text for p in content if isinstance(p, TextPart))
@@ -390,37 +383,8 @@ class DeepagentProvider(ChatProvider):
                 )
 
             elif kind == "on_tool_end":
-                tool_name = event.get("name", "")
-                run_id = event.get("run_id", "")
-                output = event.get("data", {}).get("output", "")
-
-                if tool_name == "write_todos":
-                    try:
-                        import json
-
-                        todos = json.loads(output) if isinstance(output, str) else output
-                        if isinstance(todos, list):
-                            yield PlanUpdate(
-                                entries=[
-                                    PlanEntry(
-                                        content=item.get("title", item.get("content", str(item))),
-                                        priority="medium",
-                                        status=_map_todo_status(
-                                            item.get("status", "pending")
-                                        ),
-                                    )
-                                    for item in todos
-                                ]
-                            )
-                    except Exception:
-                        logger.debug("Could not parse write_todos output", exc_info=True)
-
-                yield ToolCallUpdate(
-                    tool_call_id=run_id or f"call_{uuid.uuid4().hex[:8]}",
-                    name=tool_name,
-                    kind=_map_tool_kind(tool_name),
-                    status="completed",
-                )
+                async for update in self._handle_tool_end(event):
+                    yield update
 
             elif kind == "on_tool_error":
                 tool_name = event.get("name", "")
@@ -438,6 +402,41 @@ class DeepagentProvider(ChatProvider):
 
             elif kind == "on_chain_start" and event.get("name") == "task":
                 yield StatusUpdate(text="Delegating to subagent...")
+
+    async def _handle_tool_end(self, event: dict[str, Any]) -> AsyncIterator[SessionUpdate]:
+        """Handle on_tool_end events, including write_todos → PlanUpdate."""
+        import json
+
+        from ..session import PlanEntry
+        from ..updates import PlanUpdate, ToolCallUpdate
+
+        tool_name = event.get("name", "")
+        run_id = event.get("run_id", "")
+        output = event.get("data", {}).get("output", "")
+
+        if tool_name == "write_todos":
+            try:
+                todos = json.loads(output) if isinstance(output, str) else output
+                if isinstance(todos, list):
+                    yield PlanUpdate(
+                        entries=[
+                            PlanEntry(
+                                content=item.get("title", item.get("content", str(item))),
+                                priority="medium",
+                                status=_map_todo_status(item.get("status", "pending")),
+                            )
+                            for item in todos
+                        ]
+                    )
+            except Exception:
+                logger.debug("Could not parse write_todos output", exc_info=True)
+
+        yield ToolCallUpdate(
+            tool_call_id=run_id or f"call_{uuid.uuid4().hex[:8]}",
+            name=tool_name,
+            kind=_map_tool_kind(tool_name),
+            status="completed",
+        )
 
     async def cancel(self, session_id: str) -> None:
         """Cancel is handled cooperatively via ``cancel_event``.

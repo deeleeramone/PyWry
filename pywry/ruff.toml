@@ -80,9 +80,11 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "S104",
     "S105",
     "S106",
+    "S108",
     "S310",
     "ARG",
     "ASYNC240",
+    "PERF401",
 ]
 
 "__init__.py" = [
