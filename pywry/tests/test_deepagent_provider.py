@@ -83,7 +83,7 @@ class TestDeepagentProviderInitialize:
 
     @pytest.mark.asyncio
     async def test_initialize_with_checkpointer_enables_load(self):
-        langgraph = pytest.importorskip("langgraph")
+        pytest.importorskip("langgraph")
         from langgraph.checkpoint.memory import MemorySaver
 
         agent = FakeAgent([])

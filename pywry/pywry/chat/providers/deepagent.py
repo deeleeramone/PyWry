@@ -16,8 +16,10 @@ from typing import TYPE_CHECKING, Any
 
 from . import ChatProvider
 
+
 if TYPE_CHECKING:
     import asyncio
+
     from collections.abc import AsyncIterator
 
     from ..models import ContentBlock
@@ -227,6 +229,7 @@ class DeepagentProvider(ChatProvider):
             backend = get_state_backend()
             if backend == StateBackend.REDIS:
                 from langgraph.checkpoint.redis import RedisSaver
+
                 from ...config import get_settings
 
                 return RedisSaver(get_settings().deploy.redis_url)
