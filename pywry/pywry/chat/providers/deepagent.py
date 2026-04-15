@@ -235,7 +235,7 @@ class DeepagentProvider(ChatProvider):
                 return RedisSaver(get_settings().deploy.redis_url)
             if backend == StateBackend.SQLITE:
                 try:
-                    from langgraph.checkpoint.sqlite import SqliteSaver  # type: ignore[import-not-found,unused-ignore]
+                    from langgraph.checkpoint.sqlite import SqliteSaver  # type: ignore
 
                     from ...config import get_settings
 
