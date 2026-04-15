@@ -110,9 +110,16 @@ class CallbackProvider(ChatProvider):
             yield AgentMessageUpdate(text="No prompt callback configured.")
             return
 
+        import inspect
+
         result = self._prompt_fn(session_id, content, cancel_event)
 
-        if asyncio.iscoroutine(result):
+        if inspect.isgenerator(result) or inspect.isasyncgen(result):
+            async for update in self._iter_result(result, cancel_event):
+                yield update
+            return
+
+        if inspect.iscoroutine(result):
             result = await result
 
         if isinstance(result, str):
