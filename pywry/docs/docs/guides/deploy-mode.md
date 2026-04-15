@@ -128,7 +128,8 @@ Deploy mode is configured through environment variables (prefix `PYWRY_SERVER__`
 
 | Setting | Default | Environment variable | Description |
 |:---|:---|:---|:---|
-| State backend | `memory` | `PYWRY_DEPLOY__STATE_BACKEND` | `memory` or `redis` |
+| State backend | `memory` | `PYWRY_DEPLOY__STATE_BACKEND` | `memory`, `sqlite`, or `redis` |
+| SQLite path | `~/.config/pywry/pywry.db` | `PYWRY_DEPLOY__SQLITE_PATH` | Database file path (when backend is `sqlite`) |
 | Redis URL | `redis://localhost:6379/0` | `PYWRY_DEPLOY__REDIS_URL` | Redis connection string |
 | Redis prefix | `pywry` | `PYWRY_DEPLOY__REDIS_PREFIX` | Key namespace in Redis |
 | Redis pool size | `10` | `PYWRY_DEPLOY__REDIS_POOL_SIZE` | Connection pool size (1–100) |
