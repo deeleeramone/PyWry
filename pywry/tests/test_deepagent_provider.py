@@ -189,8 +189,9 @@ class TestDeepagentProviderStreaming:
         ]
         events = [
             make_event("on_tool_start", name="write_todos", run_id="tc3"),
-            make_event("on_tool_end", name="write_todos", run_id="tc3",
-                       data={"output": json.dumps(todos)}),
+            make_event(
+                "on_tool_end", name="write_todos", run_id="tc3", data={"output": json.dumps(todos)}
+            ),
         ]
         agent = FakeAgent(events)
         provider = DeepagentProvider(agent=agent, auto_checkpointer=False, auto_store=False)

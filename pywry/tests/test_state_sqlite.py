@@ -100,7 +100,8 @@ class TestSqliteChatStoreCRUD:
         await chat_store.save_thread("w1", ChatThread(thread_id="t1", title="A"))
         for i in range(10):
             await chat_store.append_message(
-                "w1", "t1",
+                "w1",
+                "t1",
                 ChatMessage(role="user", content=f"msg{i}", message_id=f"m{i}"),
             )
         messages = await chat_store.get_messages("w1", "t1", limit=3)
@@ -110,9 +111,7 @@ class TestSqliteChatStoreCRUD:
     async def test_persistence_across_instances(self, db_path):
         store1 = SqliteChatStore(db_path=db_path, encrypted=False)
         await store1.save_thread("w1", ChatThread(thread_id="t1", title="Persistent"))
-        await store1.append_message(
-            "w1", "t1", ChatMessage(role="user", content="saved")
-        )
+        await store1.append_message("w1", "t1", ChatMessage(role="user", content="saved"))
 
         store2 = SqliteChatStore(db_path=db_path, encrypted=False)
         thread = await store2.get_thread("w1", "t1")
@@ -249,12 +248,11 @@ class TestSqliteSessionStore:
 
     @pytest.mark.asyncio
     async def test_session_expiry(self, session_store):
-        await session_store.create_session(
-            session_id="s_exp", user_id="bob", ttl=1
-        )
+        await session_store.create_session(session_id="s_exp", user_id="bob", ttl=1)
         session = await session_store.get_session("s_exp")
         assert session is not None
         import asyncio
+
         await asyncio.sleep(1.1)
         expired = await session_store.get_session("s_exp")
         assert expired is None

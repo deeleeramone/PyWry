@@ -174,7 +174,9 @@ def get_widget_store() -> WidgetStore:
         from .sqlite import SqliteWidgetStore
 
         settings = _get_deploy_settings()
-        return SqliteWidgetStore(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
+        return SqliteWidgetStore(
+            db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db")
+        )
 
     return MemoryWidgetStore()
 
@@ -248,7 +250,9 @@ def get_connection_router() -> ConnectionRouter:
         from .sqlite import SqliteConnectionRouter
 
         settings = _get_deploy_settings()
-        return SqliteConnectionRouter(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
+        return SqliteConnectionRouter(
+            db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db")
+        )
 
     return MemoryConnectionRouter()
 
@@ -286,7 +290,9 @@ def get_session_store() -> SessionStore:
         from .sqlite import SqliteSessionStore
 
         settings = _get_deploy_settings()
-        return SqliteSessionStore(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
+        return SqliteSessionStore(
+            db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db")
+        )
 
     return MemorySessionStore()
 

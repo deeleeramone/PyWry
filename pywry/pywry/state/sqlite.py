@@ -160,7 +160,9 @@ def _resolve_encryption_key() -> str | None:
             key = uuid.uuid4().hex + uuid.uuid4().hex
             keyring.set_password("pywry", "sqlite_key", key)
     except Exception:
-        logger.debug("Keyring unavailable for SQLite key storage, falling back to salt file", exc_info=True)
+        logger.debug(
+            "Keyring unavailable for SQLite key storage, falling back to salt file", exc_info=True
+        )
     else:
         return key
 
@@ -353,17 +355,13 @@ class SqliteWidgetStore(SqliteStateBackend, WidgetStore):
     async def update_html(self, widget_id: str, html: str) -> bool:
         if not await self.exists(widget_id):
             return False
-        await self._execute(
-            "UPDATE widgets SET html = ? WHERE widget_id = ?", (html, widget_id)
-        )
+        await self._execute("UPDATE widgets SET html = ? WHERE widget_id = ?", (html, widget_id))
         return True
 
     async def update_token(self, widget_id: str, token: str) -> bool:
         if not await self.exists(widget_id):
             return False
-        await self._execute(
-            "UPDATE widgets SET token = ? WHERE widget_id = ?", (token, widget_id)
-        )
+        await self._execute("UPDATE widgets SET token = ? WHERE widget_id = ?", (token, widget_id))
         return True
 
     async def count(self) -> int:
@@ -565,8 +563,10 @@ class SqliteChatStore(SqliteStateBackend, ChatStore):
         return len(rows) > 0
 
     async def append_message(self, widget_id: str, thread_id: str, message: Any) -> None:
-        content = message.content if isinstance(message.content, str) else json.dumps(
-            [p.model_dump(by_alias=True) for p in message.content]
+        content = (
+            message.content
+            if isinstance(message.content, str)
+            else json.dumps([p.model_dump(by_alias=True) for p in message.content])
         )
         await self._execute(
             "INSERT INTO messages "
@@ -824,7 +824,13 @@ class SqliteChatStore(SqliteStateBackend, ChatStore):
                 commit=False,
             )
         if not rows:
-            return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "cost_usd": 0, "count": 0}
+            return {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0,
+                "count": 0,
+            }
         r = rows[0]
         return {
             "prompt_tokens": r["prompt"] or 0,
