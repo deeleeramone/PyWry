@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import uuid
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from . import ChatProvider
 
@@ -100,8 +100,8 @@ def _map_tool_kind(tool_name: str) -> str:
     return _TOOL_KIND_MAP.get(tool_name, "other")
 
 
-def _map_todo_status(status: str) -> str:
-    status_map = {
+def _map_todo_status(status: str) -> Literal["pending", "in_progress", "completed"]:
+    status_map: dict[str, Literal["pending", "in_progress", "completed"]] = {
         "todo": "pending",
         "in_progress": "in_progress",
         "in-progress": "in_progress",
@@ -228,14 +228,14 @@ class DeepagentProvider(ChatProvider):
 
             backend = get_state_backend()
             if backend == StateBackend.REDIS:
-                from langgraph.checkpoint.redis import RedisSaver
+                from langgraph.checkpoint.redis import RedisSaver  # type: ignore[import-not-found]
 
                 from ...config import get_settings
 
                 return RedisSaver(get_settings().deploy.redis_url)
             if backend == StateBackend.SQLITE:
                 try:
-                    from langgraph.checkpoint.sqlite import SqliteSaver
+                    from langgraph.checkpoint.sqlite import SqliteSaver  # type: ignore[import-not-found]
 
                     from ...config import get_settings
 
@@ -247,7 +247,7 @@ class DeepagentProvider(ChatProvider):
             logger.debug("Could not auto-configure checkpointer from state backend", exc_info=True)
 
         try:
-            from langgraph.checkpoint.memory import MemorySaver
+            from langgraph.checkpoint.memory import MemorySaver  # type: ignore[import-not-found]
 
             return MemorySaver()
         except ImportError:
@@ -256,7 +256,7 @@ class DeepagentProvider(ChatProvider):
 
     def _create_store(self) -> Any:
         try:
-            from langgraph.store.memory import InMemoryStore
+            from langgraph.store.memory import InMemoryStore  # type: ignore[import-not-found]
 
             return InMemoryStore()
         except ImportError:
@@ -264,7 +264,7 @@ class DeepagentProvider(ChatProvider):
             return None
 
     def _build_agent(self) -> Any:
-        from deepagents import create_deep_agent
+        from deepagents import create_deep_agent  # type: ignore[import-not-found]
 
         combined_prompt = PYWRY_SYSTEM_PROMPT
         if self._system_prompt:
@@ -387,7 +387,7 @@ class DeepagentProvider(ChatProvider):
             elif kind == "on_tool_start":
                 tool_name = event.get("name", "")
                 yield ToolCallUpdate(
-                    tool_call_id=event.get("run_id", f"call_{uuid.uuid4().hex[:8]}"),
+                    toolCallId=event.get("run_id", f"call_{uuid.uuid4().hex[:8]}"),
                     name=tool_name,
                     kind=_map_tool_kind(tool_name),
                     status="in_progress",
@@ -400,7 +400,7 @@ class DeepagentProvider(ChatProvider):
             elif kind == "on_tool_error":
                 tool_name = event.get("name", "")
                 yield ToolCallUpdate(
-                    tool_call_id=event.get("run_id", f"call_{uuid.uuid4().hex[:8]}"),
+                    toolCallId=event.get("run_id", f"call_{uuid.uuid4().hex[:8]}"),
                     name=tool_name,
                     kind=_map_tool_kind(tool_name),
                     status="failed",
@@ -443,7 +443,7 @@ class DeepagentProvider(ChatProvider):
                 logger.debug("Could not parse write_todos output", exc_info=True)
 
         yield ToolCallUpdate(
-            tool_call_id=run_id or f"call_{uuid.uuid4().hex[:8]}",
+            toolCallId=run_id or f"call_{uuid.uuid4().hex[:8]}",
             name=tool_name,
             kind=_map_tool_kind(tool_name),
             status="completed",

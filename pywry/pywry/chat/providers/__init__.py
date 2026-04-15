@@ -208,4 +208,5 @@ def get_provider(name: str, **kwargs: Any) -> ChatProvider:
     # Convention: each module exports a class named {Name}Provider
     cls_name = name.capitalize() + "Provider"
     cls = getattr(module, cls_name)
-    return cls(**kwargs)
+    result: ChatProvider = cls(**kwargs)
+    return result

@@ -275,7 +275,7 @@ class StdioProvider(ChatProvider):
                 "mcpServers": mcp_servers or [],
             },
         )
-        session_id = result.get("sessionId", "")
+        session_id: str = result.get("sessionId", "")
         self._update_queues[session_id] = asyncio.Queue()
         return session_id
 

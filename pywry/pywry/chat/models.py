@@ -266,8 +266,7 @@ class ACPToolCall(BaseModel):
     kind: ToolCallKind = "other"
     status: ToolCallStatus = "pending"
     arguments: dict[str, Any] = Field(default_factory=dict)
-    content: list[ContentBlock] | None = None  # type: ignore[assignment]
-    locations: list[ToolCallLocation] | None = None
+    content: list[ContentBlock] | None = None    locations: list[ToolCallLocation] | None = None
 
 
 class ACPCommandInput(BaseModel):
@@ -329,8 +328,7 @@ class ChatMessage(BaseModel):
     """
 
     role: Literal["user", "assistant", "system", "tool"]
-    content: str | list[ContentBlock] = ""  # type: ignore[assignment]
-    message_id: str = Field(default_factory=lambda: f"msg_{uuid.uuid4().hex[:12]}")
+    content: str | list[ContentBlock] = ""    message_id: str = Field(default_factory=lambda: f"msg_{uuid.uuid4().hex[:12]}")
     timestamp: float = Field(default_factory=time.time)
     metadata: dict[str, Any] = Field(default_factory=dict)
     tool_calls: list[ACPToolCall] | None = None

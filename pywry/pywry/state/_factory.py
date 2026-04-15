@@ -210,10 +210,7 @@ def get_event_bus() -> EventBus:
         )
 
     if backend == StateBackend.SQLITE:
-        from .sqlite import SqliteEventBus
-
-        settings = _get_deploy_settings()
-        return SqliteEventBus(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
+        return MemoryEventBus()
 
     return MemoryEventBus()
 
@@ -247,12 +244,7 @@ def get_connection_router() -> ConnectionRouter:
         )
 
     if backend == StateBackend.SQLITE:
-        from .sqlite import SqliteConnectionRouter
-
-        settings = _get_deploy_settings()
-        return SqliteConnectionRouter(
-            db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db")
-        )
+        return MemoryConnectionRouter()
 
     return MemoryConnectionRouter()
 

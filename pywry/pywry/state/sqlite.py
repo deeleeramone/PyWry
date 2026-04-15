@@ -222,9 +222,9 @@ class SqliteStateBackend:
 
         if self._encrypted and self._key:
             try:
-                from pysqlcipher3 import dbapi2 as sqlcipher
+                from pysqlcipher3 import dbapi2 as sqlcipher  # type: ignore[import-not-found]
 
-                conn = sqlcipher.connect(str(self._db_path))
+                conn: sqlite3.Connection = sqlcipher.connect(str(self._db_path))
                 conn.execute(f"PRAGMA key = '{self._key}'")
                 logger.debug("Opened encrypted SQLite database at %s", self._db_path)
             except ImportError:
@@ -846,7 +846,8 @@ class SqliteChatStore(SqliteStateBackend, ChatStore):
         widget_id: str | None = None,
     ) -> float:
         stats = await self.get_usage_stats(thread_id=thread_id, widget_id=widget_id)
-        return stats["cost_usd"]
+        cost: float = stats["cost_usd"]
+        return cost
 
     async def search_messages(
         self,
