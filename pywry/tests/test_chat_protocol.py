@@ -16,7 +16,6 @@ import asyncio
 import time
 
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -25,13 +24,12 @@ from pywry.chat.artifacts import (
     TradingViewArtifact,
     TradingViewSeries,
 )
-from pywry.chat.manager import ChatContext, ChatManager, SettingsItem
+from pywry.chat.manager import ChatManager
 from pywry.chat.models import (
     ACPToolCall,
     AudioPart,
     ChatMessage,
     EmbeddedResource,
-    EmbeddedResourcePart,
     ImagePart,
     ResourceLinkPart,
     TextPart,
@@ -49,7 +47,6 @@ from pywry.chat.session import (
 from pywry.chat.updates import (
     AgentMessageUpdate,
     ArtifactUpdate,
-    CitationUpdate,
     CommandsUpdate,
     ConfigOptionUpdate,
     ModeUpdate,
@@ -197,7 +194,7 @@ class TestCallbackProviderRoundTrip:
         updates = []
 
         async def collect():
-            caps = await provider.initialize(ClientCapabilities())
+            await provider.initialize(ClientCapabilities())
             sid = await provider.new_session("/tmp")
             async for u in provider.prompt(sid, [TextPart(text="hi")]):
                 updates.append(u)

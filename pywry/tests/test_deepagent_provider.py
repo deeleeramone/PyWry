@@ -7,16 +7,12 @@ to verify the provider maps LangGraph events to ACP SessionUpdate types.
 from __future__ import annotations
 
 import asyncio
-import time
-
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from pywry.chat.models import TextPart
 from pywry.chat.providers.deepagent import DeepagentProvider, _map_tool_kind
-from pywry.chat.session import ClientCapabilities, PlanEntry
+from pywry.chat.session import ClientCapabilities
 from pywry.chat.updates import (
     AgentMessageUpdate,
     PlanUpdate,

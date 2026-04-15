@@ -6,12 +6,7 @@ encryption, auto-setup, and interchangeability with MemoryChatStore.
 
 from __future__ import annotations
 
-import asyncio
-import tempfile
 import time
-
-from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -261,8 +256,8 @@ class TestSqliteSessionStore:
         )
         session = await session_store.get_session("s_exp")
         assert session is not None
-        import time
-        time.sleep(1.1)
+        import asyncio
+        await asyncio.sleep(1.1)
         expired = await session_store.get_session("s_exp")
         assert expired is None
 
@@ -326,7 +321,7 @@ class TestSqliteEventBusAndRouter:
     async def test_event_bus_publish_subscribe(self, db_path):
         bus = SqliteEventBus(db_path=db_path, encrypted=False)
         received = []
-        await bus.subscribe("test-channel", lambda msg: received.append(msg))
+        await bus.subscribe("test-channel", received.append)
         await bus.publish("test-channel", {"data": "hello"})
         assert len(received) == 1
         assert received[0]["data"] == "hello"

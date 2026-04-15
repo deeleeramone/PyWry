@@ -95,6 +95,10 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "TC003",
 ]
 
+"pywry/state/sqlite.py" = [
+    "D102",
+]
+
 "pywry/__main__.py" = [
     "W293",  # Trailing whitespace in JS template strings
     "S110",  # try-except-pass in window cleanup

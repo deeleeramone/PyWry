@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(grep:*)",
+      "WebFetch(domain:www.tradingview.com)",
+      "WebSearch",
+      "Bash(ls -la \"C:\\\\Users\\\\dangl\\\\github\\\\PyWry\\\\.claude\\\\worktrees\\\\goofy-diffie\\\\pywry\\\\pywry\\\\frontend\\\\src\\\\tvchart\"*)",
+      "Bash(ls -la \"C:\\\\Users\\\\dangl\\\\github\\\\PyWry\\\\.claude\\\\worktrees\\\\goofy-diffie\\\\pywry\\\\pywry\\\\mcp\"*)",
+      "Bash(ls \"C:/Users/dangl/github/PyWry/.claude/worktrees/goofy-diffie/pywry/pywry/frontend/src/\"*.js)",
+      "Bash(echo \"EXIT: $?\")",
+      "WebFetch(domain:docs.langchain.com)",
+      "Bash(cmd.exe /c \"where gh\")"
+    ]
+  }
+}

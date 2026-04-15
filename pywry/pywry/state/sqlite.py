@@ -155,13 +155,13 @@ def _resolve_encryption_key() -> str | None:
         import keyring
 
         key = keyring.get_password("pywry", "sqlite_key")
-        if key:
-            return key
-        key = uuid.uuid4().hex + uuid.uuid4().hex
-        keyring.set_password("pywry", "sqlite_key", key)
-        return key
+        if not key:
+            key = uuid.uuid4().hex + uuid.uuid4().hex
+            keyring.set_password("pywry", "sqlite_key", key)
     except Exception:
-        pass
+        logger.debug("Keyring unavailable for SQLite key storage, falling back to salt file", exc_info=True)
+    else:
+        return key
 
     import hashlib
 

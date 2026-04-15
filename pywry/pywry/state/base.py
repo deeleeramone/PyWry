@@ -669,6 +669,7 @@ class ChatStore(ABC):
         error: str | None = None,
     ) -> None:
         """Log a tool call for audit trail. No-op by default."""
+        return
 
     async def log_artifact(
         self,
@@ -679,6 +680,7 @@ class ChatStore(ABC):
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Log an artifact for audit trail. No-op by default."""
+        return
 
     async def log_token_usage(
         self,
@@ -690,6 +692,7 @@ class ChatStore(ABC):
         cost_usd: float | None = None,
     ) -> None:
         """Log token usage for audit trail. No-op by default."""
+        return
 
     async def log_resource(
         self,
@@ -701,6 +704,7 @@ class ChatStore(ABC):
         size: int | None = None,
     ) -> None:
         """Log a resource reference for audit trail. No-op by default."""
+        return
 
     async def log_skill(
         self,
@@ -709,6 +713,7 @@ class ChatStore(ABC):
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Log a skill activation for audit trail. No-op by default."""
+        return
 
     async def get_tool_calls(self, message_id: str) -> list[dict[str, Any]]:
         """Get tool calls for a message. Returns empty list by default."""

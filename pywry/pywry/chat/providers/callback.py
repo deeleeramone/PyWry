@@ -104,7 +104,6 @@ class CallbackProvider(ChatProvider):
         SessionUpdate
             Updates from the callback.
         """
-        from ..models import GenerationCancelledError
         from ..updates import AgentMessageUpdate
 
         if not self._prompt_fn:

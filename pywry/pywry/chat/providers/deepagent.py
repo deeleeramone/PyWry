@@ -9,9 +9,13 @@ All imports are lazy to avoid hard dependencies on ``deepagents``.
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from typing import TYPE_CHECKING, Any
+
+
+logger = logging.getLogger(__name__)
 
 from . import ChatProvider
 
@@ -238,7 +242,7 @@ class DeepagentProvider(ChatProvider):
                 except ImportError:
                     pass
         except Exception:
-            pass
+            logger.debug("Could not auto-configure checkpointer from state backend", exc_info=True)
 
         from langgraph.checkpoint.memory import MemorySaver
 
@@ -409,7 +413,7 @@ class DeepagentProvider(ChatProvider):
                                 ]
                             )
                     except Exception:
-                        pass
+                        logger.debug("Could not parse write_todos output", exc_info=True)
 
                 yield ToolCallUpdate(
                     tool_call_id=run_id or f"call_{uuid.uuid4().hex[:8]}",
@@ -426,6 +430,14 @@ class DeepagentProvider(ChatProvider):
                     kind=_map_tool_kind(tool_name),
                     status="failed",
                 )
+
+            elif kind == "on_chat_model_start":
+                model_name = event.get("name", "")
+                if model_name:
+                    yield StatusUpdate(text=f"Thinking ({model_name})...")
+
+            elif kind == "on_chain_start" and event.get("name") == "task":
+                yield StatusUpdate(text="Delegating to subagent...")
 
     async def cancel(self, session_id: str) -> None:
         """Cancel is handled cooperatively via ``cancel_event``.
