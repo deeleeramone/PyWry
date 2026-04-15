@@ -66,7 +66,8 @@ auto_start = true
 websocket_require_token = true
 
 [deploy]
-state_backend = "memory"  # or "redis"
+state_backend = "memory"  # "memory", "sqlite", or "redis"
+sqlite_path = "~/.config/pywry/pywry.db"
 redis_url = "redis://localhost:6379/0"
 ```
 

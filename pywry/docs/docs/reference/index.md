@@ -50,7 +50,7 @@ Complete API documentation for PyWry.
 
 | Module | Description |
 |--------|-------------|
-| [State](state.md) | `WidgetStore`, `EventBus`, `CallbackRegistry`, Redis backend |
+| [State](state.md) | `WidgetStore`, `EventBus`, `ChatStore`, `SessionStore`, Memory/Redis/SQLite backends |
 | [State Mixins](state-mixins.md) | Grid, Plotly, TVChart, Toolbar state mixins |
 
 ## Toolbar & Modal

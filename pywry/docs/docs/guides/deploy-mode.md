@@ -175,7 +175,7 @@ Redis key structure: `{prefix}:widget:{widget_id}` (hash), `{prefix}:widgets:act
 from pywry.state import is_deploy_mode, get_state_backend, get_worker_id
 
 deploy_active = is_deploy_mode()        # True when PYWRY_DEPLOY__ENABLED=true
-backend = get_state_backend().value      # "memory" or "redis"
+backend = get_state_backend().value      # "memory", "redis", or "sqlite"
 worker_id = get_worker_id()              # Unique per-process identifier
 ```
 

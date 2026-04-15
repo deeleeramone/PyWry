@@ -48,6 +48,12 @@ These classes implement the ACP session lifecycle (`initialize`, `new_session`, 
       heading_level: 2
       members: true
 
+::: pywry.chat.providers.deepagent.DeepagentProvider
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
 ---
 
 ## Factory
