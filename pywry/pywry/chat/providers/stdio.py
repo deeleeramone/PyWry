@@ -11,10 +11,12 @@ import json
 import logging
 import uuid
 
-from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from . import ChatProvider
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 log = logging.getLogger(__name__)
