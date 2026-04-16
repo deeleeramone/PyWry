@@ -364,24 +364,27 @@ class StdioProvider(ChatProvider):
                     break
                 continue
 
-            update_type = update.get("sessionUpdate", "")
-            model_cls = update_map.get(update_type)
-            if model_cls:
-                filtered = {k: v for k, v in update.items() if k != "sessionId"}
-                if "_request_id" in filtered:
-                    filtered["request_id"] = filtered.pop("_request_id")
-                yield model_cls(**filtered)
+            parsed = self._parse_update(update, update_map)
+            if parsed:
+                yield parsed
 
-        # Drain remaining updates
         while not queue.empty():
             update = queue.get_nowait()
-            update_type = update.get("sessionUpdate", "")
-            model_cls = update_map.get(update_type)
-            if model_cls:
-                filtered = {k: v for k, v in update.items() if k != "sessionId"}
-                if "_request_id" in filtered:
-                    filtered["request_id"] = filtered.pop("_request_id")
-                yield model_cls(**filtered)
+            parsed = self._parse_update(update, update_map)
+            if parsed:
+                yield parsed
+
+    @staticmethod
+    def _parse_update(update: dict[str, Any], update_map: dict[str, type]) -> Any:
+        """Build a SessionUpdate model from a raw update dict."""
+        update_type = update.get("sessionUpdate", "")
+        model_cls = update_map.get(update_type)
+        if not model_cls:
+            return None
+        filtered = {k: v for k, v in update.items() if k != "sessionId"}
+        if "_request_id" in filtered:
+            filtered["request_id"] = filtered.pop("_request_id")
+        return model_cls(**filtered)
 
     async def cancel(self, session_id: str) -> None:
         """Send ``session/cancel`` notification.
