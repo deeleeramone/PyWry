@@ -11,6 +11,7 @@ import json
 import logging
 import uuid
 
+from collections.abc import Mapping
 from typing import Any
 
 from . import ChatProvider
@@ -375,7 +376,7 @@ class StdioProvider(ChatProvider):
                 yield parsed
 
     @staticmethod
-    def _parse_update(update: dict[str, Any], update_map: dict[str, type]) -> Any:
+    def _parse_update(update: dict[str, Any], update_map: Mapping[str, type]) -> Any:
         """Build a SessionUpdate model from a raw update dict."""
         update_type = update.get("sessionUpdate", "")
         model_cls = update_map.get(update_type)
