@@ -2,8 +2,11 @@
     'use strict';
 
     // Guard against re-registration of system event handlers
-    if (window.pywry && window.pywry._systemEventsRegistered) {
-        console.log('[PyWry] System events already registered, skipping');
+    if (!window.pywry) {
+        window.pywry = { _handlers: {} };
+    }
+
+    if (window.pywry._systemEventsRegistered) {
         return;
     }
 

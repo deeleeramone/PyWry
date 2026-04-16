@@ -2688,7 +2688,8 @@ function initChatHandlers(container, pywry) {
     var commands = data.commands || [];
     state.slashCommands = [];
     commands.forEach(function (cmd) {
-      state.slashCommands.push({ name: '/' + cmd.name, description: cmd.description || '' });
+      var cmdName = cmd.name.charAt(0) === '/' ? cmd.name : '/' + cmd.name;
+      state.slashCommands.push({ name: cmdName, description: cmd.description || '' });
     });
   });
 

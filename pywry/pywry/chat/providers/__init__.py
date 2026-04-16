@@ -187,26 +187,24 @@ def get_provider(name: str, **kwargs: Any) -> ChatProvider:
     ValueError
         If provider name is unknown.
     """
-    providers: dict[str, str] = {
-        "openai": ".openai",
-        "anthropic": ".anthropic",
-        "callback": ".callback",
-        "magentic": ".magentic",
-        "stdio": ".stdio",
-        "deepagent": ".deepagent",
+    providers: dict[str, tuple[str, str]] = {
+        "openai": (".openai", "OpenAIProvider"),
+        "anthropic": (".anthropic", "AnthropicProvider"),
+        "callback": (".callback", "CallbackProvider"),
+        "magentic": (".magentic", "MagenticProvider"),
+        "stdio": (".stdio", "StdioProvider"),
+        "deepagent": (".deepagent", "DeepagentProvider"),
     }
 
-    module_name = providers.get(name)
-    if not module_name:
+    entry = providers.get(name)
+    if not entry:
         available = ", ".join(providers)
         raise ValueError(f"Unknown provider: {name!r}. Available: {available}")
 
     import importlib
 
+    module_name, cls_name = entry
     module = importlib.import_module(module_name, package=__package__)
-
-    # Convention: each module exports a class named {Name}Provider
-    cls_name = name.capitalize() + "Provider"
     cls = getattr(module, cls_name)
     result: ChatProvider = cls(**kwargs)
     return result

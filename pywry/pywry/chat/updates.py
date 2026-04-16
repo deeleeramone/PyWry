@@ -97,7 +97,7 @@ class PermissionRequestUpdate(BaseModel):
     tool_call_id: str = Field(default="", alias="toolCallId")
     title: str = ""
     options: list[PermissionOption] = Field(default_factory=list)
-    request_id: str = ""
+    request_id: str = Field(default="", alias="requestId")
 
 
 class StatusUpdate(BaseModel):

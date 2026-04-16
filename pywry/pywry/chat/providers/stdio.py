@@ -367,9 +367,10 @@ class StdioProvider(ChatProvider):
             update_type = update.get("sessionUpdate", "")
             model_cls = update_map.get(update_type)
             if model_cls:
-                yield model_cls(
-                    **{k: v for k, v in update.items() if k not in ("sessionId", "_request_id")}
-                )
+                filtered = {k: v for k, v in update.items() if k != "sessionId"}
+                if "_request_id" in filtered:
+                    filtered["request_id"] = filtered.pop("_request_id")
+                yield model_cls(**filtered)
 
         # Drain remaining updates
         while not queue.empty():
@@ -377,9 +378,10 @@ class StdioProvider(ChatProvider):
             update_type = update.get("sessionUpdate", "")
             model_cls = update_map.get(update_type)
             if model_cls:
-                yield model_cls(
-                    **{k: v for k, v in update.items() if k not in ("sessionId", "_request_id")}
-                )
+                filtered = {k: v for k, v in update.items() if k != "sessionId"}
+                if "_request_id" in filtered:
+                    filtered["request_id"] = filtered.pop("_request_id")
+                yield model_cls(**filtered)
 
     async def cancel(self, session_id: str) -> None:
         """Send ``session/cancel`` notification.

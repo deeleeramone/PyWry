@@ -579,6 +579,13 @@ class TestProviderFactory:
         provider = get_provider("callback")
         assert provider is not None
 
+    def test_openai_provider_name_resolves(self) -> None:
+        pytest.importorskip("openai")
+        from pywry.chat import get_provider
+
+        provider = get_provider("openai", api_key="sk-test")
+        assert type(provider).__name__ == "OpenAIProvider"
+
     def test_unknown_provider_raises(self) -> None:
         from pywry.chat import get_provider
 

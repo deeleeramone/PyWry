@@ -75,16 +75,21 @@ The `chat:*` namespace handles all communication between the Python `ChatManager
 |-------|---------|-------------|
 | `chat:input-required` | `{messageId, threadId, requestId, prompt, placeholder, inputType, options?}` | Pause streaming to request user input mid-conversation. |
 
-**`inputType` values:** `text`, `buttons`, `radio`
-
-Handler pattern:
+Handler pattern for permission requests:
 
 ```python
-def my_handler(message, ctx):
-    yield "Which file should I process?"
-    yield PermissionRequestUpdate(placeholder="Enter filename...")
-    filename = ctx.wait_for_input()  # Blocks until user responds
-    yield f"Processing {filename}..."
+from pywry.chat.updates import PermissionRequestUpdate
+from pywry.chat.session import PermissionOption
+
+def my_handler(messages, ctx):
+    yield PermissionRequestUpdate(
+        toolCallId="call_1",
+        title="Execute deployment script",
+        options=[
+            PermissionOption(id="allow_once", label="Allow"),
+            PermissionOption(id="reject_once", label="Reject"),
+        ],
+    )
 ```
 
 ## Rich Content (Python → JS)

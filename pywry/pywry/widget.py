@@ -1404,7 +1404,27 @@ def _get_chat_widget_esm() -> str:
     )
 
     # Start with the base widget ESM (content rendering, theme, events)
-    base_esm = _WIDGET_ESM.replace("__TOOLBAR_HANDLERS__", toolbar_handlers_js)
+    asset_listener_js = """
+        model.on("change:_asset_js", function() {
+            var js = model.get("_asset_js");
+            if (js) {
+                var script = document.createElement("script");
+                script.textContent = js;
+                document.head.appendChild(script);
+            }
+        });
+        model.on("change:_asset_css", function() {
+            var css = model.get("_asset_css");
+            if (css) {
+                var style = document.createElement("style");
+                style.textContent = css;
+                document.head.appendChild(style);
+            }
+        });
+    """
+
+    combined_handlers = toolbar_handlers_js + "\n" + asset_listener_js
+    base_esm = _WIDGET_ESM.replace("__TOOLBAR_HANDLERS__", combined_handlers)
 
     return f"""
 {toast_js}
@@ -1413,34 +1433,7 @@ def _get_chat_widget_esm() -> str:
 
 {base_esm}
 
-// --- Chat handlers ---
 {chat_handlers_js}
-
-// --- Trait-based asset injection for lazy-loaded artifact libraries ---
-// When ChatManager pushes JS/CSS via _asset_js/_asset_css traits,
-// inject them into the document head so artifact renderers work.
-(function() {{
-    if (typeof model !== 'undefined') {{
-        model.on("change:_asset_js", function() {{
-            var js = model.get("_asset_js");
-            if (js) {{
-                var script = document.createElement("script");
-                script.textContent = js;
-                document.head.appendChild(script);
-                console.log("[PyWry Chat] Injected asset JS via trait (" + js.length + " chars)");
-            }}
-        }});
-        model.on("change:_asset_css", function() {{
-            var css = model.get("_asset_css");
-            if (css) {{
-                var style = document.createElement("style");
-                style.textContent = css;
-                document.head.appendChild(style);
-                console.log("[PyWry Chat] Injected asset CSS via trait (" + css.length + " chars)");
-            }}
-        }});
-    }}
-}})();
 """
 
 
