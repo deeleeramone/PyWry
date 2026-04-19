@@ -41,34 +41,11 @@ jobs:
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
 
-      - name: Build SQLCipher from source (Linux)
-        # The lint job is pinned to ubuntu-24.04, but we still guard
-        # the step by OS so anyone adding matrix support later can't
-        # accidentally run this on Windows / macOS runners.
-        if: runner.os == 'Linux'
-        run: |
-          for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
-          # ``tcl`` intentionally omitted — SQLCipher's Tcl extension
-          # isn't needed for the ``sqlcipher3`` Python binding, and
-          # modern Tcl bottles (9.0 on macOS) break the upstream
-          # ``tclsqlite.c`` compile.  ``--disable-tcl`` makes
-          # configure skip the extension.
-          sudo apt-get install -y --fix-missing build-essential libssl-dev
-          git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
-          cd /tmp/sqlcipher
-          ./configure \
-            --disable-tcl \
-            --enable-tempstore=yes \
-            CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL" \
-            LDFLAGS="-lcrypto"
-          make -j$(nproc) libsqlcipher.la || make -j$(nproc)
-          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
-          sudo ldconfig
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e .
+          pip install ruff mypy pylint
 
       - name: Run Ruff linter
         run: ruff check pywry/ tests/
