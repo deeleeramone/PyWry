@@ -158,6 +158,12 @@ SessionUpdate = Annotated[
     | ThinkingUpdate
     | ArtifactUpdate
     | CitationUpdate,
+    # The discriminator references the Python attribute name
+    # ``session_update``.  Every variant also declares
+    # ``model_config = ConfigDict(populate_by_name=True)`` and
+    # ``alias="sessionUpdate"`` on the discriminator field, so the
+    # union correctly dispatches whether the input dict uses the
+    # snake_case attribute name or the camelCase wire-format key.
     Field(discriminator="session_update"),
 ]
 """Discriminated union of all session update types."""

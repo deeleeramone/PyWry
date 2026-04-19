@@ -94,9 +94,13 @@
 
     // Register handler for pywry:update-theme events IMMEDIATELY (not in DOMContentLoaded)
     // because content is injected via JavaScript after the page loads
-    console.log('[PyWry] Registering pywry:update-theme handler');
+    if (window.PYWRY_DEBUG) {
+        console.log('[PyWry] Registering pywry:update-theme handler');
+    }
     window.pywry.on('pywry:update-theme', function(data) {
-        console.log('[PyWry] pywry:update-theme handler called with:', data);
+        if (window.PYWRY_DEBUG) {
+            console.log('[PyWry] pywry:update-theme handler called with:', data);
+        }
         var theme = data.theme || 'plotly_dark';
         var isDark = theme.includes('dark');
         var mode = isDark ? 'dark' : 'light';

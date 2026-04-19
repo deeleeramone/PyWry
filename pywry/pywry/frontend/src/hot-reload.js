@@ -36,10 +36,18 @@
         }
     }
 
-    // Override refresh to save scroll position before reloading
-    window.pywry.refresh = function() {
+    // Wrap refresh to save scroll position before reloading.  Guard
+    // against window.pywry not yet existing (load-order with
+    // bridge.js), and preserve any existing refresh() rather than
+    // overwriting it.
+    var pywry = window.pywry = window.pywry || {};
+    var originalRefresh = pywry.refresh;
+    pywry.refresh = function() {
         saveScrollPosition();
-        window.location.reload();
+        if (typeof originalRefresh === 'function') {
+            return originalRefresh.apply(this, arguments);
+        }
+        return window.location.reload();
     };
 
     if (document.readyState === 'complete') {
@@ -48,5 +56,7 @@
         window.addEventListener('load', restoreScrollPosition);
     }
 
-    console.log('Hot reload bridge initialized');
+    if (window.PYWRY_DEBUG) {
+        console.log('Hot reload bridge initialized');
+    }
 })();

@@ -91,37 +91,72 @@ class StdioProvider(ChatProvider):
             if stripped:
                 log.debug("agent stderr: %s", stripped.decode(errors="replace")[:500])
 
+    def _fail_pending_requests(self, exc: BaseException) -> None:
+        """Fail every pending JSON-RPC request future with ``exc``.
+
+        Called when the read loop terminates (subprocess exited, stdout
+        closed, reader cancelled, etc.) so callers blocked on
+        ``_send_request`` wake up with a real error instead of hanging
+        forever.
+        """
+        pending = self._pending
+        self._pending = {}
+        for future in pending.values():
+            if not future.done():
+                future.set_exception(exc)
+
+    async def _dispatch_rpc_message(self, msg: dict[str, Any]) -> None:
+        """Route one decoded JSON-RPC message to the right handler."""
+        if "id" in msg and "result" in msg:
+            # Response to a request we sent
+            future = self._pending.pop(msg["id"], None)
+            if future and not future.done():
+                future.set_result(msg.get("result"))
+        elif "id" in msg and "error" in msg:
+            future = self._pending.pop(msg["id"], None)
+            if future and not future.done():
+                future.set_exception(RuntimeError(msg["error"].get("message", "RPC error")))
+        elif "method" in msg and "id" not in msg:
+            # Notification from agent (no id = no response expected)
+            await self._handle_notification(msg)
+        elif "method" in msg and "id" in msg:
+            # Request from agent (needs response)
+            await self._handle_agent_request(msg)
+
     async def _read_loop(self) -> None:
         """Read JSON-RPC messages from stdout line-by-line."""
         if self._process is None or self._process.stdout is None:
-            msg = "stdio read loop started before subprocess was spawned"
-            raise RuntimeError(msg)
+            err = "stdio read loop started before subprocess was spawned"
+            raise RuntimeError(err)
 
-        async for raw_line in self._process.stdout:
-            stripped = raw_line.strip()
-            if not stripped:
-                continue
-            try:
-                msg = json.loads(stripped)
-            except json.JSONDecodeError:
-                log.warning("Non-JSON line from agent: %s", stripped[:200])
-                continue
-
-            if "id" in msg and "result" in msg:
-                # Response to a request we sent
-                future = self._pending.pop(msg["id"], None)
-                if future and not future.done():
-                    future.set_result(msg.get("result"))
-            elif "id" in msg and "error" in msg:
-                future = self._pending.pop(msg["id"], None)
-                if future and not future.done():
-                    future.set_exception(RuntimeError(msg["error"].get("message", "RPC error")))
-            elif "method" in msg and "id" not in msg:
-                # Notification from agent (no id = no response expected)
-                await self._handle_notification(msg)
-            elif "method" in msg and "id" in msg:
-                # Request from agent (needs response)
-                await self._handle_agent_request(msg)
+        exit_exc: BaseException | None = None
+        try:
+            async for raw_line in self._process.stdout:
+                stripped = raw_line.strip()
+                if not stripped:
+                    continue
+                try:
+                    msg = json.loads(stripped)
+                except json.JSONDecodeError:
+                    log.warning("Non-JSON line from agent: %s", stripped[:200])
+                    continue
+                await self._dispatch_rpc_message(msg)
+        except asyncio.CancelledError:
+            exit_exc = RuntimeError("stdio reader cancelled")
+            raise
+        except Exception as exc:
+            log.exception("stdio reader failed")
+            exit_exc = RuntimeError(f"stdio reader failed: {exc}")
+            raise
+        finally:
+            if exit_exc is None:
+                rc = self._process.returncode if self._process is not None else None
+                exit_exc = RuntimeError(
+                    f"agent subprocess exited (returncode={rc})"
+                    if rc is not None
+                    else "agent subprocess stdout closed"
+                )
+            self._fail_pending_requests(exit_exc)
 
     async def _send_request(self, method: str, params: dict[str, Any] | None = None) -> Any:
         """Send a JSON-RPC request and wait for the response.
@@ -303,6 +338,61 @@ class StdioProvider(ChatProvider):
         self._update_queues[session_id] = asyncio.Queue()
         return session_id
 
+    @staticmethod
+    def _serialize_content_blocks(content: list[Any]) -> list[dict[str, Any]]:
+        """Serialize content blocks (Pydantic models or raw dicts)."""
+        dicts: list[dict[str, Any]] = []
+        for block in content:
+            if hasattr(block, "model_dump"):
+                dicts.append(block.model_dump())
+            elif isinstance(block, dict):
+                dicts.append(block)
+        return dicts
+
+    @staticmethod
+    def _update_type_map() -> dict[str, type]:
+        """Return the discriminator → model-class map for stdio updates."""
+        from ..updates import (
+            AgentMessageUpdate,
+            CommandsUpdate,
+            ConfigOptionUpdate,
+            ModeUpdate,
+            PermissionRequestUpdate,
+            PlanUpdate,
+            StatusUpdate,
+            ThinkingUpdate,
+            ToolCallUpdate,
+        )
+
+        return {
+            "agent_message": AgentMessageUpdate,
+            "tool_call": ToolCallUpdate,
+            "plan": PlanUpdate,
+            "available_commands": CommandsUpdate,
+            "config_option": ConfigOptionUpdate,
+            "current_mode": ModeUpdate,
+            "permission_request": PermissionRequestUpdate,
+            "x_status": StatusUpdate,
+            "x_thinking": ThinkingUpdate,
+        }
+
+    async def _settle_prompt_future(self, prompt_future: asyncio.Future[Any]) -> None:
+        """Settle the in-flight ``session/prompt`` request.
+
+        Always called from ``prompt()``'s ``finally`` block so exceptions
+        from the agent surface to the caller and ``_pending`` can't leak.
+        On cancellation the future is cancelled first; the ``_pending``
+        entry is either cleared by the read loop (when the agent acks)
+        or failed en masse by ``_fail_pending_requests`` when the
+        subprocess exits.
+        """
+        if not prompt_future.done():
+            prompt_future.cancel()
+        try:
+            await prompt_future
+        except (asyncio.CancelledError, Exception) as exc:
+            log.debug("session/prompt settled with %r", exc)
+
     async def prompt(
         self,
         session_id: str,
@@ -325,30 +415,10 @@ class StdioProvider(ChatProvider):
         SessionUpdate
             Typed update notifications from the agent.
         """
-        from ..updates import (
-            AgentMessageUpdate,
-            CommandsUpdate,
-            ConfigOptionUpdate,
-            ModeUpdate,
-            PermissionRequestUpdate,
-            PlanUpdate,
-            StatusUpdate,
-            ThinkingUpdate,
-            ToolCallUpdate,
-        )
-
         queue = self._update_queues.get(session_id)
         if queue is None:
             queue = asyncio.Queue()
             self._update_queues[session_id] = queue
-
-        # Serialize content blocks
-        content_dicts = []
-        for block in content:
-            if hasattr(block, "model_dump"):
-                content_dicts.append(block.model_dump())
-            elif isinstance(block, dict):
-                content_dicts.append(block)
 
         # Send the prompt — response comes when the turn completes
         prompt_future = asyncio.ensure_future(
@@ -356,47 +426,36 @@ class StdioProvider(ChatProvider):
                 "session/prompt",
                 {
                     "sessionId": session_id,
-                    "prompt": content_dicts,
+                    "prompt": self._serialize_content_blocks(content),
                 },
             )
         )
+        update_map = self._update_type_map()
 
-        # Map update type strings to models
-        update_map = {
-            "agent_message": AgentMessageUpdate,
-            "tool_call": ToolCallUpdate,
-            "plan": PlanUpdate,
-            "available_commands": CommandsUpdate,
-            "config_option": ConfigOptionUpdate,
-            "current_mode": ModeUpdate,
-            "permission_request": PermissionRequestUpdate,
-            "x_status": StatusUpdate,
-            "x_thinking": ThinkingUpdate,
-        }
+        try:
+            while not prompt_future.done():
+                try:
+                    update = await asyncio.wait_for(queue.get(), timeout=0.1)
+                except asyncio.TimeoutError:
+                    if cancel_event and cancel_event.is_set():
+                        await self._send_notification(
+                            "session/cancel",
+                            {"sessionId": session_id},
+                        )
+                        break
+                    continue
 
-        while not prompt_future.done():
-            try:
-                update = await asyncio.wait_for(queue.get(), timeout=0.1)
-            except asyncio.TimeoutError:
-                if cancel_event and cancel_event.is_set():
-                    await self._send_notification(
-                        "session/cancel",
-                        {
-                            "sessionId": session_id,
-                        },
-                    )
-                    break
-                continue
+                parsed = self._parse_update(update, update_map)
+                if parsed:
+                    yield parsed
 
-            parsed = self._parse_update(update, update_map)
-            if parsed:
-                yield parsed
-
-        while not queue.empty():
-            update = queue.get_nowait()
-            parsed = self._parse_update(update, update_map)
-            if parsed:
-                yield parsed
+            while not queue.empty():
+                update = queue.get_nowait()
+                parsed = self._parse_update(update, update_map)
+                if parsed:
+                    yield parsed
+        finally:
+            await self._settle_prompt_future(prompt_future)
 
     @staticmethod
     def _parse_update(update: dict[str, Any], update_map: Mapping[str, type]) -> Any:

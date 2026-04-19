@@ -42,6 +42,10 @@ jobs:
           cache-dependency-path: pywry/pyproject.toml
 
       - name: Build SQLCipher from source (Linux)
+        # The lint job is pinned to ubuntu-24.04, but we still guard
+        # the step by OS so anyone adding matrix support later can't
+        # accidentally run this on Windows / macOS runners.
+        if: runner.os == 'Linux'
         run: |
           for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
           # ``tcl`` intentionally omitted — SQLCipher's Tcl extension
