@@ -300,11 +300,18 @@ class TestChatManagerProviderIntegration:
             "",
         )
         time.sleep(0.5)
-        tool_events = widget.get_events("chat:tool-call")
-        assert len(tool_events) == 2
-        assert tool_events[0]["status"] == "in_progress"
-        assert tool_events[1]["status"] == "completed"
-        assert tool_events[0]["toolCallId"] == "c1"
+        # In-progress statuses go out as ``chat:tool-call`` (creates the
+        # collapsible tool card in the UI); terminal statuses go out as
+        # ``chat:tool-result`` (fills the card's result body).  Same
+        # ``toolCallId`` links the two events.
+        start_events = widget.get_events("chat:tool-call")
+        result_events = widget.get_events("chat:tool-result")
+        assert len(start_events) == 1
+        assert start_events[0]["status"] == "in_progress"
+        assert start_events[0]["toolCallId"] == "c1"
+        assert len(result_events) == 1
+        assert result_events[0]["status"] == "completed"
+        assert result_events[0]["toolCallId"] == "c1"
 
     def test_plan_update_produces_plan_event(self):
         def my_prompt(session_id, content, cancel_event):
@@ -417,11 +424,14 @@ class TestToolCallLifecycle:
             "",
         )
         time.sleep(0.5)
-        tool_events = widget.get_events("chat:tool-call")
-        statuses = [e["status"] for e in tool_events]
-        assert statuses == ["pending", "in_progress", "completed"]
-        assert all(e["toolCallId"] == "c1" for e in tool_events)
-        assert all(e["kind"] == "read" for e in tool_events)
+        # Non-terminal statuses (pending / in_progress) emit chat:tool-call;
+        # terminal statuses (completed / failed) emit chat:tool-result.
+        start_events = widget.get_events("chat:tool-call")
+        result_events = widget.get_events("chat:tool-result")
+        assert [e["status"] for e in start_events] == ["pending", "in_progress"]
+        assert [e["status"] for e in result_events] == ["completed"]
+        assert all(e["toolCallId"] == "c1" for e in start_events + result_events)
+        assert all(e["kind"] == "read" for e in start_events + result_events)
 
     def test_failed_status(self):
         def my_prompt(session_id, content, cancel_event):
@@ -442,8 +452,12 @@ class TestToolCallLifecycle:
             "",
         )
         time.sleep(0.5)
-        tool_events = widget.get_events("chat:tool-call")
-        assert tool_events[-1]["status"] == "failed"
+        # Failure routes through chat:tool-result with isError=True.
+        result_events = widget.get_events("chat:tool-result")
+        assert len(result_events) == 1
+        assert result_events[0]["status"] == "failed"
+        assert result_events[0]["isError"] is True
+        assert result_events[0]["toolCallId"] == "c2"
 
 
 class TestTradingViewArtifactDispatch:

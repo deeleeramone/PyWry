@@ -17,6 +17,23 @@
         // instead of 'main' (which is a SERIES id, not a chart id).
         var _cid = bridge._chartId || null;
 
+        // Resolve a chart id from event data, falling back to the bridge's
+        // owned ``_cid`` and finally to whatever chart is registered on
+        // ``__PYWRY_TVCHARTS__``.  Single-widget native-window mode doesn't
+        // set ``bridge._chartId``, so without the registry fallback
+        // handlers that run against the live chart (visibility/lock/state)
+        // resolve to ``null`` and no-op.
+        function _resolveCid(data) {
+            if (data && data.chartId) return data.chartId;
+            if (_cid) return _cid;
+            var reg = window.__PYWRY_TVCHARTS__;
+            if (reg) {
+                var keys = Object.keys(reg);
+                if (keys.length) return keys[0];
+            }
+            return null;
+        }
+
         // Python → JS: create chart
         bridge.on('tvchart:create', function(data) {
             var container = data.containerId
@@ -699,7 +716,7 @@
 
         // Python → JS: request state export
         bridge.on('tvchart:request-state', function(data) {
-            var chartId = data.chartId || _cid;
+            var chartId = _resolveCid(data);
             var state = _tvExportState(chartId);
             var response = state || { chartId: chartId, error: 'not found' };
             if (data && data.context) {
@@ -1349,8 +1366,8 @@
         });
 
         // Show/Hide drawings
-        bridge.on('tvchart:tool-visibility', function() {
-            var chartId = _cid;
+        bridge.on('tvchart:tool-visibility', function(data) {
+            var chartId = _resolveCid(data);
             var ds = chartId ? window.__PYWRY_DRAWINGS__[chartId] : null;
             if (ds && ds.canvas) {
                 var vis = ds.canvas.style.display !== 'none';
@@ -1360,8 +1377,8 @@
         });
 
         // Lock drawings (disable interaction)
-        bridge.on('tvchart:tool-lock', function() {
-            var chartId = _cid;
+        bridge.on('tvchart:tool-lock', function(data) {
+            var chartId = _resolveCid(data);
             var ds = chartId ? window.__PYWRY_DRAWINGS__[chartId] : null;
             if (ds) {
                 ds._locked = !ds._locked;

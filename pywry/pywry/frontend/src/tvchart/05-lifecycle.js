@@ -350,6 +350,16 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
     _tvApplyHoverReadoutMode(entry);
     _tvScheduleVisibilityRecovery(entry);
 
+    // Provision the drawing overlay up front so the canvas element is
+    // part of every live chart, not lazy-created on first tool
+    // selection.  Tools that toggle drawing visibility / lock / state
+    // export rely on the overlay existing; requiring a prior draw
+    // action to instantiate it left those paths broken whenever the
+    // user / caller hadn't drawn yet.
+    if (typeof _tvEnsureDrawingLayer === "function") {
+        try { _tvEnsureDrawingLayer(chartId); } catch (e) { /* best-effort */ }
+    }
+
     // Register with unified component registry
     window.__PYWRY_COMPONENTS__[chartId] = {
         type: 'tvchart',
