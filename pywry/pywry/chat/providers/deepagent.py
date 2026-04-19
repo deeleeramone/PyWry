@@ -239,6 +239,7 @@ class _ToolCallTextFilter:
             self._buffer = self._buffer[emit_len:]
 
     def feed(self, text: str) -> str:
+        """Feed one chunk of streamed text and return the safe-to-emit prefix."""
         if not text:
             return ""
         out: list[str] = []
@@ -520,7 +521,7 @@ def _try_parse_call_args(payload: str) -> dict[str, Any] | None:
     return args
 
 
-_plan_middleware_singleton: Any = None
+_plan_middleware_singleton: Any = None  # pylint: disable=invalid-name
 
 
 def _next_pending_plan_step(state: dict[str, Any]) -> str | None:
@@ -614,7 +615,7 @@ def _build_plan_continuation_middleware() -> Any:
     return _plan_middleware_singleton
 
 
-_inline_tool_call_middleware_singleton: Any = None
+_inline_tool_call_middleware_singleton: Any = None  # pylint: disable=invalid-name
 
 
 def _flatten_message_content(content: Any) -> str | None:
@@ -947,7 +948,9 @@ class DeepagentProvider(ChatProvider):
 
             backend = get_state_backend()
             if backend == StateBackend.REDIS:
-                from langgraph.checkpoint.redis import RedisSaver
+                from langgraph.checkpoint.redis import (  # pylint: disable=import-error,no-name-in-module
+                    RedisSaver,
+                )
 
                 from ...config import get_settings
 
@@ -1403,7 +1406,9 @@ class DeepagentProvider(ChatProvider):
             Session to cancel.
         """
 
-    def truncate_session(self, session_id: str, kept_messages: list[Any]) -> None:
+    def truncate_session(  # pylint: disable=unused-argument
+        self, session_id: str, kept_messages: list[Any]
+    ) -> None:
         """Discard the LangGraph checkpointer state for a session.
 
         Called by ``ChatManager`` when the user edits or resends a message
@@ -1430,7 +1435,7 @@ class DeepagentProvider(ChatProvider):
         try:
             delete_thread = getattr(checkpointer, "delete_thread", None)
             if callable(delete_thread):
-                delete_thread(thread_id)
+                delete_thread(thread_id)  # pylint: disable=not-callable
                 return
         except Exception:
             logger.debug("checkpointer.delete_thread failed", exc_info=True)
@@ -1442,14 +1447,16 @@ class DeepagentProvider(ChatProvider):
                 try:
                     _asyncio.get_running_loop()
                 except RuntimeError:
-                    _asyncio.run(adelete(thread_id))
+                    _asyncio.run(adelete(thread_id))  # pylint: disable=not-callable
                 else:
                     # A loop is already running — schedule the coroutine
                     # on a dedicated thread to avoid reentrancy.
                     import concurrent.futures
 
                     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                        pool.submit(lambda: _asyncio.run(adelete(thread_id))).result()
+                        pool.submit(
+                            lambda: _asyncio.run(adelete(thread_id))  # pylint: disable=not-callable
+                        ).result()
                 return
         except Exception:
             logger.debug("checkpointer.adelete_thread failed", exc_info=True)

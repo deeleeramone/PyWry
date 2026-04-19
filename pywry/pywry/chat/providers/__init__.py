@@ -5,6 +5,9 @@ ACP session lifecycle: ``initialize`` → ``new_session`` → ``prompt``
 loop → ``cancel``.
 """
 
+# pylint: disable=unused-argument
+# ABC defaults keep the full interface signature so subclasses see it.
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

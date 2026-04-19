@@ -836,7 +836,7 @@ def _handle_tvchart_symbol_search(ctx: HandlerContext) -> HandlerResult:
         return result
 
     target = str(query).upper()
-    target_bare = target.split(":")[-1].strip() if ":" in target else target
+    target_bare = target.rsplit(":", maxsplit=1)[-1].strip() if ":" in target else target
 
     def _matches(state: dict[str, Any]) -> bool:
         current = str(state.get("symbol") or "").upper()
@@ -928,7 +928,7 @@ def _handle_tvchart_compare(ctx: HandlerContext) -> HandlerResult:
         return result
 
     target = str(query).upper()
-    target_bare = target.split(":")[-1].strip() if ":" in target else target
+    target_bare = target.rsplit(":", maxsplit=1)[-1].strip() if ":" in target else target
 
     accepted_tickers = {target, target_bare}
 

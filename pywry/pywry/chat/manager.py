@@ -296,7 +296,7 @@ def _tool_result_text(content: Any) -> str:
     return ""
 
 
-class ChatManager:
+class ChatManager:  # pylint: disable=too-many-instance-attributes
     """ACP-native orchestrator for the PyWry chat component.
 
     Handles event wiring, thread management, streaming, cancellation,
@@ -984,7 +984,7 @@ class ChatManager:
             },
         )
 
-    def _dispatch_session_update(
+    def _dispatch_session_update(  # pylint: disable=unused-argument
         self,
         update: Any,
         state: _StreamState,
@@ -1504,7 +1504,7 @@ class ChatManager:
         try:
             truncate = getattr(provider, "truncate_session", None)
             if callable(truncate):
-                truncate(thread_id, kept_messages)
+                truncate(thread_id, kept_messages)  # pylint: disable=not-callable
         except Exception:
             log.debug("provider.truncate_session failed", exc_info=True)
 

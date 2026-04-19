@@ -4,8 +4,10 @@ These interfaces define the contract for state backends, enabling
 horizontal scaling via Redis or other external stores.
 """
 
-# pylint: disable=unnecessary-ellipsis
-# Ellipsis (...) is the standard Python idiom for abstract method bodies
+# pylint: disable=unnecessary-ellipsis,unused-argument
+# Ellipsis (...) is the standard Python idiom for abstract method bodies;
+# ABC defaults accept the full interface signature even when the no-op
+# body doesn't reference every parameter.
 
 from __future__ import annotations
 
