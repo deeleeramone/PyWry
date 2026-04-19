@@ -221,16 +221,27 @@ class SqliteStateBackend:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
 
         if self._encrypted and self._key:
+            # Try ``sqlcipher3`` first (actively maintained, ships
+            # prebuilt wheels as ``sqlcipher3-binary``), fall back to
+            # the legacy ``pysqlcipher3`` for installs that still pin
+            # it.  Both expose the same ``dbapi2`` API.
+            sqlcipher = None
             try:
-                from pysqlcipher3 import dbapi2 as sqlcipher  # type: ignore[import-not-found]
+                from sqlcipher3 import dbapi2 as sqlcipher  # type: ignore[import-not-found]
+            except ImportError:
+                try:
+                    from pysqlcipher3 import dbapi2 as sqlcipher  # type: ignore[import-not-found]
+                except ImportError:
+                    sqlcipher = None
 
+            if sqlcipher is not None:
                 conn: sqlite3.Connection = sqlcipher.connect(str(self._db_path))
                 conn.execute(f"PRAGMA key = '{self._key}'")
                 logger.debug("Opened encrypted SQLite database at %s", self._db_path)
-            except ImportError:
+            else:
                 logger.warning(
-                    "pysqlcipher3 not installed — database will NOT be encrypted. "
-                    "Install with: pip install pysqlcipher3"
+                    "sqlcipher3 / pysqlcipher3 not installed — database will "
+                    "NOT be encrypted.  Install with: pip install sqlcipher3-binary"
                 )
                 conn = sqlite3.connect(str(self._db_path))
         else:
