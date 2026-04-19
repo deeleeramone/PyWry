@@ -136,6 +136,7 @@ _DRAW_PIXEL_JS = (
     "}"
 )
 
+
 def _draw_hline_script() -> str:
     return (
         _DRAW_PIXEL_JS
@@ -158,7 +159,9 @@ def _draw_hline_script() -> str:
 def _draw_two_point_script(tool: str) -> str:
     return (
         _DRAW_PIXEL_JS
-        + "_tvSetDrawTool(cid, '" + tool + "');"
+        + "_tvSetDrawTool(cid, '"
+        + tool
+        + "');"
         + "var ds = window.__PYWRY_DRAWINGS__[cid];"
         + "if (!ds) { pywry.result({error:'no drawing state'}); return; }"
         + "var before = ds.drawings.length;"
@@ -176,7 +179,9 @@ def _draw_two_point_script(tool: str) -> str:
 def _draw_single_point_script(tool: str) -> str:
     return (
         _DRAW_PIXEL_JS
-        + "_tvSetDrawTool(cid, '" + tool + "');"
+        + "_tvSetDrawTool(cid, '"
+        + tool
+        + "');"
         + "var ds = window.__PYWRY_DRAWINGS__[cid];"
         + "if (!ds) { pywry.result({error:'no drawing state'}); return; }"
         + "var before = ds.drawings.length;"
