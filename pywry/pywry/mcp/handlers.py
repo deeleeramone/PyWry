@@ -766,9 +766,8 @@ def _handle_tvchart_remove_indicator(ctx: HandlerContext) -> HandlerResult:
 def _handle_tvchart_list_indicators(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
     payload: dict[str, Any] = {}
     chart_id = ctx.args.get("chart_id")
     if chart_id is not None:
@@ -1188,9 +1187,8 @@ def _handle_tvchart_open_layout(ctx: HandlerContext) -> HandlerResult:
 def _handle_tvchart_save_state(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
     widget.emit("tvchart:save-state", {})
     return {"widget_id": widget_id, "event_sent": True, "event_type": "tvchart:save-state"}
 
@@ -1198,9 +1196,8 @@ def _handle_tvchart_save_state(ctx: HandlerContext) -> HandlerResult:
 def _handle_tvchart_request_state(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
     payload: dict[str, Any] = {}
     chart_id = ctx.args.get("chart_id")
     if chart_id is not None:
@@ -1222,9 +1219,8 @@ def _handle_tvchart_request_state(ctx: HandlerContext) -> HandlerResult:
 def _handle_set_content(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None  # Type guard
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     data = {"id": ctx.args["component_id"]}
     if "html" in ctx.args:
@@ -1239,9 +1235,8 @@ def _handle_set_content(ctx: HandlerContext) -> HandlerResult:
 def _handle_set_style(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     widget.emit(
         "pywry:set-style",
@@ -1253,9 +1248,8 @@ def _handle_set_style(ctx: HandlerContext) -> HandlerResult:
 def _handle_show_toast(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     widget.emit(
         "pywry:alert",
@@ -1271,9 +1265,8 @@ def _handle_show_toast(ctx: HandlerContext) -> HandlerResult:
 def _handle_update_theme(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     widget.emit("pywry:update-theme", {"theme": ctx.args["theme"]})
     return {"widget_id": widget_id, "theme": ctx.args["theme"]}
@@ -1282,9 +1275,8 @@ def _handle_update_theme(ctx: HandlerContext) -> HandlerResult:
 def _handle_inject_css(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     widget.emit(
         "pywry:inject-css",
@@ -1299,9 +1291,8 @@ def _handle_inject_css(ctx: HandlerContext) -> HandlerResult:
 def _handle_remove_css(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     widget.emit("pywry:remove-css", {"id": ctx.args["style_id"]})
     return {"widget_id": widget_id, "css_removed": True}
@@ -1310,9 +1301,8 @@ def _handle_remove_css(ctx: HandlerContext) -> HandlerResult:
 def _handle_navigate(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     widget.emit("pywry:navigate", {"url": ctx.args["url"]})
     return {"widget_id": widget_id, "navigating_to": ctx.args["url"]}
@@ -1321,9 +1311,8 @@ def _handle_navigate(ctx: HandlerContext) -> HandlerResult:
 def _handle_download(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     widget.emit(
         "pywry:download",
@@ -1339,9 +1328,8 @@ def _handle_download(ctx: HandlerContext) -> HandlerResult:
 def _handle_update_plotly(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     fig_dict = json.loads(ctx.args["figure_json"])
 
@@ -1361,9 +1349,8 @@ def _handle_update_plotly(ctx: HandlerContext) -> HandlerResult:
 def _handle_update_marquee(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     ticker_update = ctx.args.get("ticker_update")
     if ticker_update:
@@ -1387,9 +1374,8 @@ def _handle_update_ticker_item(ctx: HandlerContext) -> HandlerResult:
 
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     ticker_item = TickerItem(ticker=ctx.args["ticker"])
     event_type, payload = ticker_item.update_payload(
@@ -1840,9 +1826,8 @@ def _handle_chat_register_command(ctx: HandlerContext) -> HandlerResult:
     description = ctx.args.get("description", "")
 
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     if not name.startswith("/"):
         name = "/" + name
@@ -1894,9 +1879,8 @@ def _handle_chat_get_history(ctx: HandlerContext) -> HandlerResult:
 def _handle_chat_update_settings(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     settings: dict[str, Any] = {}
     for key in ("model", "temperature", "max_tokens", "system_prompt", "streaming"):
@@ -1912,9 +1896,8 @@ def _handle_chat_update_settings(ctx: HandlerContext) -> HandlerResult:
 def _handle_chat_set_typing(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    if error is not None or widget is None:
+        return error or {"error": "widget_id could not be resolved."}
 
     typing = ctx.args.get("typing", True)
     thread_id = ctx.args.get("thread_id")

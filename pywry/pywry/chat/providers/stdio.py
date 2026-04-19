@@ -93,8 +93,9 @@ class StdioProvider(ChatProvider):
 
     async def _read_loop(self) -> None:
         """Read JSON-RPC messages from stdout line-by-line."""
-        assert self._process is not None
-        assert self._process.stdout is not None
+        if self._process is None or self._process.stdout is None:
+            msg = "stdio read loop started before subprocess was spawned"
+            raise RuntimeError(msg)
 
         async for raw_line in self._process.stdout:
             stripped = raw_line.strip()
@@ -138,7 +139,9 @@ class StdioProvider(ChatProvider):
             The result from the response.
         """
         proc = await self._ensure_started()
-        assert proc.stdin is not None
+        if proc.stdin is None:
+            err = "agent subprocess has no stdin"
+            raise RuntimeError(err)
 
         req_id = str(uuid.uuid4().hex[:8])
         msg = {
@@ -167,7 +170,9 @@ class StdioProvider(ChatProvider):
             Method parameters.
         """
         proc = await self._ensure_started()
-        assert proc.stdin is not None
+        if proc.stdin is None:
+            err = "agent subprocess has no stdin"
+            raise RuntimeError(err)
 
         msg = {
             "jsonrpc": "2.0",
@@ -207,7 +212,9 @@ class StdioProvider(ChatProvider):
         req_id = msg.get("id")
         params = msg.get("params", {})
         proc = await self._ensure_started()
-        assert proc.stdin is not None
+        if proc.stdin is None:
+            err = "agent subprocess has no stdin"
+            raise RuntimeError(err)
 
         if method == "session/request_permission":
             # Route to session update queue as a permission request
