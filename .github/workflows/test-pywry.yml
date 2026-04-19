@@ -187,7 +187,12 @@ jobs:
           # ``sqlcipher3``'s setup.py at the install root.
           $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
           $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
-          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet"
+          # ``--allow-unsupported`` is required on arm64-windows: the
+          # sqlcipher port pulls ``tcl`` for its test tooling, and
+          # tcl's port file marks ``windows & arm`` as unsupported.
+          # SQLCipher itself compiles fine on ARM64 — the tcl tests
+          # just won't run, which we don't need.
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet" --allow-unsupported
           $sqlcipherDir = "$env:VCPKG_ROOT\installed\$triplet"
           echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
           echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV

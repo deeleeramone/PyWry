@@ -110,7 +110,10 @@ jobs:
         run: |
           $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
           $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
-          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet"
+          # ``--allow-unsupported`` needed on arm64-windows (tcl
+          # port dep is marked unsupported there; sqlcipher itself
+          # still compiles cleanly).
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet" --allow-unsupported
           $sqlcipherDir = "$env:VCPKG_ROOT\installed\$triplet"
           echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
           echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV
@@ -635,7 +638,10 @@ jobs:
         run: |
           $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
           $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
-          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet"
+          # ``--allow-unsupported`` needed on arm64-windows (tcl
+          # port dep is marked unsupported there; sqlcipher itself
+          # still compiles cleanly).
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet" --allow-unsupported
           $sqlcipherDir = "$env:VCPKG_ROOT\installed\$triplet"
           echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
           echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV
