@@ -1,9 +1,41 @@
 (function() {
     'use strict';
 
-    // Guard against re-registration of system event handlers
+    // Guard against load-order surprises: if this file runs before
+    // bridge.js, install a minimal shim so on()/off()/_trigger() calls
+    // below don't throw. bridge.js later replaces the methods in place
+    // while preserving _handlers, so registered callbacks survive.
     if (!window.pywry) {
         window.pywry = { _handlers: {} };
+    }
+    if (!window.pywry._handlers) {
+        window.pywry._handlers = {};
+    }
+    if (typeof window.pywry.on !== 'function') {
+        window.pywry.on = function(eventType, callback) {
+            if (!this._handlers[eventType]) this._handlers[eventType] = [];
+            this._handlers[eventType].push(callback);
+        };
+    }
+    if (typeof window.pywry.off !== 'function') {
+        window.pywry.off = function(eventType, callback) {
+            if (!this._handlers[eventType]) return;
+            if (!callback) {
+                delete this._handlers[eventType];
+            } else {
+                this._handlers[eventType] = this._handlers[eventType].filter(
+                    function(h) { return h !== callback; }
+                );
+            }
+        };
+    }
+    if (typeof window.pywry._trigger !== 'function') {
+        window.pywry._trigger = function(eventType, data) {
+            var handlers = (this._handlers[eventType] || []).concat(this._handlers['*'] || []);
+            handlers.forEach(function(handler) {
+                try { handler(data, eventType); } catch (err) { console.error(err); }
+            });
+        };
     }
 
     if (window.pywry._systemEventsRegistered) {

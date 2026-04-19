@@ -693,6 +693,9 @@ class TestMenuProxyHandlers:
         registry = get_registry()
         dispatched = registry.dispatch("win-1", "menu:click", {"item_id": "save", "source": "app"})
         assert dispatched
+        # Sync handlers are executed on a thread pool, so wait for the
+        # invocation to finish before asserting (avoids flakes on slow CI).
+        registry._drain(timeout=5.0)
         h.assert_called_once()
 
     @patch("pywry.menu_proxy.runtime")
@@ -714,7 +717,10 @@ class TestMenuProxyHandlers:
 
         from pywry.callbacks import get_registry
 
-        get_registry().dispatch("win-1", "menu:click", {"item_id": "a", "source": "app"})
+        registry = get_registry()
+        registry.dispatch("win-1", "menu:click", {"item_id": "a", "source": "app"})
+        # Sync handlers run on a thread pool — wait before asserting.
+        registry._drain(timeout=5.0)
         # Handler should only be called once — one registration
         assert h.call_count == 1
 

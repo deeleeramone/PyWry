@@ -14,7 +14,7 @@ The `chat:*` namespace handles all communication between the Python `ChatManager
 | `chat:edit-message` | `{messageId, threadId, text}` | User submits edited text for a prior user message.  Backend replaces the message, drops everything after it, asks the provider to forget its own state for that thread, and re-runs generation under the same `messageId`. |
 | `chat:resend-from` | `{messageId, threadId}` | User re-runs generation starting at a specific user message.  The target user message and everything after it are dropped, then regeneration runs. |
 | `chat:slash-command` | `{command, args, threadId}` | User submits a `/command` from the input bar (e.g., `/clear`, `/export`). |
-| `chat:input-response` | `{text, requestId, threadId}` | User responds to an `PermissionRequestUpdate` prompt mid-stream. |
+| `chat:input-response` | `{text, requestId, threadId}` | User responds to a free-form `chat:input-required` prompt mid-stream (text / buttons / radio).  Permission decisions use `chat:permission-response` instead. |
 | `chat:request-state` | `{}` | Frontend requests full state snapshot on initialization. |
 | `chat:request-history` | `{threadId, limit}` | Frontend requests message history for a thread. |
 
@@ -98,8 +98,8 @@ attribute also gets populated.
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `chat:input-required` | `{messageId, threadId, requestId, prompt, placeholder, inputType, options?}` | Pause streaming to request user input mid-conversation. |
-| `chat:permission-request` | `{messageId, threadId, toolCallId, title, description?, options: [{id, label, description?}]}` | Pause streaming to ask the user to approve / deny a tool invocation.  Response arrives on `chat:permission-response`. |
+| `chat:input-required` | `{messageId, threadId, requestId, prompt, placeholder?, inputType?, options?}` | Pause streaming to request free-form user input (`inputType`: `"text"` / `"buttons"` / `"radio"`).  Typically emitted by callback / custom providers.  Response arrives on `chat:input-response`. |
+| `chat:permission-request` | `{toolCallId, title, options: [{id, label, kind?}], requestId, threadId}` | Pause streaming to ask the user to approve / deny a tool invocation.  Payload mirrors the ACP `PermissionRequestUpdate` fields (no `prompt` / `placeholder` / `description`).  Response arrives on `chat:permission-response`. |
 
 Handler pattern for permission requests:
 

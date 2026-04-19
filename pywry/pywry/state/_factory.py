@@ -10,6 +10,7 @@ import os
 import uuid
 
 from functools import lru_cache
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 
@@ -137,6 +138,21 @@ def _get_deploy_settings() -> DeploySettings:
     return DeploySettings()
 
 
+_DEFAULT_SQLITE_PATH = "~/.config/pywry/pywry.db"
+
+
+def _resolve_sqlite_path(settings: DeploySettings) -> str:
+    """Return the configured SQLite path with ``~`` expanded.
+
+    ``sqlite3`` / SQLCipher do not expand ``~`` themselves, so we normalise
+    here even though every bundled ``SqliteStateBackend`` subclass also
+    expands in its own ``__init__`` — cheaper than hunting down a future
+    caller that forgets.
+    """
+    raw = getattr(settings, "sqlite_path", None) or _DEFAULT_SQLITE_PATH
+    return str(Path(raw).expanduser())
+
+
 if TYPE_CHECKING:
     from pywry.config import DeploySettings
 
@@ -174,9 +190,7 @@ def get_widget_store() -> WidgetStore:
         from .sqlite import SqliteWidgetStore
 
         settings = _get_deploy_settings()
-        return SqliteWidgetStore(
-            db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db")
-        )
+        return SqliteWidgetStore(db_path=_resolve_sqlite_path(settings))
 
     return MemoryWidgetStore()
 
@@ -282,9 +296,7 @@ def get_session_store() -> SessionStore:
         from .sqlite import SqliteSessionStore
 
         settings = _get_deploy_settings()
-        return SqliteSessionStore(
-            db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db")
-        )
+        return SqliteSessionStore(db_path=_resolve_sqlite_path(settings))
 
     return MemorySessionStore()
 
@@ -322,7 +334,7 @@ def get_chat_store() -> ChatStore:
         from .sqlite import SqliteChatStore
 
         settings = _get_deploy_settings()
-        return SqliteChatStore(db_path=getattr(settings, "sqlite_path", "~/.config/pywry/pywry.db"))
+        return SqliteChatStore(db_path=_resolve_sqlite_path(settings))
 
     return MemoryChatStore()
 

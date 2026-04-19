@@ -54,6 +54,7 @@ class StdioProvider(ChatProvider):
         self._process: asyncio.subprocess.Process | None = None
         self._pending: dict[str | int, asyncio.Future[Any]] = {}
         self._reader_task: asyncio.Task[None] | None = None
+        self._stderr_task: asyncio.Task[None] | None = None
         self._update_queues: dict[str, asyncio.Queue[Any]] = {}
 
     async def _ensure_started(self) -> asyncio.subprocess.Process:
@@ -76,7 +77,19 @@ class StdioProvider(ChatProvider):
             env=self._env,
         )
         self._reader_task = asyncio.create_task(self._read_loop())
+        # Drain stderr continuously — if the pipe fills up the subprocess
+        # blocks on write, which would deadlock the whole read loop.
+        self._stderr_task = asyncio.create_task(self._drain_stderr())
         return self._process
+
+    async def _drain_stderr(self) -> None:
+        """Continuously consume stderr so the subprocess can't block."""
+        if self._process is None or self._process.stderr is None:
+            return
+        async for raw_line in self._process.stderr:
+            stripped = raw_line.strip()
+            if stripped:
+                log.debug("agent stderr: %s", stripped.decode(errors="replace")[:500])
 
     async def _read_loop(self) -> None:
         """Read JSON-RPC messages from stdout line-by-line."""
@@ -135,7 +148,7 @@ class StdioProvider(ChatProvider):
             "params": params or {},
         }
 
-        future: asyncio.Future[Any] = asyncio.get_event_loop().create_future()
+        future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
         self._pending[req_id] = future
 
         proc.stdin.write((json.dumps(msg) + "\n").encode())
@@ -412,6 +425,8 @@ class StdioProvider(ChatProvider):
         """
         if self._reader_task:
             self._reader_task.cancel()
+        if self._stderr_task:
+            self._stderr_task.cancel()
         if self._process and self._process.returncode is None:
             self._process.terminate()
             await self._process.wait()
