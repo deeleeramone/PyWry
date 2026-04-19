@@ -243,8 +243,6 @@ module = [
     "langchain_mcp_adapters", "langchain_mcp_adapters.*",
     "langgraph", "langgraph.*",
     "deepagents", "deepagents.*",
-    "pysqlcipher3", "pysqlcipher3.*",
-    "sqlcipher3", "sqlcipher3.*",
 ]
 ignore_missing_imports = true
 
