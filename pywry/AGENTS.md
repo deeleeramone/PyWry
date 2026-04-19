@@ -8,12 +8,14 @@
 
 | Aspect | Details |
 |--------|---------|
-| **Language** | Python 3.10+ |
-| **Type System** | Strict typing with Pydantic v2 models |
+| **Language** | Python 3.10–3.14 (base); dev tooling requires 3.11+ |
+| **Type System** | Strict mypy, Pydantic v2 models |
 | **Style** | Ruff (line length 100), NumPy docstrings |
 | **Testing** | pytest with fixtures, `PYWRY_HEADLESS=1` for CI |
-| **Architecture** | Subprocess IPC (desktop) + FastAPI inline server (notebooks) |
-| **Scaling** | Deploy mode with Redis-backed state for multi-worker deployments |
+| **Architecture** | Subprocess IPC (native) + FastAPI inline server (notebook / browser) |
+| **State** | Memory (default), Redis, or SQLite + SQLCipher for multi-worker / at-rest encryption |
+| **Chat** | Streaming chat widget with OpenAI / Anthropic / Magentic / Callback / Stdio-ACP / Deepagent providers |
+| **MCP** | FastMCP server (`pywry mcp`) exposing widget, chart, grid, chat, tvchart, and auth tooling |
 
 ---
 
@@ -27,44 +29,63 @@ Built on [PyTauri](https://pypi.org/project/pytauri/) (which uses Rust's [Tauri]
 
 ### Core Capabilities
 
-- **Five Window Modes**: `NEW_WINDOW`, `SINGLE_WINDOW`, `MULTI_WINDOW`, `NOTEBOOK`, `BROWSER`
-- **Notebook Support**: Automatic inline rendering via anywidget or IFrame in Jupyter/Colab
-- **Toolbar System**: 18 declarative Pydantic components with 7 layout positions — automatic nested flexbox structure
-- **Two-Way Events**: Python ↔ JavaScript communication with pre-wired Plotly/AgGrid events and utility events for DOM manipulation
-- **Theming & CSS**: Light/dark modes, 60+ CSS variables, component ID targeting, and dynamic styling via events (`pywry:set-style`, `pywry:inject-css`)
-- **Security**: Scoped token auth enabled by default, CSP headers, internal API protection, production presets available
-- **AgGrid Tables**: Best-in-class Pandas → AgGrid conversion with pre-wired events, context menus, and practical defaults
-- **Plotly Charts**: Plotly rendering with pre-wired plot events for Dash-like interactivity
-- **TradingView Charts**: TradingView Lightweight Charts integration with OHLCV normalization, multi-series, indicators, and toolbar-driven controls
-- **Toast Notifications**: Built-in alert system with positioning (info, success, warning, error, confirm)
-- **Marquee Ticker**: Scrolling text/content with dynamic updates
-- **Secrets Handling**: Secure password inputs — values stored server-side, never rendered in HTML
-- **Hot Reload**: CSS injection and JS refresh with scroll preservation
-- **Bundled Libraries**: Plotly.js 3.3.1 and AgGrid 35.0.0 (offline capable)
-- **Native File Dialogs**: Tauri-powered save/open dialogs and filesystem access
-- **Configuration System**: TOML files, pyproject.toml, and environment variables
-- **CLI Tools**: Configuration management and project initialization
-- **Deploy Mode**: Horizontal scaling with Redis-backed state for multi-worker deployments
-- **Authentication & RBAC**: JWT-based authentication with role-based access control
+- **Window Modes**: `NEW_WINDOW`, `SINGLE_WINDOW`, `MULTI_WINDOW`, `NOTEBOOK`, `BROWSER`.
+- **Notebook Support**: Automatic inline rendering via anywidget or IFrame in Jupyter / VS Code / Colab.
+- **Toolbar System**: Declarative Pydantic components (`Button`, `Select`, `MultiSelect`, `TextInput`, `SecretInput`, `SliderInput`, `RangeInput`, `Toggle`, `Checkbox`, `RadioGroup`, `TabGroup`, `Marquee`, `Modal`, …) with top / bottom / left / right / header / footer / inside positions and automatic nested-flexbox layout.
+- **Two-Way Events**: Python ↔ JavaScript communication with pre-wired Plotly / AgGrid / TradingView / chat events plus utility events for DOM manipulation.
+- **Theming & CSS**: Light / dark / system modes, `--pywry-*` CSS variables, component-ID targeting, hot reload, and dynamic styling via events (`pywry:set-style`, `pywry:inject-css`).
+- **Security**: Scoped token auth enabled by default, CSP headers, internal API protection, `SecuritySettings.strict() / .permissive() / .localhost()` presets.
+- **AgGrid Tables**: Pandas → AgGrid conversion with pre-wired events, context menus, server-side mode, and persisted column/filter/sort state.
+- **Plotly Charts**: Plotly rendering with pre-wired plot events, layout / trace / figure updates, and state round-trips.
+- **TradingView Charts**: Extended Lightweight Charts integration — drawing surface (trendlines, fib tools, text, price notes, brushes), pluggable datafeed API, UDF adapter for external quote servers, streaming bar updates, compare overlays, compare-derivative indicators (Spread / Ratio / Sum / Product / Correlation), savable layouts, and a themeable settings panel.
+- **Chat Widget**: Streaming chat UI with threads, artifacts, slash commands, plan / todo updates, permission prompts, context sources, and pluggable providers (`OpenAIProvider`, `AnthropicProvider`, `MagenticProvider`, `CallbackProvider`, `StdioProvider` for ACP subprocesses, `DeepagentProvider` for LangChain Deep Agents).
+- **MCP Server**: `pywry mcp --transport stdio | http` exposes widget management, components, chart / grid / tvchart control, events, chat-agent driving, auth, and docs skills to any MCP client.
+- **Toast Notifications**: Built-in alert system (info, success, warning, error, confirm) with positioning and blocking overlay.
+- **Marquee Ticker**: Scrolling text/content with dynamic per-item updates.
+- **Secrets Handling**: `SecretInput` stores values server-side; HTML only carries opaque component IDs.
+- **Hot Reload**: CSS injection and JS refresh with scroll preservation.
+- **Bundled Libraries**: Plotly.js, AgGrid, and TradingView Lightweight Charts are bundled (offline capable) and served from `pywry/frontend/assets/`.
+- **Native File Dialogs, Menus, Tray**: Tauri-powered save/open dialogs and filesystem access; `MenuProxy`, `TrayProxy`, and `WindowProxy` wrap the Tauri runtime APIs.
+- **Configuration System**: TOML files, `pyproject.toml` `[tool.pywry]`, environment variables (`PYWRY_*`).
+- **CLI Tools**: `pywry config`, `pywry init`, `pywry mcp`, `pywry mcp install`.
+- **Deploy Mode**: Horizontal scaling with Redis-backed state, or SQLite + SQLCipher for single-node at-rest encryption.
+- **Authentication**: OAuth2 (Google / GitHub / Microsoft / OIDC / custom) with PKCE, keyring-backed token storage, automatic refresh, and optional RBAC for deploy-mode routes.
+- **Standalone Executables**: `pywry[freeze]` ships a PyInstaller hook — no `.spec` edits or `--hidden-import` flags required.
 
 ### Dependencies
 
+Base package (always installed):
+
 ```
-Python 3.10+
+Python 3.10–3.14
 pytauri >= 0.8.0
-pytauri-wheel >= 0.8.0
+anyio >= 4.0.0
+httpx >= 0.27.0
 pydantic >= 2.0.0
 pydantic-settings >= 2.0.0
-anyio >= 4.0.0
+redis >= 7.1.0            # client library; only used if state_backend != "memory"
 fastapi >= 0.128.0
 uvicorn >= 0.40.0
 watchdog >= 3.0.0
-websockets >= 15.0.1
-requests >= 2.32.5
-pandas >= 1.5.3
-anywidget >= 0.9.0 (optional, recommended)
-redis >= 5.0.0 (optional, for deploy mode)
+setproctitle >= 1.3.0
+websockets >= 16.0.0
 ```
+
+Optional extras (see `pyproject.toml` for full lists):
+
+| Extra | Pulls in | Purpose |
+|-------|----------|---------|
+| `notebook` | `anywidget`, `ipykernel` | Jupyter / anywidget integration |
+| `auth` | `authlib`, `keyring` | OAuth2 and keyring-backed token storage |
+| `mcp` | `fastmcp` | `pywry mcp` MCP server |
+| `acp` | `agent-client-protocol` | `StdioProvider` (Agent Client Protocol subprocess) |
+| `sqlite` | `sqlcipher3` | Encrypted SQLite state backend |
+| `openai` / `anthropic` / `magentic` | matching SDK | Chat providers |
+| `deepagent` | `deepagents`, `langchain-mcp-adapters`, `fastmcp`, `agent-client-protocol` | `DeepagentProvider` (LangChain Deep Agents) |
+| `freeze` | `pyinstaller` | Standalone executable builds |
+| `all` | all of the above | Everything (no `freeze`) |
+
+Also used at build time: `cryptography` (for token storage in deploy mode), `plotly`, `pandas`.
 
 ---
 
@@ -107,31 +128,39 @@ PyWry automatically selects the appropriate rendering path based on environment:
 
 ```
 pywry/
-├── __init__.py          # Public API exports
-├── __main__.py          # PyTauri subprocess entry point
-├── app.py               # Main PyWry class - user entry point
+├── __init__.py          # Public API exports (see "Core API / Imports")
+├── __main__.py          # PyTauri subprocess entry point (IPC loop + plugin loader)
+├── _freeze.py           # PyInstaller-aware freeze support + runtime setup
+├── _pyinstaller_hook/   # PyInstaller hook dir (pulled in by `pywry[freeze]`)
+├── _vendor/             # Vendored pytauri_wheel bundle
+├── app.py               # Main PyWry class — user entry point
 ├── runtime.py           # PyTauri subprocess management (stdin/stdout IPC)
+├── window_dispatch.py   # Thread-safe dispatch into the PyTauri runtime
+├── window_proxy.py      # WindowProxy wrapping Tauri WebviewWindow API
+├── menu_proxy.py        # MenuProxy (native window / app menus)
+├── tray_proxy.py        # TrayProxy (system tray icons)
+├── modal.py             # Modal toolbar component + helpers
 ├── inline.py            # FastAPI-based inline rendering + InlineWidget class
 ├── notebook.py          # Notebook environment detection (NotebookEnvironment enum)
-├── widget.py            # anywidget-based widgets (PyWryWidget, PyWryPlotlyWidget, PyWryAgGridWidget)
+├── widget.py            # anywidget widgets (PyWryWidget, PyWry{Plotly,AgGrid,TVChart}Widget)
 ├── widget_protocol.py   # BaseWidget protocol and NativeWindowHandle class
 ├── config.py            # Layered configuration system (pydantic-settings)
-├── models.py            # Pydantic models (WindowConfig, HtmlContent, ThemeMode, WindowMode)
-├── templates.py         # HTML template builder with CSP, themes, scripts, toolbar
+├── models.py            # Core Pydantic models (WindowConfig, HtmlContent, ThemeMode, WindowMode)
+├── types.py             # Shared enum / menu / tray / mouse-button TypedDicts & Pydantic models
+├── exceptions.py        # PyWry exception hierarchy
+├── templates.py         # HTML template builder (CSP, themes, scripts, toolbar)
 ├── scripts.py           # JavaScript bridge code injected into windows
 ├── callbacks.py         # Event callback registry (singleton)
-├── assets.py            # Bundled asset loading (Plotly.js, AgGrid, CSS)
+├── assets.py            # Bundled asset loading (Plotly.js, AgGrid, TradingView CSS/JS)
 ├── asset_loader.py      # CSS/JS file loading with caching
 ├── grid.py              # AgGrid Pydantic models (ColDef, GridOptions, etc.)
-├── plotly_config.py     # Plotly configuration models (PlotlyConfig, ModeBarButton, etc.)
-├── tvchart_config.py    # TradingView chart config models (TVChartConfig, SeriesConfig, etc.)
-├── tvchart.py           # OHLCV data normalization and toolbar factory
-├── toolbar.py           # Toolbar component models (Button, Select, etc.)
-├── state_mixins.py      # Widget state management mixins
+├── plotly_config.py     # Plotly configuration models (PlotlyConfig, ModeBarButton, …)
+├── toolbar.py           # Toolbar component models (Button, Select, Marquee, …)
+├── state_mixins.py      # Widget state management mixins (Grid/Plotly/Toolbar/TVChart)
 ├── hot_reload.py        # Hot reload manager
 ├── watcher.py           # File system watcher (watchdog-based)
 ├── log.py               # Logging utilities
-├── cli.py               # CLI commands (config, init)
+├── cli.py               # CLI commands (config, init, mcp …)
 ├── Tauri.toml           # Tauri configuration
 ├── capabilities/        # Tauri capability permissions
 │   └── default.toml
@@ -139,16 +168,64 @@ pywry/
 │   └── window_commands.py
 ├── frontend/            # Frontend HTML and bundled assets
 │   ├── index.html
-│   ├── assets/          # Compressed libraries (plotly, ag-grid, icons)
-│   ├── src/             # JavaScript files (main.js, aggrid-defaults.js, plotly-defaults.js)
-│   └── style/           # CSS files (pywry.css)
+│   ├── assets/          # Compressed libraries (plotly, ag-grid, tvchart, icons, PyWry.png)
+│   ├── src/             # JS modules (main.js, aggrid-defaults.js, plotly-defaults.js, tvchart/*.js, chat/*.js)
+│   └── style/           # CSS files (pywry.css, chat.css, tvchart.css, …)
+├── tvchart/             # TradingView Lightweight Charts integration
+│   ├── __init__.py      # Public exports (TVChartConfig, DatafeedProvider, UDFAdapter, mixin, …)
+│   ├── config.py        # TVChartConfig / SeriesConfig / layout / drawings models
+│   ├── models.py        # TVChartBar, TVChartSymbolInfo, quote / search / mark payloads
+│   ├── normalize.py     # OHLCV normalization (DataFrame → bars, indicator helpers)
+│   ├── datafeed.py      # DatafeedProvider ABC + default async dispatcher
+│   ├── udf.py           # UDFAdapter (HTTP UDF-compatible datafeed)
+│   ├── mixin.py         # TVChartStateMixin (Python-side chart state surface)
+│   └── toolbars.py      # build_tvchart_toolbars() factory
+├── chat/                # Streaming chat widget
+│   ├── __init__.py      # Public exports (ChatProvider, artifacts, html builder, get_provider)
+│   ├── manager.py       # ChatManager, ChatContext, SettingsItem
+│   ├── session.py       # ACP session lifecycle: capabilities, modes, config options, plans
+│   ├── models.py        # ChatConfig, ChatMessage, ChatThread, ContentBlock, ACP payloads
+│   ├── updates.py       # SessionUpdate union (agent / artifact / plan / mode / tool-call / …)
+│   ├── artifacts.py     # Code / Html / Image / Json / Markdown / Plotly / Table / TradingView
+│   ├── permissions.py   # Permission request / response plumbing
+│   ├── html.py          # build_chat_html() — standalone chat UI bootstrap
+│   └── providers/       # Pluggable ChatProvider backends
+│       ├── __init__.py  # ChatProvider ABC + get_provider() factory
+│       ├── openai.py    # OpenAIProvider (OpenAI SDK)
+│       ├── anthropic.py # AnthropicProvider (Anthropic SDK)
+│       ├── magentic.py  # MagenticProvider (any magentic-supported LLM)
+│       ├── callback.py  # CallbackProvider (sync/async Python callback)
+│       ├── stdio.py     # StdioProvider (Agent Client Protocol subprocess)
+│       └── deepagent.py # DeepagentProvider (LangChain Deep Agents + MCP adapters + ACP)
+├── mcp/                 # Model Context Protocol server
+│   ├── __init__.py
+│   ├── __main__.py      # `python -m pywry.mcp`
+│   ├── server.py        # FastMCP server setup, transport wiring
+│   ├── tools.py         # Low-level event dispatch + widget/component tools
+│   ├── handlers.py      # Tool handlers
+│   ├── builders.py      # HTML/component builders shared across tools
+│   ├── resources.py     # MCP resources (bundled assets, component reference)
+│   ├── prompts.py       # MCP prompts
+│   ├── agentic.py       # Agent orchestration helpers
+│   ├── state.py         # Per-session state for long-running tools
+│   ├── docs.py          # Docs skill content
+│   ├── install.py       # `pywry mcp install` — client config writer
+│   └── skills/          # Skills (authentication, chat, chat_agent, component_reference,
+│                        #   css_selectors, data_visualization, deploy, events,
+│                        #   forms_and_inputs, iframe, interactive_buttons, jupyter,
+│                        #   modals, native, styling, tvchart, autonomous_building)
 ├── state/               # Pluggable state management for deploy mode
 │   ├── __init__.py      # Public exports (stores, factory functions, types)
 │   ├── _factory.py      # Factory functions for store instantiation
-│   ├── memory.py        # In-memory state backends (default)
-│   ├── redis.py         # Redis-backed state backends
-│   ├── types.py         # Type definitions (StateBackend, WidgetData, OAuthTokenSet, etc.)
+│   ├── base.py          # WidgetStore / EventBus / ConnectionRouter / SessionStore ABCs
+│   ├── memory.py        # In-memory backends (default)
+│   ├── redis.py         # Redis-backed backends
+│   ├── sqlite.py        # SQLite + SQLCipher backend (at-rest encryption)
+│   ├── file.py          # File-backed backend (dev / single-process)
+│   ├── server.py        # Deploy-mode FastAPI routes glue
+│   ├── callbacks.py     # Cross-worker callback dispatch
 │   ├── auth.py          # Authentication and RBAC utilities
+│   ├── types.py         # Type definitions (StateBackend, WidgetData, OAuthTokenSet, …)
 │   └── sync_helpers.py  # Sync↔async bridging (run_async, wait_for_event)
 ├── auth/                # OAuth2 authentication system
 │   ├── __init__.py      # Public exports
@@ -157,9 +234,10 @@ pywry/
 │   ├── token_store.py   # TokenStore ABC + Memory, Keyring, Redis backends
 │   ├── callback_server.py # Ephemeral localhost server for native auth redirects
 │   ├── deploy_routes.py # FastAPI /auth/* routes for deploy mode
+│   ├── login_page.py    # Rendered login page shipped with deploy-mode routes
 │   ├── flow.py          # AuthFlowManager orchestrator
 │   └── session.py       # SessionManager with automatic token refresh
-├── utils/               # Utility helpers
+├── utils/               # Utility helpers (async_helpers, …)
 └── window_manager/      # Window mode implementations
     ├── controller.py
     ├── lifecycle.py
@@ -186,14 +264,70 @@ from pywry import HtmlContent, WindowConfig
 from pywry import (
     Toolbar, Button, Select, MultiSelect, TextInput, TextArea, SearchInput,
     SecretInput, NumberInput, DateInput, SliderInput, RangeInput, Toggle,
-    Checkbox, RadioGroup, TabGroup, Div, Marquee, TickerItem, Option, ToolbarItem
+    Checkbox, RadioGroup, TabGroup, Div, Marquee, TickerItem, Option, ToolbarItem,
+    Modal,
 )
 
 # Plotly configuration (for customizing modebar, icons, buttons)
 from pywry import PlotlyConfig, PlotlyIconName, ModeBarButton, ModeBarConfig, SvgIcon, StandardButton
 
 # Grid models (for AgGrid customization)
-from pywry.grid import ColDef, ColGroupDef, DefaultColDef, RowSelection, GridOptions, GridConfig, GridData, build_grid_config, to_js_grid_config
+from pywry import ColDef, ColGroupDef, DefaultColDef, RowSelection, GridOptions, build_grid_config, to_js_grid_config
+# Or, with additional helpers:
+from pywry.grid import GridConfig, GridData
+
+# TradingView charts
+from pywry import (
+    TVChartConfig, TVChartData, TVChartBar, TVChartMark, TVChartTimescaleMark,
+    TVChartExchange, TVChartSymbolInfo, TVChartSymbolInfoPriceSource,
+    TVChartLibrarySubsessionInfo, TVChartSearchSymbolResultItem,
+    TVChartStateMixin, QuoteData,
+    # Datafeed surface
+    DatafeedProvider, UDFAdapter, build_tvchart_toolbars,
+    # Datafeed request/response payloads
+    TVChartDatafeedConfigRequest, TVChartDatafeedConfigResponse, TVChartDatafeedConfiguration,
+    TVChartDatafeedHistoryRequest, TVChartDatafeedHistoryResponse,
+    TVChartDatafeedResolveRequest, TVChartDatafeedResolveResponse,
+    TVChartDatafeedSearchRequest, TVChartDatafeedSearchResponse,
+    TVChartDatafeedMarksRequest, TVChartDatafeedMarksResponse,
+    TVChartDatafeedTimescaleMarksRequest, TVChartDatafeedTimescaleMarksResponse,
+    TVChartDatafeedServerTimeRequest, TVChartDatafeedServerTimeResponse,
+    TVChartDatafeedSubscribeRequest, TVChartDatafeedUnsubscribeRequest,
+    TVChartDatafeedBarUpdate, TVChartDatafeedSymbolType,
+)
+
+# Chat widget (ChatProvider ABC, artifact models, HTML bootstrap, provider factory)
+from pywry import (
+    ChatProvider, get_provider, build_chat_html,
+    ChatManager, ChatContext, SettingsItem,
+    ChatConfig, ChatMessage, ChatThread, ContentBlock,
+    CodeArtifact, HtmlArtifact, ImageArtifact, JsonArtifact,
+    MarkdownArtifact, PlotlyArtifact, TableArtifact,
+    TradingViewArtifact, TradingViewSeries,
+    # Session / update types
+    PlanEntry, SessionConfigOption, SessionMode,
+    AgentMessageUpdate, ArtifactUpdate, CitationUpdate, CommandsUpdate,
+    ConfigOptionUpdate, ModeUpdate, PlanUpdate, StatusUpdate,
+    ThinkingUpdate, ToolCallUpdate,
+    # ACP command payloads
+    ACPCommand, ACPToolCall,
+)
+# Concrete providers are imported from their modules:
+from pywry.chat.providers.openai import OpenAIProvider            # requires [openai]
+from pywry.chat.providers.anthropic import AnthropicProvider      # requires [anthropic]
+from pywry.chat.providers.magentic import MagenticProvider        # requires [magentic]
+from pywry.chat.providers.callback import CallbackProvider
+from pywry.chat.providers.stdio import StdioProvider              # requires [acp]
+from pywry.chat.providers.deepagent import DeepagentProvider      # requires [deepagent]
+
+# Native / Tauri proxies
+from pywry import MenuProxy, TrayProxy
+from pywry.window_proxy import WindowProxy
+from pywry.types import (
+    MenuConfig, MenuItemConfig, CheckMenuItemConfig, IconMenuItemConfig,
+    PredefinedMenuItemConfig, PredefinedMenuItemKind, SubmenuConfig,
+    TrayIconConfig, MouseButton, MouseButtonState,
+)
 
 # State mixins (for extending custom widgets)
 from pywry import GridStateMixin, PlotlyStateMixin, ToolbarStateMixin
@@ -204,8 +338,8 @@ from pywry.inline import show_plotly, show_dataframe, show_tvchart, block, stop_
 # Notebook detection
 from pywry import NotebookEnvironment, detect_notebook_environment, is_anywidget_available, should_use_inline_rendering
 
-# Widget classes (PyWryWidget for notebooks)
-from pywry import PyWryWidget, PyWryPlotlyWidget, PyWryAgGridWidget
+# Widget classes (anywidget)
+from pywry import PyWryWidget, PyWryPlotlyWidget, PyWryAgGridWidget, PyWryTVChartWidget
 
 # Widget protocol (for type checking and custom implementations)
 from pywry.widget_protocol import BaseWidget, NativeWindowHandle, is_base_widget
@@ -217,7 +351,7 @@ from pywry import BrowserMode, get_lifecycle
 from pywry import PyWrySettings, SecuritySettings, WindowSettings, ThemeSettings, HotReloadSettings, TimeoutSettings, AssetSettings, LogSettings
 
 # Settings (require full path import)
-from pywry.config import ServerSettings, DeploySettings
+from pywry.config import ServerSettings, DeploySettings, OAuth2Settings, ChatSettings
 
 # Asset loading
 from pywry import AssetLoader, get_asset_loader
@@ -229,7 +363,7 @@ from pywry import CallbackFunc, WidgetType, get_registry
 # Note: runtime is importable from pywry but not in __all__
 from pywry import runtime
 
-# State management (for deploy mode / horizontal scaling)
+# State management (for deploy mode / horizontal scaling / at-rest encryption)
 from pywry.state import (
     get_widget_store,
     get_event_bus,
@@ -243,6 +377,12 @@ from pywry.state import (
     ConnectionInfo,
     UserSession,
     StateBackend,
+)
+
+# OAuth2 authentication (public surface from pywry.auth)
+from pywry.auth import (
+    OAuthProvider, PKCEChallenge, TokenStore,
+    AuthFlowManager, SessionManager, OAuthCallbackServer,
 )
 ```
 
@@ -618,11 +758,16 @@ Events follow the format `namespace:event-name`:
 
 | Namespace | Purpose |
 |-----------|---------|
-| `pywry:*` | System events (initialization, results) |
+| `pywry:*` | System events (initialization, results, theme, downloads, content updates) |
 | `plotly:*` | Plotly chart events |
 | `grid:*` | AgGrid table events |
-
-> **Note:** The `toolbar:` namespace is NOT reserved. Toolbar state response events use `toolbar:state-response` by convention.
+| `tvchart:*` | TradingView Lightweight Charts events (datafeed, drawings, layouts, settings) |
+| `chat:*` | Chat widget events (streaming updates, plans, permissions, modes, config) |
+| `toolbar:*` | Toolbar state (`toolbar:request-state`, `toolbar:set-value`, `toolbar:state-response`, …) |
+| `auth:*` | Authentication lifecycle (`auth:login`, `auth:logout`, `auth:state-change`) |
+| `tray:*` | System tray icon / menu events |
+| `menu:*` | Native window / app menu events |
+| `modal:*` | Modal open / close / submit events |
 
 ### Pre-Registered Events
 
@@ -684,6 +829,7 @@ Events follow the format `namespace:event-name`:
 | `pywry:ready` | Window/widget initialized | `{}` |
 | `pywry:result` | Data via `window.pywry.result()` | `any` |
 | `pywry:content-request` | Request content (load/reload) | `widget_type`, `window_label`, `reason` |
+| `pywry:theme-update` | System theme changed (OS follow mode) | `theme: "light" \| "dark"` |
 | `pywry:disconnect` | Widget disconnected (inline mode) | `{}` |
 
 **System Events (Python → JS):**
@@ -701,6 +847,66 @@ Events follow the format `namespace:event-name`:
 | `pywry:navigate` | Navigate to URL | `url` |
 | `pywry:alert` | Show toast notification | `message`, `type?`, `title?`, `duration?` |
 | `pywry:refresh` | Refresh window content | `{}` |
+
+**TradingView Events (JS → Python):**
+
+| Event | Trigger | Key Payload Fields |
+|-------|---------|-------------------|
+| `tvchart:crosshair` | Crosshair moved | `chartId`, `time`, `price`, `seriesId?` |
+| `tvchart:click` | Chart clicked | `chartId`, `time`, `price`, `seriesId?` |
+| `tvchart:visible-range-change` | User panned / zoomed | `chartId`, `from`, `to` |
+| `tvchart:data-settled` | All series rendered (first frame settled) | `chartId`, `widget_type: "tvchart"` |
+| `tvchart:datafeed-request` | Drawing-surface / UDF datafeed call | `chartId`, `kind`, `payload` |
+| `tvchart:datafeed-subscribe` | Subscribe to bar updates | `chartId`, `symbol`, `resolution`, `listenerGuid` |
+| `tvchart:datafeed-unsubscribe` | Unsubscribe from bar updates | `chartId`, `listenerGuid` |
+| `tvchart:drawing-change` | User added / edited / removed a drawing | `chartId`, `drawings` |
+| `tvchart:layout-save` | Layout saved | `chartId`, `name`, `layout` |
+| `tvchart:settings-update` | Settings panel changed | `chartId`, `settings` |
+
+**TradingView Events (Python → JS):**
+
+| Event | Description | Key Payload Fields |
+|-------|-------------|-------------------|
+| `tvchart:update-data` | Replace series data | `data`, `chartId?`, `seriesId?` |
+| `tvchart:append-bar` | Append or update the last bar | `bar`, `chartId?`, `seriesId?` |
+| `tvchart:datafeed-response` | Answer a datafeed request | `chartId`, `kind`, `payload` |
+| `tvchart:datafeed-bar-update` | Push streaming bar to subscribers | `chartId`, `listenerGuid`, `bar` |
+| `tvchart:apply-indicator` | Add / update an indicator | `chartId`, `indicator`, `seriesId?` |
+| `tvchart:set-visible-range` | Programmatic range change | `chartId`, `from`, `to` |
+| `tvchart:load-layout` | Restore a saved layout | `chartId`, `layout` |
+| `tvchart:apply-settings` | Apply settings panel state | `chartId`, `settings` |
+
+**Chat Events (JS → Python):**
+
+| Event | Trigger | Key Payload Fields |
+|-------|---------|-------------------|
+| `chat:user-message` | User sent a message | `threadId`, `message`, `content` |
+| `chat:cancel` | User cancelled a streaming response | `threadId` |
+| `chat:new-thread` | User requested a new thread | `{}` |
+| `chat:switch-thread` | User switched threads | `threadId` |
+| `chat:permission-response` | User answered a permission prompt | `requestId`, `outcome` |
+| `chat:config-set` | User changed a settings item | `optionId`, `value` |
+| `chat:mode-set` | User switched agent mode | `modeId` |
+| `chat:slash-command` | User ran a slash command | `command`, `args` |
+| `chat:context-request` | User opened a context source | `sourceId` |
+
+**Chat Events (Python → JS):**
+
+| Event | Description | Key Payload Fields |
+|-------|-------------|-------------------|
+| `chat:agent-message` | Streaming agent message delta | `threadId`, `delta`, `messageId` |
+| `chat:thinking` | Thinking / reasoning chunk | `threadId`, `delta` |
+| `chat:tool-call` | Tool call start / update / complete | `threadId`, `toolCallId`, `status`, `input?`, `output?` |
+| `chat:artifact` | Attach / update an artifact | `threadId`, `artifact` |
+| `chat:status` | Status string update | `threadId`, `status` |
+| `chat:plan-update` | Plan / todo list change | `threadId`, `plan` |
+| `chat:permission-request` | Prompt the user to approve/deny | `threadId`, `requestId`, `prompt`, `options` |
+| `chat:mode-update` | Available modes / active mode | `threadId`, `modes`, `active` |
+| `chat:config-update` | Available config options | `threadId`, `options` |
+| `chat:commands-update` | Available slash commands | `threadId`, `commands` |
+| `chat:citation` | Emit a citation | `threadId`, `citation` |
+
+> **Note:** Namespace events (`auth:*`, `tray:*`, `menu:*`, `modal:*`) follow the same pattern and are documented under their respective subsystems.
 
 ### Toast Notifications (`pywry:alert`)
 
@@ -1048,7 +1254,7 @@ app.emit("toolbar:set-values", {"values": {"select-1": "A", "toggle-1": True}}, 
 
 ### Tauri Plugins
 
-PyWry bundles 19 Tauri plugins via `pytauri_wheel`. By default, only `dialog` and `fs` are enabled. Developers can enable additional plugins through configuration — **no Rust compilation required**.
+PyWry bundles the full Tauri plugin set via `pytauri_wheel`. By default, only `dialog` and `fs` are enabled. Developers can enable additional plugins through configuration — **no Rust compilation required**.
 
 #### Enabling Plugins
 
@@ -1102,7 +1308,7 @@ export PYWRY_EXTRA_CAPABILITIES="shell:allow-execute"
 1. `PyWrySettings.tauri_plugins` holds the list of plugin names to activate
 2. The parent process passes this list to the subprocess via `PYWRY_TAURI_PLUGINS` env var
 3. In `__main__.py`, `_load_plugins()` dynamically imports each `pytauri_plugins.<name>` module and calls `.init()`
-4. The `capabilities/default.toml` pre-grants `<plugin>:default` permissions for all 19 plugins (unused permissions are harmless)
+4. The `capabilities/default.toml` pre-grants `<plugin>:default` permissions for every bundled plugin (unused permissions are harmless)
 5. For fine-grained permission control, use `extra_capabilities` to add specific permission strings (e.g., `shell:allow-execute`)
 
 Each plugin has a `PLUGIN_*` compile-time feature flag in `pytauri_plugins` that is checked before initialization. If a plugin is not compiled into the bundled `pytauri_wheel`, a clear `RuntimeError` is raised.
@@ -1287,6 +1493,175 @@ Deploy mode automatically mounts `/auth/login`, `/auth/callback`, `/auth/logout`
 ### Frontend Integration
 
 When authenticated, `window.__PYWRY_AUTH__` contains `{ user_id, roles, token_type }`. Use `window.pywry.auth.isAuthenticated()`, `.getState()`, `.login()`, `.logout()`, `.onAuthStateChange(cb)`.
+
+---
+
+## Chat Widget
+
+PyWry ships a streaming chat widget with a pluggable provider interface modelled on the Agent Client Protocol (ACP) session lifecycle: `initialize` → `new_session` → `prompt` loop → `cancel`.
+
+### Providers
+
+| Provider | Extra | Description |
+|----------|-------|-------------|
+| `OpenAIProvider` | `pywry[openai]` | OpenAI Responses / Chat Completions SDK |
+| `AnthropicProvider` | `pywry[anthropic]` | Anthropic Messages SDK (streaming) |
+| `MagenticProvider` | `pywry[magentic]` | magentic — any magentic-supported LLM |
+| `CallbackProvider` | *(base)* | Wraps a sync / async Python callback |
+| `StdioProvider` | `pywry[acp]` | Runs any ACP agent as a subprocess |
+| `DeepagentProvider` | `pywry[deepagent]` | LangChain Deep Agents with built-in MCP adapters and ACP bridging |
+
+Select a provider by name with the factory:
+
+```python
+from pywry.chat import get_provider
+
+provider = get_provider("anthropic", model="claude-opus-4-7", api_key="...")
+```
+
+### ChatManager
+
+```python
+from pywry import PyWry, ChatManager, build_chat_html
+
+app = PyWry()
+chat = ChatManager(provider=provider, app=app)
+html = build_chat_html()          # chat UI bootstrap
+handle = app.show(html, callbacks=chat.callbacks())
+app.block()
+```
+
+`ChatManager` owns:
+
+- **Threads** — persisted via the configured state backend; switched with `chat:switch-thread`.
+- **Artifacts** — `CodeArtifact`, `HtmlArtifact`, `ImageArtifact`, `JsonArtifact`, `MarkdownArtifact`, `PlotlyArtifact`, `TableArtifact`, `TradingViewArtifact`. Emitted via `chat:artifact`.
+- **Plan / todo updates** — `PlanEntry` list streamed via `chat:plan-update`.
+- **Permissions** — `chat:permission-request` prompts the UI; the user answer comes back on `chat:permission-response`.
+- **Modes / config / commands** — `chat:mode-update`, `chat:config-update`, `chat:commands-update` surface whatever the underlying provider advertises.
+- **Context sources** — register file / URL / custom sources that the user can attach to a prompt.
+
+### SettingsItem
+
+Settings appear in the chat settings panel and are round-tripped via `chat:config-update` / `chat:config-set`. They support text / select / toggle / secret inputs, validation, and per-option `help`.
+
+---
+
+## TradingView Charts
+
+`pywry.tvchart` wraps TradingView Lightweight Charts with a full drawing surface, pluggable datafeed API, UDF adapter, streaming bar updates, compare overlays, compare-derivative indicators, savable layouts, and a themeable settings panel.
+
+### Quick Start
+
+```python
+import pandas as pd
+from pywry import PyWry, TVChartConfig
+
+app = PyWry()
+df = pd.DataFrame(...)  # columns: time / open / high / low / close / volume
+app.show_tvchart(df, title="AAPL — Daily")
+app.block()
+```
+
+### Datafeed API
+
+Implement `DatafeedProvider` to drive the chart from a quote server or any async source:
+
+```python
+from pywry.tvchart import (
+    DatafeedProvider,
+    TVChartDatafeedHistoryRequest,
+    TVChartDatafeedHistoryResponse,
+    TVChartDatafeedResolveRequest,
+    TVChartDatafeedResolveResponse,
+)
+
+class MyDatafeed(DatafeedProvider):
+    async def resolve_symbol(self, req: TVChartDatafeedResolveRequest) -> TVChartDatafeedResolveResponse:
+        ...
+    async def get_history(self, req: TVChartDatafeedHistoryRequest) -> TVChartDatafeedHistoryResponse:
+        ...
+    # search_symbols, get_marks, get_timescale_marks, get_server_time, subscribe_bars, unsubscribe_bars
+
+app.show_tvchart(datafeed=MyDatafeed(), symbol="AAPL", resolution="1D")
+```
+
+### UDFAdapter
+
+Point the chart at any TradingView UDF-compatible HTTP endpoint:
+
+```python
+from pywry.tvchart import UDFAdapter
+
+adapter = UDFAdapter(base_url="https://demo_feed.tradingview.com")
+app.show_tvchart(datafeed=adapter, symbol="AAPL", resolution="1D")
+```
+
+### Indicators, Compare, Drawings
+
+- **Indicators** — overlay any Lightweight Charts indicator; compare-derivative indicators (`Spread`, `Ratio`, `Sum`, `Product`, `Correlation`) are computed across overlays.
+- **Drawings** — trendlines, fib tools, text annotations, price notes, and brushes. All round-trip through `tvchart:drawing-change` and are persisted with layouts.
+- **Layouts** — save the current chart (series, overlays, indicators, drawings, settings) with `tvchart:layout-save`; restore with `tvchart:load-layout`.
+
+### TVChartStateMixin
+
+The Python-side chart state surface is exposed via `TVChartStateMixin`, which is mixed into `PyWry`, `PyWryTVChartWidget`, and any user-defined widget that wants chart control.
+
+---
+
+## MCP Server
+
+PyWry ships an MCP server that exposes widget management, chart / grid / tvchart control, events, chat driving, auth, and skills to any MCP client (Claude Desktop, Claude Code, Cursor, …).
+
+### Launching
+
+```bash
+pip install 'pywry[mcp]'
+
+pywry mcp --transport stdio                   # default, for Claude Desktop / Claude Code
+pywry mcp --transport http --host 0.0.0.0     # HTTP transport
+pywry mcp install                             # write client config (interactive)
+```
+
+### Skills
+
+Each skill bundles tools + prompts + reference docs for a coherent area. Current skills:
+
+- `authentication` — OAuth2 flows and token management
+- `autonomous_building` — long-running "build this dashboard" loops
+- `chat` — low-level chat widget control
+- `chat_agent` — drive a running chat session (select mode, send a prompt, observe)
+- `component_reference` — Pydantic toolbar components with live previews
+- `css_selectors` — `--pywry-*` variables and selector crib sheet
+- `data_visualization` — Plotly / AgGrid / TradingView recipes
+- `deploy` — deploy-mode scaling and state backend choices
+- `events` — Python ↔ JS event catalogue
+- `forms_and_inputs` — toolbar-driven form recipes
+- `iframe` — notebook / browser / inline quirks
+- `interactive_buttons` — button-centric patterns
+- `jupyter` — anywidget + iframe behaviour in notebooks
+- `modals` — `Modal` toolbar component recipes
+- `native` — native-only features (menus, tray, dialogs, `WindowProxy`)
+- `styling` — CSS variables, theming, hot reload
+- `tvchart` — TradingView datafeed, UDF, drawings, indicators, layouts
+
+### Tools
+
+Tools are grouped under `widget_*`, `component_*`, `chart_*`, `grid_*`, `tvchart_*`, `chat_*`, `auth_*`, `events_*`, and `docs_*`. The low-level `send_event` tool dispatches any namespaced event directly.
+
+---
+
+## State Backends
+
+PyWry's state layer powers deploy mode, notebook / browser mode, and any multi-window / multi-worker setup. The same `WidgetStore` / `EventBus` / `ConnectionRouter` / `SessionStore` ABCs are implemented by every backend.
+
+| Backend | Use case | Notes |
+|---------|----------|-------|
+| `memory` (default) | Single-process, development, notebooks | No external deps |
+| `file` | Single-node persistence without a DB | JSON on disk |
+| `sqlite` | Single-node with at-rest encryption | `pywry[sqlite]` (SQLCipher); keyed by `PYWRY_DEPLOY__SQLITE_KEY` |
+| `redis` | Multi-worker / horizontally scaled | `redis >= 7.1.0` (client ships in base install) |
+
+Select a backend via `PYWRY_DEPLOY__STATE_BACKEND`, `pywry.toml` `[deploy]`, or `DeploySettings(state_backend=...)`.
 
 ---
 
@@ -1513,7 +1888,7 @@ Events include `widget_type` for identification:
 
 ## CSS Theming
 
-PyWry provides 60+ CSS variables for comprehensive customization, plus component ID targeting for precise styling.
+PyWry is themed through `--pywry-*` CSS variables, with component-ID targeting for precise styling. The full variable reference lives in the [CSS docs](https://deeleeramone.github.io/PyWry/reference/css/).
 
 ### Theme Classes
 
@@ -1606,8 +1981,8 @@ Target in CSS: `#save-btn { background: green; }` or `[data-event="app:save"] { 
 ### Setup
 
 ```bash
-git clone https://github.com/OpenBB-finance/OpenBB.git
-cd pywry
+git clone https://github.com/deeleeramone/PyWry.git
+cd PyWry/pywry
 python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate on Windows
 uv sync --all-extras --group dev

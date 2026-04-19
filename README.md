@@ -114,7 +114,7 @@ app.block()
 - **Toolbar components** — `Button`, `Select`, `MultiSelect`, `TextInput`, `SecretInput`, `SliderInput`, `RangeInput`, `Toggle`, `Checkbox`, `RadioGroup`, `TabGroup`, `Marquee`, `Modal`, and more.  All Pydantic models; position them around the content edges or inside the chart area.
 - **Two-way events** — `app.emit()` and `app.on()` bridge Python and JavaScript in both directions.  Pre-wired Plotly and AgGrid events included.
 - **Chat** — streaming chat widget with threads, slash commands, artifacts, and pluggable providers: `OpenAIProvider`, `AnthropicProvider`, `MagenticProvider`, `CallbackProvider`, `StdioProvider` (ACP subprocess), and `DeepagentProvider` (LangChain Deep Agents).
-- **TradingView charts** — Lightweight Charts integration with a yFinance-compatible datafeed, drawings, compare overlays, compare-derivative indicators (Spread / Ratio / Sum / Product / Correlation), and savable layouts.
+- **TradingView charts** — extended Lightweight Charts integration with a full drawing surface (trendlines, fib tools, text annotations, price notes, brushes), pluggable datafeed API, UDF adapter for external quote servers, streaming bar updates, compare overlays, compare-derivative indicators (Spread / Ratio / Sum / Product / Correlation), savable layouts, and a themeable settings panel.
 - **Theming** — light / dark / system modes, themeable via `--pywry-*` CSS variables, hot reload during development.
 - **Security** — token auth, CSP headers, `SecuritySettings.strict()` / `.permissive()` / `.localhost()` presets.  `SecretInput` stores values server-side, never in HTML.
 - **State backends** — in-memory (default), Redis (multi-worker), or SQLite with SQLCipher encryption at rest.
