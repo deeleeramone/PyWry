@@ -20,18 +20,28 @@ Python 3.10–3.14, virtual environment recommended.
 pip install pywry
 ```
 
+Core extras:
+
 | Extra | When to use |
 |-------|-------------|
 | `pip install 'pywry[notebook]'` | Jupyter / anywidget integration |
 | `pip install 'pywry[auth]'` | OAuth2 and keyring-backed auth support |
 | `pip install 'pywry[freeze]'` | PyInstaller hook for standalone executables |
 | `pip install 'pywry[mcp]'` | Model Context Protocol server support |
-| `pip install 'pywry[openai]'` | `OpenAIProvider` integration |
-| `pip install 'pywry[anthropic]'` | `AnthropicProvider` integration |
-| `pip install 'pywry[magentic]'` | `MagenticProvider` integration |
+| `pip install 'pywry[sqlite]'` | Encrypted SQLite state backend (SQLCipher) |
 | `pip install 'pywry[all]'` | Everything above |
 
-The chat UI itself is included in the base package. The provider extras only install optional third-party SDKs.
+Chat provider extras:
+
+| Extra | When to use |
+|-------|-------------|
+| `pip install 'pywry[openai]'` | `OpenAIProvider` (OpenAI SDK) |
+| `pip install 'pywry[anthropic]'` | `AnthropicProvider` (Anthropic SDK) |
+| `pip install 'pywry[magentic]'` | `MagenticProvider` (any magentic-supported LLM) |
+| `pip install 'pywry[acp]'` | `StdioProvider` (Agent Client Protocol subprocess) |
+| `pip install 'pywry[deepagent]'` | `DeepagentProvider` (LangChain Deep Agents — includes MCP adapters and ACP) |
+
+The chat UI itself is included in the base package.  Provider extras only install the matching third-party SDK.
 
 **Linux only** — install system webview dependencies first:
 
@@ -101,12 +111,15 @@ app.block()
 
 ## Features
 
-- **18 toolbar components** — `Button`, `Select`, `MultiSelect`, `TextInput`, `SecretInput`, `SliderInput`, `RangeInput`, `Toggle`, `Checkbox`, `RadioGroup`, `TabGroup`, `Marquee`, `Modal`, and more. All Pydantic models, 7 layout positions.
-- **Two-way events** — `app.emit()` and `app.on()` bridge Python and JavaScript in both directions. Pre-wired Plotly and AgGrid events included.
-- **Theming** — light/dark modes, 60+ CSS variables, hot reload during development.
-- **Security** — token auth, CSP headers, `SecuritySettings.strict()` / `.permissive()` / `.localhost()` presets. `SecretInput` stores values server-side, never in HTML.
-- **Standalone executables** — PyInstaller hook ships with `pywry[freeze]`. No `.spec` edits or `--hidden-import` flags required.
-- **MCP server** — 25 tools, 8 skills, 20+ resources for AI agent integration.
+- **Toolbar components** — `Button`, `Select`, `MultiSelect`, `TextInput`, `SecretInput`, `SliderInput`, `RangeInput`, `Toggle`, `Checkbox`, `RadioGroup`, `TabGroup`, `Marquee`, `Modal`, and more.  All Pydantic models; position them around the content edges or inside the chart area.
+- **Two-way events** — `app.emit()` and `app.on()` bridge Python and JavaScript in both directions.  Pre-wired Plotly and AgGrid events included.
+- **Chat** — streaming chat widget with threads, slash commands, artifacts, and pluggable providers: `OpenAIProvider`, `AnthropicProvider`, `MagenticProvider`, `CallbackProvider`, `StdioProvider` (ACP subprocess), and `DeepagentProvider` (LangChain Deep Agents).
+- **TradingView charts** — Lightweight Charts integration with a yFinance-compatible datafeed, drawings, compare overlays, compare-derivative indicators (Spread / Ratio / Sum / Product / Correlation), and savable layouts.
+- **Theming** — light / dark / system modes, themeable via `--pywry-*` CSS variables, hot reload during development.
+- **Security** — token auth, CSP headers, `SecuritySettings.strict()` / `.permissive()` / `.localhost()` presets.  `SecretInput` stores values server-side, never in HTML.
+- **State backends** — in-memory (default), Redis (multi-worker), or SQLite with SQLCipher encryption at rest.
+- **Standalone executables** — PyInstaller hook ships with `pywry[freeze]`.  No `.spec` edits or `--hidden-import` flags required.
+- **MCP server** — drive widgets, charts, and dashboards from any Model Context Protocol client (Claude Desktop, Claude Code, Cursor, etc.).
 
 ## MCP Server
 
