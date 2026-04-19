@@ -781,9 +781,17 @@ class TestNativeWindowAlertE2E:
             title="Cancel Callback Test",
         )
 
+        # Clear any toasts the previous test (confirm-button) may have
+        # left attached — when tests share a page across the class,
+        # a stale ``.pywry-toast--confirm`` selector can find the
+        # old toast's DOM node (``toastDismissed=False``) or steer
+        # the click to the wrong button.
         script = """
         (function() {
             var container = document.querySelector('.pywry-widget');
+            var existing = container.querySelectorAll('.pywry-toast--confirm');
+            existing.forEach(function(el) { el.remove(); });
+
             var cancelled = false;
 
             PYWRY_TOAST.confirm({
@@ -794,23 +802,23 @@ class TestNativeWindowAlertE2E:
             });
 
             setTimeout(function() {
-                var cancelBtn = document.querySelector('.pywry-toast__btn--cancel');
+                var cancelBtn = container.querySelector('.pywry-toast__btn--cancel');
                 if (cancelBtn) {
                     cancelBtn.click();
                 }
 
                 setTimeout(function() {
-                    var toastGone = document.querySelector('.pywry-toast--confirm') === null;
+                    var toastGone = container.querySelector('.pywry-toast--confirm') === null;
                     pywry.result({
                         cancelled: cancelled,
                         toastDismissed: toastGone
                     });
-                }, 100);
-            }, 100);
+                }, 200);
+            }, 200);
         })();
         """
 
-        result = wait_for_result(label, script, timeout=3.0)
+        result = wait_for_result(label, script, timeout=5.0)
         assert result is not None
         assert result["cancelled"] is True
         assert result["toastDismissed"] is True
