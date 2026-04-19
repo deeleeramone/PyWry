@@ -19,7 +19,7 @@ Skills are **lazy-loaded** from markdown files on disk and cached in memory (LRU
 
 | ID | Priority | What it teaches |
 |:---|:---|:---|
-| `component_reference` | **Mandatory** | All 18 components — property tables, event signatures, JSON schemas, auto-wired actions, toolbar structure, event format rules |
+| `component_reference` | **Mandatory** | Every toolbar component — property tables, event signatures, JSON schemas, auto-wired actions, toolbar structure, event format rules |
 | `interactive_buttons` | High | The `elementId:action` auto-wiring pattern for buttons (increment, decrement, reset, toggle) |
 | `autonomous_building` | High | End-to-end app generation — `plan_widget`, `build_app`, `export_project`, `scaffold_app` workflows and chaining patterns |
 | `native` | Medium | Desktop native window mode — full-viewport layout, system integration, window management |
@@ -41,7 +41,7 @@ Skills are **lazy-loaded** from markdown files on disk and cached in memory (LRU
 
 The `component_reference` skill is special — it's the **authoritative source** for all toolbar component definitions. It contains:
 
-- Property tables for all 18 component types
+- Property tables for every component type
 - Event payload signatures for each component
 - JSON schema examples for tool call construction
 - Auto-wired action documentation

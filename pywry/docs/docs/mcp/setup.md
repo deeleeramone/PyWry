@@ -297,10 +297,10 @@ The command copies skill markdown files from PyWry's bundled `pywry/mcp/skills/`
 
 ## Verifying the Setup
 
-1. Restart Claude Desktop after editing the config
-2. Open a new conversation
+1. Restart Claude Desktop after editing the config.
+2. Open a new conversation.
 3. Ask: *"What PyWry tools do you have available?"*
-5. Claude should list 38 tools
+4. Claude should list the tool groups (discovery, widget creation, widget manipulation, widget management, chat, TVChart, resources / export, autonomous building) and be able to call `get_skills` to retrieve the component reference.
 
 You can also test manually:
 

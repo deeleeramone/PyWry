@@ -1,12 +1,10 @@
 # Tools Reference
 
-The MCP server exposes **38 tools** organized into eight groups.
-Every description, parameter name, type, and default below comes directly from the tool schemas in the source code.
+The MCP server groups tools by purpose: discovery, widget creation, widget manipulation, widget management, chat, TVChart manipulation, resources / export, and autonomous building.  Every description, parameter name, type, and default below comes directly from the tool schemas in the source code.
 
 !!! warning "Mandatory first step"
     Call `get_skills` with `skill="component_reference"` **before** creating any widget.
-    The component reference is the authoritative source for event signatures,
-    system events, and JSON schemas for all 18 toolbar component types.
+    The component reference is the authoritative source for every toolbar component's event signature, system events, and JSON schema.
 
 ---
 
@@ -104,7 +102,7 @@ Toolbar events that are **not** covered by an explicit `callbacks` entry are sti
   "position": "top",        // top | bottom | left | right | inside
   "items": [
     {
-      "type": "button",     // any of the 18 component types
+      "type": "button",     // any toolbar component type
       "label": "Save",
       "event": "app:save",  // namespace:action (avoid pywry/plotly/grid namespaces)
       "variant": "primary", // primary | neutral | danger | success
@@ -872,9 +870,11 @@ Destroy a widget and clean up all associated resources (event buffers, callbacks
 
 ---
 
-## send_event
+## Low-level event dispatch
 
-The low-level escape hatch. Send **any** event type to a widget's frontend. This is the same mechanism all the manipulation tools use internally — `set_content` emits `pywry:set-content`, `show_toast` emits `pywry:alert`, etc.
+### send_event
+
+The low-level escape hatch.  Send any event type to a widget's frontend.  Every manipulation tool above uses this mechanism internally — `set_content` emits `pywry:set-content`, `show_toast` emits `pywry:alert`, etc.
 
 | Parameter | Type | Required | Description |
 |:---|:---|:---|:---|

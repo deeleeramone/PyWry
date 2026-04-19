@@ -74,9 +74,9 @@ The MCP server bridges AI agents and PyWry's rendering engine:
 ```mermaid
 flowchart LR
     A["AI Agent<br>(Claude, etc.)"] <-->|"MCP Protocol<br>(stdio / SSE)"| B["PyWry MCP Server"]
-    B --> C["Tools<br>38 widget operations"]
+    B --> C["Tools<br>Widget + chart operations"]
     B --> D["Resources<br>Docs, source, exports"]
-    B --> E["Skills<br>13 guidance prompts"]
+    B --> E["Skills<br>Guidance prompts"]
     C --> F["PyWry Widgets<br>(native or browser)"]
     D --> B
     E --> B
@@ -126,7 +126,7 @@ Read-only data the agent can access via `pywry://` URIs:
 |:---|:---|
 | `pywry://docs/events` | Built-in events reference |
 | `pywry://docs/quickstart` | Getting started guide |
-| `pywry://component/{name}` | Component documentation (18 components) |
+| `pywry://component/{name}` | Component documentation |
 | `pywry://source/{name}` | Component Python source code |
 | `pywry://source/components` | All component sources combined |
 | `pywry://skill/{id}` | Skill guidance text |
@@ -134,11 +134,11 @@ Read-only data the agent can access via `pywry://` URIs:
 
 ### Prompts (Skills)
 
-13 guidance prompts that teach the agent how to use PyWry effectively:
+Guidance prompts that teach the agent how to use PyWry effectively:
 
 | Skill | What it teaches |
 |:---|:---|
-| `component_reference` | **Mandatory** — all 18 components, properties, events, JSON schemas |
+| `component_reference` | **Mandatory** — every component's properties, events, and JSON schema |
 | `interactive_buttons` | Auto-wired `elementId:action` callback pattern |
 | `native` | Desktop window mode, full-viewport layout |
 | `jupyter` | Notebook integration — AnyWidget and IFrame approaches |
@@ -150,6 +150,10 @@ Read-only data the agent can access via `pywry://` URIs:
 | `forms_and_inputs` | Form building with validation and event collection |
 | `modals` | Modal dialogs — schema, sizes, open/close/reset |
 | `chat` | Conversational chat widget — streaming, threads, slash commands, providers |
+| `chat_agent` | Operating inside a running chat widget — `@<name>` attachments, tool-call cards, reply style |
+| `authentication` | OAuth2 / OIDC sign-in (Google, GitHub, Microsoft, custom) and RBAC wiring |
+| `tvchart` | Driving a TradingView chart — symbols, intervals, indicators, markers, compares, layouts |
+| `events` | PyWry event bus — namespaced `ns:name`, widget routing, request/response correlation |
 | `autonomous_building` | End-to-end app generation with `plan_widget`, `build_app`, `export_project`, `scaffold_app` |
 
 ## Next Steps

@@ -204,6 +204,9 @@ Available providers:
 | `MagenticProvider` | Any magentic-supported LLM | `pip install 'pywry[magentic]'` |
 | `CallbackProvider` | Your own Python callable | (included) |
 | `StdioProvider` | External ACP agent via subprocess | `pip install 'pywry[acp]'` |
+| `DeepagentProvider` | LangChain Deep Agents (planning, MCP tools, skills) | `pip install 'pywry[deepagent]'` |
+
+See [Chat Providers](../../integrations/chat/chat-providers.md) for the reference API of each provider.
 
 The `StdioProvider` is special — it spawns an external program (like `claude` or `gemini`) as a subprocess and communicates over stdin/stdout using JSON-RPC. This means you can connect PyWry's chat UI to any ACP-compatible agent without writing any adapter code.
 

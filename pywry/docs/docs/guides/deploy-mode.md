@@ -170,6 +170,20 @@ python my_app.py
 
 Redis key structure: `{prefix}:widget:{widget_id}` (hash), `{prefix}:widgets:active` (set of active IDs).
 
+### SQLite
+
+Widget and session state is persisted to a local SQLite database file.  Suitable for single-host multi-worker deployments that don't want a Redis dependency.
+
+```bash
+PYWRY_DEPLOY__STATE_BACKEND=sqlite \
+PYWRY_DEPLOY__SQLITE_PATH=~/.config/pywry/pywry.db \
+python my_app.py
+```
+
+- State persists across restarts on the same host.
+- Multiple workers on one host can share the database via WAL journal mode.
+- **Encrypted at rest via SQLCipher** when `pywry[sqlite]` is installed.  The encryption key is sourced from `PYWRY_SQLITE_KEY` if set, otherwise from the OS keyring (`keyring`), otherwise derived from a per-host salt file.  Falls back to plain SQLite (with a warning) when the `sqlcipher3` binding isn't available.
+
 ## Detecting Deploy Mode
 
 ```python
