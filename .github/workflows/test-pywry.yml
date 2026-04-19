@@ -44,15 +44,21 @@ jobs:
       - name: Build SQLCipher from source (Linux)
         run: |
           for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
-          sudo apt-get install -y --fix-missing build-essential tcl libssl-dev
+          # ``tcl`` intentionally omitted — SQLCipher's Tcl extension
+          # isn't needed for the ``sqlcipher3`` Python binding, and
+          # modern Tcl bottles (9.0 on macOS) break the upstream
+          # ``tclsqlite.c`` compile.  ``--disable-tcl`` makes
+          # configure skip the extension.
+          sudo apt-get install -y --fix-missing build-essential libssl-dev
           git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
           cd /tmp/sqlcipher
           ./configure \
+            --disable-tcl \
             --enable-tempstore=yes \
             CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL" \
             LDFLAGS="-lcrypto"
-          make -j$(nproc)
-          sudo make install
+          make -j$(nproc) libsqlcipher.la || make -j$(nproc)
+          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
           sudo ldconfig
 
       - name: Install dependencies
@@ -136,7 +142,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
-          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev build-essential tcl libssl-dev && break || { sleep 30; sudo apt-get update; }; done
+          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev build-essential libssl-dev && break || { sleep 30; sudo apt-get update; }; done
 
       - name: Build SQLCipher from source (Linux)
         if: runner.os == 'Linux'
@@ -145,34 +151,45 @@ jobs:
           # Build from the upstream source (https://github.com/sqlcipher/sqlcipher)
           # so the ``sqlcipher3`` Python package's setup.py links
           # against a known-good library on every Python ABI —
-          # binary wheels stop at Python 3.13.
+          # binary wheels stop at Python 3.13.  ``--disable-tcl``
+          # skips the Tcl extension (not needed by the Python
+          # binding, and modern Tcl bottles break its compile).
           git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
           cd /tmp/sqlcipher
           ./configure \
+            --disable-tcl \
             --enable-tempstore=yes \
             CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL" \
             LDFLAGS="-lcrypto"
-          make -j$(nproc)
-          sudo make install
+          make -j$(nproc) libsqlcipher.la || make -j$(nproc)
+          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
           sudo ldconfig
 
       - name: Build SQLCipher from source (macOS)
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          brew install tcl-tk openssl@3
+          # Intentionally NOT installing ``tcl-tk`` from Homebrew:
+          # the current bottle is Tcl 9.0, whose headers drop the
+          # ``CONST`` macro and ``TCL_CHANNEL_VERSION_2``, so
+          # SQLCipher's ``tclsqlite.c`` (still Tcl-8 API) fails to
+          # compile.  SQLCipher's configure auto-disables the Tcl
+          # extension when no ``tclConfig.sh`` is on the usual
+          # search paths — we only need the C library anyway; the
+          # ``sqlcipher3`` Python binding doesn't touch Tcl.
+          brew install openssl@3
           OPENSSL_PREFIX="$(brew --prefix openssl@3)"
           git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
           cd /tmp/sqlcipher
           ./configure \
+            --disable-tcl \
             --enable-tempstore=yes \
             CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL -I$OPENSSL_PREFIX/include" \
             LDFLAGS="-L$OPENSSL_PREFIX/lib -lcrypto"
-          make -j$(sysctl -n hw.logicalcpu)
-          sudo make install
-          # ``sqlcipher3`` picks up the headers via standard Homebrew
-          # paths; also surface them via env vars so the build can't
-          # miss them.
+          # Build only the library target — the default ``make`` tries
+          # to build the ``sqlcipher`` shell which links against Tcl.
+          make -j$(sysctl -n hw.logicalcpu) libsqlcipher.la || make -j$(sysctl -n hw.logicalcpu)
+          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
           echo "LDFLAGS=-L/usr/local/lib -L$OPENSSL_PREFIX/lib -lsqlcipher -lcrypto" >> $GITHUB_ENV
           echo "CPPFLAGS=-I/usr/local/include -I/usr/local/include/sqlcipher -I$OPENSSL_PREFIX/include" >> $GITHUB_ENV
 
