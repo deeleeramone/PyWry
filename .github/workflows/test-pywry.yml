@@ -193,24 +193,22 @@ jobs:
           echo "LDFLAGS=-L/usr/local/lib -L$OPENSSL_PREFIX/lib -lsqlcipher -lcrypto" >> $GITHUB_ENV
           echo "CPPFLAGS=-I/usr/local/include -I/usr/local/include/sqlcipher -I$OPENSSL_PREFIX/include" >> $GITHUB_ENV
 
-      - name: Install SQLCipher via vcpkg (Windows)
-        if: runner.os == 'Windows'
+      - name: Install SQLCipher via vcpkg (Windows x64)
+        if: runner.os == 'Windows' && runner.arch != 'ARM64'
         shell: pwsh
         run: |
           # vcpkg builds SQLCipher from source using the same upstream
           # repo (https://github.com/sqlcipher/sqlcipher), just
           # packaged as an MSVC-friendly port so we don't have to wire
           # nmake + OpenSSL manually.  ``SQLCIPHER_PATH`` points
-          # ``sqlcipher3``'s setup.py at the install root.
+          # ``sqlcipher3``'s setup.py at the install root.  Skipped on
+          # arm64-windows: the transitive ``tcl`` port doesn't build
+          # there even with ``--allow-unsupported``, and the
+          # ``SqliteStateBackend`` handles the missing binding by
+          # falling back to plain SQLite.
           $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
-          $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
-          # ``--allow-unsupported`` is required on arm64-windows: the
-          # sqlcipher port pulls ``tcl`` for its test tooling, and
-          # tcl's port file marks ``windows & arm`` as unsupported.
-          # SQLCipher itself compiles fine on ARM64 — the tcl tests
-          # just won't run, which we don't need.
-          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet" --allow-unsupported
-          $sqlcipherDir = "$env:VCPKG_ROOT\installed\$triplet"
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:x64-windows"
+          $sqlcipherDir = "$env:VCPKG_ROOT\installed\x64-windows"
           echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
           echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV
           echo "LIB=$sqlcipherDir\lib;$env:LIB" >> $env:GITHUB_ENV

@@ -177,6 +177,15 @@ def _draw_two_point_script(tool: str) -> str:
 
 
 def _draw_single_point_script(tool: str) -> str:
+    # The ``text`` tool's canvas-click handler auto-opens
+    # ``_tvShowDrawingSettings`` (so the user can name the label
+    # immediately).  That flips ``entry._interactionLocked`` to
+    # true.  Leaving the overlay up leaks locked state into every
+    # subsequent test in the class-scoped fixture — test 39's
+    # ``assert lockedBefore is False`` then fails.  Close the
+    # drawing-settings overlay and any floating toolbar, then
+    # clear the lock flag defensively so the idle-chart contract
+    # holds.
     return (
         _DRAW_PIXEL_JS
         + "_tvSetDrawTool(cid, '"
@@ -186,7 +195,10 @@ def _draw_single_point_script(tool: str) -> str:
         + "if (!ds) { pywry.result({error:'no drawing state'}); return; }"
         + "var before = ds.drawings.length;"
         + "_dispatchDrawClick(ds, 0.4, 0.5);"
+        + "if (typeof _tvHideDrawingSettings === 'function') _tvHideDrawingSettings();"
+        + "if (typeof _tvHideFloatingToolbar === 'function') _tvHideFloatingToolbar();"
         + "_tvSetDrawTool(cid, 'cursor');"
+        + "if (entry) entry._interactionLocked = false;"
         + "pywry.result({"
         + "  count: ds.drawings.length,"
         + "  added: ds.drawings.length - before,"

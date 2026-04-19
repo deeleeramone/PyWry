@@ -112,17 +112,16 @@ jobs:
           echo "LDFLAGS=-L/usr/local/lib -L$OPENSSL_PREFIX/lib -lsqlcipher -lcrypto" >> $GITHUB_ENV
           echo "CPPFLAGS=-I/usr/local/include -I/usr/local/include/sqlcipher -I$OPENSSL_PREFIX/include" >> $GITHUB_ENV
 
-      - name: Install SQLCipher via vcpkg (Windows)
-        if: runner.os == 'Windows'
+      - name: Install SQLCipher via vcpkg (Windows x64)
+        if: runner.os == 'Windows' && runner.arch != 'ARM64'
         shell: pwsh
         run: |
+          # arm64-windows skipped: tcl (transitive port dep) doesn't
+          # build there under vcpkg; ``SqliteStateBackend`` handles
+          # missing ``sqlcipher3`` by falling back to plain SQLite.
           $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
-          $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
-          # ``--allow-unsupported`` needed on arm64-windows (tcl
-          # port dep is marked unsupported there; sqlcipher itself
-          # still compiles cleanly).
-          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet" --allow-unsupported
-          $sqlcipherDir = "$env:VCPKG_ROOT\installed\$triplet"
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:x64-windows"
+          $sqlcipherDir = "$env:VCPKG_ROOT\installed\x64-windows"
           echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
           echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV
           echo "LIB=$sqlcipherDir\lib;$env:LIB" >> $env:GITHUB_ENV
@@ -642,17 +641,16 @@ jobs:
           echo "LDFLAGS=-L/usr/local/lib -L$OPENSSL_PREFIX/lib -lsqlcipher -lcrypto" >> $GITHUB_ENV
           echo "CPPFLAGS=-I/usr/local/include -I/usr/local/include/sqlcipher -I$OPENSSL_PREFIX/include" >> $GITHUB_ENV
 
-      - name: Install SQLCipher via vcpkg (Windows)
-        if: runner.os == 'Windows'
+      - name: Install SQLCipher via vcpkg (Windows x64)
+        if: runner.os == 'Windows' && runner.arch != 'ARM64'
         shell: pwsh
         run: |
+          # arm64-windows skipped: tcl (transitive port dep) doesn't
+          # build there under vcpkg; ``SqliteStateBackend`` handles
+          # missing ``sqlcipher3`` by falling back to plain SQLite.
           $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
-          $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
-          # ``--allow-unsupported`` needed on arm64-windows (tcl
-          # port dep is marked unsupported there; sqlcipher itself
-          # still compiles cleanly).
-          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet" --allow-unsupported
-          $sqlcipherDir = "$env:VCPKG_ROOT\installed\$triplet"
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:x64-windows"
+          $sqlcipherDir = "$env:VCPKG_ROOT\installed\x64-windows"
           echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
           echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV
           echo "LIB=$sqlcipherDir\lib;$env:LIB" >> $env:GITHUB_ENV
