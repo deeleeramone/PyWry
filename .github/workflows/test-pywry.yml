@@ -44,8 +44,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
-          pip install ruff mypy pylint
+          pip install -e ".[notebook,auth,mcp,acp,deepagent,openai,anthropic,magentic]"
+          pip install ruff mypy pylint pytauri-wheel plotly pandas cryptography
 
       - name: Run Ruff linter
         run: ruff check pywry/ tests/
