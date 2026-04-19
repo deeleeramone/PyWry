@@ -577,9 +577,9 @@ def _build_plan_continuation_middleware() -> Any:
         return _plan_middleware_singleton
 
     try:
-        from langchain.agents.middleware import AgentMiddleware  # type: ignore[import-not-found]
-        from langchain.agents.middleware.types import hook_config  # type: ignore[import-not-found]
-        from langchain_core.messages import HumanMessage  # type: ignore[import-not-found]
+        from langchain.agents.middleware import AgentMiddleware
+        from langchain.agents.middleware.types import hook_config
+        from langchain_core.messages import HumanMessage
     except ImportError:
         logger.debug(
             "langchain agents middleware not importable; "
@@ -594,7 +594,7 @@ def _build_plan_continuation_middleware() -> Any:
         @hook_config(can_jump_to=["model"])
         def after_model(
             self,
-            state: dict[str, Any],
+            state: Any,
             runtime: Any,
         ) -> dict[str, Any] | None:
             next_step = _next_pending_plan_step(state)
@@ -699,7 +699,7 @@ def _build_inline_tool_call_middleware() -> Any:
         return _inline_tool_call_middleware_singleton
 
     try:
-        from langchain.agents.middleware import AgentMiddleware  # type: ignore[import-not-found]
+        from langchain.agents.middleware import AgentMiddleware
     except ImportError:
         logger.debug(
             "langchain agents middleware not importable; skipping InlineToolCallMiddleware install",
@@ -947,14 +947,14 @@ class DeepagentProvider(ChatProvider):
 
             backend = get_state_backend()
             if backend == StateBackend.REDIS:
-                from langgraph.checkpoint.redis import RedisSaver  # type: ignore[import-not-found]
+                from langgraph.checkpoint.redis import RedisSaver
 
                 from ...config import get_settings
 
                 return RedisSaver(get_settings().deploy.redis_url)
             if backend == StateBackend.SQLITE:
                 try:
-                    from langgraph.checkpoint.sqlite import SqliteSaver  # type: ignore
+                    from langgraph.checkpoint.sqlite import SqliteSaver
 
                     from ...config import get_settings
 
@@ -966,7 +966,7 @@ class DeepagentProvider(ChatProvider):
             logger.debug("Could not auto-configure checkpointer from state backend", exc_info=True)
 
         try:
-            from langgraph.checkpoint.memory import MemorySaver  # type: ignore[import-not-found]
+            from langgraph.checkpoint.memory import MemorySaver
 
             return MemorySaver()
         except ImportError:
@@ -975,7 +975,7 @@ class DeepagentProvider(ChatProvider):
 
     def _create_store(self) -> Any:
         try:
-            from langgraph.store.memory import InMemoryStore  # type: ignore[import-not-found]
+            from langgraph.store.memory import InMemoryStore
 
             return InMemoryStore()
         except ImportError:
@@ -993,7 +993,7 @@ class DeepagentProvider(ChatProvider):
         if not self._mcp_servers:
             return []
         try:
-            from langchain_mcp_adapters.client import (  # type: ignore[import-not-found]
+            from langchain_mcp_adapters.client import (
                 MultiServerMCPClient,
             )
         except ImportError:
@@ -1008,7 +1008,13 @@ class DeepagentProvider(ChatProvider):
             import asyncio as _asyncio
             import warnings as _warnings
 
-            client = MultiServerMCPClient(self._mcp_servers)
+            # ``MultiServerMCPClient``'s type signature expects a
+            # ``dict[str, StdioConnection | SSEConnection | ...]`` but
+            # the runtime accepts plain dicts that carry a
+            # ``transport`` key.  We keep ``_mcp_servers`` as
+            # ``dict[str, dict[str, Any]]`` so the ACP surface isn't
+            # coupled to the adapter's exported typed-dicts.
+            client = MultiServerMCPClient(self._mcp_servers)  # type: ignore[arg-type]
 
             def _get_tools() -> list[Any]:
                 # langchain-mcp-adapters <= 0.2.2 imports the deprecated
@@ -1082,7 +1088,7 @@ class DeepagentProvider(ChatProvider):
         return kwargs
 
     def _build_agent(self) -> Any:
-        from deepagents import create_deep_agent  # type: ignore[import-not-found]
+        from deepagents import create_deep_agent
 
         # Auto-create the checkpointer here too so callers that bypass
         # initialize() (e.g. building the agent eagerly before show()) still

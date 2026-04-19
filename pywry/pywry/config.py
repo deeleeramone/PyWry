@@ -75,7 +75,7 @@ def _load_toml_config() -> dict[str, Any]:
         return {}
 
     merged: dict[str, Any] = {}
-    toml_decode_error = getattr(tomllib, "TOMLDecodeError", ValueError)
+    toml_decode_error: type[BaseException] = getattr(tomllib, "TOMLDecodeError", ValueError)
 
     for config_file in _find_config_files():
         try:

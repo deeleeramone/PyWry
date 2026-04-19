@@ -434,8 +434,8 @@ def _get_widget_or_error(widget_id: str | None) -> tuple[Any | None, HandlerResu
     self-correct.
     """
     resolved_id, error = _resolve_widget_id(widget_id)
-    if error:
-        return None, error
+    if error is not None or resolved_id is None:
+        return None, error or {"error": "widget_id could not be resolved."}
     widget = get_widget(resolved_id)
     if not widget:
         ids = list_widget_ids()
@@ -503,7 +503,7 @@ def _wait_for_data_settled(
     """
     import threading as _threading
 
-    result: dict[str, Any] = {"payload": None}
+    result: dict[str, dict[str, Any] | None] = {"payload": None}
     done = _threading.Event()
 
     def _listener(data: Any, _event_type: str = "", _label: str = "") -> None:
@@ -620,8 +620,8 @@ def _emit_tvchart(
     """Shared helper: resolve widget, emit event, return a uniform result."""
     widget_id = ctx.args.get("widget_id")
     resolved_id, error = _resolve_widget_id(widget_id)
-    if error:
-        return error
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
     widget = get_widget(resolved_id)
     if not widget:
         ids = list_widget_ids()
@@ -796,8 +796,8 @@ def _handle_tvchart_show_indicators(ctx: HandlerContext) -> HandlerResult:
 def _handle_tvchart_symbol_search(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     resolved_id, error = _resolve_widget_id(widget_id)
-    if error:
-        return error
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
     widget = get_widget(resolved_id)
     if not widget:
         return {"error": f"Widget not found: {resolved_id}."}
@@ -901,8 +901,8 @@ def _snapshot_compare_set(widget: Any) -> set[str]:
 def _handle_tvchart_compare(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     resolved_id, error = _resolve_widget_id(widget_id)
-    if error:
-        return error
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
     widget = get_widget(resolved_id)
     if not widget:
         return {"error": f"Widget not found: {resolved_id}."}
@@ -966,8 +966,8 @@ def _handle_tvchart_compare(ctx: HandlerContext) -> HandlerResult:
 def _handle_tvchart_change_interval(ctx: HandlerContext) -> HandlerResult:
     widget_id = ctx.args.get("widget_id")
     resolved_id, error = _resolve_widget_id(widget_id)
-    if error:
-        return error
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
     widget = get_widget(resolved_id)
     if not widget:
         return {"error": f"Widget not found: {resolved_id}."}
@@ -1061,8 +1061,8 @@ def _emit_zoom_and_confirm(
     """
     widget_id = ctx.args.get("widget_id")
     resolved_id, error = _resolve_widget_id(widget_id)
-    if error:
-        return error
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
     widget = get_widget(resolved_id)
     if not widget:
         return {"error": f"Widget not found: {resolved_id}."}
@@ -1415,8 +1415,8 @@ def _handle_send_event(ctx: HandlerContext) -> HandlerResult:
         return {"error": "event_type is required (e.g. 'tvchart:symbol-search')."}
     widget_id = ctx.args.get("widget_id")
     resolved_id, error = _resolve_widget_id(widget_id)
-    if error:
-        return error
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
     widget = get_widget(resolved_id)
     if not widget:
         ids = list_widget_ids()
@@ -1452,22 +1452,26 @@ def _handle_list_widgets(ctx: HandlerContext) -> HandlerResult:
 
 
 def _handle_get_events(ctx: HandlerContext) -> HandlerResult:
-    widget_id = ctx.args.get("widget_id")
-    widget_events = ctx.events.get(widget_id, [])
+    resolved_id, error = _resolve_widget_id(ctx.args.get("widget_id"))
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
+    widget_events = ctx.events.get(resolved_id, [])
     if ctx.args.get("clear", False):
-        ctx.events[widget_id] = []
-    return {"widget_id": widget_id, "events": widget_events}
+        ctx.events[resolved_id] = []
+    return {"widget_id": resolved_id, "events": widget_events}
 
 
 def _handle_destroy_widget(ctx: HandlerContext) -> HandlerResult:
-    widget_id = ctx.args.get("widget_id")
-    ctx.events.pop(widget_id, None)
-    remove_widget(widget_id)
+    resolved_id, error = _resolve_widget_id(ctx.args.get("widget_id"))
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
+    ctx.events.pop(resolved_id, None)
+    remove_widget(resolved_id)
     if ctx.headless:
         from ..inline import _state as inline_state
 
-        inline_state.widgets.pop(widget_id, None)
-    return {"widget_id": widget_id, "destroyed": True}
+        inline_state.widgets.pop(resolved_id, None)
+    return {"widget_id": resolved_id, "destroyed": True}
 
 
 # =============================================================================
@@ -1496,7 +1500,10 @@ def _handle_get_component_source(ctx: HandlerContext) -> HandlerResult:
 
 
 def _handle_export_widget(ctx: HandlerContext) -> HandlerResult:
-    widget_id = ctx.args.get("widget_id")
+    resolved_id, error = _resolve_widget_id(ctx.args.get("widget_id"))
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
+    widget_id = resolved_id
     code = export_widget_code(widget_id)
     if not code:
         return {"error": f"Widget not found or no config stored: {widget_id}"}
@@ -1651,11 +1658,13 @@ def _handle_create_chat_widget(ctx: HandlerContext) -> HandlerResult:
 
 
 def _handle_chat_send_message(ctx: HandlerContext) -> HandlerResult:
-    widget_id = ctx.args.get("widget_id")
-    widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    resolved_id, error = _resolve_widget_id(ctx.args.get("widget_id"))
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
+    widget, werror = _get_widget_or_error(resolved_id)
+    if werror is not None or widget is None:
+        return werror or {"error": f"Widget not found: {resolved_id}."}
+    widget_id = resolved_id
 
     text = ctx.args["text"]
     thread_id = ctx.args.get("thread_id")
@@ -1695,7 +1704,10 @@ def _handle_chat_send_message(ctx: HandlerContext) -> HandlerResult:
 
 
 def _handle_chat_stop_generation(ctx: HandlerContext) -> HandlerResult:
-    widget_id = ctx.args.get("widget_id")
+    resolved_id, error = _resolve_widget_id(ctx.args.get("widget_id"))
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
+    widget_id = resolved_id
     thread_id = ctx.args.get("thread_id")
 
     widget_gens = _active_generations.get(widget_id, {})
@@ -1733,15 +1745,17 @@ def _handle_chat_stop_generation(ctx: HandlerContext) -> HandlerResult:
 
 
 def _handle_chat_manage_thread(ctx: HandlerContext) -> HandlerResult:
-    widget_id = ctx.args.get("widget_id")
+    resolved_id, error = _resolve_widget_id(ctx.args.get("widget_id"))
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
+    widget_id = resolved_id
     action = ctx.args["action"]
     thread_id = ctx.args.get("thread_id")
     title = ctx.args.get("title", "New Chat")
 
-    widget, error = _get_widget_or_error(widget_id)
-    if error:
-        return error
-    assert widget is not None
+    widget, werror = _get_widget_or_error(widget_id)
+    if werror is not None or widget is None:
+        return werror or {"error": f"Widget not found: {widget_id}."}
 
     handlers = {
         "create": _thread_create,
@@ -1845,7 +1859,10 @@ def _handle_chat_register_command(ctx: HandlerContext) -> HandlerResult:
 
 
 def _handle_chat_get_history(ctx: HandlerContext) -> HandlerResult:
-    widget_id = ctx.args.get("widget_id")
+    resolved_id, error = _resolve_widget_id(ctx.args.get("widget_id"))
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
+    widget_id = resolved_id
     thread_id = ctx.args.get("thread_id")
     limit = ctx.args.get("limit", 50)
     before_id = ctx.args.get("before_id")

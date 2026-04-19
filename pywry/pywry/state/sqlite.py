@@ -29,6 +29,28 @@ from .types import UserSession, WidgetData
 
 logger = logging.getLogger(__name__)
 
+
+def _load_sqlcipher() -> Any:
+    """Return the ``sqlcipher3`` / ``pysqlcipher3`` ``dbapi2`` module, or ``None``.
+
+    Both packages expose the same DB-API 2.0 surface as stdlib
+    ``sqlite3``.  ``sqlcipher3`` is the actively-maintained fork; the
+    legacy ``pysqlcipher3`` is checked as a fallback for environments
+    that still pin it.  ``importlib`` is used so mypy doesn't complain
+    about the alternative import paths missing stubs at runtime —
+    neither package ships a ``py.typed`` marker.
+    """
+    import importlib
+
+    for name in ("sqlcipher3", "pysqlcipher3"):
+        try:
+            module = importlib.import_module(f"{name}.dbapi2")
+        except ImportError:
+            continue
+        return module
+    return None
+
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS widgets (
     widget_id TEXT PRIMARY KEY,
@@ -220,28 +242,17 @@ class SqliteStateBackend:
 
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
 
+        conn: sqlite3.Connection
         if self._encrypted and self._key:
-            # Try ``sqlcipher3`` first (actively maintained, ships
-            # prebuilt wheels as ``sqlcipher3-binary``), fall back to
-            # the legacy ``pysqlcipher3`` for installs that still pin
-            # it.  Both expose the same ``dbapi2`` API.
-            sqlcipher = None
-            try:
-                from sqlcipher3 import dbapi2 as sqlcipher  # type: ignore[import-not-found]
-            except ImportError:
-                try:
-                    from pysqlcipher3 import dbapi2 as sqlcipher  # type: ignore[import-not-found]
-                except ImportError:
-                    sqlcipher = None
-
+            sqlcipher = _load_sqlcipher()
             if sqlcipher is not None:
-                conn: sqlite3.Connection = sqlcipher.connect(str(self._db_path))
+                conn = sqlcipher.connect(str(self._db_path))
                 conn.execute(f"PRAGMA key = '{self._key}'")
                 logger.debug("Opened encrypted SQLite database at %s", self._db_path)
             else:
                 logger.warning(
                     "sqlcipher3 / pysqlcipher3 not installed — database will "
-                    "NOT be encrypted.  Install with: pip install sqlcipher3-binary"
+                    "NOT be encrypted.  Install with: pip install sqlcipher3"
                 )
                 conn = sqlite3.connect(str(self._db_path))
         else:

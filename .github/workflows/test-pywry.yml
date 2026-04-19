@@ -265,16 +265,45 @@ jobs:
         if: runner.os == 'Linux'
         run: docker version
 
-      - name: Setup Docker (macOS Intel)
-        id: docker-macos
+      - name: Configure Docker (macOS Intel)
         if: runner.os == 'macOS' && runner.arch == 'X64'
-        uses: docker/setup-docker-action@v4
-
-      - name: Verify Docker (macOS Intel)
-        if: runner.os == 'macOS' && runner.arch == 'X64'
+        shell: bash
         run: |
-          echo "DOCKER_HOST=$DOCKER_HOST"
-          docker version
+          # ``docker/setup-docker-action@v4`` doesn't reliably bring up
+          # a Docker daemon on ``macos-15-intel`` runners — testcontainers
+          # then fails with ``FileNotFoundError: /var/run/docker.sock``
+          # during the Redis fixture setup.  Mirror the resilient
+          # Docker-Desktop → Colima fallback used in publish-pywry.yml.
+          set -euo pipefail
+
+          if docker info >/dev/null 2>&1; then
+            echo "Docker daemon already available"
+          else
+            if [ -d "/Applications/Docker.app" ]; then
+              echo "Starting Docker Desktop"
+              open -a Docker
+              for _ in {1..30}; do
+                if docker info >/dev/null 2>&1; then
+                  break
+                fi
+                sleep 5
+              done
+            fi
+          fi
+
+          if ! docker info >/dev/null 2>&1; then
+            echo "Falling back to Colima"
+            brew install docker colima
+            colima start --runtime docker --arch x86_64 --cpu 2 --memory 4 --disk 20
+          fi
+
+          if [ -S "$HOME/.colima/default/docker.sock" ]; then
+            sudo mkdir -p /var/run
+            sudo ln -sf "$HOME/.colima/default/docker.sock" /var/run/docker.sock
+          fi
+
+          echo "DOCKER_HOST=unix:///var/run/docker.sock" >> "$GITHUB_ENV"
+          docker info
 
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
