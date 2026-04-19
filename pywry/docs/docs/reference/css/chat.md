@@ -42,6 +42,52 @@ Source: `frontend/style/chat.css` — Styles for the `show_chat()` / `ChatManage
 .pywry-chat-new-msg-badge { /* "New messages" badge at bottom of scroll */ }
 ```
 
+Every message bubble carries `data-msg-id="msg_..."`, which the edit/
+resend UI uses to address messages on both sides of the bridge.
+
+### Edit / Resend actions
+
+Each user message gets **Edit** and **Resend** buttons.  Assistant
+messages (including the welcome bubble) have no action buttons —
+rerun happens from the user's own prior message, not from the
+assistant's reply.  Both buttons tie into the `chat:edit-message` /
+`chat:resend-from` events.  Actions fade in on hover and stay
+visible during edit mode.
+
+```css
+.pywry-chat-msg-actions { /* Flex toolbar at bottom of each user bubble.
+                            opacity: 0 by default. */ }
+.pywry-chat-msg:hover .pywry-chat-msg-actions,
+.pywry-chat-msg-editing .pywry-chat-msg-actions {
+    /* Visible on hover or while editing. */
+}
+.pywry-chat-msg-action { /* Individual action button (Edit / Resend /
+                           Save & Resend / Cancel). */ }
+.pywry-chat-msg-action:hover { /* Hover state. */ }
+.pywry-chat-msg-action svg { /* Icon inside action buttons. */ }
+
+.pywry-chat-msg-editing { /* Applied to the message bubble while its
+                            textarea is open.  Keeps actions pinned
+                            visible. */ }
+.pywry-chat-msg-edit-textarea { /* The inline editor swapped in for
+                                   the message content during edit. */ }
+```
+
+Button semantics (by `data-action` attribute):
+
+| Button | `data-action` | Effect |
+|--------|---------------|--------|
+| **Edit** | `edit` | Swap the message content for `<textarea.pywry-chat-msg-edit-textarea>` and show Save/Cancel. |
+| **Resend** | `resend` | Emit `chat:resend-from` with this message's id.  Backend truncates the thread to this message and re-runs. |
+| **Save & Resend** (edit mode) | `save` (`data-edit-action`) | Emit `chat:edit-message` with new text. |
+| **Cancel** (edit mode) | `cancel` (`data-edit-action`) | Restore the original rendered markdown, discard the textarea. |
+
+Tooltips on these buttons use PyWry's shared tooltip manager (the
+globally injected `#pywry-tooltip` element, styled by `.pywry-tooltip`)
+via the `data-tooltip="..."` attribute — not the native browser
+`title=` popup.  Hover delay, arrow positioning, and light/dark theme
+colors come from the shared CSS in `frontend/style/pywry.css`.
+
 ---
 
 ## Threads & Conversation Picker

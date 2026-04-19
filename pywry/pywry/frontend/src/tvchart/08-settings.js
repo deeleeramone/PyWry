@@ -187,12 +187,13 @@ function _tvHideSymbolSearch() {
     _tvRefreshLegendVisibility();
 }
 
-function _tvShowSymbolSearchDialog(chartId) {
+function _tvShowSymbolSearchDialog(chartId, options) {
     _tvHideSymbolSearch();
     var resolved = _tvResolveChartEntry(chartId);
     if (!resolved || !resolved.entry) return;
     chartId = resolved.chartId;
     var entry = resolved.entry;
+    options = options || {};
     var ds = window.__PYWRY_DRAWINGS__[chartId] || _tvEnsureDrawingLayer(chartId);
     if (!ds) return;
 
@@ -582,6 +583,116 @@ function _tvShowSymbolSearchDialog(chartId) {
 
     ds.uiLayer.appendChild(overlay);
     searchInput.focus();
+
+    // Programmatic drive: pre-fill the search query and optionally
+    // auto-select the first result (or a specific symbol match) when
+    // the datafeed responds. Driven by `tvchart:symbol-search` callers
+    // that pass `{query, autoSelect, symbolType, exchange}` (e.g. agent
+    // tools).  ``symbolType`` / ``exchange`` pre-select the filter
+    // dropdowns so the datafeed search is narrowed before it runs —
+    // e.g. ``{query: "SPY", symbolType: "etf"}`` skips over SPYM.
+    if (options.query) {
+        var preQuery = String(options.query).trim();
+        if (preQuery) {
+            searchInput.value = preQuery;
+            var autoSelect = options.autoSelect !== false;
+            // Pre-select filter dropdowns (case-insensitive match against
+            // option values).  Silently ignore unknown filter values so a
+            // caller's ``symbolType: "etf"`` request doesn't break the
+            // search when the datafeed exposes ``ETF`` instead.
+            if (options.symbolType) {
+                var wantType = String(options.symbolType).toLowerCase();
+                for (var tsi = 0; tsi < typeSelect.options.length; tsi++) {
+                    if (String(typeSelect.options[tsi].value).toLowerCase() === wantType) {
+                        typeSelect.selectedIndex = tsi;
+                        break;
+                    }
+                }
+            }
+            if (options.exchange) {
+                var wantExch = String(options.exchange).toLowerCase();
+                for (var esi = 0; esi < exchangeSelect.options.length; esi++) {
+                    if (String(exchangeSelect.options[esi].value).toLowerCase() === wantExch) {
+                        exchangeSelect.selectedIndex = esi;
+                        break;
+                    }
+                }
+            }
+            // Optimistically advertise the requested ticker on the chart's
+            // payload BEFORE the datafeed search round-trip completes.  Other
+            // events that fire in the meantime (e.g. a `tvchart:interval-change`
+            // dispatched by the same agent turn) read this field to decide
+            // which symbol to refetch — without the optimistic update they
+            // see the previous symbol and clobber the pending change with a
+            // refetch of the old ticker.  ``selectSymbol`` re-confirms the
+            // value once the resolve responds; if the search fails to find a
+            // match the optimistic value is harmless because no data-request
+            // ever fires.
+            var optimisticTicker = preQuery.toUpperCase();
+            if (optimisticTicker.indexOf(':') >= 0) {
+                optimisticTicker = optimisticTicker.split(':').pop().trim();
+            }
+            if (entry && entry.payload) {
+                entry.payload.title = optimisticTicker;
+                if (entry.payload.series && Array.isArray(entry.payload.series) && entry.payload.series[0]) {
+                    entry.payload.series[0].symbol = optimisticTicker;
+                }
+            }
+
+            var prevRender = renderResults;
+            // Wrap renderResults to auto-select on first non-empty results.
+            var selected = false;
+            // Pull the bare ticker from a symbol record — datafeed results
+            // may carry a fully-qualified ``EXCHANGE:TICKER`` in ``ticker``
+            // and the bare ticker in ``symbol`` / ``requestSymbol``.  Exact
+            // match has to beat prefix match (``SPY`` → ``SPY``, not
+            // ``SPYM``) even when the datafeed returns them alphabetically.
+            function _bareTickerSearch(rec) {
+                if (!rec) return '';
+                var candidates = [rec.symbol, rec.requestSymbol, rec.ticker];
+                for (var ci = 0; ci < candidates.length; ci++) {
+                    var raw = String(candidates[ci] || '').toUpperCase();
+                    if (!raw) continue;
+                    if (raw.indexOf(':') >= 0) raw = raw.split(':').pop().trim();
+                    if (raw) return raw;
+                }
+                return '';
+            }
+            renderResults = function() {
+                prevRender();
+                if (selected || !autoSelect || !searchResults.length) return;
+                var match = null;
+                for (var mi = 0; mi < searchResults.length; mi++) {
+                    if (_bareTickerSearch(searchResults[mi]) === optimisticTicker) {
+                        match = searchResults[mi];
+                        break;
+                    }
+                }
+                if (!match) {
+                    for (var mj = 0; mj < searchResults.length; mj++) {
+                        if (_bareTickerSearch(searchResults[mj]).indexOf(optimisticTicker) === 0) {
+                            match = searchResults[mj];
+                            break;
+                        }
+                    }
+                }
+                if (!match) match = searchResults[0];
+                selected = true;
+                // Re-sync the optimistic value with the actual selected match
+                // — the auto-pick fallback may have chosen a different ticker
+                // than the requested query.
+                var resolvedTicker = (match.ticker || match.requestSymbol || match.symbol || '').toString().toUpperCase();
+                if (resolvedTicker && entry && entry.payload) {
+                    entry.payload.title = resolvedTicker;
+                    if (entry.payload.series && Array.isArray(entry.payload.series) && entry.payload.series[0]) {
+                        entry.payload.series[0].symbol = resolvedTicker;
+                    }
+                }
+                selectSymbol(match);
+            };
+            requestSearch(preQuery);
+        }
+    }
 }
 
 function _tvHideSeriesSettings() {
@@ -627,28 +738,47 @@ function _tvShowSeriesSettings(chartId, seriesId) {
         : _ssTypeToStyleName(currentType || 'Line');
     var auxStyle = (entry._seriesStyleAux && entry._seriesStyleAux[seriesId]) ? entry._seriesStyleAux[seriesId] : {};
 
+    // Theme-aware defaults — all pulled from CSS vars so swapping themes
+    // (or overriding them via CSS) recolors the settings-dialog "Reset"
+    // state.  Fallback literals match the dark-theme palette for the case
+    // where _cssVar resolves to empty (e.g. running outside the chart's
+    // themed container).
+    var themeUp = _cssVar('--pywry-tvchart-up') || '#26a69a';
+    var themeDown = _cssVar('--pywry-tvchart-down') || '#ef5350';
+    var themeBorderUp = _cssVar('--pywry-tvchart-border-up') || themeUp;
+    var themeBorderDown = _cssVar('--pywry-tvchart-border-down') || themeDown;
+    var themeWickUp = _cssVar('--pywry-tvchart-wick-up') || themeUp;
+    var themeWickDown = _cssVar('--pywry-tvchart-wick-down') || themeDown;
+    var themeLineColor = _cssVar('--pywry-tvchart-line-default') || '#4c87ff';
+    var themeAreaTop = _cssVar('--pywry-tvchart-area-top-default') || themeLineColor;
+    var themeAreaBottom = _cssVar('--pywry-tvchart-area-bottom-default') || '#10223f';
+    var themeBaselineTopFill1 = _cssVar('--pywry-tvchart-baseline-top-fill1') || themeUp;
+    var themeBaselineTopFill2 = _cssVar('--pywry-tvchart-baseline-top-fill2') || themeUp;
+    var themeBaselineBottomFill1 = _cssVar('--pywry-tvchart-baseline-bottom-fill1') || themeDown;
+    var themeBaselineBottomFill2 = _cssVar('--pywry-tvchart-baseline-bottom-fill2') || themeDown;
+
     var initialState = {
         style: initialStyle,
         priceSource: 'close',
         color: _tvColorToHex(
-            currentOpts.color || currentOpts.lineColor || (entry._legendSeriesColors && entry._legendSeriesColors[seriesId]) || '#4c87ff',
-            '#4c87ff'
+            currentOpts.color || currentOpts.lineColor || (entry._legendSeriesColors && entry._legendSeriesColors[seriesId]) || themeLineColor,
+            themeLineColor
         ),
         lineWidth: _tvClamp(_tvToNumber(currentOpts.lineWidth || currentOpts.width, 2), 1, 4),
         markersVisible: currentOpts.pointMarkersVisible === true,
-        areaTopColor: _tvColorToHex(currentOpts.topColor || '#4c87ff', '#4c87ff'),
-        areaBottomColor: _tvColorToHex(currentOpts.bottomColor || '#10223f', '#10223f'),
-        baselineTopLineColor: _tvColorToHex(currentOpts.topLineColor || '#26a69a', '#26a69a'),
-        baselineBottomLineColor: _tvColorToHex(currentOpts.bottomLineColor || '#ef5350', '#ef5350'),
-        baselineTopFillColor1: _tvColorToHex(currentOpts.topFillColor1 || '#26a69a', '#26a69a'),
-        baselineTopFillColor2: _tvColorToHex(currentOpts.topFillColor2 || '#26a69a', '#26a69a'),
-        baselineBottomFillColor1: _tvColorToHex(currentOpts.bottomFillColor1 || '#ef5350', '#ef5350'),
-        baselineBottomFillColor2: _tvColorToHex(currentOpts.bottomFillColor2 || '#ef5350', '#ef5350'),
+        areaTopColor: _tvColorToHex(currentOpts.topColor || themeAreaTop, themeAreaTop),
+        areaBottomColor: _tvColorToHex(currentOpts.bottomColor || themeAreaBottom, themeAreaBottom),
+        baselineTopLineColor: _tvColorToHex(currentOpts.topLineColor || themeUp, themeUp),
+        baselineBottomLineColor: _tvColorToHex(currentOpts.bottomLineColor || themeDown, themeDown),
+        baselineTopFillColor1: _tvColorToHex(currentOpts.topFillColor1 || themeBaselineTopFill1, themeUp),
+        baselineTopFillColor2: _tvColorToHex(currentOpts.topFillColor2 || themeBaselineTopFill2, themeUp),
+        baselineBottomFillColor1: _tvColorToHex(currentOpts.bottomFillColor1 || themeBaselineBottomFill1, themeDown),
+        baselineBottomFillColor2: _tvColorToHex(currentOpts.bottomFillColor2 || themeBaselineBottomFill2, themeDown),
         baselineBaseLevel: _tvToNumber((currentOpts.baseValue && currentOpts.baseValue._level), 50),
-        columnsUpColor: _tvColorToHex(currentOpts.upColor || currentOpts.color || '#26a69a', '#26a69a'),
-        columnsDownColor: _tvColorToHex(currentOpts.downColor || currentOpts.color || '#ef5350', '#ef5350'),
-        barsUpColor: _tvColorToHex(currentOpts.upColor || '#26a69a', '#26a69a'),
-        barsDownColor: _tvColorToHex(currentOpts.downColor || '#ef5350', '#ef5350'),
+        columnsUpColor: _tvColorToHex(currentOpts.upColor || currentOpts.color || themeUp, themeUp),
+        columnsDownColor: _tvColorToHex(currentOpts.downColor || currentOpts.color || themeDown, themeDown),
+        barsUpColor: _tvColorToHex(currentOpts.upColor || themeUp, themeUp),
+        barsDownColor: _tvColorToHex(currentOpts.downColor || themeDown, themeDown),
         barsOpenVisible: currentOpts.openVisible !== false,
         priceLineVisible: currentOpts.priceLineVisible !== false,
         overrideMinTick: 'Default',
@@ -656,12 +786,12 @@ function _tvShowSeriesSettings(chartId, seriesId) {
         bodyVisible: true,
         bordersVisible: true,
         wickVisible: true,
-        bodyUpColor: _tvColorToHex(currentOpts.upColor || currentOpts.color || '#26a69a', '#26a69a'),
-        bodyDownColor: _tvColorToHex(currentOpts.downColor || '#ef5350', '#ef5350'),
-        borderUpColor: _tvColorToHex(currentOpts.borderUpColor || currentOpts.upColor || '#26a69a', '#26a69a'),
-        borderDownColor: _tvColorToHex(currentOpts.borderDownColor || currentOpts.downColor || '#ef5350', '#ef5350'),
-        wickUpColor: _tvColorToHex(currentOpts.wickUpColor || currentOpts.upColor || '#26a69a', '#26a69a'),
-        wickDownColor: _tvColorToHex(currentOpts.wickDownColor || currentOpts.downColor || '#ef5350', '#ef5350'),
+        bodyUpColor: _tvColorToHex(currentOpts.upColor || currentOpts.color || themeUp, themeUp),
+        bodyDownColor: _tvColorToHex(currentOpts.downColor || themeDown, themeDown),
+        borderUpColor: _tvColorToHex(currentOpts.borderUpColor || currentOpts.upColor || themeBorderUp, themeBorderUp),
+        borderDownColor: _tvColorToHex(currentOpts.borderDownColor || currentOpts.downColor || themeBorderDown, themeBorderDown),
+        wickUpColor: _tvColorToHex(currentOpts.wickUpColor || currentOpts.upColor || themeWickUp, themeWickUp),
+        wickDownColor: _tvColorToHex(currentOpts.wickDownColor || currentOpts.downColor || themeWickDown, themeWickDown),
         hlcHighVisible: auxStyle.highVisible !== false,
         hlcLowVisible: auxStyle.lowVisible !== false,
         hlcCloseVisible: auxStyle.closeVisible !== false,
@@ -920,7 +1050,8 @@ function _tvShowSeriesSettings(chartId, seriesId) {
                 seriesType: 'Candlestick',
                 source: 'close',
                 optionPatch: {
-                    upColor: 'rgba(0, 0, 0, 0)',
+                    upColor: _cssVar('--pywry-tvchart-hollow-up-body') || 'rgba(0, 0, 0, 0)',
+                    priceLineColor: _cssVar('--pywry-tvchart-price-line') || _cssVar('--pywry-tvchart-up') || '#26a69a',
                 },
             };
         }
@@ -1525,14 +1656,15 @@ function _tvShowSeriesSettings(chartId, seriesId) {
             var patchOpts = {};
 
             if (_ssIsCandleStyle(selectedStyle)) {
-                var hidden = 'rgba(0, 0, 0, 0)';
+                var hidden = _cssVar('--pywry-tvchart-hidden') || 'rgba(0, 0, 0, 0)';
+                var hollowBody = _cssVar('--pywry-tvchart-hollow-up-body') || hidden;
                 patchOpts.upColor = (draft.bodyVisible !== false) ? draft.bodyUpColor : hidden;
                 patchOpts.downColor = (draft.bodyVisible !== false) ? draft.bodyDownColor : hidden;
                 patchOpts.borderUpColor = (draft.bordersVisible !== false) ? draft.borderUpColor : hidden;
                 patchOpts.borderDownColor = (draft.bordersVisible !== false) ? draft.borderDownColor : hidden;
                 patchOpts.wickUpColor = (draft.wickVisible !== false) ? draft.wickUpColor : hidden;
                 patchOpts.wickDownColor = (draft.wickVisible !== false) ? draft.wickDownColor : hidden;
-                if (selectedStyle === 'Hollow candles') patchOpts.upColor = hidden;
+                if (selectedStyle === 'Hollow candles') patchOpts.upColor = hollowBody;
             } else if (_ssIsLineLikeStyle(selectedStyle)) {
                 patchOpts.color = draft.color;
                 patchOpts.lineColor = draft.color;
@@ -1721,7 +1853,7 @@ function _tvShowSeriesSettings(chartId, seriesId) {
         }
 
         if (_ssIsCandleStyle(selectedStyle)) {
-            var hidden = 'rgba(0, 0, 0, 0)';
+            var hidden = _cssVar('--pywry-tvchart-hidden') || 'rgba(0, 0, 0, 0)';
             rebuiltOptions.upColor = (draft.bodyVisible !== false) ? draft.bodyUpColor : hidden;
             rebuiltOptions.downColor = (draft.bodyVisible !== false) ? draft.bodyDownColor : hidden;
             rebuiltOptions.borderUpColor = (draft.bordersVisible !== false) ? draft.borderUpColor : hidden;
@@ -3560,7 +3692,8 @@ function _tvNormalizeSymbolInfo(item) {
     };
 }
 
-function _tvShowComparePanel(chartId) {
+function _tvShowComparePanel(chartId, options) {
+    options = options || {};
     _tvHideComparePanel();
     var resolved = _tvResolveChartEntry(chartId);
     if (!resolved || !resolved.entry) return;
@@ -4001,6 +4134,93 @@ function _tvShowComparePanel(chartId) {
 
     ds.uiLayer.appendChild(overlay);
     searchInput.focus();
+
+    // Programmatic drive: pre-fill the search and auto-add the first
+    // matching ticker.  Driven by ``tvchart:compare`` callers that pass
+    // ``{query, autoAdd, symbolType, exchange}`` (e.g. the MCP
+    // tvchart_compare tool).  ``symbolType`` / ``exchange`` narrow the
+    // datafeed search before it runs — e.g. ``{query: "SPY", symbolType:
+    // "etf"}`` skips over SPYM.  Mirrors the symbol-search auto-select
+    // flow so the compare shows up in entry._compareSymbols before the
+    // caller polls chart state.
+    if (options.query) {
+        var cmpQuery = String(options.query).trim();
+        if (cmpQuery) {
+            searchInput.value = cmpQuery;
+            var autoAdd = options.autoAdd !== false;
+            if (options.symbolType) {
+                var wantCmpType = String(options.symbolType).toLowerCase();
+                for (var ctsi = 0; ctsi < typeSelect.options.length; ctsi++) {
+                    if (String(typeSelect.options[ctsi].value).toLowerCase() === wantCmpType) {
+                        typeSelect.selectedIndex = ctsi;
+                        break;
+                    }
+                }
+            }
+            if (options.exchange) {
+                var wantCmpExch = String(options.exchange).toLowerCase();
+                for (var cesi = 0; cesi < exchangeSelect.options.length; cesi++) {
+                    if (String(exchangeSelect.options[cesi].value).toLowerCase() === wantCmpExch) {
+                        exchangeSelect.selectedIndex = cesi;
+                        break;
+                    }
+                }
+            }
+            var prevRenderCmp = renderSearchResults;
+            var addedOnce = false;
+            var targetTicker = cmpQuery.toUpperCase();
+            if (targetTicker.indexOf(':') >= 0) {
+                targetTicker = targetTicker.split(':').pop().trim();
+            }
+            // Pull the bare ticker from a symbol record — datafeed results
+            // may carry a fully-qualified ``EXCHANGE:TICKER`` in ``ticker``
+            // and the bare ticker in ``symbol`` / ``requestSymbol``.  Exact-
+            // match needs to beat prefix-match (otherwise ``SPY`` finds
+            // ``SPYM`` first just because ``SPYM`` sorted earlier).
+            function _bareTicker(rec) {
+                if (!rec) return '';
+                var candidates = [rec.symbol, rec.requestSymbol, rec.ticker];
+                for (var ci = 0; ci < candidates.length; ci++) {
+                    var raw = String(candidates[ci] || '').toUpperCase();
+                    if (!raw) continue;
+                    if (raw.indexOf(':') >= 0) raw = raw.split(':').pop().trim();
+                    if (raw) return raw;
+                }
+                return '';
+            }
+            renderSearchResults = function() {
+                prevRenderCmp();
+                if (addedOnce || !autoAdd || !searchResults.length) return;
+                var pick = null;
+                for (var pi = 0; pi < searchResults.length; pi++) {
+                    if (_bareTicker(searchResults[pi]) === targetTicker) {
+                        pick = searchResults[pi];
+                        break;
+                    }
+                }
+                // No exact match → prefer results whose bare ticker
+                // *starts with* the query, then fall back to the first
+                // result.  Prevents ``SPY`` → ``SPYM`` just because the
+                // datafeed returned them in alphabetical order.
+                if (!pick) {
+                    for (var pj = 0; pj < searchResults.length; pj++) {
+                        if (_bareTicker(searchResults[pj]).indexOf(targetTicker) === 0) {
+                            pick = searchResults[pj];
+                            break;
+                        }
+                    }
+                }
+                if (!pick) pick = searchResults[0];
+                addedOnce = true;
+                addCompare(pick, 'same_percent');
+                // Auto-close the panel after a programmatic add so the
+                // MCP caller's confirmation flow doesn't leave an empty
+                // search dialog sitting on top of the chart.
+                setTimeout(function() { _tvHideComparePanel(); }, 0);
+            };
+            requestSearch(cmpQuery);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

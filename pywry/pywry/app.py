@@ -1408,6 +1408,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         symbol: str | None = None,
         resolution: str = "1D",
         provider: Any = None,
+        chart_id: str | None = None,
     ) -> NativeWindowHandle | BaseWidget:
         """Show a TradingView Lightweight Chart.
 
@@ -1451,6 +1452,14 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             A :class:`~pywry.tvchart.datafeed.DatafeedProvider` instance.
             When supplied, ``use_datafeed`` is set to ``True`` automatically
             and all datafeed IPC events are wired to the provider.
+        chart_id : str or None
+            Explicit identifier for the TradingView chart component.
+            Every TVChart event carries ``chartId`` so multiple charts
+            in one window can be addressed independently; passing a
+            caller-chosen ``chart_id`` here lets apps assign a
+            meaningful name (e.g. ``"chart"``) that agents and chat
+            context attachments can route MCP tool calls against.  If
+            omitted, a unique ``tvchart_<hex>`` id is auto-generated.
 
         Returns
         -------
@@ -1567,7 +1576,12 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             }
         )
 
-        chart_id = f"tvchart_{uuid.uuid4().hex[:8]}"
+        # Caller-supplied chart_id lets apps assign a meaningful name to
+        # the TradingView chart component (e.g. "chart") so agents /
+        # context attachments can route MCP tool calls against it
+        # directly.  Fall back to an auto-generated unique id otherwise.
+        if not chart_id:
+            chart_id = f"tvchart_{uuid.uuid4().hex[:8]}"
 
         chart_html = f"""
         <div id="{chart_id}" class="pywry-tvchart-container"></div>

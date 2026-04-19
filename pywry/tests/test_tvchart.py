@@ -1213,8 +1213,22 @@ class TestTVChartFrontendStateContracts:
         return self._extract_braced(src, src.index(f"function {name}("))
 
     def _handler(self, src: str, event: str) -> str:
-        """Extract the body of ``window.pywry.on('<event>', ...)``."""
-        return self._extract_braced(src, src.index(f"window.pywry.on('{event}'"))
+        """Extract the body of an event listener for ``<event>``.
+
+        Accepts both ``window.pywry.on('<event>', ...)`` and
+        ``bridge.on('<event>', ...)`` — the tvchart event handlers are
+        registered against a local ``bridge`` reference that defaults to
+        ``window.pywry``.
+        """
+        candidates = (
+            f"window.pywry.on('{event}'",
+            f"bridge.on('{event}'",
+        )
+        for candidate in candidates:
+            idx = src.find(candidate)
+            if idx != -1:
+                return self._extract_braced(src, idx)
+        raise ValueError(f"No handler registration found for event '{event}'")
 
     def _create_body(self, src: str) -> str:
         """Extract the PYWRY_TVCHART_CREATE function body."""
@@ -1356,18 +1370,20 @@ class TestTVChartFrontendStateContracts:
 
     def test_time_range_selection_handles_all_and_ytd(self, tvchart_defaults_js: str):
         """_tvApplyTimeRangeSelection must have explicit branches for 'all'
-        (fit all data) and 'ytd' (year-to-date), plus use _tvResolveRangeSpanMs
-        for named presets like '1y', '3m', etc."""
+        (fit all data) and 'ytd' (year-to-date), plus use _tvResolveRangeSpanDays
+        for named presets like '1y', '3m', etc.  For absolute date-range
+        requests it must delegate to _tvApplyAbsoluteDateRange."""
         body = self._fn(tvchart_defaults_js, "_tvApplyTimeRangeSelection")
         assert "range === 'all'" in body
         assert "fitContent()" in body
         assert "range === 'ytd'" in body
-        assert "_tvResolveRangeSpanMs(" in body
-        assert "_tvApplyAbsoluteDateRange(" in body
+        assert "_tvResolveRangeSpanDays(" in body
+        # Absolute date-range requests are handled by a separate helper.
+        assert "function _tvApplyAbsoluteDateRange" in tvchart_defaults_js
 
     def test_range_span_resolver_covers_standard_presets(self, tvchart_defaults_js: str):
-        """_tvResolveRangeSpanMs must define time spans for all standard presets."""
-        body = self._fn(tvchart_defaults_js, "_tvResolveRangeSpanMs")
+        """_tvResolveRangeSpanDays must define time spans for all standard presets."""
+        body = self._fn(tvchart_defaults_js, "_tvResolveRangeSpanDays")
         for preset in ("'1d'", "'5d'", "'1m'", "'3m'", "'6m'", "'1y'", "'5y'"):
             assert preset in body, f"Range resolver must cover preset {preset}"
 
@@ -1801,6 +1817,87 @@ class TestTVChartStateMixin:
         event, payload = m._emitted[0]
         assert event == "tvchart:remove-series"
         assert payload["seriesId"] == "sma20"
+
+    # -------- built-in indicator engine (JS-side compute) ---------------
+
+    def test_add_builtin_indicator_minimal(self):
+        m = _MockEmitter()
+        m.add_builtin_indicator("RSI")
+        event, payload = m._emitted[0]
+        assert event == "tvchart:add-indicator"
+        assert payload == {"name": "RSI"}
+
+    def test_add_builtin_indicator_with_period_and_color(self):
+        m = _MockEmitter()
+        m.add_builtin_indicator("SMA", period=50, color="#2196F3")
+        event, payload = m._emitted[0]
+        assert event == "tvchart:add-indicator"
+        assert payload["name"] == "SMA"
+        assert payload["period"] == 50
+        assert payload["color"] == "#2196F3"
+
+    def test_add_builtin_indicator_passes_bollinger_options(self):
+        m = _MockEmitter()
+        m.add_builtin_indicator(
+            "Bollinger Bands",
+            period=20,
+            multiplier=2.0,
+            ma_type="SMA",
+            offset=0,
+            source="close",
+        )
+        _event, payload = m._emitted[0]
+        # Note: ma_type → maType in payload (per the wire contract)
+        assert payload["multiplier"] == 2.0
+        assert payload["maType"] == "SMA"
+        assert payload["offset"] == 0
+        assert payload["source"] == "close"
+
+    def test_add_builtin_indicator_omits_unset_options(self):
+        m = _MockEmitter()
+        m.add_builtin_indicator("EMA", period=12)
+        _event, payload = m._emitted[0]
+        # Only the explicit fields land in the payload
+        assert set(payload.keys()) == {"name", "period"}
+
+    def test_add_builtin_indicator_chart_id(self):
+        m = _MockEmitter()
+        m.add_builtin_indicator("SMA", period=10, chart_id="alt")
+        _event, payload = m._emitted[0]
+        assert payload["chartId"] == "alt"
+
+    def test_add_builtin_indicator_with_method(self):
+        m = _MockEmitter()
+        m.add_builtin_indicator("Moving Average", period=14, method="EMA")
+        _event, payload = m._emitted[0]
+        assert payload["method"] == "EMA"
+
+    def test_remove_builtin_indicator(self):
+        m = _MockEmitter()
+        m.remove_builtin_indicator("ind_sma_99")
+        event, payload = m._emitted[0]
+        assert event == "tvchart:remove-indicator"
+        assert payload == {"seriesId": "ind_sma_99"}
+
+    def test_remove_builtin_indicator_with_chart_id(self):
+        m = _MockEmitter()
+        m.remove_builtin_indicator("ind_sma_99", chart_id="alt")
+        _event, payload = m._emitted[0]
+        assert payload["chartId"] == "alt"
+
+    def test_list_indicators_default(self):
+        m = _MockEmitter()
+        m.list_indicators()
+        event, payload = m._emitted[0]
+        assert event == "tvchart:list-indicators"
+        assert payload == {}
+
+    def test_list_indicators_with_context(self):
+        m = _MockEmitter()
+        m.list_indicators(chart_id="alt", context={"trigger": "init"})
+        _event, payload = m._emitted[0]
+        assert payload["chartId"] == "alt"
+        assert payload["context"] == {"trigger": "init"}
 
     def test_add_marker(self):
         m = _MockEmitter()

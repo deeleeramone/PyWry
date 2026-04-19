@@ -182,6 +182,21 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
             gridVisible: true,
             crosshairEnabled: false,
         },
+        // One-shot callbacks that fire once seriesMap contains a main
+        // series (registered via entry.whenMainSeriesReady).  Needed
+        // because the destroy-recreate flow has to chain post-CREATE
+        // work (re-apply display style, etc.) but datafeed mode adds
+        // the series inside an async resolveSymbol callback — polling
+        // for seriesMap.main would be a race-condition workaround.
+        _mainSeriesReadyCallbacks: [],
+    };
+    entry.whenMainSeriesReady = function(cb) {
+        if (typeof cb !== 'function') return;
+        if (entry.seriesMap && (entry.seriesMap.main || entry.seriesMap['series-0'])) {
+            try { cb(); } catch (e) {}
+            return;
+        }
+        entry._mainSeriesReadyCallbacks.push(cb);
     };
 
     // Normalise: support both multi-series array and legacy flat format
@@ -240,6 +255,9 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
             if (_tvIsMainSeriesId(sid) && series && typeof series.moveToPane === 'function') {
                 try { series.moveToPane(0); } catch (e) {}
             }
+            if (_tvIsMainSeriesId(sid) || sid === 'series-0') {
+                _tvFireMainSeriesReady(entry);
+            }
             if (_tvLooksLikeOhlcBars(sourceBars)) {
                 entry._seriesCanonicalRawData[sid] = sourceBars;
             }
@@ -283,6 +301,23 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
         // (which resizes the chart at 0ms, double-rAF, and 120ms).
         (function(e, c) {
             function applyDefault() {
+                // Destroy-recreate flows (interval-change / symbol-change)
+                // hand us a pre-destroy zoom to restore — honour it instead
+                // of falling through to fitContent, which would wipe the
+                // user's zoom every time the data interval changes.
+                var preserved = e._preservedVisibleTimeRange;
+                if (preserved && preserved.from != null && preserved.to != null) {
+                    try {
+                        c.timeScale().setVisibleRange({
+                            from: preserved.from,
+                            to: preserved.to,
+                        });
+                        delete e._preservedVisibleTimeRange;
+                        return;
+                    } catch (err) {
+                        delete e._preservedVisibleTimeRange;
+                    }
+                }
                 var sel = document.querySelector('.pywry-tab.pywry-tab-active[data-target-interval]');
                 if (sel) {
                     var range = sel.getAttribute('data-value');
@@ -844,15 +879,44 @@ function _tvExportState(chartId) {
         };
     }
 
-    var range;
-    try {
-        range = entry.chart.timeScale().getVisibleLogicalRange();
-    } catch (e) {
-        range = null;
-    }
+    var logicalRange;
+    var timeRange;
+    try { logicalRange = entry.chart.timeScale().getVisibleLogicalRange(); } catch (e) { logicalRange = null; }
+    try { timeRange = entry.chart.timeScale().getVisibleRange(); } catch (e) { timeRange = null; }
 
     // Collect raw bar data if stored
     var rawData = entry._rawData ? entry._rawData.slice() : null;
+
+    // Main symbol and interval (from the stored payload)
+    var mainSymbol = '';
+    if (entry.payload && entry.payload.series && entry.payload.series[0] && entry.payload.series[0].symbol) {
+        mainSymbol = String(entry.payload.series[0].symbol);
+    } else if (entry._resolvedSymbolInfo && entry._resolvedSymbolInfo.main) {
+        mainSymbol = String(entry._resolvedSymbolInfo.main.symbol || entry._resolvedSymbolInfo.main.ticker || '');
+    }
+    var interval = (entry.payload && entry.payload.interval) ? String(entry.payload.interval) : '';
+    var chartType = entry._chartDisplayStyle || 'Candles';
+
+    // Split compare-series entries into two buckets: user-facing
+    // compares (what the user added via the Compare dialog) vs.
+    // indicator-source compares (the secondary ticker that drives a
+    // Spread/Ratio/Sum/Product/Correlation indicator — hidden from
+    // the Compare panel, but still in the compare map because that's
+    // where the bar data lives).
+    var compareSymbols = {};
+    var indicatorSourceSymbols = {};
+    if (entry._compareSymbols) {
+        var csKeys = Object.keys(entry._compareSymbols);
+        for (var cs = 0; cs < csKeys.length; cs++) {
+            var sid = csKeys[cs];
+            var sym = String(entry._compareSymbols[sid]);
+            if (entry._indicatorSourceSeries && entry._indicatorSourceSeries[sid]) {
+                indicatorSourceSymbols[sid] = sym;
+            } else {
+                compareSymbols[sid] = sym;
+            }
+        }
+    }
 
     // Collect drawings
     var ds = window.__PYWRY_DRAWINGS__[chartId];
@@ -863,27 +927,47 @@ function _tvExportState(chartId) {
         }
     }
 
-    // Collect active indicators for this chart
+    // Collect active indicators for this chart.  Binary indicators
+    // (Spread, Ratio, Sum, Product, Correlation) carry their secondary
+    // series id — resolve it back to the ticker symbol so agents
+    // describing the chart know *what* is being spread/ratioed without
+    // having to cross-reference seriesId maps themselves.
     var indicators = [];
     var aiKeys = Object.keys(_activeIndicators);
     for (var a = 0; a < aiKeys.length; a++) {
         var ai = _activeIndicators[aiKeys[a]];
-        if (ai.chartId === chartId) {
-            indicators.push({
-                seriesId: aiKeys[a],
-                name: ai.name,
-                period: ai.period,
-                color: ai.color || null,
-                group: ai.group || null,
-            });
+        if (ai.chartId !== chartId) continue;
+        var entryOut = {
+            seriesId: aiKeys[a],
+            name: ai.name,
+            type: ai.type || null,
+            period: ai.period,
+            color: ai.color || null,
+            group: ai.group || null,
+            sourceSeriesId: ai.sourceSeriesId || null,
+            secondarySeriesId: ai.secondarySeriesId || null,
+            isSubplot: !!ai.isSubplot,
+            primarySource: ai.primarySource || null,
+            secondarySource: ai.secondarySource || null,
+        };
+        if (ai.secondarySeriesId) {
+            var secSym = (entry._compareSymbols && entry._compareSymbols[ai.secondarySeriesId]) || null;
+            entryOut.secondarySymbol = secSym ? String(secSym) : null;
         }
+        indicators.push(entryOut);
     }
 
     return {
         chartId: chartId,
         theme: entry.theme,
+        symbol: mainSymbol,
+        interval: interval,
+        chartType: chartType,
+        compareSymbols: compareSymbols,
+        indicatorSourceSymbols: indicatorSourceSymbols,
         series: seriesData,
-        visibleRange: range,
+        visibleRange: timeRange,
+        visibleLogicalRange: logicalRange,
         rawData: rawData,
         drawings: drawings,
         indicators: indicators,

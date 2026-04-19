@@ -81,6 +81,20 @@ _reg_close_cache: dict[str, float] = {}  # symbol → regular session close pric
 _session_bounds_cache: dict[str, tuple[int, int, int, int]] = {}
 
 
+def _is_24_7_market(bounds: tuple[int, int, int, int]) -> bool:
+    """Detect 24/7 markets (crypto) from their session bounds.
+
+    yfinance encodes a 24/7 session as a regular window spanning the
+    entire day — typically ``(0, 0, 1439, 1439)`` or similar.  Equality
+    of ``pre_start`` and ``post_end`` is not reliable; test the span
+    of the regular window instead (≥ 23 hours ⇒ 24/7).
+    """
+    pre_start_m, reg_start_m, reg_end_m, post_end_m = bounds
+    if pre_start_m == post_end_m:
+        return True  # legacy encoding
+    return (reg_end_m - reg_start_m) >= 23 * 60
+
+
 def _is_overnight(epoch: int, symbol: str) -> bool:
     """Return True if *epoch* falls outside the pre→post session window.
 
@@ -91,9 +105,9 @@ def _is_overnight(epoch: int, symbol: str) -> bool:
     bounds = _session_bounds_cache.get(symbol.upper())
     if bounds is None:
         return False  # unknown symbol — let it through
-    pre_start_m, _, _, post_end_m = bounds
-    if pre_start_m == post_end_m:
+    if _is_24_7_market(bounds):
         return False  # 24/7 market (crypto) — no overnight
+    pre_start_m, _, _, post_end_m = bounds
     tz_name = _tz_cache.get(symbol.upper(), "America/New_York")
     dt = datetime.fromtimestamp(epoch, tz=ZoneInfo(tz_name))
     hm = dt.hour * 60 + dt.minute
@@ -110,39 +124,73 @@ def _current_session_label(symbol: str) -> tuple[str, str]:
 
     Session windows for US equities (exchange-local time):
 
-    - **Pre-Market**: 4:00 AM – 9:30 AM ET
-    - **Market Open**: 9:30 AM – 4:00 PM ET
-    - **After Hours**: 4:00 PM – 8:00 PM ET
-    - **Overnight**: 8:00 PM – 4:00 AM ET (Blue Ocean ATS)
+    - **Pre-Market**: 4:00 AM – 9:30 AM ET, Mon–Fri
+    - **Market Open**: 9:30 AM – 4:00 PM ET, Mon–Fri
+    - **After Hours**: 4:00 PM – 8:00 PM ET, Mon–Fri
+    - **Overnight**: 8:00 PM Mon–Thu – 4:00 AM Tue–Fri (Blue Ocean ATS)
+    - **Closed**: Saturday and Sunday
+
+    24/7 markets (crypto) always report "Market Open".
     """
     bounds = _session_bounds_cache.get(symbol.upper())
     if bounds is None:
         return ("—", "#787b86")
-    pre_start_m, reg_start_m, reg_end_m, post_end_m = bounds
-    if pre_start_m == post_end_m:
+    if _is_24_7_market(bounds):
         return ("Market Open", "#26a69a")  # 24/7 (crypto)
+    pre_start_m, reg_start_m, reg_end_m, post_end_m = bounds
     tz_name = _tz_cache.get(symbol.upper(), "America/New_York")
     now = datetime.now(tz=ZoneInfo(tz_name))
     hm = now.hour * 60 + now.minute
+    # datetime.weekday(): Mon=0 .. Sun=6
+    weekday = now.weekday()
+    is_weekend = weekday >= 5  # Sat or Sun
+
+    # Weekends are fully closed for US equities.  Friday after-hours
+    # ends at 20:00 ET and the chart stays closed until Sunday 20:00
+    # ET when Blue Ocean ATS resumes overnight trading for Monday's
+    # pre-market open.
+    if is_weekend:
+        # Sunday 20:00 ET onward is the next trading week's overnight.
+        if weekday == 6 and hm >= post_end_m:
+            return ("Overnight", "#64b5f6")
+        return ("Closed", "#787b86")
+
     if reg_start_m <= hm < reg_end_m:
         return ("Market Open", "#26a69a")
     if pre_start_m <= hm < reg_start_m:
         return ("Pre-Market", "#ffa726")
     if reg_end_m <= hm < post_end_m:
         return ("After Hours", "#ffa726")
-    if hm >= post_end_m or hm < pre_start_m:
+    # Overnight runs from post-market close through pre-market open the
+    # NEXT weekday.  Friday 20:00 → Sunday 20:00 is weekend-closed,
+    # handled above; Friday early-morning (before pre-market) is still
+    # Thursday-night overnight.
+    if hm >= post_end_m:
+        # Friday evening rolls into weekend closed.
+        if weekday == 4:  # Friday
+            return ("Closed", "#787b86")
+        return ("Overnight", "#64b5f6")
+    if hm < pre_start_m:
         return ("Overnight", "#64b5f6")
     return ("Closed", "#787b86")
 
 
 def _is_extended_session(symbol: str) -> bool:
-    """Return True if the current time is outside the regular session."""
+    """Return True if the current time is outside the regular session.
+
+    Weekends count as extended (not regular).  24/7 markets (crypto)
+    are never extended.
+    """
     bounds = _session_bounds_cache.get(symbol.upper())
     if bounds is None:
         return False
+    if _is_24_7_market(bounds):
+        return False  # 24/7 market — always "regular"
     _, reg_start_m, reg_end_m, _ = bounds
     tz_name = _tz_cache.get(symbol.upper(), "America/New_York")
     now = datetime.now(tz=ZoneInfo(tz_name))
+    if now.weekday() >= 5:  # Sat or Sun
+        return True
     hm = now.hour * 60 + now.minute
     return hm < reg_start_m or hm >= reg_end_m
 
@@ -807,6 +855,15 @@ class RealtimeStreamer:
         self._stop = threading.Event()
         # symbol → delay in minutes (from exchangeDataDelayedBy)
         self._delay: dict[str, int] = {}
+        # Yahoo streams ``day_volume`` as a cumulative session total on
+        # every tick.  To report per-minute bar volume we subtract the
+        # cumulative value observed at the end of the previous minute
+        # (``_bar_volume_base``) from each incoming tick's day_volume.
+        # symbol → cum day_volume at the start of the current minute bar
+        self._bar_volume_base: dict[str, int] = {}
+        # symbol → most recently observed cum day_volume (seeds the base
+        # when a new minute rolls over)
+        self._last_day_volume: dict[str, int] = {}
         # Active marquee symbol — only this symbol may update the marquee.
         self._active_marquee_symbol: str = ""
         # Periodic backfill timers (symbol → Timer)
@@ -867,9 +924,38 @@ class RealtimeStreamer:
         for timer in self._backfill_timers.values():
             timer.cancel()
         self._backfill_timers.clear()
-        if self._ws:
-            with contextlib.suppress(Exception):
-                self._ws.close()
+
+        # Silence yfinance's "Error while listening to messages" log that
+        # fires when we close the WebSocket — it's the normal 1000 OK
+        # close handshake, not a real error.  yfinance uses the
+        # ``yfinance`` logger (NOT ``yfinance.live``) and passes
+        # ``exc_info=True``, so the full traceback leaks to stderr
+        # unless we raise the level above CRITICAL here.  If
+        # ``YfConfig.debug.hide_exceptions`` is False, yfinance re-raises
+        # instead of logging, which exits the listener thread without a
+        # traceback — also fine.
+        import logging as _logging
+
+        _yf_logger = _logging.getLogger("yfinance")
+        _prior_level = _yf_logger.level
+        _yf_logger.setLevel(_logging.CRITICAL + 1)
+
+        try:
+            if self._ws:
+                with contextlib.suppress(Exception):
+                    self._ws.close()
+            # Wait for the daemon listener thread to exit cleanly.  If
+            # we skip this join, the daemon races the interpreter
+            # finalisation — yfinance catches the close handshake
+            # exception and tries to log it, but by then the finalizer
+            # has the stderr lock and the whole process aborts with
+            # ``Fatal Python error: _enter_buffered_busy``.
+            thread = self._thread
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=2.0)
+                self._thread = None
+        finally:
+            _yf_logger.setLevel(_prior_level)
 
     def _backfill_gap(self, guid: str, symbol: str, resolution: str) -> None:
         """Refresh cache and push any newer bars to fill the gap."""
@@ -948,7 +1034,10 @@ class RealtimeStreamer:
         """Handle a WebSocket tick message from Yahoo Finance.
 
         Ticks are bucketed into 1-minute bars and only pushed to
-        subscribers at 1-minute resolution.
+        subscribers at 1-minute resolution.  Yahoo ships ``day_volume``
+        as a cumulative session total on every tick, so per-minute bar
+        volume is the delta from the cumulative observed at the end of
+        the previous minute.
         """
         symbol = msg.get("id", "")
         price = msg.get("price")
@@ -962,6 +1051,8 @@ class RealtimeStreamer:
         # Bucket to the start of the current minute
         bar_time = (epoch // 60) * 60
         price = float(price)
+        has_day_volume = "day_volume" in msg
+        cum_day_volume = int(msg["day_volume"]) if has_day_volume else None
 
         with self._lock:
             prev = self._latest.get(symbol)
@@ -969,19 +1060,35 @@ class RealtimeStreamer:
                 prev["high"] = max(prev["high"], price)
                 prev["low"] = min(prev["low"], price)
                 prev["close"] = price
-                if "day_volume" in msg:
-                    prev["volume"] = int(msg["day_volume"])
+                if cum_day_volume is not None:
+                    base = self._bar_volume_base.get(symbol, cum_day_volume)
+                    # day_volume resets on a new session — protect against
+                    # negative deltas by clamping to zero.
+                    prev["volume"] = max(0, cum_day_volume - base)
                 bar = dict(prev)
             else:
+                # New minute bucket — seed the base from the last tick
+                # we saw (the cumulative at the end of the previous
+                # minute) so the first tick in the new bar already
+                # carries only its own volume.
+                if cum_day_volume is not None:
+                    base = self._last_day_volume.get(symbol, cum_day_volume)
+                    base = min(base, cum_day_volume)
+                    self._bar_volume_base[symbol] = base
+                    initial_vol = max(0, cum_day_volume - base)
+                else:
+                    initial_vol = 0
                 bar = {
                     "time": bar_time,
                     "open": price,
                     "high": price,
                     "low": price,
                     "close": price,
-                    "volume": int(msg.get("day_volume", 0)),
+                    "volume": initial_vol,
                 }
                 self._latest[symbol] = dict(bar)
+            if cum_day_volume is not None:
+                self._last_day_volume[symbol] = cum_day_volume
 
             # Only push to 1-minute subscribers — skip overnight bars
             # so the chart never shows sparse Blue Ocean ATS data.
@@ -1422,9 +1529,182 @@ def make_callbacks(
     }
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
+def build_marquee(symbol: str) -> tuple[Toolbar, str]:
+    """Build the live-data marquee toolbar and its companion CSS.
+
+    Returns a ``(toolbar, css)`` tuple.  The toolbar is a static
+    ``Marquee`` laid out as a flex row of labelled ticker slots that
+    are updated at runtime via ``toolbar:marquee-set-item`` events.
+    """
+    ticker_items = [
+        TickerItem(
+            ticker="ws-symbol",
+            html=f'<span class="ws-sym">{symbol}</span>',
+        ),
+        TickerItem(
+            ticker="ws-price",
+            html='<span class="ws-val">\u2014</span>',
+            class_name="ws-price",
+        ),
+        TickerItem(
+            ticker="ws-change",
+            html='<span class="ws-val ws-muted">\u2014 (\u2014%)</span>',
+            class_name="ws-change",
+        ),
+        TickerItem(
+            ticker="ws-session",
+            html='<span class="ws-val ws-muted">\u2014</span>',
+            class_name="ws-session",
+        ),
+        TickerItem(ticker="ws-ext-price", html="", class_name="ws-ext-price"),
+        TickerItem(ticker="ws-ext-change", html="", class_name="ws-ext-change"),
+        TickerItem(
+            ticker="ws-open",
+            html='<span class="ws-val ws-muted">\u2014</span>',
+            class_name="ws-field",
+        ),
+        TickerItem(
+            ticker="ws-high",
+            html='<span class="ws-val ws-muted">\u2014</span>',
+            class_name="ws-field",
+        ),
+        TickerItem(
+            ticker="ws-low",
+            html='<span class="ws-val ws-muted">\u2014</span>',
+            class_name="ws-field",
+        ),
+        TickerItem(
+            ticker="ws-volume",
+            html='<span class="ws-val ws-muted">\u2014</span>',
+            class_name="ws-field",
+        ),
+        TickerItem(
+            ticker="ws-mktcap",
+            html='<span class="ws-val ws-muted">\u2014</span>',
+            class_name="ws-field",
+        ),
+        TickerItem(ticker="ws-vol24", html="", class_name="ws-field"),
+    ]
+
+    labels = ["", "", "", "", "", "", "O", "H", "L", "Vol", "Mkt Cap", ""]
+    parts: list[str] = []
+    for label, item in zip(labels, ticker_items, strict=False):
+        if label:
+            parts.append(f'<span class="ws-label">{label}</span>{item.build_html()}')
+        else:
+            parts.append(item.build_html())
+
+    marquee_html = "  ".join(parts)
+
+    toolbar = Toolbar(
+        position="header",
+        class_name="yf-marquee-strip",
+        items=[
+            Marquee(
+                component_id="yf-live-marquee",
+                text=marquee_html,
+                behavior="static",
+                event="toolbar:noop",
+                style="width: 100%;",
+            ),
+        ],
+    )
+
+    css = """
+    .yf-marquee-strip {
+        border-bottom: 1px solid var(--pywry-border-color) !important;
+        background: var(--pywry-bg-primary) !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+    }
+    .yf-marquee-strip .pywry-toolbar-content {
+        padding: 0 !important;
+    }
+    .yf-marquee-strip .pywry-marquee {
+        width: 100%;
+    }
+    .yf-marquee-strip .pywry-marquee-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 10px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 11.5px;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        color: var(--pywry-text-primary);
+    }
+    .ws-sym {
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--pywry-text-primary);
+        letter-spacing: 0.04em;
+    }
+    .ws-price .pywry-ticker-item,
+    .ws-price {
+        font-weight: 600;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+    }
+    .ws-change .pywry-ticker-item,
+    .ws-change {
+        font-weight: 500;
+        font-size: 11.5px;
+        font-variant-numeric: tabular-nums;
+    }
+    .ws-label {
+        color: var(--pywry-text-secondary);
+        font-size: 10.5px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-right: 2px;
+    }
+    .ws-field {
+        font-variant-numeric: tabular-nums;
+        color: var(--pywry-text-primary);
+        font-size: 11px;
+    }
+    .ws-val {
+        font-variant-numeric: tabular-nums;
+        color: var(--pywry-text-primary);
+    }
+    .ws-muted {
+        color: var(--pywry-text-secondary);
+    }
+    /* Session badge — theme-aware contrast chip.  Dark mode: subtle
+       white overlay on the dark bar.  Light mode: subtle dark overlay
+       on the light bar.  Both land around 6-8% alpha so the inner
+       colored text (bull/bear/overnight tint) stays primary. */
+    .ws-session .pywry-ticker-item,
+    .ws-session {
+        font-weight: 600;
+        font-size: 10.5px;
+        letter-spacing: 0.03em;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.08);
+    }
+    html.light .ws-session .pywry-ticker-item,
+    html.light .ws-session,
+    .pywry-theme-light .ws-session .pywry-ticker-item,
+    .pywry-theme-light .ws-session {
+        background: rgba(0, 0, 0, 0.06);
+    }
+    .ws-ext-price .pywry-ticker-item,
+    .ws-ext-price {
+        font-weight: 600;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+    }
+    .ws-ext-change .pywry-ticker-item,
+    .ws-ext-change {
+        font-weight: 500;
+        font-size: 11.5px;
+        font-variant-numeric: tabular-nums;
+    }
+    """
+    return toolbar, css
 
 
 def main() -> None:
@@ -1449,178 +1729,8 @@ def main() -> None:
         selected_interval="1d",
     )
 
-    # -- Live data marquee (non-scrolling ticker strip above the header) -----
-    ticker_items = [
-        TickerItem(
-            ticker="ws-symbol",
-            html=f'<span class="ws-sym">{symbol}</span>',
-        ),
-        TickerItem(
-            ticker="ws-price",
-            html='<span class="ws-val">—</span>',
-            class_name="ws-price",
-        ),
-        TickerItem(
-            ticker="ws-change",
-            html='<span class="ws-val ws-muted">— (—%)</span>',
-            class_name="ws-change",
-        ),
-        TickerItem(
-            ticker="ws-session",
-            html='<span class="ws-val ws-muted">—</span>',
-            class_name="ws-session",
-        ),
-        TickerItem(
-            ticker="ws-ext-price",
-            html="",
-            class_name="ws-ext-price",
-        ),
-        TickerItem(
-            ticker="ws-ext-change",
-            html="",
-            class_name="ws-ext-change",
-        ),
-        TickerItem(
-            ticker="ws-open",
-            html='<span class="ws-val ws-muted">—</span>',
-            class_name="ws-field",
-        ),
-        TickerItem(
-            ticker="ws-high",
-            html='<span class="ws-val ws-muted">—</span>',
-            class_name="ws-field",
-        ),
-        TickerItem(
-            ticker="ws-low",
-            html='<span class="ws-val ws-muted">—</span>',
-            class_name="ws-field",
-        ),
-        TickerItem(
-            ticker="ws-volume",
-            html='<span class="ws-val ws-muted">—</span>',
-            class_name="ws-field",
-        ),
-        TickerItem(
-            ticker="ws-mktcap",
-            html='<span class="ws-val ws-muted">—</span>',
-            class_name="ws-field",
-        ),
-        TickerItem(
-            ticker="ws-vol24",
-            html="",
-            class_name="ws-field",
-        ),
-    ]
-
-    # Build HTML: label + value pairs laid out in a flex row
-    labels = ["", "", "", "", "", "", "O", "H", "L", "Vol", "Mkt Cap", ""]
-    parts: list[str] = []
-    for label, item in zip(labels, ticker_items, strict=False):
-        if label:
-            parts.append(f'<span class="ws-label">{label}</span>{item.build_html()}')
-        else:
-            parts.append(item.build_html())
-
-    marquee_html = "  ".join(parts)
-
-    marquee_toolbar = Toolbar(
-        position="header",
-        class_name="yf-marquee-strip",
-        items=[
-            Marquee(
-                component_id="yf-live-marquee",
-                text=marquee_html,
-                behavior="static",
-                event="toolbar:noop",
-                style="width: 100%;",
-            ),
-        ],
-    )
+    marquee_toolbar, marquee_css = build_marquee(symbol)
     toolbars.insert(0, marquee_toolbar)
-
-    # -- Custom CSS for the marquee strip -----------------------------------
-    marquee_css = """
-    .yf-marquee-strip {
-        border-bottom: 1px solid var(--pywry-border-color, #333) !important;
-        background: var(--pywry-bg-primary, #1e1e1e) !important;
-        padding: 0 !important;
-        min-height: 0 !important;
-    }
-    .yf-marquee-strip .pywry-toolbar-content {
-        padding: 0 !important;
-    }
-    .yf-marquee-strip .pywry-marquee {
-        width: 100%;
-    }
-    .yf-marquee-strip .pywry-marquee-content {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 4px 10px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 11.5px;
-        letter-spacing: 0.01em;
-        white-space: nowrap;
-    }
-    .ws-sym {
-        font-weight: 700;
-        font-size: 13px;
-        color: var(--pywry-text-primary, #e0e0e0);
-        letter-spacing: 0.04em;
-    }
-    .ws-price .pywry-ticker-item,
-    .ws-price {
-        font-weight: 600;
-        font-size: 13px;
-        font-variant-numeric: tabular-nums;
-    }
-    .ws-change .pywry-ticker-item,
-    .ws-change {
-        font-weight: 500;
-        font-size: 11.5px;
-        font-variant-numeric: tabular-nums;
-    }
-    .ws-label {
-        color: var(--pywry-text-secondary, #787b86);
-        font-size: 10.5px;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-right: 2px;
-    }
-    .ws-field {
-        font-variant-numeric: tabular-nums;
-        color: var(--pywry-text-primary, #e0e0e0);
-        font-size: 11px;
-    }
-    .ws-val {
-        font-variant-numeric: tabular-nums;
-    }
-    .ws-muted {
-        color: var(--pywry-text-secondary, #787b86);
-    }
-    .ws-session .pywry-ticker-item,
-    .ws-session {
-        font-weight: 600;
-        font-size: 10.5px;
-        letter-spacing: 0.03em;
-        padding: 1px 6px;
-        border-radius: 3px;
-        background: rgba(255, 255, 255, 0.06);
-    }
-    .ws-ext-price .pywry-ticker-item,
-    .ws-ext-price {
-        font-weight: 600;
-        font-size: 13px;
-        font-variant-numeric: tabular-nums;
-    }
-    .ws-ext-change .pywry-ticker-item,
-    .ws-ext-change {
-        font-weight: 500;
-        font-size: 11.5px;
-        font-variant-numeric: tabular-nums;
-    }
-    """
 
     app.show_tvchart(
         use_datafeed=True,

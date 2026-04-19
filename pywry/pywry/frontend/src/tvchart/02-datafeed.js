@@ -712,6 +712,9 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                         sOptions.color || sOptions.lineColor ||
                         sOptions.upColor || sOptions.borderUpColor || '#4c87ff'
                     );
+                    if (_tvIsMainSeriesId(sid) || sid === 'series-0') {
+                        _tvFireMainSeriesReady(entry);
+                    }
 
                     // Request initial historical bars
                     var periodParams = {

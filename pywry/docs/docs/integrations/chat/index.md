@@ -385,6 +385,10 @@ Connects to [LangChain Deep Agents](https://docs.langchain.com/oss/python/deepag
 pip install 'pywry[deepagent]'
 ```
 
+The `deepagent` extra pulls in both `deepagents>=0.1.0` and
+`langchain-mcp-adapters>=0.1.0`.  The MCP adapters package is what
+bridges any MCP server's tools into LangChain tools the agent can call.
+
 ```python
 from deepagents import create_deep_agent
 from pywry.chat.manager import ChatManager
@@ -411,14 +415,171 @@ provider = DeepagentProvider(
 )
 ```
 
+#### Constructor parameters
+
+| Parameter | Type | Default | Notes |
+|-----------|------|---------|-------|
+| `agent` | `CompiledGraph \| None` | `None` | Pre-built agent.  When `None` the provider builds one itself using the rest of the parameters. |
+| `model` | `str` | `"anthropic:claude-sonnet-4-6"` | Any model string `create_deep_agent()` accepts (`"openai:gpt-4o"`, `"nvidia:meta/llama-3.3-70b-instruct"`, etc.). |
+| `tools` | `list` | `None` | LangChain-compatible tool callables.  Merged with any MCP-served tools before the agent is built. |
+| `mcp_servers` | `dict[str, dict]` | `None` | MCP servers the agent should connect to.  See the section below. |
+| `system_prompt` | `str` | `""` | Appended to PyWry's base prompt before being passed to `create_deep_agent`. |
+| `checkpointer` | LangGraph saver | `None` | Explicit checkpointer.  Auto-created when `auto_checkpointer=True`. |
+| `store` | LangGraph store | `None` | Explicit memory store.  Auto-created when `auto_store=True`. |
+| `memory`, `interrupt_on`, `backend`, `subagents`, `middleware` | — | `None` | Forwarded to `create_deep_agent()` when provided. |
+| `skills` | `list[str] \| None` | `None` | File paths to Deep Agents skill markdown.  The PyWry MCP package ships seventeen of these under `pywry.mcp.skills` — point at the ones relevant to your agent.  See below. |
+| `auto_checkpointer` | `bool` | `True` | Creates a checkpointer matching PyWry's state backend (Memory/Redis/SQLite) on first agent build. |
+| `auto_store` | `bool` | `True` | Creates an `InMemoryStore` on first agent build when no explicit store is given. |
+| `recursion_limit` | `int` | `50` | LangGraph recursion limit per prompt turn.  Every tool call costs 2–3 graph steps, so the default (LangGraph's own is 25) leaves headroom for multi-tool turns without hiding pathological loops. |
+
+#### Connecting to MCP servers
+
+`mcp_servers` takes a dict in the `langchain_mcp_adapters.client.MultiServerMCPClient` format — one entry per server, keyed by a short name:
+
+```python
+provider = DeepagentProvider(
+    model="openai:gpt-4o",
+    system_prompt="You are a chart analyst.",
+    mcp_servers={
+        # Remote HTTP transport
+        "pywry": {
+            "transport": "streamable_http",
+            "url": "http://127.0.0.1:8765/mcp",
+        },
+        # Local stdio subprocess
+        "fs": {
+            "transport": "stdio",
+            "command": "uvx",
+            "args": ["mcp-server-filesystem", "/tmp"],
+        },
+    },
+)
+```
+
+On first `_build_agent()` the provider calls `MultiServerMCPClient.get_tools()`,
+converts every MCP tool into a LangChain tool, and merges the result
+with `self._tools` before handing the combined list to
+`create_deep_agent(tools=...)`.  The agent then sees local `@tool`
+callables and MCP-served tools in a single unified list.
+
+Pass `mcp_servers=None` (the default) to skip the MCP bridge entirely —
+the adapters package is only imported when at least one server is
+configured.
+
+ACP clients can also add servers at session start by passing
+`mcp_servers=[...]` to `new_session()`; the provider converts those
+entries into the `MultiServerMCPClient` format, merges them into its
+existing map, and rebuilds the agent on the next prompt turn.
+
+#### In-process PyWry MCP server
+
+To run PyWry's own MCP server alongside the app and have the Deep Agent
+drive the same widgets the user sees, start it in a daemon thread and
+point the provider at it:
+
+```python
+import socket, threading, sys
+import pywry.mcp.state as mcp_state
+from pywry.mcp.server import create_server
+
+def start_pywry_mcp_server(app, chart_widget_id):
+    """Start PyWry's FastMCP server in-process with shared app state."""
+    mcp_state._app = app
+    mcp_state.register_widget(chart_widget_id, app)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    mcp = create_server()
+    threading.Thread(
+        target=lambda: mcp.run(transport="streamable-http",
+                               host="127.0.0.1", port=port),
+        daemon=True,
+    ).start()
+    return f"http://127.0.0.1:{port}/mcp"
+
+url = start_pywry_mcp_server(app, chart_widget_id="chart")
+provider = DeepagentProvider(
+    model="openai:gpt-4o",
+    mcp_servers={"pywry": {"transport": "streamable_http", "url": url}},
+)
+```
+
+The in-process server operates on the same `pywry.mcp.state._app`
+singleton the running app uses, so `send_event`, `update_marquee`,
+`update_plotly`, and all other MCP tools act on the live widget.
+
+#### Loading PyWry skill files
+
+PyWry ships seventeen agent-facing skill markdown files under
+`pywry.mcp.skills`.  Pass the ones relevant to your agent's task
+surface as `skills=` — Deep Agents exposes each file as on-demand
+reference the agent can pull in when needed.
+
+```python
+import pathlib
+from pywry.mcp import skills as _skills_pkg
+
+skills_root = pathlib.Path(_skills_pkg.__file__).parent
+
+provider = DeepagentProvider(
+    model="nvidia:meta/llama-3.3-70b-instruct",
+    mcp_servers={"pywry": {"transport": "streamable_http", "url": url}},
+    skills=[
+        str(skills_root / "tvchart" / "SKILL.md"),
+        str(skills_root / "chat_agent" / "SKILL.md"),
+        str(skills_root / "events" / "SKILL.md"),
+    ],
+)
+```
+
+The skills most useful for a running-widget agent (as opposed to the
+widget-builder agents `pywry build_app` uses) are:
+
+| Skill | When to include |
+|-------|-----------------|
+| `tvchart` | Any agent driving a `tvchart` widget — documents every typed tvchart MCP tool, the state shape, and compare-derivative indicator flow |
+| `chat_agent` | Every DeepagentProvider-backed agent — explains `@<name>` context attachments, tool-result cards, edit/resend flow, reply style |
+| `events` | Agents that use `send_event` / `get_events` or need to reason about request/response correlation |
+| `component_reference` | Only when the agent needs to CREATE widgets (not relevant for agents that just operate on an existing one) |
+| `authentication` | Agents that gate actions on OAuth / RBAC state |
+
+See `pywry.mcp.skills.SKILL_METADATA` for the full inventory, and
+[`docs/mcp/skills.md`](../../mcp/skills.md) for the full skill
+reference table.
+
+#### ACP session updates
+
 The provider maps LangGraph streaming events to ACP session updates:
 
 - Text chunks from the LLM → `AgentMessageUpdate`
-- Tool invocations (`read_file`, `write_file`, `execute`, etc.) → `ToolCallUpdate` with lifecycle tracking (pending → in_progress → completed/failed)
+- Tool invocations (`read_file`, `write_file`, `execute`, MCP tools, etc.) → `ToolCallUpdate` with lifecycle tracking (`in_progress` → `completed`/`failed`).  Completed updates carry the serialized tool output in `content`.
 - The `write_todos` built-in tool → `PlanUpdate` with structured task entries
 - `interrupt_on` tools → `PermissionRequestUpdate` for inline approval in the chat UI
 
-Session persistence adapts to PyWry's state backend automatically. With `auto_checkpointer=True` (default), the provider creates a `MemorySaver` for desktop apps, a `RedisSaver` for deploy mode, or a `SqliteSaver` for local persistent storage — matching whatever backend the rest of PyWry is using.
+#### Session persistence
+
+Persistence adapts to PyWry's state backend automatically. With
+`auto_checkpointer=True` (the default), the provider creates a
+`MemorySaver` for desktop apps, a `RedisSaver` for deploy mode, or a
+`SqliteSaver` for local persistent storage — matching whatever backend
+the rest of PyWry is using.  The auto-creation runs the first time
+`_build_agent()` is called so callers that bypass the async
+`initialize()` still get conversation-history persistence across turns.
+
+Each chat UI thread maps to its own LangGraph `thread_id`, so prior
+turns in the same conversation are automatically visible to the agent
+on every new message.
+
+#### Edit / resend truncation
+
+When the user hits **Edit** or **Resend** on a prior message, the chat
+manager calls `provider.truncate_session(session_id, kept_messages)`
+before re-running generation.  `DeepagentProvider` implements this by
+deleting the thread state from the checkpointer (via `delete_thread()`
+on newer LangGraph saver APIs, falling back to dict-level cleanup) or
+— if deletion isn't supported — remapping the session to a fresh
+`thread_id` so the next prompt runs against an empty graph state.
 
 ### Provider Factory
 

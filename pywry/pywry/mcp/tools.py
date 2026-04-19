@@ -461,6 +461,604 @@ and optional volume fields. Time should be Unix epoch seconds.
             },
         ),
         # =====================================================================
+        # TVChart — first-class tools for every chart operation.  Every tool
+        # accepts the owning ``widget_id`` plus an optional ``chart_id`` for
+        # multi-chart widgets (defaults to the first chart).
+        # =====================================================================
+        Tool(
+            name="tvchart_update_series",
+            description="""Replace the bar data for a chart series.
+
+Emits ``tvchart:update`` with ``{bars, volume?, fitContent?, chartId?, seriesId?}``.
+Time values are Unix epoch seconds.  Use ``series_id`` to target a specific
+series (defaults to the main OHLCV series).""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "bars": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": "Bar objects with time/open/high/low/close/volume fields",
+                    },
+                    "volume": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": "Optional separate volume points {time,value,color?}",
+                    },
+                    "series_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                    "fit_content": {"type": "boolean", "default": True},
+                },
+                "required": ["widget_id", "bars"],
+            },
+        ),
+        Tool(
+            name="tvchart_update_bar",
+            description="""Stream a single real-time bar update.
+
+Emits ``tvchart:stream`` with the merged bar payload.  If the bar's time
+matches the most recent bar the chart updates that bar; otherwise a new
+bar is appended.  Volume colour is auto-derived from open/close unless
+provided.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "bar": {
+                        "type": "object",
+                        "description": "Bar dict with time/open/high/low/close/volume",
+                    },
+                    "series_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "bar"],
+            },
+        ),
+        Tool(
+            name="tvchart_add_series",
+            description="""Add a pre-computed overlay series to the chart.
+
+Emits ``tvchart:add-series``.  Use this for any series whose values you
+already computed in Python (custom indicators, compare symbols, forecasts,
+etc.).  For the built-in indicator engine (SMA/EMA/RSI/BB/…) use
+``tvchart_add_indicator`` instead.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "series_id": {"type": "string"},
+                    "bars": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": "Series data points — shape depends on series_type",
+                    },
+                    "series_type": {
+                        "type": "string",
+                        "enum": ["Line", "Area", "Histogram", "Baseline", "Candlestick", "Bar"],
+                        "default": "Line",
+                    },
+                    "series_options": {"type": "object"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "series_id", "bars"],
+            },
+        ),
+        Tool(
+            name="tvchart_remove_series",
+            description="""Remove a series or overlay by id.
+
+Emits ``tvchart:remove-series``.  Works for any series added via
+``tvchart_add_series`` or ``tvchart_add_indicator``.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "series_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "series_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_add_markers",
+            description="""Add buy/sell or event markers at specific bars.
+
+Emits ``tvchart:add-markers``.  Each marker is ``{time, position, color,
+shape, text}`` where ``position`` is ``"aboveBar"`` or ``"belowBar"`` and
+``shape`` is one of ``"arrowUp"``, ``"arrowDown"``, ``"circle"``, etc.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "markers": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": "List of marker dicts",
+                    },
+                    "series_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "markers"],
+            },
+        ),
+        Tool(
+            name="tvchart_add_price_line",
+            description="""Draw a horizontal price line (support/resistance/target).
+
+Emits ``tvchart:add-price-line``.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "price": {"type": "number"},
+                    "color": {"type": "string", "default": "#2196F3"},
+                    "line_width": {"type": "integer", "default": 1},
+                    "title": {"type": "string", "default": ""},
+                    "series_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "price"],
+            },
+        ),
+        Tool(
+            name="tvchart_apply_options",
+            description="""Apply chart-level or series-level option patches.
+
+Emits ``tvchart:apply-options``.  ``chart_options`` patches the chart
+(layout/grid/crosshair/timeScale); ``series_options`` patches the
+specified series (colour, lineWidth, priceScaleId, etc.).""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_options": {"type": "object"},
+                    "series_options": {"type": "object"},
+                    "series_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_add_indicator",
+            description="""Add a built-in technical indicator to the chart.
+
+Emits ``tvchart:add-indicator``.  The indicator is computed natively by
+the charting engine from the current bar data.  Supports legend,
+undo/redo, and subplot panes automatically.
+
+Valid ``name`` values:
+- Moving averages: ``SMA``, ``EMA``, ``WMA``, ``SMA (50)``, ``SMA (200)``,
+  ``EMA (12)``, ``EMA (26)``, ``Moving Average``
+- Momentum: ``RSI``, ``Momentum``
+- Volatility: ``Bollinger Bands``, ``ATR``
+- Volume: ``VWAP``, ``Volume SMA``
+- Lightweight Examples: ``Average Price``, ``Median Price``, ``Weighted Close``,
+  ``Percent Change``, ``Correlation``, ``Spread``, ``Ratio``, ``Sum``, ``Product``""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "period": {
+                        "type": "integer",
+                        "description": "Lookback period (0 uses the indicator default)",
+                    },
+                    "color": {"type": "string", "description": "Hex colour (empty = auto-assign)"},
+                    "source": {
+                        "type": "string",
+                        "description": "OHLC source: close/open/high/low/hl2/hlc3/ohlc4",
+                    },
+                    "method": {
+                        "type": "string",
+                        "description": "For Moving Average: SMA/EMA/WMA",
+                    },
+                    "multiplier": {"type": "number", "description": "Bollinger Bands multiplier"},
+                    "ma_type": {"type": "string", "description": "Bollinger Bands MA type"},
+                    "offset": {
+                        "type": "integer",
+                        "description": "Bar offset for indicator shifting",
+                    },
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "name"],
+            },
+        ),
+        Tool(
+            name="tvchart_remove_indicator",
+            description="""Remove a built-in indicator by series id.
+
+Emits ``tvchart:remove-indicator``.  Grouped indicators (e.g. the three
+Bollinger bands) are removed together, and subplot panes are cleaned up
+automatically.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "series_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "series_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_list_indicators",
+            description="""Return the list of active built-in indicators.
+
+Synchronously round-trips ``tvchart:list-indicators`` →
+``tvchart:list-indicators-response`` and returns the decoded response
+(``{indicators: [{seriesId, name, type, period, color, group}]}``).""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                    "timeout": {"type": "number", "default": 5.0},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_show_indicators",
+            description="Open the indicator picker panel.  Emits ``tvchart:show-indicators``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_symbol_search",
+            description="""Open the symbol search dialog, optionally pre-filling it.
+
+Emits ``tvchart:symbol-search``.  When ``query`` is set the datafeed
+search runs with that query and — if ``auto_select`` (default true) —
+the exact-ticker match (or the first result otherwise) is selected as
+soon as results arrive.  ``symbol_type`` and ``exchange`` narrow the
+datafeed search to a specific security class or venue — e.g.
+``symbol_type="etf"`` ensures ``SPY`` resolves to the SPDR ETF rather
+than a near-prefix match like ``SPYM``.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "query": {"type": "string"},
+                    "auto_select": {"type": "boolean", "default": True},
+                    "symbol_type": {
+                        "type": "string",
+                        "description": (
+                            "Security class filter (datafeed-provided values — "
+                            "typically one of 'equity', 'etf', 'index', "
+                            "'mutualfund', 'future', 'cryptocurrency', "
+                            "'currency').  Case-insensitive."
+                        ),
+                    },
+                    "exchange": {
+                        "type": "string",
+                        "description": "Exchange filter (datafeed-provided values).  Case-insensitive.",
+                    },
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_compare",
+            description="""Add a symbol as an overlay compare series on the chart.
+
+Emits ``tvchart:compare``.  When ``query`` is set the compare panel
+runs a datafeed search and — if ``auto_add`` (default true) — adds the
+exact-ticker match (or the first result otherwise) to the chart.  The
+tool polls chart state until the new compare series appears in
+``state.compareSymbols`` and returns the confirmed state; if the match
+doesn't commit in time, the result includes a ``note``.  Omit
+``query`` to just open the panel for the user.  ``symbol_type`` and
+``exchange`` narrow the datafeed search — e.g. ``symbol_type="etf"``
+routes ``SPY`` to the SPDR ETF rather than a near-prefix match.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "query": {
+                        "type": "string",
+                        "description": "Ticker / name to search and auto-add as a compare series.",
+                    },
+                    "auto_add": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "If true, auto-commit the matching result.  If false, just open the dialog.",
+                    },
+                    "symbol_type": {
+                        "type": "string",
+                        "description": (
+                            "Security class filter (datafeed-provided values — "
+                            "typically one of 'equity', 'etf', 'index', "
+                            "'mutualfund', 'future', 'cryptocurrency', "
+                            "'currency').  Case-insensitive."
+                        ),
+                    },
+                    "exchange": {
+                        "type": "string",
+                        "description": "Exchange filter (datafeed-provided values).  Case-insensitive.",
+                    },
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_change_interval",
+            description="""Change the chart timeframe / bar interval.
+
+Emits ``tvchart:interval-change``.  Valid intervals match the chart's
+``supported_resolutions``.  Typical values: ``1m 3m 5m 15m 30m 45m 1h
+2h 3h 4h 1d 1w 1M 3M 6M 12M``.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "value": {"type": "string", "description": "Interval (e.g. '5m', '1d')"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "value"],
+            },
+        ),
+        Tool(
+            name="tvchart_set_visible_range",
+            description="""Set the chart's visible time range.
+
+Emits ``tvchart:time-scale`` with ``{visibleRange: {from, to}}``.  Times
+are Unix epoch seconds.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "from_time": {"type": "integer"},
+                    "to_time": {"type": "integer"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "from_time", "to_time"],
+            },
+        ),
+        Tool(
+            name="tvchart_fit_content",
+            description="Fit all bars to the visible area.  Emits ``tvchart:time-scale`` with ``{fitContent: true}``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_time_range",
+            description="""Zoom to a preset time range.
+
+Emits ``tvchart:time-range``.  Typical values: ``1D 1W 1M 3M 6M 1Y 5Y YTD``.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "value": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "value"],
+            },
+        ),
+        Tool(
+            name="tvchart_time_range_picker",
+            description="Open the date-range picker dialog.  Emits ``tvchart:time-range-picker``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_log_scale",
+            description="Toggle the logarithmic price scale.  Emits ``tvchart:log-scale``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "value": {"type": "boolean"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "value"],
+            },
+        ),
+        Tool(
+            name="tvchart_auto_scale",
+            description="Toggle auto-scale on the price axis.  Emits ``tvchart:auto-scale``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "value": {"type": "boolean"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "value"],
+            },
+        ),
+        Tool(
+            name="tvchart_chart_type",
+            description="""Change the main series chart type.
+
+Emits ``tvchart:chart-type-change``.  Valid values: ``Candles``,
+``Hollow Candles``, ``Heikin Ashi``, ``Bars``, ``Line``, ``Area``,
+``Baseline``, ``Histogram``.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "value": {"type": "string"},
+                    "series_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "value"],
+            },
+        ),
+        Tool(
+            name="tvchart_drawing_tool",
+            description="""Activate a drawing tool or toggle drawing-layer state.
+
+Emits one of ``tvchart:tool-cursor``, ``tvchart:tool-crosshair``,
+``tvchart:tool-magnet``, ``tvchart:tool-eraser``,
+``tvchart:tool-visibility``, ``tvchart:tool-lock`` depending on ``mode``.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "mode": {
+                        "type": "string",
+                        "enum": ["cursor", "crosshair", "magnet", "eraser", "visibility", "lock"],
+                    },
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "mode"],
+            },
+        ),
+        Tool(
+            name="tvchart_undo",
+            description="Undo the last chart action.  Emits ``tvchart:undo``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_redo",
+            description="Redo the last undone chart action.  Emits ``tvchart:redo``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_show_settings",
+            description="Open the chart settings modal.  Emits ``tvchart:show-settings``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_toggle_dark_mode",
+            description="Toggle the chart's dark/light theme.  Emits ``tvchart:toggle-dark-mode``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "value": {"type": "boolean", "description": "true = dark, false = light"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id", "value"],
+            },
+        ),
+        Tool(
+            name="tvchart_screenshot",
+            description="Take a screenshot of the chart.  Emits ``tvchart:screenshot``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_fullscreen",
+            description="Toggle chart fullscreen mode.  Emits ``tvchart:fullscreen``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_save_layout",
+            description="""Save the current chart layout (indicators + drawings).
+
+Emits ``tvchart:save-layout``.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_open_layout",
+            description="Open the layout picker dialog.  Emits ``tvchart:open-layout``.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_save_state",
+            description="""Request a full state export from every chart in the widget.
+
+Emits ``tvchart:save-state``.  Use ``tvchart_request_state`` for a
+synchronous single-chart snapshot.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        Tool(
+            name="tvchart_request_state",
+            description="""Read a single chart's full state synchronously.
+
+Round-trips ``tvchart:request-state`` → ``tvchart:state-response`` and
+returns the decoded state object (``{chartId, theme, series,
+visibleRange, rawData, drawings, indicators}``).""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {"type": "string"},
+                    "chart_id": {"type": "string"},
+                    "timeout": {"type": "number", "default": 5.0},
+                },
+                "required": ["widget_id"],
+            },
+        ),
+        # =====================================================================
         # Widget Manipulation
         # =====================================================================
         Tool(

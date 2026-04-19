@@ -33,6 +33,7 @@ dependencies = [
     "uvicorn>=0.40.0",
     "watchdog>=3.0.0",
     "setproctitle>=1.3.0",
+    "websockets>=16.0.0",
 ]
 
 [project.scripts]
@@ -43,6 +44,62 @@ ext_mod = "pywry._vendor.pytauri_wheel.ext_mod"
 
 [project.entry-points."pyinstaller40"]
 hook-dirs = "pywry._pyinstaller_hook:get_hook_dirs"
+
+[dependency-groups]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-timeout>=2.0.0",
+    "fakeredis>=2.33.0",
+    "testcontainers>=4.14.0",
+]
+lint = [
+    "ruff>=0.13",
+    "pylint>=3.0.0",
+]
+typecheck = [
+    "mypy>=1.0.0",
+]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocs-autorefs>=1.0.0",
+    "mkdocstrings[python]>=0.26.0",
+    "griffe>=1.0.0",
+    "mkdocs-gen-files>=0.5.0",
+    "mkdocs-literate-nav>=0.6.0",
+    "mkdocs-section-index>=0.3.0",
+]
+build = [
+    "pytauri-wheel>=0.8.0",
+    "pyinstaller>=6.0",
+]
+features = [
+    "agent-client-protocol>=0.1.0",
+    "anthropic>=0.34.0",
+    "anywidget>=0.9.0",
+    "authlib>=1.3.0",
+    "cryptography>=46.0.0",
+    "deepagents>=0.1.0",
+    "fastmcp>=3.2.2",
+    "ipykernel>=7.2.0",
+    "keyring>=24.0",
+    "langchain-mcp-adapters>=0.1.0",
+    "magentic>=0.39.0",
+    "openai>=1.0.0",
+    "pandas>=1.5.3",
+    "plotly>=6.5.0",
+    "pysqlcipher3>=1.2.0",
+    "websockets>=16.0.0",
+]
+dev = [
+    { include-group = "test" },
+    { include-group = "lint" },
+    { include-group = "typecheck" },
+    { include-group = "docs" },
+    { include-group = "build" },
+    { include-group = "features" },
+]
 
 [project.optional-dependencies]
 dev = [
@@ -68,7 +125,7 @@ dev = [
     "anthropic>=0.34.0",
     "anywidget>=0.9.0",
     "authlib>=1.3.0",
-    "fastmcp>=3.0.0",
+    "fastmcp>=3.2.2",
     "ipykernel>=7.2.0",
     "keyring>=24.0",
     "magentic>=0.39.0",
@@ -76,6 +133,10 @@ dev = [
     "pyinstaller>=6.0",
     "websockets>=16.0.0",
     "pandas>=1.5.3",
+    "pysqlcipher3>=1.2.0",
+    "agent-client-protocol>=0.1.0",
+    "deepagents>=0.1.0",
+    "langchain-mcp-adapters>=0.1.0",
 ]
 openai = [
     "openai>=1.0.0",
@@ -98,6 +159,9 @@ acp = [
 ]
 deepagent = [
     "deepagents>=0.1.0",
+    "fastmcp>=3.2.2",
+    "langchain-mcp-adapters>=0.1.0",
+    "agent-client-protocol>=0.1.0",
 ]
 sqlite = [
     "pysqlcipher3>=1.2.0",
@@ -107,15 +171,18 @@ auth = [
     "keyring>=24.0",
 ]
 all = [
+    "agent-client-protocol>=0.1.0",
     "anthropic>=0.34.0",
     "anywidget>=0.9.0",
     "authlib>=1.3.0",
-    "fastmcp>=3.0.0",
+    "deepagents>=0.1.0",
+    "fastmcp>=3.2.2",
     "ipykernel>=7.2.0",
     "keyring>=24.0",
+    "langchain-mcp-adapters>=0.1.0",
     "magentic>=0.39.0",
     "openai>=1.0.0",
-    "pyinstaller>=6.0",
+    "pysqlcipher3>=1.2.0"
 ]
 freeze = [
     "pyinstaller>=6.0",
@@ -133,7 +200,6 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["pywry"]
 # Force platform-specific wheel since we bundle native pytauri binaries
-# Setting this to false tells hatch this is NOT a pure Python package
 strict-naming = false
 
 [tool.hatch.build.targets.wheel.hooks.custom]

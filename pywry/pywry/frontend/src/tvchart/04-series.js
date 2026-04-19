@@ -378,6 +378,7 @@ function _tvResolveRangeSpanDays(rangeValue) {
     var spans = {
         '1d': 1,
         '5d': 5,
+        '1w': 7,
         '1m': 30,
         '3m': 91,
         '6m': 182,
@@ -387,7 +388,11 @@ function _tvResolveRangeSpanDays(rangeValue) {
         '10y': 365 * 10,
         '20y': 365 * 20,
     };
-    return spans[rangeValue] || spans['1y'];
+    // Callers mix cases: the UI tabs use lowercase ("1d", "1y"), but the
+    // MCP tool doc and public API use uppercase ("1D", "1Y").  Normalise
+    // to lowercase so either works without a hidden fallback to "1y".
+    var key = String(rangeValue || '').toLowerCase();
+    return spans[key] || spans['1y'];
 }
 
 /**
@@ -493,6 +498,18 @@ function _tvApplyTimeRangeSelection(entry, range) {
     var bars = _tvResolvePrimaryBars(entry);
     var totalBars = bars.length;
     if (!totalBars) return false;
+
+    // Any preserved range from a prior destroy-recreate becomes stale the
+    // moment the caller picks a new range — clear it so the applyDefault
+    // setTimeout scheduled in lifecycle.js can't later overwrite our
+    // freshly-applied zoom with the pre-destroy view.
+    if (entry._preservedVisibleTimeRange) {
+        delete entry._preservedVisibleTimeRange;
+    }
+
+    // Normalise case — "1D" from the MCP tool and "1d" from the UI tab
+    // both need to resolve to the same range config.
+    range = String(range || '').toLowerCase();
 
     if (range === 'all') {
         entry.chart.timeScale().fitContent();
@@ -1611,6 +1628,21 @@ function _tvIsMainSeriesId(seriesId) {
 }
 
 /**
+ * Fire any one-shot ``whenMainSeriesReady`` callbacks registered on an
+ * entry.  Called by both the lifecycle static-bar path and the datafeed
+ * path right after a main series is attached to ``entry.seriesMap``.
+ */
+function _tvFireMainSeriesReady(entry) {
+    if (!entry || !Array.isArray(entry._mainSeriesReadyCallbacks)) return;
+    if (!entry.seriesMap || !(entry.seriesMap.main || entry.seriesMap['series-0'])) return;
+    var cbs = entry._mainSeriesReadyCallbacks;
+    entry._mainSeriesReadyCallbacks = [];
+    for (var i = 0; i < cbs.length; i++) {
+        try { cbs[i](); } catch (e) {}
+    }
+}
+
+/**
  * Compute a baseValue price for Baseline series from the data range.
  * TradingView uses a percentage-based "Base level" (default 50%) which
  * places the baseline at that percentile of the min-max range.
@@ -1643,9 +1675,16 @@ function _tvComputeBaselineValue(bars, pct) {
  */
 function _tvResolveChartStyle(styleName) {
     var s = String(styleName || 'Line');
+    // Pull the hollow-body value from the active theme's CSS variable so
+    // it respects light/dark/custom themes and is never hardcoded in JS.
+    // Fall back to fully transparent if the variable is undefined.
+    var hollowBody = _cssVar('--pywry-tvchart-hollow-up-body') || 'rgba(0, 0, 0, 0)';
+    // Price line lives on its own CSS selector so the transparent
+    // hollow-body doesn't also erase the right-axis price marker.
+    var priceLineColor = _cssVar('--pywry-tvchart-price-line') || _cssVar('--pywry-tvchart-up') || '#26a69a';
     if (s === 'Bars')              return { seriesType: 'Bar',         source: 'close',      optionPatch: {} };
     if (s === 'Candles')           return { seriesType: 'Candlestick', source: 'close',      optionPatch: {} };
-    if (s === 'Hollow candles')    return { seriesType: 'Candlestick', source: 'close',      optionPatch: { upColor: 'rgba(0, 0, 0, 0)' } };
+    if (s === 'Hollow candles')    return { seriesType: 'Candlestick', source: 'close',      optionPatch: { upColor: hollowBody, priceLineColor: priceLineColor } };
     if (s === 'HLC bars')          return { seriesType: 'Bar',         source: 'hlc3',       optionPatch: {} };
     if (s === 'Line')              return { seriesType: 'Line',        source: 'close',      optionPatch: {} };
     if (s === 'Line with markers') return { seriesType: 'Line',        source: 'close',      optionPatch: { pointMarkersVisible: true } };

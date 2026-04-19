@@ -228,6 +228,116 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
             payload["chartId"] = chart_id
         self.emit("tvchart:remove-series", payload)
 
+    def add_builtin_indicator(
+        self,
+        name: str,
+        period: int | None = None,
+        *,
+        color: str | None = None,
+        source: str | None = None,
+        method: str | None = None,
+        multiplier: float | None = None,
+        ma_type: str | None = None,
+        offset: int | None = None,
+        chart_id: str | None = None,
+    ) -> None:
+        """Add a built-in indicator computed on the JS frontend.
+
+        Uses the full indicator engine: legend integration, undo/redo,
+        subplot panes, and Bollinger Bands band-fill rendering.
+
+        Available indicators (by name):
+            SMA, EMA, WMA, SMA (50), SMA (200), EMA (12), EMA (26),
+            RSI, ATR, VWAP, Volume SMA, Bollinger Bands
+
+        Parameters
+        ----------
+        name : str
+            Indicator name from the catalog (e.g. ``"SMA"``, ``"RSI"``).
+        period : int, optional
+            Lookback period.  Falls back to the catalog default.
+        color : str, optional
+            Hex colour.  Auto-assigned from the palette when omitted.
+        source : str, optional
+            OHLC source: ``"close"``, ``"open"``, ``"high"``, ``"low"``,
+            ``"hl2"``, ``"hlc3"``, ``"ohlc4"``.
+        method : str, optional
+            Moving average method for the Moving Average indicator:
+            ``"SMA"``, ``"EMA"``, ``"WMA"``.
+        multiplier : float, optional
+            Bollinger Bands standard-deviation multiplier (default 2).
+        ma_type : str, optional
+            Bollinger Bands moving-average type (default ``"SMA"``).
+        offset : int, optional
+            Bar offset for indicator shifting.
+        chart_id : str, optional
+            Target chart instance ID.
+        """
+        payload: dict[str, Any] = {"name": name}
+        if period is not None:
+            payload["period"] = period
+        if color is not None:
+            payload["color"] = color
+        if source is not None:
+            payload["source"] = source
+        if method is not None:
+            payload["method"] = method
+        if multiplier is not None:
+            payload["multiplier"] = multiplier
+        if ma_type is not None:
+            payload["maType"] = ma_type
+        if offset is not None:
+            payload["offset"] = offset
+        if chart_id is not None:
+            payload["chartId"] = chart_id
+        self.emit("tvchart:add-indicator", payload)
+
+    def remove_builtin_indicator(
+        self,
+        series_id: str,
+        chart_id: str | None = None,
+    ) -> None:
+        """Remove a built-in indicator by its series ID.
+
+        Handles grouped indicators (e.g. Bollinger Bands upper/mid/lower
+        are removed together), subplot pane cleanup, and undo/redo.
+
+        Parameters
+        ----------
+        series_id : str
+            The indicator series ID (e.g. ``"ind_sma_1713200000"``).
+        chart_id : str, optional
+            Target chart instance ID.
+        """
+        payload: dict[str, Any] = {"seriesId": series_id}
+        if chart_id is not None:
+            payload["chartId"] = chart_id
+        self.emit("tvchart:remove-indicator", payload)
+
+    def list_indicators(
+        self,
+        chart_id: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> None:
+        """Request the list of active built-in indicators.
+
+        The frontend replies with a ``tvchart:list-indicators-response``
+        event containing an ``indicators`` array.
+
+        Parameters
+        ----------
+        chart_id : str, optional
+            Target chart instance ID.
+        context : dict, optional
+            Opaque context echoed back in the response.
+        """
+        payload: dict[str, Any] = {}
+        if chart_id is not None:
+            payload["chartId"] = chart_id
+        if context is not None:
+            payload["context"] = context
+        self.emit("tvchart:list-indicators", payload)
+
     def add_marker(
         self,
         markers: list[dict[str, Any]],

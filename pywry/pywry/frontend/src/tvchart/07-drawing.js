@@ -1787,8 +1787,9 @@ function _tvApplySettingsToChart(chartId, entry, settings, opts) {
             var borderDownOpacity = _tvClamp(_tvToNumber(settings['Borders-Down Color-Opacity'], settings['Borders-Opacity']), 0, 100);
             var wickUpOpacity = _tvClamp(_tvToNumber(settings['Wick-Up Color-Opacity'], settings['Wick-Opacity']), 0, 100);
             var wickDownOpacity = _tvClamp(_tvToNumber(settings['Wick-Down Color-Opacity'], settings['Wick-Opacity']), 0, 100);
-            sOpts.upColor = bodyVisible ? _tvColorWithOpacity(settings['Body-Up Color'], bodyUpOpacity, _cssVar('--pywry-tvchart-up', '#26a69a')) : 'rgba(0,0,0,0)';
-            sOpts.downColor = bodyVisible ? _tvColorWithOpacity(settings['Body-Down Color'], bodyDownOpacity, _cssVar('--pywry-tvchart-down', '#ef5350')) : 'rgba(0,0,0,0)';
+            var bodyHidden = _cssVar('--pywry-tvchart-hidden') || 'rgba(0, 0, 0, 0)';
+            sOpts.upColor = bodyVisible ? _tvColorWithOpacity(settings['Body-Up Color'], bodyUpOpacity, _cssVar('--pywry-tvchart-up', '#26a69a')) : bodyHidden;
+            sOpts.downColor = bodyVisible ? _tvColorWithOpacity(settings['Body-Down Color'], bodyDownOpacity, _cssVar('--pywry-tvchart-down', '#ef5350')) : bodyHidden;
             sOpts.borderVisible = settings['Borders'] !== false;
             sOpts.borderUpColor = _tvColorWithOpacity(settings['Borders-Up Color'], borderUpOpacity, _cssVar('--pywry-tvchart-border-up', '#26a69a'));
             sOpts.borderDownColor = _tvColorWithOpacity(settings['Borders-Down Color'], borderDownOpacity, _cssVar('--pywry-tvchart-border-down', '#ef5350'));

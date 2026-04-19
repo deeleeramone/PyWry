@@ -59,6 +59,16 @@
                     type = 'select';
                     var selectedOpt = el.querySelector('.pywry-dropdown-option.pywry-selected');
                     value = selectedOpt ? selectedOpt.getAttribute('data-value') : null;
+                } else if (el.classList.contains('pywry-marquee')) {
+                    type = 'marquee';
+                    var items = {};
+                    el.querySelectorAll('[data-ticker]').forEach(function(item) {
+                        var ticker = item.getAttribute('data-ticker');
+                        if (ticker && !(ticker in items)) {
+                            items[ticker] = (item.textContent || '').trim();
+                        }
+                    });
+                    value = { text: el.getAttribute('data-text') || '', items: items };
                 }
 
                 if (type) {
@@ -93,6 +103,15 @@
         } else if (el.classList.contains('pywry-dropdown')) {
             var selectedOpt = el.querySelector('.pywry-dropdown-option.pywry-selected');
             return selectedOpt ? selectedOpt.getAttribute('data-value') : null;
+        } else if (el.classList.contains('pywry-marquee')) {
+            var marqueeItems = {};
+            el.querySelectorAll('[data-ticker]').forEach(function(item) {
+                var t = item.getAttribute('data-ticker');
+                if (t && !(t in marqueeItems)) {
+                    marqueeItems[t] = (item.textContent || '').trim();
+                }
+            });
+            return { text: el.getAttribute('data-text') || '', items: marqueeItems };
         }
         return null;
     }

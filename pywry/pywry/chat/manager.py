@@ -84,6 +84,11 @@ class Attachment:
         For widget attachments — live data extracted from the component.
     source : str
         Original source identifier.
+    auto_attached : bool
+        ``True`` when the attachment was added implicitly via the chat's
+        permanent ``@context`` (a registered context source).  Such
+        attachments are passed to the agent like any other but do NOT
+        render an ``attach_widget`` tool-call card on every turn.
     """
 
     type: str
@@ -91,6 +96,7 @@ class Attachment:
     path: pathlib.Path | None = None
     content: str = ""
     source: str = ""
+    auto_attached: bool = False
 
 
 _MAX_ATTACHMENTS = 20
@@ -273,6 +279,21 @@ class _StreamState:
         self.full_text = ""
         self.buffer = ""
         self.last_flush = time.monotonic()
+
+
+def _tool_result_text(content: Any) -> str:
+    """Flatten a ToolCallUpdate.content value into a plain string for the UI."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                parts.append(str(part.get("text", "")))
+            elif isinstance(part, str):
+                parts.append(part)
+        return "".join(parts)
+    return ""
 
 
 class ChatManager:
@@ -524,6 +545,8 @@ class ChatManager:
             "chat:request-state": self._on_request_state,
             "chat:todo-clear": self._on_todo_clear,
             "chat:input-response": self._on_input_response,
+            "chat:edit-message": self._on_edit_message,
+            "chat:resend-from": self._on_resend_from,
         }
 
     @property
@@ -558,7 +581,7 @@ class ChatManager:
             {"messageId": msg_id, "text": text, "threadId": tid},
         )
         self._threads.setdefault(tid, [])
-        self._threads[tid].append({"role": "assistant", "text": text})
+        self._threads[tid].append({"id": msg_id, "role": "assistant", "text": text})
 
     def _emit(self, event: str, data: dict[str, Any]) -> None:
         """Emit an event via the bound widget."""
@@ -709,40 +732,101 @@ class ChatManager:
         content: str | None = None,
         name: str | None = None,
     ) -> Attachment | None:
-        """Create an Attachment for a widget/component reference."""
+        """Create an Attachment for a widget/component reference.
+
+        The resulting attachment always carries an explicit
+        ``widget_id: <id>`` line so an LLM agent reading the @-context
+        can use it directly in any tool call that requires a widget_id
+        (notably the MCP ``tvchart_*`` family).  Any payload returned
+        by the JS-side ``getData()`` is appended after the id header.
+        """
+        registered = self._context_sources.get(widget_id)
+        display_name = (registered or {}).get("name") or name or widget_id
+        # Always lead with the widget id so any consuming agent has the
+        # routing information it needs without having to discover it.
+        header_lines = [f"widget_id: {widget_id}"]
+
         if content:
-            display_name = name or widget_id
-            registered = self._context_sources.get(widget_id)
-            if registered:
-                display_name = registered["name"]
+            body = f"{chr(10).join(header_lines)}\n\n{content}"
             return Attachment(
                 type="widget",
                 name=f"@{display_name}",
-                content=content,
+                content=body,
                 source=widget_id,
             )
+
+        # No content from the frontend — fall back to inline-widget
+        # introspection (HTML widgets created via app.show), still
+        # prefixing widget_id.
         try:
             app = getattr(self._widget, "_app", None) if self._widget else None
             if app is None:
-                return None
+                return Attachment(
+                    type="widget",
+                    name=f"@{display_name}",
+                    content="\n".join(header_lines),
+                    source=widget_id,
+                )
             widgets = getattr(app, "_inline_widgets", {})
             target = widgets.get(widget_id)
             if target is None:
-                return None
+                return Attachment(
+                    type="widget",
+                    name=f"@{display_name}",
+                    content="\n".join(header_lines),
+                    source=widget_id,
+                )
             label = getattr(target, "label", widget_id)
-            content_parts = [f"# Widget: {label}"]
+            inline_lines: list[str] = [f"# Widget: {label}"]
             html_content = getattr(target, "html", None)
             if html_content:
-                content_parts.append(f"Widget type: HTML widget ({len(html_content)} chars)")
+                inline_lines.append(f"Widget type: HTML widget ({len(html_content)} chars)")
+            body = "\n".join(header_lines) + "\n\n" + "\n\n".join(inline_lines)
             return Attachment(
                 type="widget",
                 name=f"@{label}",
-                content="\n\n".join(content_parts),
+                content=body,
                 source=widget_id,
             )
         except Exception:
             log.warning("Could not resolve widget %r", widget_id, exc_info=True)
-            return None
+            # Even on failure, surface the widget_id — better the agent
+            # has the id than nothing at all.
+            return Attachment(
+                type="widget",
+                name=f"@{display_name}",
+                content="\n".join(header_lines),
+                source=widget_id,
+            )
+
+    def _auto_attach_context_sources(
+        self,
+        existing: list[Attachment],
+    ) -> list[Attachment]:
+        """Append every registered context source the user didn't @-mention.
+
+        A widget registered with :py:meth:`register_context_source` is part
+        of the chat's permanent ``@context``: every user message carries
+        an attachment for it whose content begins with ``widget_id: <id>``.
+        That guarantees an LLM agent always has the routing information
+        for the chat's components without the user having to repeat
+        ``@<name>`` on every turn.
+
+        Already-resolved attachments take precedence — explicit mentions
+        keep whatever payload the frontend's ``getData()`` returned.
+        """
+        if not self._enable_context or not self._context_sources:
+            return existing
+        explicit_sources = {att.source for att in existing if att.type == "widget" and att.source}
+        merged: list[Attachment] = list(existing)
+        for source_id in self._context_sources:
+            if source_id in explicit_sources:
+                continue
+            auto = self._resolve_widget_attachment(source_id)
+            if auto is not None:
+                auto.auto_attached = True
+                merged.append(auto)
+        return merged
 
     def _resolve_attachments(
         self,
@@ -862,6 +946,44 @@ class ChatManager:
                 },
             )
 
+    def _dispatch_tool_call_update(
+        self,
+        update: ToolCallUpdate,
+        state: _StreamState,
+        thread_id: str,
+    ) -> None:
+        """Dispatch a tool-call start OR a tool-result to the UI."""
+        self._flush_buffer(state)
+        if update.status in {"completed", "failed"}:
+            self._emit_fire(
+                "chat:tool-result",
+                {
+                    "messageId": state.message_id,
+                    "toolId": update.tool_call_id,
+                    "toolCallId": update.tool_call_id,
+                    "name": update.name,
+                    "kind": update.kind,
+                    "status": update.status,
+                    "result": _tool_result_text(update.content),
+                    "isError": update.status == "failed",
+                    "threadId": thread_id,
+                },
+            )
+            return
+        self._emit_fire(
+            "chat:tool-call",
+            {
+                "messageId": state.message_id,
+                "toolId": update.tool_call_id,
+                "toolCallId": update.tool_call_id,
+                "title": update.title,
+                "name": update.name,
+                "kind": update.kind,
+                "status": update.status,
+                "threadId": thread_id,
+            },
+        )
+
     def _dispatch_session_update(
         self,
         update: Any,
@@ -877,19 +999,7 @@ class ChatManager:
             self._dispatch_text_update(update, state, thread_id)
 
         elif isinstance(update, ToolCallUpdate):
-            self._flush_buffer(state)
-            self._emit_fire(
-                "chat:tool-call",
-                {
-                    "messageId": state.message_id,
-                    "toolCallId": update.tool_call_id,
-                    "title": update.title,
-                    "name": update.name,
-                    "kind": update.kind,
-                    "status": update.status,
-                    "threadId": thread_id,
-                },
-            )
+            self._dispatch_tool_call_update(update, state, thread_id)
 
         elif isinstance(update, PlanUpdate):
             self._flush_buffer(state)
@@ -979,13 +1089,20 @@ class ChatManager:
             "chat:thinking-done",
             {"messageId": state.message_id, "threadId": thread_id},
         )
+        # Clear any persistent status banner ("Thinking...", "Searching...", etc.)
+        self._emit_fire(
+            "chat:status-update",
+            {"messageId": state.message_id, "text": "", "threadId": thread_id},
+        )
         self._emit_fire(
             "chat:stream-chunk",
             {"messageId": state.message_id, "chunk": "", "done": True},
         )
         if state.full_text:
             self._threads.setdefault(thread_id, [])
-            self._threads[thread_id].append({"role": "assistant", "text": state.full_text})
+            self._threads[thread_id].append(
+                {"id": state.message_id, "role": "assistant", "text": state.full_text}
+            )
 
     def _handle_cancel(self, state: _StreamState, thread_id: str) -> None:
         """Handle stream cancellation."""
@@ -1002,7 +1119,12 @@ class ChatManager:
         if state.full_text:
             self._threads.setdefault(thread_id, [])
             self._threads[thread_id].append(
-                {"role": "assistant", "text": state.full_text, "stopped": True}
+                {
+                    "id": state.message_id,
+                    "role": "assistant",
+                    "text": state.full_text,
+                    "stopped": True,
+                }
             )
 
     def _handle_stream(
@@ -1067,6 +1189,12 @@ class ChatManager:
         if not (ctx.attachments and messages):
             return messages
         for att in ctx.attachments:
+            # Auto-attached @-context entries are infrastructure, not user
+            # actions — don't render an ``attach_widget`` tool-call card
+            # for them every single turn.  Their content is still injected
+            # into the user message text below so the agent can read it.
+            if att.auto_attached:
+                continue
             label = att.name.lstrip("@").strip()
             tool_id = f"ctx_{uuid.uuid4().hex[:8]}"
             self._emit_fire(
@@ -1167,7 +1295,7 @@ class ChatManager:
             {"messageId": message_id, "text": text, "threadId": thread_id},
         )
         self._threads.setdefault(thread_id, [])
-        self._threads[thread_id].append({"role": "assistant", "text": text})
+        self._threads[thread_id].append({"id": message_id, "role": "assistant", "text": text})
 
     def _run_handler(
         self,
@@ -1193,7 +1321,9 @@ class ChatManager:
                 {"messageId": message_id, "text": error_text, "threadId": thread_id},
             )
             self._threads.setdefault(thread_id, [])
-            self._threads[thread_id].append({"role": "assistant", "text": error_text})
+            self._threads[thread_id].append(
+                {"id": message_id, "role": "assistant", "text": error_text}
+            )
         finally:
             self._cancel_events.pop(thread_id, None)
 
@@ -1204,9 +1334,13 @@ class ChatManager:
         if not text:
             return
 
+        # Use the frontend-generated message ID when present so edit/resend
+        # can address the exact same message in both ends.
+        user_message_id = data.get("messageId") or f"msg_{uuid.uuid4().hex[:8]}"
+
         self._active_thread = thread_id
         self._threads.setdefault(thread_id, [])
-        self._threads[thread_id].append({"role": "user", "text": text})
+        self._threads[thread_id].append({"id": user_message_id, "role": "user", "text": text})
 
         message_id = f"msg_{uuid.uuid4().hex[:8]}"
         cancel = threading.Event()
@@ -1219,6 +1353,13 @@ class ChatManager:
 
         raw_attachments = data.get("attachments", [])
         attachments = self._resolve_attachments(raw_attachments) if raw_attachments else []
+        # Auto-attach every registered context source that the user did not
+        # explicitly @-mention.  Registering a widget as a context source is
+        # the developer's declaration that "this component is part of the
+        # conversation context" — every turn should carry the routing info
+        # for those widgets so an LLM agent never has to remember an id
+        # across messages.
+        attachments = self._auto_attach_context_sources(attachments)
 
         ctx = ChatContext(
             thread_id=thread_id,
@@ -1269,13 +1410,15 @@ class ChatManager:
                 content_blocks.append(TextPart(text=last.get("text", "")))
 
             cancel_event = asyncio.Event()
+            # Use the UI thread_id as the provider session_id so each chat
+            # thread has its own LangGraph checkpointer thread and the agent
+            # sees prior turns in the same conversation.
+            session_id = thread_id or self._session_id
 
             async def _run() -> None:
                 state = _StreamState(message_id)
                 typing_hidden = False
-                async for update in self._provider.prompt(
-                    self._session_id, content_blocks, cancel_event
-                ):
+                async for update in self._provider.prompt(session_id, content_blocks, cancel_event):
                     if not typing_hidden:
                         typing_hidden = True
                         self._emit(
@@ -1306,7 +1449,9 @@ class ChatManager:
                 {"messageId": message_id, "text": error_text, "threadId": thread_id},
             )
             self._threads.setdefault(thread_id, [])
-            self._threads[thread_id].append({"role": "assistant", "text": error_text})
+            self._threads[thread_id].append(
+                {"id": message_id, "role": "assistant", "text": error_text}
+            )
         finally:
             self._cancel_events.pop(thread_id, None)
 
@@ -1316,6 +1461,190 @@ class ChatManager:
         cancel = self._cancel_events.get(thread_id)
         if cancel:
             cancel.set()
+
+    def _truncate_thread_at(
+        self,
+        thread_id: str,
+        message_id: str,
+        *,
+        keep_target: bool,
+    ) -> tuple[list[MessageDict], list[str]]:
+        """Truncate a thread's history at the message with ``message_id``.
+
+        Returns a tuple ``(removed_messages, removed_ids)``.  When
+        ``keep_target`` is True the message itself is retained and only
+        messages after it are removed; when False the target message and
+        everything after it are removed.
+        """
+        messages = self._threads.get(thread_id, [])
+        cut_index: int | None = None
+        for idx, msg in enumerate(messages):
+            if msg.get("id") == message_id:
+                cut_index = idx
+                break
+        if cut_index is None:
+            return [], []
+        keep_until = cut_index + 1 if keep_target else cut_index
+        removed = messages[keep_until:]
+        removed_ids = [m.get("id", "") for m in removed if m.get("id")]
+        self._threads[thread_id] = messages[:keep_until]
+        return removed, removed_ids
+
+    def _truncate_provider_state(self, thread_id: str, kept_messages: list[MessageDict]) -> None:
+        """Best-effort: align the provider's persisted history with the UI.
+
+        For LangGraph-backed providers (DeepagentProvider) we delete the
+        thread state from the checkpointer so the next prompt rebuilds
+        from a fresh state.  The next user message gets re-sent to the
+        agent with the full surviving history via the ChatManager flow.
+        """
+        provider = self._provider
+        if provider is None:
+            return
+        try:
+            truncate = getattr(provider, "truncate_session", None)
+            if callable(truncate):
+                truncate(thread_id, kept_messages)
+        except Exception:
+            log.debug("provider.truncate_session failed", exc_info=True)
+
+    def _on_edit_message(self, data: Any, _event_type: str, _label: str) -> None:
+        """Edit a previously-sent user message and regenerate from there."""
+        thread_id = data.get("threadId", self._active_thread) or self._active_thread
+        message_id = data.get("messageId", "")
+        new_text = (data.get("text") or "").strip()
+        if not message_id or not new_text:
+            return
+
+        messages = self._threads.get(thread_id, [])
+        target_idx: int | None = None
+        for idx, msg in enumerate(messages):
+            if msg.get("id") == message_id and msg.get("role") == "user":
+                target_idx = idx
+                break
+        if target_idx is None:
+            return
+
+        # Cancel any active generation in this thread before mutating history
+        active_cancel = self._cancel_events.get(thread_id)
+        if active_cancel:
+            active_cancel.set()
+
+        # Replace the user message text and drop everything after it
+        messages[target_idx] = {**messages[target_idx], "text": new_text}
+        removed = messages[target_idx + 1 :]
+        removed_ids = [m.get("id", "") for m in removed if m.get("id")]
+        self._threads[thread_id] = messages[: target_idx + 1]
+
+        # Tell the frontend to drop the obsolete bubbles
+        self._emit_fire(
+            "chat:messages-deleted",
+            {
+                "threadId": thread_id,
+                "messageIds": removed_ids,
+                "editedMessageId": message_id,
+                "editedText": new_text,
+            },
+        )
+
+        # Reset provider-side history then re-run the prompt with the new text
+        self._truncate_provider_state(thread_id, list(self._threads[thread_id]))
+
+        synthetic = {
+            "text": new_text,
+            "threadId": thread_id,
+            "messageId": message_id,
+            "_resend": True,
+        }
+        # Pop the just-edited user message so _on_user_message re-appends it
+        # with the same id.
+        self._threads[thread_id] = messages[:target_idx]
+        self._on_user_message(synthetic, "chat:user-message", "")
+
+    def _on_resend_from(self, data: Any, _event_type: str, _label: str) -> None:
+        """Re-run generation from a specific user message in the thread.
+
+        The target user message stays visible — only the assistant reply
+        (and any subsequent turns) are dropped and regenerated.  Previous
+        behaviour also removed the user bubble itself, which looked like
+        the message had been erased.
+        """
+        thread_id = data.get("threadId", self._active_thread) or self._active_thread
+        message_id = data.get("messageId", "")
+        if not message_id:
+            return
+
+        messages = self._threads.get(thread_id, [])
+        target_idx: int | None = None
+        for idx, msg in enumerate(messages):
+            if msg.get("id") == message_id and msg.get("role") == "user":
+                target_idx = idx
+                break
+        if target_idx is None:
+            return
+
+        active_cancel = self._cancel_events.get(thread_id)
+        if active_cancel:
+            active_cancel.set()
+
+        target = messages[target_idx]
+        # Keep the target user message; drop everything after it.
+        removed = messages[target_idx + 1 :]
+        removed_ids = [m.get("id", "") for m in removed if m.get("id")]
+        self._threads[thread_id] = messages[: target_idx + 1]
+
+        # Frontend drops the obsolete bubbles.  We deliberately DO NOT
+        # pass ``editedMessageId`` / ``editedText`` — the target bubble
+        # is still in the DOM and its text hasn't changed, so there's
+        # nothing to re-render for the user message.
+        if removed_ids:
+            self._emit_fire(
+                "chat:messages-deleted",
+                {"threadId": thread_id, "messageIds": removed_ids},
+            )
+
+        self._truncate_provider_state(thread_id, list(self._threads[thread_id]))
+
+        # Regenerate the assistant reply WITHOUT re-appending the user
+        # message — it's already in the thread.  Skip the user-message
+        # append step by calling the provider path directly.
+        cancel = threading.Event()
+        self._cancel_events[thread_id] = cancel
+        new_assistant_id = f"msg_{uuid.uuid4().hex[:8]}"
+
+        self._emit(
+            "chat:typing-indicator",
+            {"typing": True, "threadId": thread_id},
+        )
+
+        raw_attachments = target.get("attachments", [])
+        attachments = self._resolve_attachments(raw_attachments) if raw_attachments else []
+        attachments = self._auto_attach_context_sources(attachments)
+
+        ctx = ChatContext(
+            thread_id=thread_id,
+            message_id=new_assistant_id,
+            settings=dict(self._settings_values),
+            cancel_event=cancel,
+            system_prompt=self._system_prompt,
+            model=self._model,
+            temperature=self._temperature,
+            attachments=attachments,
+        )
+
+        messages_for_run = list(self._threads.get(thread_id, []))
+        if self._handler is not None:
+            threading.Thread(
+                target=self._run_handler,
+                args=(messages_for_run, ctx, new_assistant_id, thread_id, cancel),
+                daemon=True,
+            ).start()
+        elif self._provider is not None:
+            threading.Thread(
+                target=self._run_provider,
+                args=(messages_for_run, ctx, new_assistant_id, thread_id, cancel),
+                daemon=True,
+            ).start()
 
     def _on_todo_clear(self, _data: Any, _event_type: str, _label: str) -> None:
         """Handle user clearing the plan/todo list."""
