@@ -41,6 +41,16 @@ jobs:
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
 
+      - name: Install Linux system deps
+        run: |
+          for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
+          # ``libsqlcipher-dev`` is required to build ``pysqlcipher3``
+          # (pulled in by the ``features`` / ``dev`` / ``sqlite`` groups
+          # for the encrypted SQLite state backend).  Without it the
+          # build fails with ``fatal error: sqlcipher/sqlite3.h: No
+          # such file or directory`` during the ``pip install`` step.
+          sudo apt-get install -y --fix-missing libsqlcipher-dev
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -117,7 +127,52 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
-          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev && break || { sleep 30; sudo apt-get update; }; done
+          # ``libsqlcipher-dev`` is required for ``pysqlcipher3`` to
+          # build its C extension — without it ``pip install .[dev]``
+          # fails.  Pinned here alongside the webkit / x11 deps so the
+          # pip step below has everything it needs.
+          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev libsqlcipher-dev && break || { sleep 30; sudo apt-get update; }; done
+
+      - name: Install macOS system deps
+        if: runner.os == 'macOS'
+        run: |
+          # ``sqlcipher`` provides the library + headers
+          # ``pysqlcipher3`` compiles against.  Homebrew doesn't put
+          # it in the default include path so surface it via
+          # ``LDFLAGS`` / ``CPPFLAGS`` in the environment so the
+          # later ``pip install`` step picks it up.
+          brew install sqlcipher
+          SQLCIPHER_PREFIX="$(brew --prefix sqlcipher)"
+          echo "LDFLAGS=-L$SQLCIPHER_PREFIX/lib" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I$SQLCIPHER_PREFIX/include -I$SQLCIPHER_PREFIX/include/sqlcipher" >> $GITHUB_ENV
+
+      - name: Cache vcpkg packages (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v5
+        with:
+          path: C:/vcpkg/installed
+          key: vcpkg-${{ runner.arch }}-windows-openssl-lua-sqlcipher-${{ hashFiles('.github/workflows/test-pywry.yml') }}
+          restore-keys: |
+            vcpkg-${{ runner.arch }}-windows-openssl-lua-sqlcipher-
+
+      - name: Install SQLCipher via vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # ``pysqlcipher3`` builds a C extension against the
+          # SQLCipher library.  Windows has no system package for
+          # it, so install via vcpkg and pin the env vars the
+          # setuptools build honours (``INCLUDE`` / ``LIB`` flow
+          # through MSVC; ``SQLCIPHER_PATH`` gives pysqlcipher3 a
+          # direct hint).
+          $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
+          $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:$triplet"
+          $sqlcipherDir = "$env:VCPKG_ROOT\installed\$triplet"
+          echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
+          echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV
+          echo "LIB=$sqlcipherDir\lib;$env:LIB" >> $env:GITHUB_ENV
+          echo "PATH=$sqlcipherDir\bin;$env:PATH" >> $env:GITHUB_ENV
 
       - name: Cache vcpkg packages (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
