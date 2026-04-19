@@ -17,12 +17,27 @@
         // instead of 'main' (which is a SERIES id, not a chart id).
         var _cid = bridge._chartId || null;
 
-        // Resolve a chart id from event data, falling back to the bridge's
-        // owned ``_cid`` and finally to whatever chart is registered on
-        // ``__PYWRY_TVCHARTS__``.  Single-widget native-window mode doesn't
-        // set ``bridge._chartId``, so without the registry fallback
-        // handlers that run against the live chart (visibility/lock/state)
-        // resolve to ``null`` and no-op.
+        // In native mode, ``bridge._chartId`` is undefined at onReady
+        // time because the chart is created later via a direct call
+        // to ``PYWRY_TVCHART_CREATE`` (bypassing the ``tvchart:create``
+        // event).  Wire a property accessor so that when
+        // ``PYWRY_TVCHART_CREATE`` later sets ``bridge._chartId``, the
+        // closure variable ``_cid`` updates automatically.
+        if (!_cid) {
+            Object.defineProperty(bridge, '_chartId', {
+                get: function() { return _cid; },
+                set: function(v) { _cid = v; },
+                configurable: true,
+            });
+        }
+
+        // Resolve a chart id from event data, falling back to the
+        // bridge's owned ``_cid`` and finally to whatever chart is
+        // registered on ``__PYWRY_TVCHARTS__``.  Single-widget native-
+        // window mode doesn't always have ``_cid`` populated in time
+        // (e.g. an event fires before the create handler runs), so the
+        // registry fallback keeps handlers that operate on the live
+        // chart (visibility / lock / state) from silently no-op'ing.
         function _resolveCid(data) {
             if (data && data.chartId) return data.chartId;
             if (_cid) return _cid;
@@ -44,6 +59,9 @@
                 return;
             }
             var chartId = data.chartId || _cid;
+            // In native mode bridge._chartId is null, so capture the first
+            // chartId from the create payload for subsequent handlers.
+            if (!_cid && chartId) _cid = chartId;
             window.PYWRY_TVCHART_CREATE(chartId, container, data);
         });
 

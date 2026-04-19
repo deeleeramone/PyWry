@@ -1544,6 +1544,13 @@ if HAS_ANYWIDGET:
                 handlers = self._handlers.get(event_type, [])
                 for handler in handlers:
                     handler(event_data, event_type, self._label)
+
+                # Also dispatch through the global callback registry so that
+                # handlers registered via app.on(..., label=widget_label) are
+                # invoked (e.g. datafeed event handlers wired by show_tvchart).
+                from .callbacks import get_registry
+
+                get_registry().dispatch(self._label, event_type, event_data)
             except Exception as e:
                 print(f"[PyWry] Error handling JS event: {e}")
                 import traceback
