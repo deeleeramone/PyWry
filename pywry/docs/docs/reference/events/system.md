@@ -27,7 +27,13 @@
 | `pywry:inject-css` | `{css, id?}` | Inject CSS (id for replacement) |
 | `pywry:remove-css` | `{id}` | Remove injected CSS by id |
 | `pywry:update-html` | `{html}` | Replace entire page content |
-| `pywry:update-theme` | `{theme}` | Switch theme (`dark` or `light`) |
+| `pywry:update-theme` | `{theme}` | Switch theme (`dark`, `light`, or `system`) |
+
+## Theme Broadcast (JS → Python)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `pywry:theme-update` | `{mode, original}` | Broadcast when the frontend resolves a theme change — fires after the user toggles dark/light or when `system` mode resolves to the concrete `light`/`dark` choice.  `mode` is the resolved theme (`dark` / `light`); `original` is the request (`dark` / `light` / `system`). |
 
 ## Notifications & Actions (Python → JS)
 
@@ -35,6 +41,7 @@
 |-------|---------|-------------|
 | `pywry:alert` | `{message, type?, title?, duration?, position?, callback_event?}` | Toast notification |
 | `pywry:download` | `{content, filename, mimeType?}` | Trigger file download |
+| `pywry:download-csv` | `{filename, data: [[row]], headers?}` | Trigger a CSV download — the frontend serialises `data` as CSV and streams it through the same download pipeline as `pywry:download`.  Used by the Plotly export-data flow. |
 | `pywry:navigate` | `{url}` | Navigate to URL |
 | `pywry:refresh` | `{}` | Request content refresh |
 | `pywry:cleanup` | `{}` | Cleanup resources (native mode) |

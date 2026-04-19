@@ -62,6 +62,7 @@ buttons send the id from the `data-msg-id` attribute on the bubble.
 |-------|---------|-------------|
 | `chat:settings-change` | `{key, value}` | User changed a settings menu item (e.g., temperature slider, model select). |
 | `chat:todo-clear` | `{}` | User dismissed the todo list above the input bar. |
+| `chat:permission-response` | `{toolCallId, optionId, threadId}` | User clicked one of the options offered by a `chat:permission-request`.  Resumes the paused generation with the chosen option id. |
 
 ## Assistant Responses (Python → JS)
 
@@ -98,6 +99,7 @@ attribute also gets populated.
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `chat:input-required` | `{messageId, threadId, requestId, prompt, placeholder, inputType, options?}` | Pause streaming to request user input mid-conversation. |
+| `chat:permission-request` | `{messageId, threadId, toolCallId, title, description?, options: [{id, label, description?}]}` | Pause streaming to ask the user to approve / deny a tool invocation.  Response arrives on `chat:permission-response`. |
 
 Handler pattern for permission requests:
 
@@ -123,6 +125,7 @@ def my_handler(messages, ctx):
 | `chat:artifact` | `{messageId, artifactType, title, threadId, ...}` | Rich content artifact (code, chart, table, image, etc.). |
 | `chat:citation` | `{messageId, url, title, snippet, threadId}` | Source citation/reference link. |
 | `chat:todo-update` | `{items}` | Push a todo list above the input bar. Not stored in history. |
+| `chat:plan-update` | `{entries: [{content, priority, status}]}` | Push a structured plan (to-do card) above the input bar.  Emitted by agent providers that expose an explicit planning phase (e.g. Deep Agents `write_todos`). |
 
 **Artifact types and type-specific fields:**
 
@@ -159,5 +162,8 @@ def my_handler(messages, ctx):
 | `chat:register-settings-item` | `{id, label, type, value, options?, min?, max?, step?}` | Register a settings menu item in the gear dropdown. |
 | `chat:context-sources` | `{sources}` | List of dashboard components available as @-mentionable context sources. |
 | `chat:update-settings` | `{key: value, ...}` | Push updated settings values to the frontend menu. |
+| `chat:config-update` | `{options: [{id, label, description?}]}` | Update the registered command palette when a provider adjusts its slash-command surface mid-session. |
+| `chat:mode-update` | `{currentModeId, availableModes: [ModeInfo]}` | Broadcast a change in the active agent mode (e.g. planner / builder / chat).  The mode picker in the chat header rerenders from this payload. |
+| `chat:commands-update` | `{commands: [{name, description}]}` | Replace the full slash-command palette.  Used when the provider resets or switches its command set. |
 
 **Settings item types:** `action`, `toggle`, `select`, `range`, `separator`
