@@ -379,31 +379,37 @@ class TestTVChartFullLifecycle:
     # ------------------------------------------------------------------
 
     def test_08_add_sma_20(self, chart: dict[str, Any]) -> None:
-        """Add SMA overlay -- series count increases, metadata correct."""
+        """Add an SMA(20) overlay via the unified Moving Average entry."""
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var before = Object.keys(entry.seriesMap).length;"
             "_tvAddIndicator("
-            "  {name: 'SMA', key: 'sma', fullName: 'SMA',"
-            "   category: 'Moving Averages', defaultPeriod: 20},"
+            "  {name: 'Moving Average', key: 'moving-average-ex',"
+            "   fullName: 'Moving Average', category: 'Moving Averages',"
+            "   defaultPeriod: 20, _method: 'SMA'},"
             "  cid"
             ");"
             "var after = Object.keys(entry.seriesMap).length;"
             "var indKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "var info = indKey ? _activeIndicators[indKey] : null;"
             "pywry.result({"
             "  before: before, after: after,"
             "  name: info ? info.name : null,"
+            "  method: info ? info.method : null,"
             "  period: info ? info.period : null,"
             "  isSubplot: info ? !!info.isSubplot : null,"
             "  seriesId: indKey || null,"
             "});"
             "})();",
         )
-        assert r["after"] > r["before"], "SMA should add a new series"
-        assert r["name"] == "SMA"
+        assert r["after"] > r["before"], "Moving Average should add a new series"
+        assert r["name"] == "Moving Average"
+        assert r["method"] == "SMA"
         assert r["period"] == 20
         assert r["isSubplot"] is False
 
@@ -412,7 +418,10 @@ class TestTVChartFullLifecycle:
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var indKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "var series = indKey ? entry.seriesMap[indKey] : null;"
             "var data = [];"
@@ -434,7 +443,10 @@ class TestTVChartFullLifecycle:
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var indKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "_tvApplyIndicatorSettings(indKey, {period: 50});"
             "var info = _activeIndicators[indKey];"
@@ -447,7 +459,10 @@ class TestTVChartFullLifecycle:
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var indKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "_tvApplyIndicatorSettings(indKey, {color: '#ff6600'});"
             "var info = _activeIndicators[indKey];"
@@ -457,12 +472,13 @@ class TestTVChartFullLifecycle:
         assert r["color"] == "#ff6600"
 
     def test_12_add_ema_overlay(self, chart: dict[str, Any]) -> None:
-        """Add EMA(12) -- now two overlay indicators active."""
+        """Add an EMA(12) -- now two overlay indicators active."""
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "_tvAddIndicator("
-            "  {name: 'EMA', key: 'ema', fullName: 'EMA',"
-            "   category: 'Moving Averages', defaultPeriod: 12},"
+            "  {name: 'Moving Average', key: 'moving-average-ex',"
+            "   fullName: 'Moving Average', category: 'Moving Averages',"
+            "   defaultPeriod: 12, _method: 'EMA'},"
             "  cid"
             ");"
             "var indKeys = Object.keys(_activeIndicators);"
@@ -570,7 +586,7 @@ class TestTVChartFullLifecycle:
         assert any(c >= 3 for c in group_counts)
 
     def test_17_indicator_count_correct(self, chart: dict[str, Any]) -> None:
-        """SMA + EMA + RSI + BB(3) = at least 6 indicator series."""
+        """MA(SMA) + MA(EMA) + RSI + BB(3) = at least 6 indicator series."""
         r = _js(
             chart["label"],
             "(function() {pywry.result({count: Object.keys(_activeIndicators).length});})();",
@@ -586,7 +602,10 @@ class TestTVChartFullLifecycle:
             chart["label"],
             "(function() {"
             "var smaKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "var rsiKey = Object.keys(_activeIndicators).filter("
             "  function(k) { return _activeIndicators[k].name === 'RSI'; }"
@@ -1106,7 +1125,10 @@ class TestTVChartFullLifecycle:
             "(function() {"
             "var before = Object.keys(_activeIndicators).length;"
             "var smaKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "if (smaKey) _tvRemoveIndicator(smaKey);"
             "var after = Object.keys(_activeIndicators).length;"

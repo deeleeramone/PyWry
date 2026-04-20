@@ -159,13 +159,6 @@ function _tvRecomputeIndicatorSeries(chartId, seriesId, recomputedGroups) {
         return;
     }
 
-    if (baseName === 'SMA' || baseName === 'EMA' || baseName === 'WMA') {
-        var fn2 = baseName === 'SMA' ? _computeSMA : baseName === 'EMA' ? _computeEMA : _computeWMA;
-        var s2 = entry.seriesMap[seriesId];
-        if (s2) s2.setData(fn2(rawData, period).filter(function(v) { return v.value !== undefined; }));
-        return;
-    }
-
     if (info.group && type === 'bollinger-bands') {
         if (recomputedGroups && recomputedGroups[info.group]) return;
         if (recomputedGroups) recomputedGroups[info.group] = true;

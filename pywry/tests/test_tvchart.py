@@ -1830,10 +1830,11 @@ class TestTVChartStateMixin:
 
     def test_add_builtin_indicator_with_period_and_color(self):
         m = _MockEmitter()
-        m.add_builtin_indicator("SMA", period=50, color="#2196F3")
+        m.add_builtin_indicator("Moving Average", period=50, color="#2196F3", method="SMA")
         event, payload = m._emitted[0]
         assert event == "tvchart:add-indicator"
-        assert payload["name"] == "SMA"
+        assert payload["name"] == "Moving Average"
+        assert payload["method"] == "SMA"
         assert payload["period"] == 50
         assert payload["color"] == "#2196F3"
 
@@ -1856,14 +1857,14 @@ class TestTVChartStateMixin:
 
     def test_add_builtin_indicator_omits_unset_options(self):
         m = _MockEmitter()
-        m.add_builtin_indicator("EMA", period=12)
+        m.add_builtin_indicator("RSI", period=12)
         _event, payload = m._emitted[0]
         # Only the explicit fields land in the payload
         assert set(payload.keys()) == {"name", "period"}
 
     def test_add_builtin_indicator_chart_id(self):
         m = _MockEmitter()
-        m.add_builtin_indicator("SMA", period=10, chart_id="alt")
+        m.add_builtin_indicator("Moving Average", period=10, method="SMA", chart_id="alt")
         _event, payload = m._emitted[0]
         assert payload["chartId"] == "alt"
 

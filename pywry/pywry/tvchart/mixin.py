@@ -247,14 +247,18 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
         subplot panes, and Bollinger Bands band-fill rendering.
 
         Available indicators (by name):
-            SMA, EMA, WMA, SMA (50), SMA (200), EMA (12), EMA (26),
-            RSI, ATR, VWAP, Volume SMA, Bollinger Bands,
-            Volume Profile Fixed Range, Volume Profile Visible Range
+            Moving Average (pick SMA / EMA / WMA / HMA / VWMA via
+            ``method``), Ichimoku Cloud, Bollinger Bands, Keltner
+            Channels, ATR, Historical Volatility, Parabolic SAR, RSI,
+            MACD, Stochastic, Williams %R, CCI, ADX, Aroon, VWAP,
+            Volume SMA, Accumulation/Distribution, Volume Profile
+            Fixed Range, Volume Profile Visible Range.
 
         Parameters
         ----------
         name : str
-            Indicator name from the catalog (e.g. ``"SMA"``, ``"RSI"``).
+            Indicator name from the catalog (e.g. ``"Moving Average"``,
+            ``"RSI"``, ``"MACD"``).
         period : int, optional
             Lookback period.  Falls back to the catalog default.
         color : str, optional
@@ -264,9 +268,10 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
             ``"hl2"``, ``"hlc3"``, ``"ohlc4"``.
         method : str, optional
             Moving average method for the Moving Average indicator:
-            ``"SMA"``, ``"EMA"``, ``"WMA"``.
+            ``"SMA"``, ``"EMA"``, ``"WMA"``, ``"HMA"``, or ``"VWMA"``.
         multiplier : float, optional
-            Bollinger Bands standard-deviation multiplier (default 2).
+            Bollinger Bands / Keltner Channels standard-deviation (or
+            ATR) multiplier (default 2).
         ma_type : str, optional
             Bollinger Bands moving-average type (default ``"SMA"``).
         offset : int, optional

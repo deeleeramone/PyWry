@@ -97,7 +97,7 @@ fill primitive.
 
 ```python
 # SMA(50) overlay using the charting engine's own computation
-app.add_builtin_indicator("SMA", period=50, color="#2196F3")
+app.add_builtin_indicator("Moving Average", period=50, method="SMA", color="#2196F3")
 
 # Bollinger Bands (creates three series: upper, middle, lower)
 app.add_builtin_indicator("Bollinger Bands", period=20, multiplier=2)
