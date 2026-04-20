@@ -375,19 +375,15 @@ function _tvPositionsBox(a, b, pixelRatio) {
 /**
  * Bucket bars into a volume-by-price histogram with up/down split.
  *
- * Net volume at each price level is computed by distributing each bar's
- * volume uniformly across the buckets its (low..high) range spans.  The
- * volume is tagged as "up" when the bar closed at or above its open,
- * "down" otherwise.
- *
  * @param {Array} bars - OHLCV bar objects with {time, open, high, low, close, volume}
  * @param {number} fromIdx - inclusive start index
  * @param {number} toIdx - inclusive end index
- * @param {number} bucketCount - number of price buckets
- * @returns {{profile, minPrice, maxPrice, step, totalVolume}|null}
+ * @param {Object} opts - { rowsLayout: 'rows'|'ticks', rowSize: number, valueAreaPct, withDeveloping }
+ * @returns {{profile, minPrice, maxPrice, step, totalVolume, developing?}|null}
  */
-function _tvComputeVolumeProfile(bars, fromIdx, toIdx, bucketCount) {
+function _tvComputeVolumeProfile(bars, fromIdx, toIdx, opts) {
     if (!bars || !bars.length) return null;
+    opts = opts || {};
     var lo = Math.max(0, Math.min(fromIdx, toIdx, bars.length - 1));
     var hi = Math.min(bars.length - 1, Math.max(fromIdx, toIdx, 0));
     if (hi < lo) return null;
@@ -403,10 +399,26 @@ function _tvComputeVolumeProfile(bars, fromIdx, toIdx, bucketCount) {
     }
     if (!isFinite(minP) || !isFinite(maxP) || maxP === minP) return null;
 
-    var nBuckets = Math.max(2, Math.floor(bucketCount || 24));
+    // Resolve bucket count from layout option.
+    var rowsLayout = opts.rowsLayout || 'rows';
+    var rowSize = Math.max(0.0001, Number(opts.rowSize) || 24);
+    var nBuckets;
+    if (rowsLayout === 'ticks') {
+        nBuckets = Math.max(2, Math.min(2000, Math.ceil((maxP - minP) / rowSize)));
+    } else {
+        nBuckets = Math.max(2, Math.floor(rowSize));
+    }
     var step = (maxP - minP) / nBuckets;
+
     var up = new Array(nBuckets), down = new Array(nBuckets);
     for (var k = 0; k < nBuckets; k++) { up[k] = 0; down[k] = 0; }
+
+    // Optional running snapshots (for Developing POC / VA).  Recorded
+    // once per bar so the renderer can plot the running point of
+    // control as a step line across time.
+    var withDeveloping = opts.withDeveloping === true;
+    var valueAreaPct = opts.valueAreaPct || 0.70;
+    var developing = withDeveloping ? [] : null;
 
     var totalVol = 0;
     for (var j = lo; j <= hi; j++) {
@@ -416,8 +428,14 @@ function _tvComputeVolumeProfile(bars, fromIdx, toIdx, bucketCount) {
         var bO = bar.open !== undefined ? bar.open : bar.close;
         var bC = bar.close !== undefined ? bar.close : bar.value;
         var vol = bar.volume !== undefined && bar.volume !== null ? Number(bar.volume) : 0;
-        if (!isFinite(vol) || vol <= 0) continue;
-        if (bH === undefined || bL === undefined) continue;
+        if (!isFinite(vol) || vol <= 0) {
+            if (withDeveloping) developing.push({ time: bar.time });
+            continue;
+        }
+        if (bH === undefined || bL === undefined) {
+            if (withDeveloping) developing.push({ time: bar.time });
+            continue;
+        }
         var loIdx = Math.max(0, Math.min(nBuckets - 1, Math.floor((bL - minP) / step)));
         var hiIdx = Math.max(0, Math.min(nBuckets - 1, Math.floor((bH - minP) / step)));
         var span = hiIdx - loIdx + 1;
@@ -427,12 +445,23 @@ function _tvComputeVolumeProfile(bars, fromIdx, toIdx, bucketCount) {
             if (isUp) up[bi] += share; else down[bi] += share;
         }
         totalVol += vol;
+
+        if (withDeveloping) {
+            // Snapshot the running POC and Value Area edges so far.
+            var snap = _tvDevelopingSnapshot(up, down, totalVol, minP, step, valueAreaPct);
+            developing.push({
+                time: bar.time,
+                pocPrice: snap.pocPrice,
+                vaHighPrice: snap.vaHighPrice,
+                vaLowPrice: snap.vaLowPrice,
+            });
+        }
     }
 
     var profile = [];
     for (var p = 0; p < nBuckets; p++) {
         profile.push({
-            price: minP + step * (p + 0.5),   // centre of bucket
+            price: minP + step * (p + 0.5),
             priceLo: minP + step * p,
             priceHi: minP + step * (p + 1),
             upVol: up[p],
@@ -447,6 +476,40 @@ function _tvComputeVolumeProfile(bars, fromIdx, toIdx, bucketCount) {
         maxPrice: maxP,
         step: step,
         totalVolume: totalVol,
+        developing: developing,
+    };
+}
+
+/** Per-bar snapshot of the running POC + value-area edges. */
+function _tvDevelopingSnapshot(up, down, totalVol, minP, step, vaPct) {
+    var n = up.length;
+    var pocIdx = 0;
+    var pocVol = up[0] + down[0];
+    for (var i = 1; i < n; i++) {
+        var t = up[i] + down[i];
+        if (t > pocVol) { pocVol = t; pocIdx = i; }
+    }
+    if (pocVol === 0) return { pocPrice: undefined, vaHighPrice: undefined, vaLowPrice: undefined };
+
+    var target = totalVol * (vaPct || 0.70);
+    var accumulated = pocVol;
+    var loIdx = pocIdx, hiIdx = pocIdx;
+    while (accumulated < target && (loIdx > 0 || hiIdx < n - 1)) {
+        var nextLow = loIdx > 0 ? (up[loIdx - 1] + down[loIdx - 1]) : -1;
+        var nextHigh = hiIdx < n - 1 ? (up[hiIdx + 1] + down[hiIdx + 1]) : -1;
+        if (nextLow < 0 && nextHigh < 0) break;
+        if (nextHigh >= nextLow) {
+            hiIdx += 1;
+            accumulated += up[hiIdx] + down[hiIdx];
+        } else {
+            loIdx -= 1;
+            accumulated += up[loIdx] + down[loIdx];
+        }
+    }
+    return {
+        pocPrice: minP + step * (pocIdx + 0.5),
+        vaHighPrice: minP + step * (hiIdx + 1),
+        vaLowPrice: minP + step * loIdx,
     };
 }
 
@@ -494,40 +557,58 @@ function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData, getOpts) {
         var opts = (getOpts && getOpts()) || {};
 
         var ctx = scope.context;
+        // bitmapSize is ALREADY in bitmap pixels (= mediaSize * pixelRatio).
+        // priceToCoordinate returns MEDIA pixels — convert with vpr.
         var paneW = scope.bitmapSize.width;
-        var paneH = scope.bitmapSize.height;
         var hpr = scope.horizontalPixelRatio;
         var vpr = scope.verticalPixelRatio;
 
-        var widthPct = Math.max(5, Math.min(60, opts.widthPercent || 25)); // % of pane width
+        var widthPct = Math.max(2, Math.min(60, opts.widthPercent || 15));
         var placement = opts.placement === 'left' ? 'left' : 'right';
-        var upColor = opts.upColor || 'rgba(38, 166, 154, 0.55)';
-        var downColor = opts.downColor || 'rgba(239, 83, 80, 0.55)';
-        var vaUpColor = opts.vaUpColor || 'rgba(38, 166, 154, 0.85)';
-        var vaDownColor = opts.vaDownColor || 'rgba(239, 83, 80, 0.85)';
-        var pocColor = opts.pocColor || '#ffffff';
+        var volumeMode = opts.volumeMode || 'updown';   // 'updown' | 'total' | 'delta'
+        var upColor = opts.upColor || _cssVar('--pywry-tvchart-vp-up');
+        var downColor = opts.downColor || _cssVar('--pywry-tvchart-vp-down');
+        var vaUpColor = opts.vaUpColor || _cssVar('--pywry-tvchart-vp-va-up');
+        var vaDownColor = opts.vaDownColor || _cssVar('--pywry-tvchart-vp-va-down');
+        var pocColor = opts.pocColor || _cssVar('--pywry-tvchart-vp-poc');
+        var devPocColor = opts.developingPOCColor || _cssVar('--pywry-tvchart-ind-tertiary');
+        var devVAColor = opts.developingVAColor || _cssVar('--pywry-tvchart-vp-va-up');
         var showPOC = opts.showPOC !== false;
         var showVA = opts.showValueArea !== false;
+        var showDevPOC = opts.showDevelopingPOC === true;
+        var showDevVA = opts.showDevelopingVA === true;
         var valueAreaPct = opts.valueAreaPct || 0.70;
 
+        // For Delta mode the displayed magnitude is |upVol - downVol|.
+        // Otherwise it's the total bucket volume.
+        function bucketMagnitude(row) {
+            return volumeMode === 'delta' ? Math.abs(row.upVol - row.downVol) : row.totalVol;
+        }
         var maxVol = 0;
         for (var i = 0; i < vp.profile.length; i++) {
-            if (vp.profile[i].totalVol > maxVol) maxVol = vp.profile[i].totalVol;
+            var m = bucketMagnitude(vp.profile[i]);
+            if (m > maxVol) maxVol = m;
         }
         if (maxVol <= 0) return;
 
         var poc = _tvComputePOCAndValueArea(vp.profile, vp.totalVolume, valueAreaPct);
 
         var maxBarBitmap = paneW * (widthPct / 100);
-        // Row half-height — half of the bucket's pixel span.  We cap at
-        // a reasonable minimum so very dense profiles still render.
+
+        // Row height: derive from bucket spacing (priceToCoordinate is media px).
         var y0 = series.priceToCoordinate(vp.profile[0].price);
         var y1 = vp.profile.length > 1 ? series.priceToCoordinate(vp.profile[1].price) : null;
         if (y0 === null) return;
         var pxPerBucket = (y1 !== null) ? Math.abs(y0 - y1) : 4;
         var rowHalfBitmap = Math.max(1, (pxPerBucket * vpr) / 2 - 1);
+        var rowHeight = Math.max(1, rowHalfBitmap * 2 - 2);
 
-        // Draw rows
+        function drawSegment(x, w, color, yTop) {
+            if (w <= 0) return;
+            ctx.fillStyle = color;
+            ctx.fillRect(x, yTop, w, rowHeight);
+        }
+
         for (var r = 0; r < vp.profile.length; r++) {
             var row = vp.profile[r];
             if (row.totalVol <= 0) continue;
@@ -536,35 +617,44 @@ function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData, getOpts) {
 
             var yBitmap = y * vpr;
             var yTop = yBitmap - rowHalfBitmap;
-            var rowHeight = Math.max(1, rowHalfBitmap * 2 - 2);
-
-            var barLenBitmap = maxBarBitmap * (row.totalVol / maxVol) * hpr;
-            var upRatio = row.totalVol > 0 ? row.upVol / row.totalVol : 0;
-            var upLen = barLenBitmap * upRatio;
-            var downLen = barLenBitmap - upLen;
-
             var inValueArea = poc && r >= poc.vaLowIdx && r <= poc.vaHighIdx;
             var curUp = inValueArea && showVA ? vaUpColor : upColor;
             var curDown = inValueArea && showVA ? vaDownColor : downColor;
 
-            // Up volume is drawn on the "inner" side (nearest price axis),
-            // down on the "outer" side.  For right placement, inner = right.
-            if (placement === 'right') {
-                var rightEdge = paneW * hpr;
-                ctx.fillStyle = curUp;
-                ctx.fillRect(rightEdge - upLen, yTop, upLen, rowHeight);
-                ctx.fillStyle = curDown;
-                ctx.fillRect(rightEdge - upLen - downLen, yTop, downLen, rowHeight);
+            var barLenBitmap = maxBarBitmap * (bucketMagnitude(row) / maxVol);
+
+            if (volumeMode === 'updown') {
+                var upRatio = row.upVol / row.totalVol;
+                var upLen = barLenBitmap * upRatio;
+                var downLen = barLenBitmap - upLen;
+                if (placement === 'right') {
+                    drawSegment(paneW - upLen, upLen, curUp, yTop);
+                    drawSegment(paneW - upLen - downLen, downLen, curDown, yTop);
+                } else {
+                    drawSegment(0, upLen, curUp, yTop);
+                    drawSegment(upLen, downLen, curDown, yTop);
+                }
+            } else if (volumeMode === 'delta') {
+                // Delta = upVol - downVol.  Positive bars use the up colour
+                // (extending inward from the edge); negative use down.
+                var net = row.upVol - row.downVol;
+                var col = net >= 0 ? curUp : curDown;
+                if (placement === 'right') {
+                    drawSegment(paneW - barLenBitmap, barLenBitmap, col, yTop);
+                } else {
+                    drawSegment(0, barLenBitmap, col, yTop);
+                }
             } else {
-                ctx.fillStyle = curUp;
-                ctx.fillRect(0, yTop, upLen, rowHeight);
-                ctx.fillStyle = curDown;
-                ctx.fillRect(upLen, yTop, downLen, rowHeight);
+                // Total: single bar coloured by net direction (up bias = up colour).
+                var totalCol = row.upVol >= row.downVol ? curUp : curDown;
+                if (placement === 'right') {
+                    drawSegment(paneW - barLenBitmap, barLenBitmap, totalCol, yTop);
+                } else {
+                    drawSegment(0, barLenBitmap, totalCol, yTop);
+                }
             }
         }
 
-        // POC line: horizontal dashed line at the price level with the
-        // highest volume, spanning the full pane width.
         if (showPOC && poc) {
             var pocPrice = vp.profile[poc.pocIdx].price;
             var pocY = series.priceToCoordinate(pocPrice);
@@ -575,9 +665,41 @@ function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData, getOpts) {
                 ctx.setLineDash([4 * hpr, 3 * hpr]);
                 ctx.beginPath();
                 ctx.moveTo(0, pocY * vpr);
-                ctx.lineTo(paneW * hpr, pocY * vpr);
+                ctx.lineTo(paneW, pocY * vpr);
                 ctx.stroke();
                 ctx.restore();
+            }
+        }
+
+        // Developing POC / VA: step-line plots across time, computed
+        // bar-by-bar in _tvComputeVolumeProfile when withDeveloping=true.
+        if ((showDevPOC || showDevVA) && Array.isArray(vp.developing) && vp.developing.length > 0) {
+            var timeScale = entry.chart.timeScale();
+            function plotDevLine(field, color) {
+                ctx.save();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = Math.max(1, Math.round(vpr));
+                ctx.beginPath();
+                var moved = false;
+                for (var di = 0; di < vp.developing.length; di++) {
+                    var p = vp.developing[di];
+                    var px = p[field];
+                    if (px === undefined) { moved = false; continue; }
+                    var dx = timeScale.timeToCoordinate(p.time);
+                    var dy = series.priceToCoordinate(px);
+                    if (dx === null || dy === null) { moved = false; continue; }
+                    var dxB = dx * hpr;
+                    var dyB = dy * vpr;
+                    if (!moved) { ctx.moveTo(dxB, dyB); moved = true; }
+                    else { ctx.lineTo(dxB, dyB); }
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+            if (showDevPOC) plotDevLine('pocPrice', devPocColor);
+            if (showDevVA) {
+                plotDevLine('vaHighPrice', devVAColor);
+                plotDevLine('vaLowPrice', devVAColor);
             }
         }
     }
@@ -595,7 +717,12 @@ function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData, getOpts) {
     };
 
     return {
-        attached: function(params) { _requestUpdate = params.requestUpdate; },
+        attached: function(params) {
+            _requestUpdate = params.requestUpdate;
+            // Kick the first paint — without this the primitive only renders
+            // on the next user interaction (pan/zoom/resize).
+            if (_requestUpdate) _requestUpdate();
+        },
         detached: function() { _requestUpdate = null; },
         updateAllViews: function() {},
         paneViews: function() { return [paneView]; },
@@ -638,7 +765,12 @@ function _tvRefreshVisibleVolumeProfiles(chartId) {
             fromIdx = 0;
             toIdx = bars.length - 1;
         }
-        var vp = _tvComputeVolumeProfile(bars, fromIdx, toIdx, slot.bucketCount);
+        var vp = _tvComputeVolumeProfile(bars, fromIdx, toIdx, {
+            rowsLayout: slot.rowsLayout || 'rows',
+            rowSize: slot.rowSize || ai.rowSize || 24,
+            valueAreaPct: (slot.opts && slot.opts.valueAreaPct) || 0.70,
+            withDeveloping: (slot.opts && (slot.opts.showDevelopingPOC || slot.opts.showDevelopingVA)) === true,
+        });
         if (!vp) continue;
         slot.vpData = vp;
         ai.fromIndex = fromIdx;
@@ -2248,7 +2380,11 @@ function _tvRebuildIndicatorLegend(chartId) {
             eyeBtn.id = 'tvchart-eye-' + seriesId;
             ctrl.appendChild(eyeBtn);
             ctrl.appendChild(_tvLegendActionButton('Settings', settingsSvg, function() {
-                _tvShowIndicatorSettings(seriesId);
+                try {
+                    _tvShowIndicatorSettings(seriesId);
+                } catch (err) {
+                    console.error('[pywry:tvchart] Settings dialog failed for', seriesId, err);
+                }
             }));
             ctrl.appendChild(_tvLegendActionButton('Remove', removeSvg, function() {
                 _tvRemoveIndicator(seriesId);
@@ -2390,6 +2526,7 @@ function _tvShowIndicatorSettings(seriesId) {
     var isVWAP = baseName === 'VWAP';
     var isVolSMA = baseName === 'Volume SMA';
     var isMA = baseName === 'SMA' || baseName === 'EMA' || baseName === 'WMA';
+    var isVP = type === 'volume-profile-fixed' || type === 'volume-profile-visible';
     var isLightweight = type === 'moving-average-ex' || type === 'momentum' || type === 'correlation'
         || type === 'percent-change' || type === 'average-price' || type === 'median-price'
         || type === 'weighted-close' || type === 'spread' || type === 'ratio'
@@ -2426,6 +2563,29 @@ function _tvShowIndicatorSettings(seriesId) {
         offset: info.offset || 0,
         primarySource: info.primarySource || 'close',
         secondarySource: info.secondarySource || 'close',
+        // Volume Profile-specific draft
+        vpRowsLayout: info.rowsLayout || 'rows',          // 'rows' | 'ticks'
+        vpRowSize: info.rowSize != null
+            ? info.rowSize
+            : (info.rowsLayout === 'ticks' ? 1 : (info.bucketCount || info.period || 24)),
+        vpVolumeMode: info.volumeMode || 'updown',         // 'updown' | 'total' | 'delta'
+        vpPlacement: info.placement || 'right',
+        vpWidthPercent: info.widthPercent != null ? info.widthPercent : 15,
+        vpValueAreaPct: info.valueAreaPct != null ? Math.round(info.valueAreaPct * 100) : 70,
+        vpShowPOC: info.showPOC !== false,
+        vpShowValueArea: info.showValueArea !== false,
+        vpShowDevelopingPOC: info.showDevelopingPOC === true,
+        vpShowDevelopingVA: info.showDevelopingVA === true,
+        vpLabelsOnPriceScale: info.labelsOnPriceScale !== false,
+        vpValuesInStatusLine: info.valuesInStatusLine !== false,
+        vpInputsInStatusLine: info.inputsInStatusLine !== false,
+        vpUpColor: info.upColor || _cssVar('--pywry-tvchart-vp-up'),
+        vpDownColor: info.downColor || _cssVar('--pywry-tvchart-vp-down'),
+        vpVAUpColor: info.vaUpColor || _cssVar('--pywry-tvchart-vp-va-up'),
+        vpVADownColor: info.vaDownColor || _cssVar('--pywry-tvchart-vp-va-down'),
+        vpPOCColor: info.pocColor || _cssVar('--pywry-tvchart-vp-poc'),
+        vpDevelopingPOCColor: info.developingPOCColor || _cssVar('--pywry-tvchart-ind-tertiary'),
+        vpDevelopingVAColor: info.developingVAColor || _cssVar('--pywry-tvchart-vp-va-up'),
         // BB-specific fill settings
         showBandFill: info.showBandFill !== undefined ? info.showBandFill : true,
         bandFillColor: info.bandFillColor || '#2196f3',
@@ -2807,9 +2967,42 @@ function _tvShowIndicatorSettings(seriesId) {
                 }
             }
 
-            // Volume SMA  
+            // Volume SMA
             if (isVolSMA) {
                 addSelectRow(body, 'Source', [{ v: 'volume', l: 'Volume' }], 'volume', function() {});
+                hasInputs = true;
+            }
+
+            // Volume Profile inputs (VPVR / VPFR)
+            if (isVP) {
+                addSelectRow(body, 'Rows Layout', [
+                    { v: 'rows', l: 'Number Of Rows' },
+                    { v: 'ticks', l: 'Ticks Per Row' },
+                ], draft.vpRowsLayout, function(v) {
+                    draft.vpRowsLayout = v;
+                    // Reset row size to a sensible default for the new layout
+                    if (v === 'ticks') {
+                        if (!draft.vpRowSize || draft.vpRowSize > 100) draft.vpRowSize = 1;
+                    } else {
+                        if (!draft.vpRowSize || draft.vpRowSize < 4) draft.vpRowSize = 24;
+                    }
+                    renderBody();
+                });
+                addNumberRow(
+                    body,
+                    'Row Size',
+                    draft.vpRowsLayout === 'ticks' ? '1' : '4',
+                    draft.vpRowsLayout === 'ticks' ? '1000' : '500',
+                    draft.vpRowsLayout === 'ticks' ? '0.0001' : '1',
+                    draft.vpRowSize,
+                    function(v) { draft.vpRowSize = v; }
+                );
+                addSelectRow(body, 'Volume', [
+                    { v: 'updown', l: 'Up/Down' },
+                    { v: 'total', l: 'Total' },
+                    { v: 'delta', l: 'Delta' },
+                ], draft.vpVolumeMode, function(v) { draft.vpVolumeMode = v; });
+                addNumberRow(body, 'Value Area Volume', '10', '95', '1', draft.vpValueAreaPct, function(v) { draft.vpValueAreaPct = v; });
                 hasInputs = true;
             }
 
@@ -2823,6 +3016,40 @@ function _tvShowIndicatorSettings(seriesId) {
 
         // ===================== STYLE TAB =====================
         } else if (activeTab === 'style') {
+            // Volume Profile style — full custom panel (skip the generic plot rows)
+            if (isVP) {
+                addSection(body, 'VOLUME PROFILE');
+                addNumberRow(body, 'Width (% of pane)', '2', '60', '1', draft.vpWidthPercent, function(v) { draft.vpWidthPercent = v; });
+                addSelectRow(body, 'Placement', [
+                    { v: 'right', l: 'Right' },
+                    { v: 'left', l: 'Left' },
+                ], draft.vpPlacement, function(v) { draft.vpPlacement = v; });
+                addColorRow(body, 'Up Volume', draft.vpUpColor, function(v, op) { draft.vpUpColor = _tvColorWithOpacity(v, op, v); });
+                addColorRow(body, 'Down Volume', draft.vpDownColor, function(v, op) { draft.vpDownColor = _tvColorWithOpacity(v, op, v); });
+                addColorRow(body, 'Value Area Up', draft.vpVAUpColor, function(v, op) { draft.vpVAUpColor = _tvColorWithOpacity(v, op, v); });
+                addColorRow(body, 'Value Area Down', draft.vpVADownColor, function(v, op) { draft.vpVADownColor = _tvColorWithOpacity(v, op, v); });
+
+                addSection(body, 'POC');
+                addCheckRow(body, 'Show POC', draft.vpShowPOC, function(v) { draft.vpShowPOC = v; });
+                addColorRow(body, 'POC Color', draft.vpPOCColor, function(v, op) { draft.vpPOCColor = _tvColorWithOpacity(v, op, v); });
+
+                addSection(body, 'DEVELOPING POC');
+                addCheckRow(body, 'Show Developing POC', draft.vpShowDevelopingPOC, function(v) { draft.vpShowDevelopingPOC = v; });
+                addColorRow(body, 'Developing POC Color', draft.vpDevelopingPOCColor, function(v, op) { draft.vpDevelopingPOCColor = _tvColorWithOpacity(v, op, v); });
+
+                addSection(body, 'VALUE AREA');
+                addCheckRow(body, 'Highlight Value Area', draft.vpShowValueArea, function(v) { draft.vpShowValueArea = v; });
+                addCheckRow(body, 'Show Developing VA', draft.vpShowDevelopingVA, function(v) { draft.vpShowDevelopingVA = v; });
+                addColorRow(body, 'Developing VA Color', draft.vpDevelopingVAColor, function(v, op) { draft.vpDevelopingVAColor = _tvColorWithOpacity(v, op, v); });
+
+                addSection(body, 'OUTPUT VALUES');
+                addCheckRow(body, 'Labels on price scale', draft.vpLabelsOnPriceScale, function(v) { draft.vpLabelsOnPriceScale = v; });
+                addCheckRow(body, 'Values in status line', draft.vpValuesInStatusLine, function(v) { draft.vpValuesInStatusLine = v; });
+                addSection(body, 'INPUT VALUES');
+                addCheckRow(body, 'Inputs in status line', draft.vpInputsInStatusLine, function(v) { draft.vpInputsInStatusLine = v; });
+                return;
+            }
+
             addSection(body, 'PLOTS');
 
             // Multi-plot indicators (Bollinger Bands)
@@ -3226,6 +3453,91 @@ function _tvApplyIndicatorSettings(seriesId, newSettings) {
             info.period = newPeriod;
         }
     }
+    // Volume Profile: apply settings + recompute if anything that
+    // affects the bucket layout changed (rows-layout / row-size /
+    // developing-poc/va toggles).
+    if (type === 'volume-profile-fixed' || type === 'volume-profile-visible') {
+        var vpSlot = _volumeProfilePrimitives[seriesId];
+        if (vpSlot) {
+            var prevOpts = vpSlot.opts || {};
+            var newRowsLayout = newSettings.vpRowsLayout || vpSlot.rowsLayout || 'rows';
+            var newRowSize = newSettings.vpRowSize != null ? Number(newSettings.vpRowSize) : vpSlot.rowSize;
+            var newVolumeMode = newSettings.vpVolumeMode || vpSlot.volumeMode || 'updown';
+            var newValueAreaPct = newSettings.vpValueAreaPct != null
+                ? newSettings.vpValueAreaPct / 100
+                : (prevOpts.valueAreaPct || 0.70);
+            var newShowDevPOC = newSettings.vpShowDevelopingPOC === true;
+            var newShowDevVA = newSettings.vpShowDevelopingVA === true;
+
+            vpSlot.opts = {
+                rowsLayout: newRowsLayout,
+                rowSize: newRowSize,
+                volumeMode: newVolumeMode,
+                widthPercent: newSettings.vpWidthPercent != null ? newSettings.vpWidthPercent : prevOpts.widthPercent,
+                placement: newSettings.vpPlacement || prevOpts.placement || 'right',
+                upColor: newSettings.vpUpColor || prevOpts.upColor,
+                downColor: newSettings.vpDownColor || prevOpts.downColor,
+                vaUpColor: newSettings.vpVAUpColor || prevOpts.vaUpColor,
+                vaDownColor: newSettings.vpVADownColor || prevOpts.vaDownColor,
+                pocColor: newSettings.vpPOCColor || prevOpts.pocColor,
+                developingPOCColor: newSettings.vpDevelopingPOCColor || prevOpts.developingPOCColor,
+                developingVAColor: newSettings.vpDevelopingVAColor || prevOpts.developingVAColor,
+                showPOC: newSettings.vpShowPOC !== undefined ? newSettings.vpShowPOC : prevOpts.showPOC,
+                showValueArea: newSettings.vpShowValueArea !== undefined ? newSettings.vpShowValueArea : prevOpts.showValueArea,
+                showDevelopingPOC: newShowDevPOC,
+                showDevelopingVA: newShowDevVA,
+                valueAreaPct: newValueAreaPct,
+            };
+
+            // Recompute when any compute-affecting field changed
+            var needsRecompute = newRowsLayout !== vpSlot.rowsLayout
+                || newRowSize !== vpSlot.rowSize
+                || newValueAreaPct !== (prevOpts.valueAreaPct || 0.70)
+                || newShowDevPOC !== (prevOpts.showDevelopingPOC === true)
+                || newShowDevVA !== (prevOpts.showDevelopingVA === true);
+            if (needsRecompute) {
+                vpSlot.rowsLayout = newRowsLayout;
+                vpSlot.rowSize = newRowSize;
+                vpSlot.volumeMode = newVolumeMode;
+                var fromIdx = info.fromIndex != null ? info.fromIndex : 0;
+                var toIdx = info.toIndex != null ? info.toIndex : (rawData.length - 1);
+                var newVp = _tvComputeVolumeProfile(rawData, fromIdx, toIdx, {
+                    rowsLayout: newRowsLayout,
+                    rowSize: newRowSize,
+                    valueAreaPct: newValueAreaPct,
+                    withDeveloping: newShowDevPOC || newShowDevVA,
+                });
+                if (newVp) vpSlot.vpData = newVp;
+            } else {
+                vpSlot.volumeMode = newVolumeMode;
+            }
+
+            info.rowsLayout = newRowsLayout;
+            info.rowSize = newRowSize;
+            info.volumeMode = newVolumeMode;
+            info.period = newRowsLayout === 'rows' ? newRowSize : 0;
+            info.widthPercent = vpSlot.opts.widthPercent;
+            info.placement = vpSlot.opts.placement;
+            info.upColor = vpSlot.opts.upColor;
+            info.downColor = vpSlot.opts.downColor;
+            info.vaUpColor = vpSlot.opts.vaUpColor;
+            info.vaDownColor = vpSlot.opts.vaDownColor;
+            info.pocColor = vpSlot.opts.pocColor;
+            info.developingPOCColor = vpSlot.opts.developingPOCColor;
+            info.developingVAColor = vpSlot.opts.developingVAColor;
+            info.showPOC = vpSlot.opts.showPOC;
+            info.showValueArea = vpSlot.opts.showValueArea;
+            info.showDevelopingPOC = newShowDevPOC;
+            info.showDevelopingVA = newShowDevVA;
+            info.valueAreaPct = newValueAreaPct;
+            if (newSettings.vpLabelsOnPriceScale !== undefined) info.labelsOnPriceScale = newSettings.vpLabelsOnPriceScale;
+            if (newSettings.vpValuesInStatusLine !== undefined) info.valuesInStatusLine = newSettings.vpValuesInStatusLine;
+            if (newSettings.vpInputsInStatusLine !== undefined) info.inputsInStatusLine = newSettings.vpInputsInStatusLine;
+
+            if (vpSlot.primitive && vpSlot.primitive.triggerUpdate) vpSlot.primitive.triggerUpdate();
+        }
+    }
+
     _tvRebuildIndicatorLegend(info.chartId);
     // Re-render BB fills after settings change
     if (type === 'bollinger-bands') {

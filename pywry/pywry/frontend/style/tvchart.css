@@ -102,6 +102,22 @@ html.dark,
     /* Session breaks and crosshair */
     --pywry-tvchart-session-breaks: #4c87ff;
     --pywry-tvchart-crosshair-color: rgba(235, 180, 194, 0.8);
+    /* Volume Profile (VPVR / VPFR) — deliberately blue/violet so the
+       histogram doesn't camouflage the green/red candles, with a low
+       fill opacity so price action stays readable through it. */
+    --pywry-tvchart-vp-up: rgba(95, 145, 255, 0.28);
+    --pywry-tvchart-vp-down: rgba(220, 110, 220, 0.28);
+    --pywry-tvchart-vp-va-up: rgba(95, 145, 255, 0.50);
+    --pywry-tvchart-vp-va-down: rgba(220, 110, 220, 0.50);
+    --pywry-tvchart-vp-poc: rgba(243, 193, 39, 0.85);
+    /* Indicator multi-plot palette (MACD / Stoch / ADX / Aroon / Ichimoku / KC / SAR) */
+    --pywry-tvchart-ind-primary: #4c87ff;
+    --pywry-tvchart-ind-secondary: #f3c127;
+    --pywry-tvchart-ind-tertiary: #9598a1;
+    --pywry-tvchart-ind-positive: #089981;
+    --pywry-tvchart-ind-negative: #f23645;
+    --pywry-tvchart-ind-positive-dim: rgba(8, 153, 129, 0.6);
+    --pywry-tvchart-ind-negative-dim: rgba(242, 54, 69, 0.6);
 }
 
 html.light,
@@ -198,6 +214,20 @@ html.light,
     /* Session breaks and crosshair */
     --pywry-tvchart-session-breaks: #4c87ff;
     --pywry-tvchart-crosshair-color: #9598a1;
+    /* Volume Profile (VPVR / VPFR) — different hue from candles + low opacity. */
+    --pywry-tvchart-vp-up: rgba(41, 98, 255, 0.22);
+    --pywry-tvchart-vp-down: rgba(180, 70, 200, 0.22);
+    --pywry-tvchart-vp-va-up: rgba(41, 98, 255, 0.45);
+    --pywry-tvchart-vp-va-down: rgba(180, 70, 200, 0.45);
+    --pywry-tvchart-vp-poc: rgba(31, 41, 55, 0.85);
+    /* Indicator multi-plot palette */
+    --pywry-tvchart-ind-primary: #2962ff;
+    --pywry-tvchart-ind-secondary: #f09614;
+    --pywry-tvchart-ind-tertiary: #6b7280;
+    --pywry-tvchart-ind-positive: #26a69a;
+    --pywry-tvchart-ind-negative: #ef5350;
+    --pywry-tvchart-ind-positive-dim: rgba(38, 166, 154, 0.6);
+    --pywry-tvchart-ind-negative-dim: rgba(239, 83, 80, 0.6);
 }
 
 .pywry-icon-btn {

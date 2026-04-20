@@ -1471,7 +1471,7 @@ function _tvAddIndicator(indicatorDef, chartId) {
     } else if (name === 'Parabolic SAR') {
         var psStep = indicatorDef._step || 0.02;
         var psMax = indicatorDef._maxStep || 0.2;
-        var psColor = indicatorDef._color || '#ff9800';
+        var psColor = indicatorDef._color || _cssVar('--pywry-tvchart-ind-secondary');
         var psScaleId = _tvResolveScalePlacement(entry);
         var psSeries = entry.chart.addSeries(LightweightCharts.LineSeries, {
             color: psColor,
@@ -1498,7 +1498,10 @@ function _tvAddIndicator(indicatorDef, chartId) {
         var macd = _computeMACD(rawData, macdFast, macdSlow, macdSignal);
         if (!entry._nextPane) entry._nextPane = 1;
         var macdPane = entry._nextPane++;
-        var macdColor = '#2196f3', sigColor = '#ff9800', histPosColor = 'rgba(76,175,80,0.6)', histNegColor = 'rgba(239,83,80,0.6)';
+        var macdColor = _cssVar('--pywry-tvchart-ind-primary');
+        var sigColor = _cssVar('--pywry-tvchart-ind-secondary');
+        var histPosColor = _cssVar('--pywry-tvchart-ind-positive-dim');
+        var histNegColor = _cssVar('--pywry-tvchart-ind-negative-dim');
         var histData = macd.histogram.filter(function(v) { return v.value !== undefined; }).map(function(v) {
             return { time: v.time, value: v.value, color: v.value >= 0 ? histPosColor : histNegColor };
         });
@@ -1529,7 +1532,8 @@ function _tvAddIndicator(indicatorDef, chartId) {
         var stoch = _computeStochastic(rawData, kPeriod, dPeriod);
         if (!entry._nextPane) entry._nextPane = 1;
         var stochPane = entry._nextPane++;
-        var stochKColor = '#2196f3', stochDColor = '#ff9800';
+        var stochKColor = _cssVar('--pywry-tvchart-ind-primary');
+        var stochDColor = _cssVar('--pywry-tvchart-ind-secondary');
         var sK, sD;
         try {
             sK = entry.chart.addSeries(LightweightCharts.LineSeries, { color: stochKColor, lineWidth: 2, priceLineVisible: false }, stochPane);
@@ -1549,7 +1553,8 @@ function _tvAddIndicator(indicatorDef, chartId) {
         var aroon = _computeAroon(rawData, aroonPeriod);
         if (!entry._nextPane) entry._nextPane = 1;
         var aroonPane = entry._nextPane++;
-        var aroonUpColor = '#4caf50', aroonDownColor = '#f44336';
+        var aroonUpColor = _cssVar('--pywry-tvchart-ind-positive');
+        var aroonDownColor = _cssVar('--pywry-tvchart-ind-negative');
         var sUp, sDown;
         try {
             sUp = entry.chart.addSeries(LightweightCharts.LineSeries, { color: aroonUpColor, lineWidth: 2, priceLineVisible: false }, aroonPane);
@@ -1569,7 +1574,9 @@ function _tvAddIndicator(indicatorDef, chartId) {
         var adx = _computeADX(rawData, adxPeriod);
         if (!entry._nextPane) entry._nextPane = 1;
         var adxPane = entry._nextPane++;
-        var adxColor = '#2196f3', plusDIColor = '#4caf50', minusDIColor = '#f44336';
+        var adxColor = _cssVar('--pywry-tvchart-ind-primary');
+        var plusDIColor = _cssVar('--pywry-tvchart-ind-positive');
+        var minusDIColor = _cssVar('--pywry-tvchart-ind-negative');
         var sAdx, sPlus, sMinus;
         try {
             sAdx = entry.chart.addSeries(LightweightCharts.LineSeries, { color: adxColor, lineWidth: 2, priceLineVisible: false }, adxPane);
@@ -1594,7 +1601,8 @@ function _tvAddIndicator(indicatorDef, chartId) {
         var kcMaType = indicatorDef._maType || 'EMA';
         var kc = _computeKeltnerChannels(rawData, kcPeriod, kcMult, kcMaType);
         var kcScaleId = _tvResolveScalePlacement(entry);
-        var kcMidColor = '#ff9800', kcBandColor = '#2196f3';
+        var kcMidColor = _cssVar('--pywry-tvchart-ind-secondary');
+        var kcBandColor = _cssVar('--pywry-tvchart-ind-primary');
         var kcM = entry.chart.addSeries(LightweightCharts.LineSeries, { color: kcMidColor, lineWidth: 1, priceScaleId: kcScaleId, lastValueVisible: false, priceLineVisible: false });
         var kcU = entry.chart.addSeries(LightweightCharts.LineSeries, { color: kcBandColor, lineWidth: 1, priceScaleId: kcScaleId, lastValueVisible: false, priceLineVisible: false });
         var kcL = entry.chart.addSeries(LightweightCharts.LineSeries, { color: kcBandColor, lineWidth: 1, priceScaleId: kcScaleId, lastValueVisible: false, priceLineVisible: false });
@@ -1616,7 +1624,11 @@ function _tvAddIndicator(indicatorDef, chartId) {
         var ichiSpB = indicatorDef._senkouB || 52;
         var ichi = _computeIchimoku(rawData, ichiTen, ichiKij, ichiSpB);
         var ichiScaleId = _tvResolveScalePlacement(entry);
-        var cTen = '#2196f3', cKij = '#f44336', cSpA = 'rgba(76,175,80,0.7)', cSpB = 'rgba(239,83,80,0.7)', cChi = '#9e9e9e';
+        var cTen = _cssVar('--pywry-tvchart-ind-primary');
+        var cKij = _cssVar('--pywry-tvchart-ind-negative');
+        var cSpA = _cssVar('--pywry-tvchart-ind-positive-dim');
+        var cSpB = _cssVar('--pywry-tvchart-ind-negative-dim');
+        var cChi = _cssVar('--pywry-tvchart-ind-tertiary');
         var sTen = entry.chart.addSeries(LightweightCharts.LineSeries, { color: cTen, lineWidth: 1, priceScaleId: ichiScaleId, lastValueVisible: false, priceLineVisible: false });
         var sKij = entry.chart.addSeries(LightweightCharts.LineSeries, { color: cKij, lineWidth: 1, priceScaleId: ichiScaleId, lastValueVisible: false, priceLineVisible: false });
         var sSpA = entry.chart.addSeries(LightweightCharts.LineSeries, { color: cSpA, lineWidth: 1, priceScaleId: ichiScaleId, lastValueVisible: false, priceLineVisible: false });
@@ -1644,7 +1656,11 @@ function _tvAddIndicator(indicatorDef, chartId) {
         _activeIndicators[sidChi] = _tvMerge(ichiCommon, { name: 'Ichimoku Chikou', color: cChi });
     } else if (key === 'volume-profile-fixed' || key === 'volume-profile-visible') {
         var vpMode = key === 'volume-profile-fixed' ? 'fixed' : 'visible';
-        var vpBuckets = Math.max(2, Math.floor(period || 24));
+        var vpRowsLayout = indicatorDef._rowsLayout || 'rows';
+        var vpRowSize = indicatorDef._rowSize != null
+            ? Number(indicatorDef._rowSize)
+            : (vpRowsLayout === 'ticks' ? 1 : Math.max(2, Math.floor(period || 24)));
+        var vpVolumeMode = indicatorDef._volumeMode || 'updown';
         var vpFromIdx, vpToIdx;
 
         if (vpMode === 'fixed') {
@@ -1667,30 +1683,50 @@ function _tvAddIndicator(indicatorDef, chartId) {
             }
         }
 
-        var vpData = _tvComputeVolumeProfile(rawData, vpFromIdx, vpToIdx, vpBuckets);
+        var vpValueAreaPct = indicatorDef._valueAreaPct || 0.70;
+        var vpShowDevPOC = indicatorDef._showDevelopingPOC === true;
+        var vpShowDevVA = indicatorDef._showDevelopingVA === true;
+        var vpData = _tvComputeVolumeProfile(rawData, vpFromIdx, vpToIdx, {
+            rowsLayout: vpRowsLayout,
+            rowSize: vpRowSize,
+            valueAreaPct: vpValueAreaPct,
+            withDeveloping: vpShowDevPOC || vpShowDevVA,
+        });
         if (!vpData) {
             console.warn('[pywry:tvchart] Volume Profile: insufficient data / no volume');
             return;
         }
 
         var vpId = 'ind_vp_' + vpMode + '_' + Date.now();
+        // Colours resolve from the active theme via CSS vars when the
+        // caller doesn't override them, so a theme switch automatically
+        // recolours every Volume Profile on screen.
         var vpOpts = {
-            widthPercent: indicatorDef._widthPercent || 25,
+            rowsLayout: vpRowsLayout,
+            rowSize: vpRowSize,
+            volumeMode: vpVolumeMode,
+            widthPercent: indicatorDef._widthPercent || 15,
             placement: indicatorDef._placement || 'right',
-            upColor: indicatorDef._upColor || 'rgba(38, 166, 154, 0.55)',
-            downColor: indicatorDef._downColor || 'rgba(239, 83, 80, 0.55)',
-            vaUpColor: indicatorDef._vaUpColor || 'rgba(38, 166, 154, 0.85)',
-            vaDownColor: indicatorDef._vaDownColor || 'rgba(239, 83, 80, 0.85)',
-            pocColor: indicatorDef._pocColor || '#ffffff',
+            upColor: indicatorDef._upColor || _cssVar('--pywry-tvchart-vp-up'),
+            downColor: indicatorDef._downColor || _cssVar('--pywry-tvchart-vp-down'),
+            vaUpColor: indicatorDef._vaUpColor || _cssVar('--pywry-tvchart-vp-va-up'),
+            vaDownColor: indicatorDef._vaDownColor || _cssVar('--pywry-tvchart-vp-va-down'),
+            pocColor: indicatorDef._pocColor || _cssVar('--pywry-tvchart-vp-poc'),
+            developingPOCColor: indicatorDef._developingPOCColor || _cssVar('--pywry-tvchart-ind-tertiary'),
+            developingVAColor: indicatorDef._developingVAColor || _cssVar('--pywry-tvchart-vp-va-up'),
             showPOC: indicatorDef._showPOC !== false,
             showValueArea: indicatorDef._showValueArea !== false,
-            valueAreaPct: indicatorDef._valueAreaPct || 0.70,
+            showDevelopingPOC: vpShowDevPOC,
+            showDevelopingVA: vpShowDevVA,
+            valueAreaPct: vpValueAreaPct,
         };
         var vpSlot = {
             chartId: chartId,
             seriesId: primarySeriesId,
             mode: vpMode,
-            bucketCount: vpBuckets,
+            rowsLayout: vpRowsLayout,
+            rowSize: vpRowSize,
+            volumeMode: vpVolumeMode,
             vpData: vpData,
             opts: vpOpts,
             primitive: null,
@@ -1711,7 +1747,7 @@ function _tvAddIndicator(indicatorDef, chartId) {
 
         _activeIndicators[vpId] = {
             name: name,
-            period: vpBuckets,
+            period: vpRowsLayout === 'rows' ? vpRowSize : 0,
             chartId: chartId,
             color: null,
             paneIndex: 0,
@@ -1720,11 +1756,19 @@ function _tvAddIndicator(indicatorDef, chartId) {
             sourceSeriesId: primarySeriesId,
             secondarySeriesId: null,
             mode: vpMode,
-            bucketCount: vpBuckets,
+            rowsLayout: vpRowsLayout,
+            rowSize: vpRowSize,
+            volumeMode: vpVolumeMode,
             fromIndex: vpFromIdx,
             toIndex: vpToIdx,
             widthPercent: vpOpts.widthPercent,
             placement: vpOpts.placement,
+            valueAreaPct: vpValueAreaPct,
+            showDevelopingPOC: vpShowDevPOC,
+            showDevelopingVA: vpShowDevVA,
+            labelsOnPriceScale: indicatorDef._labelsOnPriceScale !== false,
+            valuesInStatusLine: indicatorDef._valuesInStatusLine !== false,
+            inputsInStatusLine: indicatorDef._inputsInStatusLine !== false,
         };
     } else {
         console.error('[pywry:tvchart] Unknown indicator:', name, 'key:', key);
