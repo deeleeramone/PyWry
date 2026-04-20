@@ -1299,6 +1299,16 @@ function _tvPromptDateRangeAndApply(entry) {
 }
 
 function _tvSeriesRawData(entry, seriesId) {
+    // When RTH session filter is active, prefer the displayed (filtered)
+    // bars so indicator compute paths align with what the user is
+    // actually looking at — SMA(9) on an RTH chart should be 9 RTH bars,
+    // not 9 ETH bars that straddle an overnight gap.
+    if (entry && entry._sessionMode === 'RTH'
+        && entry._seriesDisplayData
+        && entry._seriesDisplayData[seriesId]
+        && entry._seriesDisplayData[seriesId].length) {
+        return entry._seriesDisplayData[seriesId];
+    }
     if (entry._seriesRawData && entry._seriesRawData[seriesId]) return entry._seriesRawData[seriesId];
     if (seriesId === 'main' && entry._rawData) return entry._rawData;
     var s = entry.seriesMap[seriesId];

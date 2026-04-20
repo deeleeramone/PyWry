@@ -244,8 +244,13 @@ function _tvApplySessionFilter() {
     var sids = Object.keys(entry.seriesMap || {});
     entry._seriesDisplayData = entry._seriesDisplayData || {};
 
+    // Skip derived series that have no ``_seriesRawData`` entry —
+    // indicator lines are computed from the main bars and get refreshed
+    // below via the global recompute; session filter only applies to
+    // chart-data series (main + compare overlays).
     for (var i = 0; i < sids.length; i++) {
         var sid = sids[i];
+        if (typeof _activeIndicators === 'object' && _activeIndicators[sid]) continue;
         var series = entry.seriesMap[sid];
         var raw = entry._seriesRawData[sid];
         if (!series || !raw || !raw.length) continue;
@@ -268,13 +273,30 @@ function _tvApplySessionFilter() {
         }
     }
 
-    if (entry.chart) entry.chart.timeScale().fitContent();
-    // Find the chartId for the given entry from the registry
+    // Find the chartId for downstream per-chart refreshes.
     var _sessIds = Object.keys(window.__PYWRY_TVCHARTS__ || {});
     var _sessChartId = null;
     for (var _si = 0; _si < _sessIds.length; _si++) {
         if (window.__PYWRY_TVCHARTS__[_sessIds[_si]] === entry) { _sessChartId = _sessIds[_si]; break; }
     }
+
+    // Recompute every indicator against the now-filtered bar set so
+    // SMA(9) etc. reflects 9 RTH bars, not 9 ETH bars with an overnight
+    // gap baked in.  _tvSeriesRawData now returns _seriesDisplayData
+    // when _sessionMode === 'RTH', so the compute paths pick up the
+    // right source automatically.
+    if (_sessChartId && typeof _tvRecomputeIndicatorsForChart === 'function') {
+        try { _tvRecomputeIndicatorsForChart(_sessChartId, 'main'); } catch (_e) {}
+    }
+
+    // Volume Profile Visible Range reads from _seriesRawData inside
+    // _tvRefreshVisibleVolumeProfiles — the above raw-data shim kicks
+    // in there too, so the profile re-pins over the filtered bar set.
+    if (_sessChartId && typeof _tvRefreshVisibleVolumeProfiles === 'function') {
+        try { _tvRefreshVisibleVolumeProfiles(_sessChartId); } catch (_e2) {}
+    }
+
+    if (entry.chart) entry.chart.timeScale().fitContent();
     if (_sessChartId) _tvRenderHoverLegend(_sessChartId, null);
 }
 
