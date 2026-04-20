@@ -860,9 +860,29 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                                     return;
                                 }
                             }
+                            // Drop ticks whose time is older than what's
+                            // already in the series — LWC's series.update
+                            // throws "Cannot update oldest data" if the
+                            // incoming bar comes before the last one (can
+                            // happen after a session-filter swap or a
+                            // late tick from a previous session).
+                            var lastRaw = entry._seriesRawData && entry._seriesRawData[sid];
+                            if (lastRaw && lastRaw.length) {
+                                var lastTime = lastRaw[lastRaw.length - 1].time;
+                                if (typeof bar.time === 'number' && typeof lastTime === 'number' && bar.time < lastTime) {
+                                    return;
+                                }
+                            }
                             var normalized = _tvNormalizeBarsForSeriesType([bar], sType);
                             if (normalized.length > 0) {
-                                series.update(normalized[0]);
+                                try {
+                                    series.update(normalized[0]);
+                                } catch (_e) {
+                                    // LWC rejected the update (out-of-order
+                                    // time, format mismatch, etc.) — drop
+                                    // the tick rather than break the stream.
+                                    return;
+                                }
                             }
                             if (bar.volume != null && entry.volumeMap[sid]) {
                                 var palette = TVCHART_THEMES._get(entry.theme || _tvDetectTheme());
@@ -881,11 +901,13 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                                 }
                                 var uc = prefs.upColor || palette.volumeUp;
                                 var dc = prefs.downColor || palette.volumeDown || palette.volumeUp;
-                                entry.volumeMap[sid].update({
-                                    time: bar.time,
-                                    value: bar.volume,
-                                    color: isUp ? uc : dc,
-                                });
+                                try {
+                                    entry.volumeMap[sid].update({
+                                        time: bar.time,
+                                        value: bar.volume,
+                                        color: isUp ? uc : dc,
+                                    });
+                                } catch (_ev) { /* same out-of-order guard */ }
                             }
                         }, guid, function() {
                             // onResetCacheNeeded — re-fetch all bars
