@@ -2539,6 +2539,7 @@ function _tvUpdateIndicatorLegendValues(chartId, param) {
 function _tvShowIndicatorSettings(seriesId) {
     var info = _activeIndicators[seriesId];
     if (!info) return;
+    var chartId = info.chartId;
     var ds = window.__PYWRY_DRAWINGS__[info.chartId] || _tvEnsureDrawingLayer(info.chartId);
     if (!ds || !ds.uiLayer) return;
 
