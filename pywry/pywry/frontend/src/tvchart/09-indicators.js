@@ -731,6 +731,130 @@ function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData, getOpts, getH
     };
 }
 
+/** Format a volume number for the legend (1.23M / 4.56K / 789). */
+function _tvFormatVolume(v) {
+    var n = Number(v) || 0;
+    var sign = n < 0 ? '-' : '';
+    var a = Math.abs(n);
+    if (a >= 1e9) return sign + (a / 1e9).toFixed(2) + 'B';
+    if (a >= 1e6) return sign + (a / 1e6).toFixed(2) + 'M';
+    if (a >= 1e3) return sign + (a / 1e3).toFixed(2) + 'K';
+    return sign + a.toFixed(0);
+}
+
+/** Sum up, down, and total volume across a VP profile for the legend readout. */
+function _tvVolumeProfileTotals(vp) {
+    var totals = { up: 0, down: 0, total: 0 };
+    if (!vp || !vp.profile) return totals;
+    for (var i = 0; i < vp.profile.length; i++) {
+        totals.up += vp.profile[i].upVol || 0;
+        totals.down += vp.profile[i].downVol || 0;
+    }
+    totals.total = totals.up + totals.down;
+    return totals;
+}
+
+/** Update the legend value span for a VP indicator with current totals. */
+function _tvUpdateVolumeProfileLegendValues(seriesId) {
+    var slot = _volumeProfilePrimitives[seriesId];
+    if (!slot) return;
+    var el = document.getElementById('tvchart-ind-val-' + seriesId);
+    if (!el) return;
+    var t = _tvVolumeProfileTotals(slot.vpData);
+    el.textContent = _tvFormatVolume(t.up) + '  '
+        + _tvFormatVolume(t.down) + '  '
+        + _tvFormatVolume(t.total);
+}
+
+/**
+ * Live-preview helper for the VP settings dialog: every Inputs/Style
+ * row callback funnels through here so changes paint instantly without
+ * waiting for the OK button.  Recomputes the bucket profile when a
+ * compute-affecting field changed (rows layout, row size, value area,
+ * developing toggles).  Cheap when only colours / placement / width
+ * change — just updates the opts dict and triggers a redraw.
+ */
+function _tvApplyVPDraftLive(seriesId, draft) {
+    var slot = _volumeProfilePrimitives[seriesId];
+    var info = _activeIndicators[seriesId];
+    if (!slot || !info) return;
+    var entry = window.__PYWRY_TVCHARTS__[info.chartId];
+    if (!entry) return;
+    var prevOpts = slot.opts || {};
+    var newRowsLayout = draft.vpRowsLayout || slot.rowsLayout || 'rows';
+    var newRowSize = draft.vpRowSize != null ? Number(draft.vpRowSize) : slot.rowSize;
+    var newVolumeMode = draft.vpVolumeMode || slot.volumeMode || 'updown';
+    var newValueAreaPct = draft.vpValueAreaPct != null
+        ? draft.vpValueAreaPct / 100
+        : (prevOpts.valueAreaPct || 0.70);
+    var newShowDevPOC = draft.vpShowDevelopingPOC === true;
+    var newShowDevVA = draft.vpShowDevelopingVA === true;
+
+    slot.opts = {
+        rowsLayout: newRowsLayout,
+        rowSize: newRowSize,
+        volumeMode: newVolumeMode,
+        widthPercent: draft.vpWidthPercent != null ? Number(draft.vpWidthPercent) : prevOpts.widthPercent,
+        placement: draft.vpPlacement || prevOpts.placement || 'right',
+        upColor: draft.vpUpColor || prevOpts.upColor,
+        downColor: draft.vpDownColor || prevOpts.downColor,
+        vaUpColor: draft.vpVAUpColor || prevOpts.vaUpColor,
+        vaDownColor: draft.vpVADownColor || prevOpts.vaDownColor,
+        pocColor: draft.vpPOCColor || prevOpts.pocColor,
+        developingPOCColor: draft.vpDevelopingPOCColor || prevOpts.developingPOCColor,
+        developingVAColor: draft.vpDevelopingVAColor || prevOpts.developingVAColor,
+        showPOC: draft.vpShowPOC !== undefined ? draft.vpShowPOC : prevOpts.showPOC,
+        showValueArea: draft.vpShowValueArea !== undefined ? draft.vpShowValueArea : prevOpts.showValueArea,
+        showDevelopingPOC: newShowDevPOC,
+        showDevelopingVA: newShowDevVA,
+        valueAreaPct: newValueAreaPct,
+    };
+
+    var needsRecompute = newRowsLayout !== slot.rowsLayout
+        || newRowSize !== slot.rowSize
+        || newValueAreaPct !== (prevOpts.valueAreaPct || 0.70)
+        || newShowDevPOC !== (prevOpts.showDevelopingPOC === true)
+        || newShowDevVA !== (prevOpts.showDevelopingVA === true);
+    if (needsRecompute) {
+        slot.rowsLayout = newRowsLayout;
+        slot.rowSize = newRowSize;
+        var rawData = _tvSeriesRawData(entry, info.sourceSeriesId || 'main');
+        var fromIdx = info.fromIndex != null ? info.fromIndex : 0;
+        var toIdx = info.toIndex != null ? info.toIndex : (rawData.length - 1);
+        var newVp = _tvComputeVolumeProfile(rawData, fromIdx, toIdx, {
+            rowsLayout: newRowsLayout,
+            rowSize: newRowSize,
+            valueAreaPct: newValueAreaPct,
+            withDeveloping: newShowDevPOC || newShowDevVA,
+        });
+        if (newVp) slot.vpData = newVp;
+    }
+    slot.volumeMode = newVolumeMode;
+
+    info.rowsLayout = newRowsLayout;
+    info.rowSize = newRowSize;
+    info.volumeMode = newVolumeMode;
+    info.valueAreaPct = newValueAreaPct;
+    info.placement = slot.opts.placement;
+    info.widthPercent = slot.opts.widthPercent;
+    info.upColor = slot.opts.upColor;
+    info.downColor = slot.opts.downColor;
+    info.vaUpColor = slot.opts.vaUpColor;
+    info.vaDownColor = slot.opts.vaDownColor;
+    info.pocColor = slot.opts.pocColor;
+    info.developingPOCColor = slot.opts.developingPOCColor;
+    info.developingVAColor = slot.opts.developingVAColor;
+    info.showPOC = slot.opts.showPOC;
+    info.showValueArea = slot.opts.showValueArea;
+    info.showDevelopingPOC = newShowDevPOC;
+    info.showDevelopingVA = newShowDevVA;
+    info.period = newRowsLayout === 'rows' ? newRowSize : 0;
+
+    if (slot.primitive && slot.primitive.triggerUpdate) slot.primitive.triggerUpdate();
+    _tvUpdateVolumeProfileLegendValues(seriesId);
+    _tvRebuildIndicatorLegend(info.chartId);
+}
+
 /** Remove a volume-profile primitive by indicator id. */
 function _tvRemoveVolumeProfilePrimitive(indicatorId) {
     var slot = _volumeProfilePrimitives[indicatorId];
@@ -777,6 +901,7 @@ function _tvRefreshVisibleVolumeProfiles(chartId) {
         ai.fromIndex = fromIdx;
         ai.toIndex = toIdx;
         if (slot.primitive && slot.primitive.triggerUpdate) slot.primitive.triggerUpdate();
+        _tvUpdateVolumeProfileLegendValues(ids[i]);
     }
 }
 
@@ -2339,6 +2464,16 @@ function _tvRebuildIndicatorLegend(chartId) {
                 var valSp = document.createElement('span');
                 valSp.className = 'tvchart-ind-val';
                 valSp.id = 'tvchart-ind-val-' + seriesId;
+                // Volume Profile: show running totals (up / down / total).
+                if (info.type === 'volume-profile-fixed' || info.type === 'volume-profile-visible') {
+                    var vpSlotForLabel = _volumeProfilePrimitives[seriesId];
+                    if (vpSlotForLabel) {
+                        var t = _tvVolumeProfileTotals(vpSlotForLabel.vpData);
+                        valSp.textContent = _tvFormatVolume(t.up) + '  '
+                            + _tvFormatVolume(t.down) + '  '
+                            + _tvFormatVolume(t.total);
+                    }
+                }
                 row.appendChild(valSp);
             }
             var ctrl = document.createElement('span');
@@ -3005,12 +3140,12 @@ function _tvShowIndicatorSettings(seriesId) {
                     { v: 'ticks', l: 'Ticks Per Row' },
                 ], draft.vpRowsLayout, function(v) {
                     draft.vpRowsLayout = v;
-                    // Reset row size to a sensible default for the new layout
                     if (v === 'ticks') {
                         if (!draft.vpRowSize || draft.vpRowSize > 100) draft.vpRowSize = 1;
                     } else {
                         if (!draft.vpRowSize || draft.vpRowSize < 4) draft.vpRowSize = 24;
                     }
+                    _tvApplyVPDraftLive(seriesId, draft);
                     renderBody();
                 });
                 addNumberRow(
@@ -3020,14 +3155,20 @@ function _tvShowIndicatorSettings(seriesId) {
                     draft.vpRowsLayout === 'ticks' ? '1000' : '500',
                     draft.vpRowsLayout === 'ticks' ? '0.0001' : '1',
                     draft.vpRowSize,
-                    function(v) { draft.vpRowSize = v; }
+                    function(v) { draft.vpRowSize = v; _tvApplyVPDraftLive(seriesId, draft); }
                 );
                 addSelectRow(body, 'Volume', [
                     { v: 'updown', l: 'Up/Down' },
                     { v: 'total', l: 'Total' },
                     { v: 'delta', l: 'Delta' },
-                ], draft.vpVolumeMode, function(v) { draft.vpVolumeMode = v; });
-                addNumberRow(body, 'Value Area Volume', '10', '95', '1', draft.vpValueAreaPct, function(v) { draft.vpValueAreaPct = v; });
+                ], draft.vpVolumeMode, function(v) {
+                    draft.vpVolumeMode = v;
+                    _tvApplyVPDraftLive(seriesId, draft);
+                });
+                addNumberRow(body, 'Value Area Volume', '10', '95', '1', draft.vpValueAreaPct, function(v) {
+                    draft.vpValueAreaPct = v;
+                    _tvApplyVPDraftLive(seriesId, draft);
+                });
                 hasInputs = true;
             }
 
@@ -3043,29 +3184,30 @@ function _tvShowIndicatorSettings(seriesId) {
         } else if (activeTab === 'style') {
             // Volume Profile style — full custom panel (skip the generic plot rows)
             if (isVP) {
+                function liveVP() { _tvApplyVPDraftLive(seriesId, draft); }
                 addSection(body, 'VOLUME PROFILE');
-                addNumberRow(body, 'Width (% of pane)', '2', '60', '1', draft.vpWidthPercent, function(v) { draft.vpWidthPercent = v; });
+                addNumberRow(body, 'Width (% of pane)', '2', '60', '1', draft.vpWidthPercent, function(v) { draft.vpWidthPercent = v; liveVP(); });
                 addSelectRow(body, 'Placement', [
                     { v: 'right', l: 'Right' },
                     { v: 'left', l: 'Left' },
-                ], draft.vpPlacement, function(v) { draft.vpPlacement = v; });
-                addColorRow(body, 'Up Volume', draft.vpUpColor, function(v, op) { draft.vpUpColor = _tvColorWithOpacity(v, op, v); });
-                addColorRow(body, 'Down Volume', draft.vpDownColor, function(v, op) { draft.vpDownColor = _tvColorWithOpacity(v, op, v); });
-                addColorRow(body, 'Value Area Up', draft.vpVAUpColor, function(v, op) { draft.vpVAUpColor = _tvColorWithOpacity(v, op, v); });
-                addColorRow(body, 'Value Area Down', draft.vpVADownColor, function(v, op) { draft.vpVADownColor = _tvColorWithOpacity(v, op, v); });
+                ], draft.vpPlacement, function(v) { draft.vpPlacement = v; liveVP(); });
+                addColorRow(body, 'Up Volume', draft.vpUpColor, function(v, op) { draft.vpUpColor = _tvColorWithOpacity(v, op, v); liveVP(); });
+                addColorRow(body, 'Down Volume', draft.vpDownColor, function(v, op) { draft.vpDownColor = _tvColorWithOpacity(v, op, v); liveVP(); });
+                addColorRow(body, 'Value Area Up', draft.vpVAUpColor, function(v, op) { draft.vpVAUpColor = _tvColorWithOpacity(v, op, v); liveVP(); });
+                addColorRow(body, 'Value Area Down', draft.vpVADownColor, function(v, op) { draft.vpVADownColor = _tvColorWithOpacity(v, op, v); liveVP(); });
 
                 addSection(body, 'POC');
-                addCheckRow(body, 'Show POC', draft.vpShowPOC, function(v) { draft.vpShowPOC = v; });
-                addColorRow(body, 'POC Color', draft.vpPOCColor, function(v, op) { draft.vpPOCColor = _tvColorWithOpacity(v, op, v); });
+                addCheckRow(body, 'Show POC', draft.vpShowPOC, function(v) { draft.vpShowPOC = v; liveVP(); });
+                addColorRow(body, 'POC Color', draft.vpPOCColor, function(v, op) { draft.vpPOCColor = _tvColorWithOpacity(v, op, v); liveVP(); });
 
                 addSection(body, 'DEVELOPING POC');
-                addCheckRow(body, 'Show Developing POC', draft.vpShowDevelopingPOC, function(v) { draft.vpShowDevelopingPOC = v; });
-                addColorRow(body, 'Developing POC Color', draft.vpDevelopingPOCColor, function(v, op) { draft.vpDevelopingPOCColor = _tvColorWithOpacity(v, op, v); });
+                addCheckRow(body, 'Show Developing POC', draft.vpShowDevelopingPOC, function(v) { draft.vpShowDevelopingPOC = v; liveVP(); });
+                addColorRow(body, 'Developing POC Color', draft.vpDevelopingPOCColor, function(v, op) { draft.vpDevelopingPOCColor = _tvColorWithOpacity(v, op, v); liveVP(); });
 
                 addSection(body, 'VALUE AREA');
-                addCheckRow(body, 'Highlight Value Area', draft.vpShowValueArea, function(v) { draft.vpShowValueArea = v; });
-                addCheckRow(body, 'Show Developing VA', draft.vpShowDevelopingVA, function(v) { draft.vpShowDevelopingVA = v; });
-                addColorRow(body, 'Developing VA Color', draft.vpDevelopingVAColor, function(v, op) { draft.vpDevelopingVAColor = _tvColorWithOpacity(v, op, v); });
+                addCheckRow(body, 'Highlight Value Area', draft.vpShowValueArea, function(v) { draft.vpShowValueArea = v; liveVP(); });
+                addCheckRow(body, 'Show Developing VA', draft.vpShowDevelopingVA, function(v) { draft.vpShowDevelopingVA = v; liveVP(); });
+                addColorRow(body, 'Developing VA Color', draft.vpDevelopingVAColor, function(v, op) { draft.vpDevelopingVAColor = _tvColorWithOpacity(v, op, v); liveVP(); });
 
                 addSection(body, 'OUTPUT VALUES');
                 addCheckRow(body, 'Labels on price scale', draft.vpLabelsOnPriceScale, function(v) { draft.vpLabelsOnPriceScale = v; });
