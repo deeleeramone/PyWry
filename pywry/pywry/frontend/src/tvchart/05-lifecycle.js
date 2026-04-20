@@ -739,6 +739,19 @@ function _tvApplyThemeToChart(chartId, newTheme) {
     entry.theme = newTheme;
     var palette = TVCHART_THEMES._get(newTheme || 'dark');
 
+    // Reset any stored override of text/grid/background colours so the new
+    // palette takes effect on the price scale as well as the time scale.
+    // Without this, _chartPrefs.textColor remembers the previous theme's
+    // value and the price scale stays unreadable after the toggle.
+    if (entry._chartPrefs) {
+        entry._chartPrefs.textColor = palette.textColor;
+        entry._chartPrefs.linesColor = palette.grid.vertLines.color;
+        if (entry._chartPrefs.settings) {
+            entry._chartPrefs.settings['Text-Color'] = palette.textColor;
+            entry._chartPrefs.settings['Lines-Color'] = palette.grid.vertLines.color;
+        }
+    }
+
     // Update chart layout, grid, and scale borders
     // Crosshair mode stays Normal (hover readout always active);
     // only lines visibility respects the user setting.
@@ -756,7 +769,10 @@ function _tvApplyThemeToChart(chartId, newTheme) {
             vertLine: { color: _chColor, visible: _chEnabled, labelVisible: true, style: 2, width: 1 },
             horzLine: { color: _chColor, visible: _chEnabled, labelVisible: _chEnabled, style: 2, width: 1 },
         },
-        rightPriceScale: { borderColor: palette.grid.vertLines.color },
+        // Both scales need an EXPLICIT textColor — the layout-level value
+        // doesn't always cascade to the price scale labels in LWC.
+        rightPriceScale: { borderColor: palette.grid.vertLines.color, textColor: palette.textColor },
+        leftPriceScale: { borderColor: palette.grid.vertLines.color, textColor: palette.textColor },
         timeScale: { borderColor: palette.grid.vertLines.color },
     });
 

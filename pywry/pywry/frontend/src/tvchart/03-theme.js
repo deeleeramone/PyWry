@@ -112,7 +112,12 @@ function _tvBuildChartOptions(chartOptions, theme) {
         crosshair: palette.crosshair,
         rightPriceScale: {
             borderColor: palette.grid.vertLines.color,
+            textColor: palette.textColor,
             scaleMargins: { top: 0.1, bottom: 0.1 },
+        },
+        leftPriceScale: {
+            borderColor: palette.grid.vertLines.color,
+            textColor: palette.textColor,
         },
         timeScale: {
             borderColor: palette.grid.vertLines.color,

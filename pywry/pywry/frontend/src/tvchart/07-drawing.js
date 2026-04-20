@@ -6061,6 +6061,9 @@ function _emitDrawingAdded(chartId, d) {
     if (window.pywry && window.pywry.emit) {
         window.pywry.emit('tvchart:drawing-added', { chartId: chartId, drawing: d });
     }
+    // Auto-revert to cursor after every drawing finishes so the
+    // toolbar button doesn't stay highlighted forever.
+    _tvRevertToCursor(chartId);
 }
 
 // ---- Tool switching ----
