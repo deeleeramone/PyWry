@@ -156,10 +156,17 @@ function _tvFilterBarsBySession(bars, sessionStr, tz) {
     if (!bars || !bars.length || !sessionStr) return bars || [];
     if (sessionStr === '24x7') return bars;
 
-    var ranges = sessionStr.split(',');
+    // TradingView session strings may include a ``:weekdays`` suffix
+    // (``0930-1600:23456`` = Mon-Fri) and be separated by either ``,`` or
+    // ``|`` in multi-session feeds.  Normalise both so the regex below
+    // only has to handle ``HHMM-HHMM``.
+    var ranges = sessionStr.split(/[,|]/);
     var parsed = [];
     for (var i = 0; i < ranges.length; i++) {
-        var m = ranges[i].trim().match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+        var r = ranges[i].trim();
+        var colonIdx = r.indexOf(':');
+        if (colonIdx >= 0) r = r.substring(0, colonIdx);
+        var m = r.match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
         if (m) {
             parsed.push({
                 s: parseInt(m[1], 10) * 60 + parseInt(m[2], 10),
@@ -219,7 +226,12 @@ function _tvIsBarInCurrentSession(barTime) {
     if (mode !== 'RTH') return true;
 
     var info = _tvGetMainSymbolInfo();
-    var sessionStr = info.session_regular;
+    // For RTH-only filtering we want the regular-hours window
+    // explicitly — ``info.session`` is the FULL trading hours string
+    // (may include pre + regular + post concatenated), while
+    // ``info.session_regular`` is just the core 0930-1600 slot.  When
+    // the provider only ships ``info.session``, fall back to that.
+    var sessionStr = info.session_regular || info.session;
     if (!sessionStr || sessionStr === '24x7') return true;
 
     var tz = info.timezone || _tvGetExchangeTimezone();
@@ -239,7 +251,12 @@ function _tvApplySessionFilter() {
 
     var mode = entry._sessionMode || 'ETH';
     var info = _tvGetMainSymbolInfo();
-    var sessionStr = info.session_regular;
+    // For RTH-only filtering we want the regular-hours window
+    // explicitly — ``info.session`` is the FULL trading hours string
+    // (may include pre + regular + post concatenated), while
+    // ``info.session_regular`` is just the core 0930-1600 slot.  When
+    // the provider only ships ``info.session``, fall back to that.
+    var sessionStr = info.session_regular || info.session;
     var tz = info.timezone || _tvGetExchangeTimezone();
     var sids = Object.keys(entry.seriesMap || {});
     entry._seriesDisplayData = entry._seriesDisplayData || {};

@@ -149,7 +149,6 @@ function _tvWireScrollback(entry, sid, series, symbolInfo, resolution, sType) {
             if (normalized.length === 0) { exhausted = true; return; }
 
             var merged = normalized.concat(raw);
-            series.setData(merged);
             entry._seriesRawData[sid] = merged;
 
             // Update canonical raw data for indicator computation
@@ -162,13 +161,32 @@ function _tvWireScrollback(entry, sid, series, symbolInfo, resolution, sType) {
             }
 
             // Prepend volume bars if present
+            var volData = null;
             if (entry.volumeMap[sid]) {
-                var volData = _tvExtractVolumeFromBars(bars, entry.theme || _tvDetectTheme(), entry);
+                volData = _tvExtractVolumeFromBars(bars, entry.theme || _tvDetectTheme(), entry);
                 if (volData && volData.length > 0) {
                     var existingVol = entry._seriesRawData['volume'] || [];
                     var mergedVol = volData.concat(existingVol);
-                    entry.volumeMap[sid].setData(mergedVol);
                     entry._seriesRawData['volume'] = mergedVol;
+                }
+            }
+
+            // When RTH filter is active, push the merged bars through
+            // the session filter so both the main series and every
+            // indicator see the refreshed set.  Otherwise just setData
+            // the merged bars directly.
+            if (entry._sessionMode === 'RTH' && typeof _tvApplySessionFilter === 'function') {
+                _tvApplySessionFilter();
+            } else {
+                series.setData(merged);
+                if (entry.volumeMap[sid] && volData && volData.length > 0) {
+                    entry.volumeMap[sid].setData(entry._seriesRawData['volume']);
+                }
+                if (typeof _tvRecomputeIndicatorsForChart === 'function') {
+                    try { _tvRecomputeIndicatorsForChart(chartId, sid); } catch (_e) {}
+                }
+                if (typeof _tvRefreshVisibleVolumeProfiles === 'function') {
+                    try { _tvRefreshVisibleVolumeProfiles(chartId); } catch (_e2) {}
                 }
             }
         });
@@ -374,6 +392,7 @@ function _tvNormalizeSymbolInfoFull(item) {
         ['session_premarket', 'sessionPremarket'],
         ['session_regular', 'sessionRegular'],
         ['session_postmarket', 'sessionPostmarket'],
+        ['session_overnight', 'sessionOvernight'],
         ['corrections', 'corrections'],
         ['subsession_id', 'subsessionId'],
         ['variable_tick_size', 'variableTickSize'],

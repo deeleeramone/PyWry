@@ -581,13 +581,18 @@ def _yf_search(
         return items
 
 
-def _build_session_string(metadata: dict[str, Any]) -> tuple[str, str, str, str, dict | None]:
+def _build_session_string(
+    metadata: dict[str, Any],
+) -> tuple[str, str, str, str, str, dict | None]:
     """Derive TradingView session strings from Yahoo metadata.
 
-    Returns ``(full, premarket, regular, postmarket, schedule)`` where
-    the first four are ``HHMM-HHMM`` strings and *schedule* is an
+    Returns ``(full, premarket, regular, postmarket, overnight, schedule)``
+    where the first five are ``HHMM-HHMM`` strings and *schedule* is an
     optional per-day dict ``{"SUN": "1800-2359", ...}`` for instruments
-    that don't trade every day (e.g. futures).
+    that don't trade every day (e.g. futures).  ``overnight`` is the
+    window between post-market close and the next pre-market open
+    (e.g. Blue Ocean ATS ``2000-0400`` for US equities) — Yahoo doesn't
+    ship it explicitly, so it's derived here.
     """
     ctp = metadata.get("currentTradingPeriod", {})
     reg = ctp.get("regular", {})
@@ -606,7 +611,7 @@ def _build_session_string(metadata: dict[str, Any]) -> tuple[str, str, str, str,
         if instrument == "FUTURE":
             return _build_futures_session(metadata)
         # True 24/7 markets (crypto)
-        return "24x7", "", "24x7", "", None
+        return "24x7", "", "24x7", "", "", None
 
     tz_name = metadata.get("exchangeTimezoneName", "UTC")
     zi = ZoneInfo(tz_name)
@@ -622,15 +627,27 @@ def _build_session_string(metadata: dict[str, Any]) -> tuple[str, str, str, str,
     reg_str = _fmt(reg_start, reg_end)
     post_str = _fmt(post_period.get("start", 0), post_period.get("end", 0))
 
-    windows = [w for w in [pre_str, reg_str, post_str] if w]
+    # Overnight session (e.g. Blue Ocean ATS 20:00-04:00 ET) isn't reported
+    # by Yahoo metadata but does show up in the streamed ticks — fill in the
+    # gap between post-market close and pre-market open so that bars inside
+    # the overnight window still pass the chart's session filter and the
+    # session-schedule display renders the overnight leg.
+    overnight_str = ""
+    if pre_str and post_str:
+        post_end = post_str.split("-")[1]
+        pre_start = pre_str.split("-")[0]
+        if post_end != pre_start:  # crypto-style 24h already covered
+            overnight_str = f"{post_end}-{pre_start}"
+
+    windows = [w for w in [pre_str, reg_str, post_str, overnight_str] if w]
     full = ",".join(windows) if windows else "0930-1600"
 
-    return full, pre_str, reg_str, post_str, None
+    return full, pre_str, reg_str, post_str, overnight_str, None
 
 
 def _build_futures_session(
     metadata: dict[str, Any],
-) -> tuple[str, str, str, str, dict]:
+) -> tuple[str, str, str, str, str, dict]:
     """Build session data for futures that trade ~24h Sun-Fri with a 1h break.
 
     CME/COMEX/NYMEX futures typically trade 18:00-17:00 ET (23h) with a
@@ -686,7 +703,9 @@ def _build_futures_session(
     reg_str = "0000-1700,1800-2359"
     full = reg_str
 
-    return full, "", reg_str, "", schedule
+    # Futures already cover their overnight leg inside the two-segment
+    # regular window above, so no separate overnight slot.
+    return full, "", reg_str, "", "", schedule
 
 
 def _pricescale_from_hint(price_hint: int | None) -> int:
@@ -748,9 +767,14 @@ def _yf_symbol_info(symbol: str) -> dict[str, Any] | None:
     name = md.get("shortName") or md.get("longName", symbol)
     instrument = (md.get("instrumentType") or "EQUITY").lower()
     type_label = _TYPE_LABELS.get(instrument, instrument.title())
-    session_full, session_pre, session_reg, session_post, session_schedule = _build_session_string(
-        md
-    )
+    (
+        session_full,
+        session_pre,
+        session_reg,
+        session_post,
+        session_overnight,
+        session_schedule,
+    ) = _build_session_string(md)
     pricescale = _pricescale_from_hint(md.get("priceHint"))
     currency = md.get("currency", "USD")
 
@@ -806,6 +830,7 @@ def _yf_symbol_info(symbol: str) -> dict[str, Any] | None:
         "session_premarket": session_pre,
         "session_regular": session_reg,
         "session_postmarket": session_post,
+        "session_overnight": session_overnight,
         "timezone": exchange_tz,
         "sector": sector,
         "industry": industry,

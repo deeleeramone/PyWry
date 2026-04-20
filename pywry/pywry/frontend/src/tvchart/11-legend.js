@@ -876,6 +876,7 @@ function _tvSetupLegendControls(chartId) {
         var sessionPre = String(info.session_premarket || '').trim();
         var sessionReg = String(info.session_regular || '').trim();
         var sessionPost = String(info.session_postmarket || '').trim();
+        var sessionOvernight = String(info.session_overnight || '').trim();
 
         var sessionSchedule = info.session_schedule || null;
 
@@ -941,8 +942,38 @@ function _tvSetupLegendControls(chartId) {
             if (sessionReg) addWindow(sessionReg, 'regular', weekdays);
             if (sessionPost) addWindow(sessionPost, 'post', weekdays);
 
+            // Overnight window (e.g. 20:00-04:00 for Blue Ocean ATS).
+            // Wraps midnight so the "2000-0400" string fails the usual
+            // HHMM-HHMM addWindow(); split it into an evening segment
+            // (post-market close → 24:00) and a next-day early segment
+            // (00:00 → pre-market open).  The evening segment attaches
+            // to each weekday + Sunday (Sun 20:00 is the start of Mon's
+            // overnight); the early segment attaches to Mon-Fri + Sat
+            // (Fri's overnight carries into Sat 04:00... actually no —
+            // Fri post-market is the session's last piece; overnight
+            // only runs before trading days.  Use Mon-Fri for both ends
+            // plus Sun 2000-2400, matching real Blue Ocean ATS hours).
+            if (sessionOvernight) {
+                var oParts = sessionOvernight.split('-');
+                if (oParts.length === 2) {
+                    var oStart = _parseHHMM(oParts[0]);
+                    var oEnd = _parseHHMM(oParts[1]);
+                    if (!isNaN(oStart) && !isNaN(oEnd) && oEnd <= oStart) {
+                        var eveningStr = oParts[0] + '-2400';
+                        var earlyStr = '0000-' + oParts[1];
+                        // Evening leg: Sun-Thu (each "pre-Mon/Tue/.../Fri overnight")
+                        addWindow(eveningStr, 'overnight', ['SUN', 'MON', 'TUE', 'WED', 'THU']);
+                        // Early leg: Mon-Fri (morning continuation of prior day's overnight)
+                        addWindow(earlyStr, 'overnight', weekdays);
+                    } else if (!isNaN(oStart) && !isNaN(oEnd) && oEnd > oStart) {
+                        // Doesn't wrap — treat like any other window.
+                        addWindow(sessionOvernight, 'overnight', weekdays);
+                    }
+                }
+            }
+
             // Fallback: parse the combined session string if no separate parts
-            if (!sessionPre && !sessionReg && !sessionPost) {
+            if (!sessionPre && !sessionReg && !sessionPost && !sessionOvernight) {
                 var segments = rawSession.split(',');
                 for (var si = 0; si < segments.length; si++) {
                     addWindow(segments[si].trim(), 'regular', weekdays);
@@ -954,6 +985,7 @@ function _tvSetupLegendControls(chartId) {
         function _sessionColorForKind(kind) {
             if (kind === 'pre') return _dimColor;
             if (kind === 'post') return _dimColor;
+            if (kind === 'overnight') return _dimColor;
             return _activeColor;
         }
 
