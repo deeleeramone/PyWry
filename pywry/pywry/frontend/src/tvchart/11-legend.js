@@ -653,27 +653,160 @@ function _tvSetupLegendControls(chartId) {
     }
 
     function _legendDisableVolume() {
-        if (typeof window._tvBuildCurrentSettings === 'function' && typeof window._tvApplySettingsToChart === 'function') {
-            var settings = window._tvBuildCurrentSettings(entry);
-            settings['Volume'] = false;
-            window._tvApplySettingsToChart(chartId, entry, settings);
-        } else {
-            var volSeries = entry.volumeMap && entry.volumeMap.main ? entry.volumeMap.main : null;
-            if (volSeries) {
-                try { entry.chart.removeSeries(volSeries); } catch (e) {}
-                delete entry.volumeMap.main;
+        var volSeries = entry.volumeMap && entry.volumeMap.main ? entry.volumeMap.main : null;
+        if (!volSeries) {
+            legendUiState.volumeHidden = false;
+            if (volRowEl) volRowEl.style.display = 'none';
+            return;
+        }
+
+        var removedPane = -1;
+        if (entry._volumePaneBySeries && entry._volumePaneBySeries.main != null) {
+            removedPane = entry._volumePaneBySeries.main;
+        }
+
+        try { entry.chart.removeSeries(volSeries); } catch (_e) {}
+        delete entry.volumeMap.main;
+        if (entry._volumePaneBySeries) delete entry._volumePaneBySeries.main;
+
+        if (removedPane > 0 && entry.chart && typeof entry.chart.removePane === 'function') {
+            var paneStillUsed = false;
+            if (entry._volumePaneBySeries) {
+                var volKeys = Object.keys(entry._volumePaneBySeries);
+                for (var vk = 0; vk < volKeys.length; vk++) {
+                    if (entry._volumePaneBySeries[volKeys[vk]] === removedPane) { paneStillUsed = true; break; }
+                }
+            }
+            if (!paneStillUsed && typeof _activeIndicators === 'object') {
+                var indKeys = Object.keys(_activeIndicators);
+                for (var ik = 0; ik < indKeys.length; ik++) {
+                    var ai = _activeIndicators[indKeys[ik]];
+                    if (ai && ai.chartId === chartId && ai.paneIndex === removedPane) { paneStillUsed = true; break; }
+                }
+            }
+            if (!paneStillUsed) {
+                var paneRemoved = false;
+                try { entry.chart.removePane(removedPane); paneRemoved = true; } catch (_e2) {
+                    try {
+                        if (typeof entry.chart.panes === 'function') {
+                            var paneObj = entry.chart.panes()[removedPane];
+                            if (paneObj) { entry.chart.removePane(paneObj); paneRemoved = true; }
+                        }
+                    } catch (_e3) {}
+                }
+                if (paneRemoved) {
+                    if (entry._volumePaneBySeries) {
+                        var vk2 = Object.keys(entry._volumePaneBySeries);
+                        for (var vi = 0; vi < vk2.length; vi++) {
+                            if (entry._volumePaneBySeries[vk2[vi]] > removedPane) {
+                                entry._volumePaneBySeries[vk2[vi]] -= 1;
+                            }
+                        }
+                    }
+                    if (typeof _activeIndicators === 'object') {
+                        var iks = Object.keys(_activeIndicators);
+                        for (var ii = 0; ii < iks.length; ii++) {
+                            var aii = _activeIndicators[iks[ii]];
+                            if (aii && aii.chartId === chartId && aii.isSubplot && aii.paneIndex > removedPane) {
+                                aii.paneIndex -= 1;
+                            }
+                        }
+                    }
+                    if (entry._nextPane && entry._nextPane > 1) entry._nextPane -= 1;
+                }
             }
         }
+
+        if (typeof _tvEnforceMainScaleDividerClearance === 'function') {
+            try { _tvEnforceMainScaleDividerClearance(entry, 0.1, 0.08); } catch (_e4) {}
+        }
+
+        entry._paneState = { mode: 'normal', pane: -1 };
+        delete entry._savedPaneHeights;
+
         legendUiState.volumeHidden = false;
+        if (volRowEl) volRowEl.style.display = 'none';
+
+        if (typeof window._tvBuildCurrentSettings === 'function' && typeof window._tvApplySettingsToChart === 'function') {
+            try {
+                var settings = window._tvBuildCurrentSettings(entry);
+                settings['Volume'] = false;
+                window._tvApplySettingsToChart(chartId, entry, settings);
+            } catch (_e5) {}
+        }
+
+        if (typeof _tvRebuildIndicatorLegend === 'function') {
+            try { _tvRebuildIndicatorLegend(chartId); } catch (_e6) {}
+        }
+
+        try { window.dispatchEvent(new CustomEvent('pywry:legend-refresh', { detail: { chartId: chartId } })); } catch (_e7) {}
     }
 
     function _legendEnableVolume() {
-        if (typeof window._tvBuildCurrentSettings === 'function' && typeof window._tvApplySettingsToChart === 'function') {
-            var settings = window._tvBuildCurrentSettings(entry);
-            settings['Volume'] = true;
-            window._tvApplySettingsToChart(chartId, entry, settings);
+        if (entry.volumeMap && entry.volumeMap.main) {
+            try { entry.volumeMap.main.applyOptions({ visible: true }); } catch (_e) {}
+            legendUiState.volumeHidden = false;
+            if (volRowEl) volRowEl.style.display = 'flex';
+            return;
         }
+
+        if (typeof _tvBuildVolumeOptions !== 'function' ||
+            typeof _tvExtractVolumeFromBars !== 'function' ||
+            typeof _tvAddSeriesCompat !== 'function' ||
+            typeof _tvReserveVolumePane !== 'function') {
+            return;
+        }
+
+        var payload = entry.payload || {};
+        var seriesDesc = (payload.series && payload.series[0]) ? payload.series[0] : payload;
+        var bars = entry._rawData;
+        if (!bars && entry._seriesRawData && entry._seriesRawData.main) bars = entry._seriesRawData.main;
+        if (!bars && seriesDesc && seriesDesc.bars) bars = seriesDesc.bars;
+        if (!Array.isArray(bars) || bars.length === 0) return;
+
+        var theme = entry.theme || (typeof _tvDetectTheme === 'function' ? _tvDetectTheme() : 'dark');
+        var explicitVol = (seriesDesc && seriesDesc.volume && seriesDesc.volume.length > 0) ? seriesDesc.volume : null;
+        var volData = explicitVol || _tvExtractVolumeFromBars(bars, theme, entry);
+        if (!volData || volData.length === 0) return;
+
+        var volOptions = _tvBuildVolumeOptions(seriesDesc || {}, theme);
+        if (typeof _tvRegisterCustomPriceScaleId === 'function') {
+            try { _tvRegisterCustomPriceScaleId(entry, volOptions.priceScaleId); } catch (_e2) {}
+        }
+        var vPaneIndex = _tvReserveVolumePane(entry, 'main');
+        var volSeries;
+        try {
+            volSeries = _tvAddSeriesCompat(entry.chart, 'Histogram', volOptions, vPaneIndex);
+        } catch (_e3) { return; }
+        try { volSeries.setData(volData); } catch (_e4) {}
+        entry.volumeMap.main = volSeries;
+
+        if (typeof _tvApplyDefaultVolumePaneHeight === 'function') {
+            try { _tvApplyDefaultVolumePaneHeight(entry, vPaneIndex); } catch (_e5) {}
+        }
+        if (typeof _tvEnforceMainScaleDividerClearance === 'function') {
+            try { _tvEnforceMainScaleDividerClearance(entry, 0.1, 0.08); } catch (_e6) {}
+        }
+
+        entry._paneState = { mode: 'normal', pane: -1 };
+        delete entry._savedPaneHeights;
+
         legendUiState.volumeHidden = false;
+        if (volRowEl) volRowEl.style.display = 'flex';
+
+        if (typeof window._tvBuildCurrentSettings === 'function' && typeof window._tvApplySettingsToChart === 'function') {
+            try {
+                var settings = window._tvBuildCurrentSettings(entry);
+                settings['Volume'] = true;
+                window._tvApplySettingsToChart(chartId, entry, settings);
+            } catch (_e7) {}
+        }
+
+        if (typeof _tvRebuildIndicatorLegend === 'function') {
+            try { _tvRebuildIndicatorLegend(chartId); } catch (_e8) {}
+        }
+
+        try { window.dispatchEvent(new CustomEvent('pywry:legend-refresh', { detail: { chartId: chartId } })); } catch (_e9) {}
     }
 
     function _legendSetDatasetFlag(key, enabled) {

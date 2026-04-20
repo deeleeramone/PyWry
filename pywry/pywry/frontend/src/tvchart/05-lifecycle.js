@@ -512,12 +512,17 @@ window.PYWRY_TVCHART_RENDER = function(chartId, container, payload) {
  */
 function _tvBuildVolumeOptions(seriesEntry, theme) {
     var palette = TVCHART_THEMES._get(theme || 'dark');
+    // Use the pane's standard 'right' scale (visible by default) instead
+    // of a custom 'volume' overlay scale (hidden by default).  When the
+    // volume histogram lives in its own subplot pane, the right scale
+    // belongs to that pane and renders independently from the price
+    // pane's right scale.
     return _tvMerge({
         priceFormat: { type: 'volume' },
-        priceScaleId: 'volume',
-        scaleMargins: { top: 0.8, bottom: 0 },
+        priceScaleId: 'right',
+        scaleMargins: { top: 0.1, bottom: 0.05 },
         color: palette.volumeUp,
-        lastValueVisible: false,
+        lastValueVisible: true,
         priceLineVisible: false,
     }, seriesEntry.volumeOptions || {});
 }
