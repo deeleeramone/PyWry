@@ -712,9 +712,12 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                         sOptions.color || sOptions.lineColor ||
                         sOptions.upColor || sOptions.borderUpColor || '#4c87ff'
                     );
-                    if (_tvIsMainSeriesId(sid) || sid === 'series-0') {
-                        _tvFireMainSeriesReady(entry);
-                    }
+                    // `whenMainSeriesReady` must guarantee bars are loaded,
+                    // not just the series constructed.  Fire happens inside
+                    // `_onBarsLoaded` below, after setData + `_seriesRawData`
+                    // — otherwise indicator re-add after an interval/symbol
+                    // change computes from an empty bar set and silently
+                    // produces nothing.
 
                     // Request initial historical bars
                     var periodParams = {
@@ -733,6 +736,14 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                         var normalizedBars = _tvNormalizeBarsForSeriesType(bars, sType);
                         series.setData(normalizedBars);
                         entry._seriesRawData[sid] = normalizedBars;
+
+                        // Main series now has data — fire any pending
+                        // whenMainSeriesReady callbacks.  Callers waiting on
+                        // this event need `_seriesRawData[sid]` populated
+                        // (e.g., indicator re-add after interval change).
+                        if (_tvIsMainSeriesId(sid) || sid === 'series-0') {
+                            _tvFireMainSeriesReady(entry);
+                        }
 
                         // Ensure payload.interval is set so the data-response
                         // handler can compare intervals correctly on the first

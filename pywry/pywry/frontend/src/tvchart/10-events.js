@@ -326,16 +326,18 @@
                         }
                     }
 
-                    // Re-add indicators after a short delay to allow main
-                    // series data to be set (indicators compute from raw
-                    // bar data).  Tracked so data-settled waits for it.
+                    // Re-add indicators once the main series actually has
+                    // data — whenMainSeriesReady fires AFTER setData has
+                    // populated _seriesRawData so every indicator's compute
+                    // sees the new bars.  A fixed setTimeout races the
+                    // async datafeed path and produces silent empty lines.
                     // Grouped indicators (BB, MACD, Stochastic, etc.) add
                     // multiple series sharing the same ``group`` id — only
                     // re-add the FIRST member per group, `_tvAddIndicator`
                     // materialises the rest.
                     if (savedIndicators.length > 0) {
                         var _indDone = _track();
-                        setTimeout(function() {
+                        var _reAddIndicators = function() {
                             var reEntry = window.__PYWRY_TVCHARTS__[cid];
                             if (!reEntry) { _indDone(); return; }
                             var seenGroups = {};
@@ -409,8 +411,24 @@
                                     _inputsInStatusLine: ind.inputsInStatusLine,
                                 }, cid);
                             }
+                            // Belt-and-braces: force a recompute pass once
+                            // every indicator has been attached so each one
+                            // picks up the freshly-loaded bars (matters if
+                            // async compute paths raced the main-series
+                            // ready fire).
+                            if (typeof _tvRecomputeIndicatorsForChart === 'function') {
+                                try { _tvRecomputeIndicatorsForChart(cid, 'main'); } catch (_e) {}
+                            }
                             _indDone();
-                        }, 100);
+                        };
+                        var reEntryForInd = window.__PYWRY_TVCHARTS__[cid];
+                        if (reEntryForInd && typeof reEntryForInd.whenMainSeriesReady === 'function') {
+                            reEntryForInd.whenMainSeriesReady(_reAddIndicators);
+                        } else {
+                            // Entry vanished before we could register — still
+                            // settle the tracker so data-settled can fire.
+                            _indDone();
+                        }
                     }
 
                     _tvRefreshLegendTitle(cid);
