@@ -163,15 +163,30 @@
                     }
                     if (effectiveSymbol) newPayload.title = effectiveSymbol;
 
-                    // Symbol change wipes prior compares/indicators — they
-                    // belong to the old ticker, not the new one.  Interval-
-                    // only change preserves them (handled by the saved vars
-                    // below).
-                    if (symbolChanged) {
-                        savedCompareSymbols = null;
-                        savedCompareLabels = null;
-                        savedCompareSymbolInfo = null;
-                        savedIndicators = [];
+                    // Indicators + compare overlays survive across both
+                    // interval and symbol changes.  An SMA(20) on AAPL is
+                    // still an SMA(20) on MSFT; the new chart should pick
+                    // up the same indicators with the new ticker's bars.
+                    // Purge the old _activeIndicators entries so the
+                    // post-recreate re-add starts with a clean slate —
+                    // otherwise the legend rebuild iterates both the
+                    // dead (chartless) entries and the freshly-added
+                    // ones and duplicates every row.
+                    var wipeKeys = Object.keys(_activeIndicators);
+                    for (var wi = 0; wi < wipeKeys.length; wi++) {
+                        if (_activeIndicators[wipeKeys[wi]] && _activeIndicators[wipeKeys[wi]].chartId === cid) {
+                            delete _activeIndicators[wipeKeys[wi]];
+                        }
+                    }
+                    // Same cleanup for VP primitives — the old chart's
+                    // primitive references are about to become unreachable.
+                    if (typeof _volumeProfilePrimitives === 'object') {
+                        var vpKeys = Object.keys(_volumeProfilePrimitives);
+                        for (var vpi = 0; vpi < vpKeys.length; vpi++) {
+                            if (_volumeProfilePrimitives[vpKeys[vpi]] && _volumeProfilePrimitives[vpKeys[vpi]].chartId === cid) {
+                                delete _volumeProfilePrimitives[vpKeys[vpi]];
+                            }
+                        }
                     }
                     // Destroy then recreate
                     window.PYWRY_TVCHART_DESTROY(cid);
@@ -314,24 +329,85 @@
                     // Re-add indicators after a short delay to allow main
                     // series data to be set (indicators compute from raw
                     // bar data).  Tracked so data-settled waits for it.
+                    // Grouped indicators (BB, MACD, Stochastic, etc.) add
+                    // multiple series sharing the same ``group`` id — only
+                    // re-add the FIRST member per group, `_tvAddIndicator`
+                    // materialises the rest.
                     if (savedIndicators.length > 0) {
                         var _indDone = _track();
                         setTimeout(function() {
                             var reEntry = window.__PYWRY_TVCHARTS__[cid];
-                            if (reEntry) {
-                                for (var si = 0; si < savedIndicators.length; si++) {
-                                    var ind = savedIndicators[si];
-                                    _tvAddIndicator({
-                                        name: ind.name,
-                                        key: ind.type,
-                                        defaultPeriod: ind.period,
-                                        _color: ind.color,
-                                        _source: ind.source,
-                                        _method: ind.method,
-                                        _multiplier: ind.multiplier,
-                                        requiresSecondary: !!ind.secondarySeriesId,
-                                    }, cid);
+                            if (!reEntry) { _indDone(); return; }
+                            var seenGroups = {};
+                            for (var si = 0; si < savedIndicators.length; si++) {
+                                var ind = savedIndicators[si];
+                                if (ind.group) {
+                                    if (seenGroups[ind.group]) continue;
+                                    seenGroups[ind.group] = true;
                                 }
+                                // Every tunable info.* field is re-marshalled as
+                                // indicatorDef._* so _tvAddIndicator reconstructs
+                                // the indicator at the user's settings — period,
+                                // method, MACD lengths, Ichimoku lines, VP range
+                                // + layout, status-line toggles, etc.
+                                _tvAddIndicator({
+                                    name: ind.name,
+                                    key: ind.type,
+                                    defaultPeriod: ind.period,
+                                    requiresSecondary: !!ind.secondarySeriesId,
+                                    _color: ind.color,
+                                    _source: ind.source,
+                                    _method: ind.method,
+                                    _maType: ind.maType,
+                                    _multiplier: ind.multiplier,
+                                    _offset: ind.offset,
+                                    _primarySource: ind.primarySource,
+                                    _secondarySource: ind.secondarySource,
+                                    // MACD / Stochastic / Aroon / ADX / PSAR / HV
+                                    _fast: ind.fast,
+                                    _slow: ind.slow,
+                                    _signal: ind.signal,
+                                    _macdSource: ind.macdSource,
+                                    _oscMaType: ind.oscMaType,
+                                    _signalMaType: ind.signalMaType,
+                                    _kSmoothing: ind.kSmoothing,
+                                    _dPeriod: ind.dPeriod,
+                                    _diLength: ind.diLength,
+                                    _adxSmoothing: ind.adxSmoothing,
+                                    _step: ind.step,
+                                    _maxStep: ind.maxStep,
+                                    _annualization: ind.annualization,
+                                    // Ichimoku
+                                    _conversionPeriod: ind.conversionPeriod,
+                                    _basePeriod: ind.basePeriod,
+                                    _leadingSpanPeriod: ind.leadingSpanPeriod,
+                                    _laggingPeriod: ind.laggingPeriod,
+                                    _leadingShiftPeriod: ind.leadingShiftPeriod,
+                                    // Volume Profile
+                                    _rowSize: ind.rowSize,
+                                    _rowsLayout: ind.rowsLayout,
+                                    _volumeMode: ind.volumeMode,
+                                    _valueAreaPct: ind.valueAreaPct,
+                                    _showDevelopingPOC: ind.showDevelopingPOC,
+                                    _showDevelopingVA: ind.showDevelopingVA,
+                                    _fromIndex: ind.fromIndex,
+                                    _toIndex: ind.toIndex,
+                                    _widthPercent: ind.widthPercent,
+                                    _placement: ind.placement,
+                                    _upColor: ind.upColor,
+                                    _downColor: ind.downColor,
+                                    _vaUpColor: ind.vaUpColor,
+                                    _vaDownColor: ind.vaDownColor,
+                                    _pocColor: ind.pocColor,
+                                    _developingPOCColor: ind.developingPOCColor,
+                                    _developingVAColor: ind.developingVAColor,
+                                    _showPOC: ind.showPOC,
+                                    _showValueArea: ind.showValueArea,
+                                    // Status-line toggles
+                                    _labelsOnPriceScale: ind.labelsOnPriceScale,
+                                    _valuesInStatusLine: ind.valuesInStatusLine,
+                                    _inputsInStatusLine: ind.inputsInStatusLine,
+                                }, cid);
                             }
                             _indDone();
                         }, 100);
