@@ -14,9 +14,9 @@ html.dark,
     --pywry-tvchart-hover: #17191f;
     --pywry-tvchart-active-bg: rgba(41, 98, 255, 0.16);
     --pywry-tvchart-active-text: #2962ff;
-    --pywry-tvchart-text: #d1d4dc;
-    --pywry-tvchart-text-muted: #aeb4c2;
-    --pywry-tvchart-text-dim: #787b86;
+    --pywry-tvchart-text: #e6e9f0;
+    --pywry-tvchart-text-muted: #c4c9d4;
+    --pywry-tvchart-text-dim: #a3a8b5;
     --pywry-tvchart-grid: rgba(255, 255, 255, 0.05);
     --pywry-tvchart-crosshair: #758696;
     --pywry-tvchart-crosshair-label-bg: #1b1f27;
@@ -133,9 +133,9 @@ html.light,
     /* Contrast-heavy text palette: the chart sits on pure #ffffff, so
        text needs to land well above WCAG AA to feel crisp rather than
        "technically readable".  text: 18.1:1, muted: 11.1:1, dim: 8.1:1. */
-    --pywry-tvchart-text: #0a0e18;
-    --pywry-tvchart-text-muted: #2e3540;
-    --pywry-tvchart-text-dim: #3d4553;
+    --pywry-tvchart-text: #050912;
+    --pywry-tvchart-text-muted: #1f2530;
+    --pywry-tvchart-text-dim: #4a5160;
     --pywry-tvchart-grid: rgba(197, 203, 206, 0.5);
     --pywry-tvchart-crosshair: #9598a1;
     --pywry-tvchart-crosshair-label-bg: #e1ecf2;
@@ -798,8 +798,8 @@ html.light,
     left: 8px;
     z-index: 10;
     font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
-    font-size: 12px;
-    line-height: 1.35;
+    font-size: 13px;
+    line-height: 1.4;
     color: var(--pywry-tvchart-text);
     pointer-events: none;
     white-space: normal;
@@ -869,8 +869,8 @@ html.light,
     border-radius: 6px;
     background: var(--pywry-tvchart-legend-bg);
     box-sizing: border-box;
-    font-weight: 400;
-    font-size: 11px;
+    font-weight: 500;
+    font-size: 13px;
     color: var(--pywry-tvchart-text);
     letter-spacing: 0;
     max-width: fit-content;
@@ -879,7 +879,7 @@ html.light,
 
 .tvchart-legend-ohlc {
     display: inline-block;
-    font-size: 12px;
+    font-size: 13px;
     vertical-align: middle;
     white-space: nowrap;
 }
@@ -887,7 +887,7 @@ html.light,
 .tvchart-legend-vol {
     display: inline-block;
     color: var(--pywry-tvchart-text);
-    font-size: 11px;
+    font-size: 13px;
     margin-left: 2px;
     white-space: nowrap;
 }
@@ -928,8 +928,8 @@ html.light,
     left: 8px;
     z-index: 10;
     font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
-    font-size: 11px;
-    line-height: 1.35;
+    font-size: 13px;
+    line-height: 1.4;
     color: var(--pywry-tvchart-text);
     pointer-events: none;
     white-space: normal;
@@ -940,7 +940,7 @@ html.light,
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 11px;
+    font-size: 13px;
     line-height: 20px;
     pointer-events: auto;
 }
