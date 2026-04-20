@@ -234,6 +234,7 @@ nav:
       - integrations/tradingview/index.md
       - Config: integrations/tradingview/tvchart-config.md
       - DatafeedProvider: integrations/tradingview/tvchart-datafeed.md
+      - Indicators: integrations/tradingview/tvchart-indicators.md
       - Models: integrations/tradingview/tvchart-models.md
       - TVChartStateMixin: integrations/tradingview/tvchart-mixin.md
       - UDFAdapter: integrations/tradingview/tvchart-udf.md

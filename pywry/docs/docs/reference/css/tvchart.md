@@ -88,6 +88,38 @@ This stylesheet defines ~67 CSS custom properties per theme (dark and light) for
 }
 ```
 
+### Volume Profile (VPVR / VPFR)
+
+Colours for the **Volume Profile Fixed Range** and **Volume Profile Visible Range** indicators. Every value is kept low-opacity so the profile rows never drown the candles underneath:
+
+```css
+:root {
+    --pywry-tvchart-vp-up:       /* up-volume bar (dim, left half of each row) */;
+    --pywry-tvchart-vp-down:     /* down-volume bar (dim, right half of each row) */;
+    --pywry-tvchart-vp-va-up:    /* up-volume INSIDE the value area (higher opacity) */;
+    --pywry-tvchart-vp-va-down:  /* down-volume INSIDE the value area (higher opacity) */;
+    --pywry-tvchart-vp-poc:      /* Point of Control line (accent, highest opacity) */;
+}
+```
+
+The renderer reads these via `_cssVar()` inside `_tvMakeVolumeProfilePrimitive()` so the palette stays theme-driven — never hard-coded.
+
+### Indicator Palette
+
+Shared colour palette used by every multi-series indicator (MACD, Stochastic, ADX, Aroon, Keltner, Ichimoku, etc.) so each subplot stays visually consistent across themes:
+
+```css
+:root {
+    --pywry-tvchart-ind-primary:      /* primary line (MACD line, Stoch %K, ADX, KC mid) */;
+    --pywry-tvchart-ind-secondary:    /* secondary line (MACD signal, Stoch %D, Ichimoku Kijun) */;
+    --pywry-tvchart-ind-tertiary:     /* tertiary accent (Ichimoku Chikou, fallback dim) */;
+    --pywry-tvchart-ind-positive:     /* up / +DI / Aroon-up (green accent) */;
+    --pywry-tvchart-ind-negative:     /* down / -DI / Aroon-down (red accent) */;
+    --pywry-tvchart-ind-positive-dim: /* MACD histogram positive bar fill */;
+    --pywry-tvchart-ind-negative-dim: /* MACD histogram negative bar fill */;
+}
+```
+
 ### Drawing Tools
 
 ```css

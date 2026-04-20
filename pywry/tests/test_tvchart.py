@@ -1327,18 +1327,19 @@ class TestTVChartFrontendStateContracts:
         # Actually sets the height on the pane
         assert "setHeight(desiredHeight)" in body
 
-    def test_volume_options_suppress_value_label(self, tvchart_defaults_js: str):
-        """The volume series builder must hide the value label and price line
-        so they don't overlap with the main series axis labels."""
+    def test_volume_options(self, tvchart_defaults_js: str):
+        """Volume series uses the right-side price scale of its own pane,
+        keeps the latest-value label visible, and suppresses the price line."""
         body = self._fn(tvchart_defaults_js, "_tvBuildVolumeOptions")
-        assert "lastValueVisible: false" in body, (
-            "Volume must hide lastValueVisible to avoid axis label overlap"
+        assert "lastValueVisible: true" in body, (
+            "Volume needs the latest-value label so the right axis renders ticks"
         )
         assert "priceLineVisible: false" in body, (
-            "Volume must hide priceLineVisible to avoid axis label overlap"
+            "Volume must hide priceLineVisible to avoid horizontal-line clutter"
         )
-        # Volume gets its own price scale
-        assert "priceScaleId: 'volume'" in body
+        # Volume series binds to the standard 'right' price scale of its
+        # own pane (visible by default), not a hidden custom 'volume' scale.
+        assert "priceScaleId: 'right'" in body
 
     def test_volume_auto_enables_in_create(self, tvchart_defaults_js: str):
         """PYWRY_TVCHART_CREATE enables volume by default when enableVolume is
@@ -2445,6 +2446,368 @@ class TestShowTVChartSignature:
 
         sig = inspect.signature(show_tvchart)
         assert sig.parameters["resolution"].default == "1D"
+
+
+# =============================================================================
+# Indicator catalog + compute + recompute coverage
+# =============================================================================
+
+
+class TestTVChartIndicatorCatalog:
+    """Every indicator advertised by the catalog must have:
+
+    * a compute function present in the bundled JS,
+    * an add-indicator branch that creates its series, and
+    * a recompute branch in ``_tvRecomputeIndicatorSeries`` so it refreshes
+      when underlying bars change (otherwise indicators silently freeze at
+      their initial snapshot when the datafeed replaces bars — exactly the
+      bug that made VWAP show 9.99 on a $270 stock).
+    """
+
+    @pytest.fixture
+    def js(self) -> str:
+        from pywry.assets import get_tvchart_defaults_js
+
+        return get_tvchart_defaults_js()
+
+    # ------------------------------------------------------------------
+    # Catalog entries
+    # ------------------------------------------------------------------
+
+    EXPECTED_CATALOG_NAMES = (
+        "Moving Average",
+        "Ichimoku Cloud",
+        "Bollinger Bands",
+        "Keltner Channels",
+        "ATR",
+        "Historical Volatility",
+        "Parabolic SAR",
+        "RSI",
+        "MACD",
+        "Stochastic",
+        "Williams %R",
+        "CCI",
+        "ADX",
+        "Aroon",
+        "VWAP",
+        "Volume SMA",
+        "Accumulation/Distribution",
+        "Volume Profile Fixed Range",
+        "Volume Profile Visible Range",
+    )
+
+    @pytest.mark.parametrize("name", EXPECTED_CATALOG_NAMES)
+    def test_catalog_contains_indicator(self, js: str, name: str) -> None:
+        cat_start = js.index("_INDICATOR_CATALOG = [")
+        cat_end = js.index("];", cat_start)
+        catalog_src = js[cat_start:cat_end]
+        assert f"name: '{name}'" in catalog_src, (
+            f"Indicator catalog missing entry for '{name}'"
+        )
+
+    def test_volume_profile_entries_are_primitive(self, js: str) -> None:
+        cat_start = js.index("_INDICATOR_CATALOG = [")
+        cat_end = js.index("];", cat_start)
+        catalog_src = js[cat_start:cat_end]
+        for key in ("'volume-profile-fixed'", "'volume-profile-visible'"):
+            block = catalog_src[catalog_src.index(key):]
+            first_close = block.index("}")
+            entry = block[:first_close]
+            assert "primitive: true" in entry, (
+                f"Expected VP entry {key} to have primitive: true"
+            )
+
+    # ------------------------------------------------------------------
+    # Compute functions
+    # ------------------------------------------------------------------
+
+    EXPECTED_COMPUTE_FNS = (
+        "_computeSMA",
+        "_computeEMA",
+        "_computeWMA",
+        "_computeHMA",
+        "_computeVWMA",
+        "_computeRSI",
+        "_computeATR",
+        "_computeBollingerBands",
+        "_computeKeltnerChannels",
+        "_computeVWAP",
+        "_computeMACD",
+        "_computeStochastic",
+        "_computeAroon",
+        "_computeADX",
+        "_computeCCI",
+        "_computeWilliamsR",
+        "_computeAccumulationDistribution",
+        "_computeHistoricalVolatility",
+        "_computeIchimoku",
+        "_computeParabolicSAR",
+    )
+
+    @pytest.mark.parametrize("fn_name", EXPECTED_COMPUTE_FNS)
+    def test_compute_function_defined(self, js: str, fn_name: str) -> None:
+        assert f"function {fn_name}(" in js, (
+            f"Missing compute function {fn_name} in bundled JS"
+        )
+
+    # ------------------------------------------------------------------
+    # Add-indicator branches
+    # ------------------------------------------------------------------
+
+    ADD_BRANCHES = (
+        ("name === 'VWAP'", "_computeVWAP"),
+        ("name === 'MACD'", "_computeMACD"),
+        ("name === 'Stochastic'", "_computeStochastic"),
+        ("name === 'Aroon'", "_computeAroon"),
+        ("name === 'ADX'", "_computeADX"),
+        ("name === 'CCI'", "_computeCCI"),
+        ("name === 'Williams %R'", "_computeWilliamsR"),
+        ("name === 'Accumulation/Distribution'", "_computeAccumulationDistribution"),
+        ("name === 'Historical Volatility'", "_computeHistoricalVolatility"),
+        ("name === 'Keltner Channels'", "_computeKeltnerChannels"),
+        ("name === 'Ichimoku Cloud'", "_computeIchimoku"),
+        ("name === 'Parabolic SAR'", "_computeParabolicSAR"),
+    )
+
+    @pytest.mark.parametrize("branch,fn", ADD_BRANCHES)
+    def test_add_branch_wires_compute(self, js: str, branch: str, fn: str) -> None:
+        assert branch in js, f"Missing add-indicator branch '{branch}' in 04-series.js"
+        # Narrow the search: compute call must appear after the branch and
+        # before the next `} else if (name ===` marker.
+        branch_idx = js.index(branch)
+        next_branch = js.find("} else if (name ===", branch_idx + 1)
+        if next_branch < 0:
+            next_branch = js.find("_tvAddIndicator fallthrough", branch_idx + 1)
+        segment = js[branch_idx : next_branch if next_branch > 0 else branch_idx + 2000]
+        assert fn in segment, (
+            f"Branch for '{branch}' should call {fn}() but didn't within 2000 chars"
+        )
+
+    # ------------------------------------------------------------------
+    # Recompute branches (THIS is the bug that caused VWAP=9.99)
+    # ------------------------------------------------------------------
+
+    @pytest.fixture
+    def recompute_body(self, js: str) -> str:
+        start = js.index("function _tvRecomputeIndicatorSeries(")
+        # Find matching close brace for the function
+        depth = 0
+        i = js.index("{", start)
+        n = len(js)
+        while i < n:
+            ch = js[i]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return js[start : i + 1]
+            i += 1
+        raise RuntimeError("Could not find end of _tvRecomputeIndicatorSeries")
+
+    RECOMPUTE_BRANCHES = (
+        ("info.name === 'VWAP'", "_computeVWAP"),
+        ("info.name === 'CCI'", "_computeCCI"),
+        ("info.name === 'Williams %R'", "_computeWilliamsR"),
+        ("info.name === 'Accumulation/Distribution'", "_computeAccumulationDistribution"),
+        ("info.name === 'Historical Volatility'", "_computeHistoricalVolatility"),
+        ("type === 'parabolic-sar'", "_computeParabolicSAR"),
+        ("type === 'macd'", "_computeMACD"),
+        ("type === 'stochastic'", "_computeStochastic"),
+        ("type === 'aroon'", "_computeAroon"),
+        ("type === 'adx'", "_computeADX"),
+        ("type === 'keltner-channels'", "_computeKeltnerChannels"),
+        ("type === 'ichimoku'", "_computeIchimoku"),
+    )
+
+    @pytest.mark.parametrize("branch,fn", RECOMPUTE_BRANCHES)
+    def test_recompute_branch_refreshes_series(
+        self, recompute_body: str, branch: str, fn: str
+    ) -> None:
+        assert branch in recompute_body, (
+            f"_tvRecomputeIndicatorSeries missing branch for {branch!r}. "
+            "Without this branch, the indicator won't refresh when bars "
+            "change (e.g., via datafeed scrollback or interval switch) "
+            "and will stay frozen at its initial snapshot."
+        )
+        idx = recompute_body.index(branch)
+        tail = recompute_body[idx : idx + 2500]
+        assert fn in tail, (
+            f"Recompute branch {branch!r} found but never calls {fn}() "
+            "within the following 2500 chars — did the branch get broken?"
+        )
+
+    def test_recompute_branch_for_volume_profile(self, recompute_body: str) -> None:
+        """Visible-range volume profiles must recompute when the bar set
+        changes — otherwise scrolling into new data leaves their right-pinned
+        rows reflecting the old range."""
+        assert "type === 'volume-profile-visible'" in recompute_body
+        assert "_tvRefreshVisibleVolumeProfiles" in recompute_body
+
+
+# =============================================================================
+# Volume Profile compute contract
+# =============================================================================
+
+
+class TestTVChartVolumeProfile:
+    """Tests for _tvComputeVolumeProfile — the pure function behind VPVR."""
+
+    @pytest.fixture
+    def js(self) -> str:
+        from pywry.assets import get_tvchart_defaults_js
+
+        return get_tvchart_defaults_js()
+
+    def test_vp_compute_function_signature(self, js: str) -> None:
+        assert "function _tvComputeVolumeProfile(bars, fromIdx, toIdx, opts)" in js
+
+    def test_vp_result_returns_profile_and_metadata(self, js: str) -> None:
+        fn_start = js.index("function _tvComputeVolumeProfile(")
+        fn_end = js.index("\nfunction ", fn_start + 1)
+        body = js[fn_start:fn_end]
+        for key in ("profile", "minPrice", "maxPrice", "step", "totalVolume"):
+            assert key in body, f"VP compute result missing expected field '{key}'"
+
+    def test_vp_splits_up_down_volume(self, js: str) -> None:
+        fn_start = js.index("function _tvComputeVolumeProfile(")
+        fn_end = js.index("\nfunction ", fn_start + 1)
+        body = js[fn_start:fn_end]
+        # Up/down split is what differentiates VPVR from a flat histogram.
+        assert "upVol" in body and "downVol" in body, (
+            "VP compute must split each row into up vs down volume"
+        )
+
+    def test_vp_exposes_poc_value_area_helper(self, js: str) -> None:
+        """A separate helper derives POC and Value Area from the computed profile."""
+        assert "function _tvComputePOCAndValueArea(" in js
+        fn_start = js.index("function _tvComputePOCAndValueArea(")
+        fn_end = js.index("\nfunction ", fn_start + 1)
+        body = js[fn_start:fn_end]
+        for key in ("pocIdx", "vaLowIdx", "vaHighIdx"):
+            assert key in body, (
+                f"POC/VA helper must expose '{key}' so renderer can draw lines"
+            )
+
+    def test_vp_refresh_visible_exposed(self, js: str) -> None:
+        """Visible-range refresh must exist for the recompute path to call it."""
+        assert "function _tvRefreshVisibleVolumeProfiles(chartId)" in js
+
+
+# =============================================================================
+# Legend volume removal actually destroys the series + pane
+# =============================================================================
+
+
+class TestTVChartLegendVolumeRemoval:
+    """Removing volume from the legend must actually remove it from the chart
+    (issue: previously, clicking Remove only set a legend dataset flag but
+    left the histogram series and its pane on the chart)."""
+
+    @pytest.fixture
+    def js(self) -> str:
+        from pywry.assets import get_tvchart_defaults_js
+
+        return get_tvchart_defaults_js()
+
+    def _fn_or_nested(self, js: str, name: str) -> str:
+        """Extract a function body — works for nested ``function X()`` too."""
+        idx = js.index(f"function {name}(")
+        depth = 0
+        i = js.index("{", idx)
+        n = len(js)
+        while i < n:
+            ch = js[i]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return js[idx : i + 1]
+            i += 1
+        raise RuntimeError(f"Could not find end of {name}")
+
+    def test_disable_volume_removes_series(self, js: str) -> None:
+        body = self._fn_or_nested(js, "_legendDisableVolume")
+        assert "entry.chart.removeSeries(volSeries)" in body, (
+            "Remove-volume must actually call chart.removeSeries"
+        )
+        assert "delete entry.volumeMap.main" in body, (
+            "Remove-volume must clear the volumeMap entry"
+        )
+
+    def test_disable_volume_removes_pane(self, js: str) -> None:
+        body = self._fn_or_nested(js, "_legendDisableVolume")
+        assert "chart.removePane(removedPane)" in body, (
+            "Remove-volume must collapse the now-empty pane, not leave dead space"
+        )
+
+    def test_disable_volume_reindexes_panes(self, js: str) -> None:
+        body = self._fn_or_nested(js, "_legendDisableVolume")
+        # When pane N is removed, LWC reindexes panes > N down by 1. We must
+        # mirror that for our bookkeeping on _activeIndicators and _volumePaneBySeries.
+        assert ".paneIndex -= 1" in body
+        assert "_volumePaneBySeries" in body
+
+    def test_enable_volume_rebuilds_series(self, js: str) -> None:
+        body = self._fn_or_nested(js, "_legendEnableVolume")
+        assert "_tvAddSeriesCompat(entry.chart, 'Histogram'" in body, (
+            "Restore-volume must rebuild the histogram series via the same "
+            "path used for initial creation"
+        )
+        assert "_tvExtractVolumeFromBars" in body, (
+            "Restore-volume must re-extract volume from the stored raw bars"
+        )
+
+
+# =============================================================================
+# Theme CSS variables — every new VP / indicator color var is defined
+# =============================================================================
+
+
+class TestTVChartThemeVariables:
+    """The tvchart.css stylesheet must define every CSS variable that the
+    frontend JS consumes, in both dark and light themes (otherwise colors
+    silently fall back to whatever the browser decides)."""
+
+    @pytest.fixture
+    def css(self) -> str:
+        from pathlib import Path
+
+        return (
+            Path(__file__).parents[1]
+            / "pywry"
+            / "frontend"
+            / "style"
+            / "tvchart.css"
+        ).read_text(encoding="utf-8")
+
+    VP_VARS = (
+        "--pywry-tvchart-vp-up",
+        "--pywry-tvchart-vp-down",
+        "--pywry-tvchart-vp-va-up",
+        "--pywry-tvchart-vp-va-down",
+        "--pywry-tvchart-vp-poc",
+    )
+
+    INDICATOR_PALETTE_VARS = (
+        "--pywry-tvchart-ind-primary",
+        "--pywry-tvchart-ind-secondary",
+        "--pywry-tvchart-ind-tertiary",
+        "--pywry-tvchart-ind-positive",
+        "--pywry-tvchart-ind-negative",
+        "--pywry-tvchart-ind-positive-dim",
+        "--pywry-tvchart-ind-negative-dim",
+    )
+
+    @pytest.mark.parametrize("var", VP_VARS + INDICATOR_PALETTE_VARS)
+    def test_var_defined_at_least_twice(self, css: str, var: str) -> None:
+        """Each var must appear in both the dark (root) and light theme blocks."""
+        count = css.count(var + ":")
+        assert count >= 2, (
+            f"CSS var {var} defined only {count} time(s); expected at least 2 "
+            "(one for dark theme, one for light)."
+        )
 
 
 # =============================================================================
