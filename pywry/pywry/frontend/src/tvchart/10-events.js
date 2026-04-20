@@ -1054,6 +1054,31 @@
                 _offset: data.offset || undefined,
                 _fromIndex: data.fromIndex,
                 _toIndex: data.toIndex,
+                // Volume Profile styling
+                _widthPercent: data.widthPercent,
+                _placement: data.placement,
+                _upColor: data.upColor,
+                _downColor: data.downColor,
+                _vaUpColor: data.vaUpColor,
+                _vaDownColor: data.vaDownColor,
+                _pocColor: data.pocColor,
+                _showPOC: data.showPOC,
+                _showValueArea: data.showValueArea,
+                _valueAreaPct: data.valueAreaPct,
+                // MACD / Stochastic extras
+                _fast: data.fast,
+                _slow: data.slow,
+                _signal: data.signal,
+                _dPeriod: data.dPeriod,
+                // Parabolic SAR
+                _step: data.step,
+                _maxStep: data.maxStep,
+                // Ichimoku
+                _tenkan: data.tenkan,
+                _kijun: data.kijun,
+                _senkouB: data.senkouB,
+                // Historical volatility
+                _annualization: data.annualization,
             };
             _tvAddIndicator(def, chartId);
         });

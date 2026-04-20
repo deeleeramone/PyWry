@@ -1051,6 +1051,8 @@ function _tvExportLayout(chartId) {
             if (ai.bucketCount != null) indEntry.bucketCount = ai.bucketCount;
             if (ai.fromIndex != null) indEntry.fromIndex = ai.fromIndex;
             if (ai.toIndex != null) indEntry.toIndex = ai.toIndex;
+            if (ai.widthPercent != null) indEntry.widthPercent = ai.widthPercent;
+            if (ai.placement) indEntry.placement = ai.placement;
             indicators.push(indEntry);
         }
     }

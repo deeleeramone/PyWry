@@ -300,34 +300,70 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
         bucket_count: int = 24,
         from_index: int | None = None,
         to_index: int | None = None,
+        placement: Literal["right", "left"] = "right",
+        width_percent: float = 25.0,
+        value_area_pct: float = 0.70,
+        show_poc: bool = True,
+        show_value_area: bool = True,
+        up_color: str | None = None,
+        down_color: str | None = None,
+        poc_color: str | None = None,
         chart_id: str | None = None,
     ) -> None:
-        """Add a Volume Profile histogram overlay to the main price pane.
+        """Add a Volume Profile overlay pinned to the price pane edge.
 
-        Draws a horizontal volume-by-price histogram using the TradingView
-        Lightweight Charts series-primitive API (ported from the upstream
-        ``plugin-examples/src/plugins/volume-profile`` example).
+        Renders a volume-by-price histogram: one horizontal row per price
+        bucket, bar length proportional to net volume traded at that
+        level, split into up-volume and down-volume portions.  A
+        Point-of-Control (POC) line marks the bucket with the highest
+        volume; the value area (default 70%) is drawn in a deeper
+        colour.
 
         Parameters
         ----------
         mode : {"fixed", "visible"}
-            ``"fixed"`` anchors the histogram to a specific bar-index
-            range (``from_index`` / ``to_index``).  ``"visible"`` anchors
-            it to the current viewport and recomputes on every pan/zoom.
+            ``"fixed"`` buckets a specific bar-index range.
+            ``"visible"`` tracks the current viewport and recomputes on
+            every pan/zoom.
         bucket_count : int
             Number of price buckets (default 24).
         from_index, to_index : int, optional
-            Inclusive bar-index bounds for fixed mode.  Ignored when
-            ``mode="visible"``.  If omitted under fixed mode, defaults
-            to the last 20% of bars.
+            Inclusive bar-index bounds for fixed mode.  Defaults to the
+            full bar set if omitted.
+        placement : {"right", "left"}
+            Which side of the pane the histogram is pinned to.
+        width_percent : float
+            Maximum histogram width as a percentage of the pane width
+            (default 25).
+        value_area_pct : float
+            Fraction of volume that defines the Value Area (default 0.70).
+        show_poc, show_value_area : bool
+            Toggle the POC line and Value Area colouring.
+        up_color, down_color, poc_color : str, optional
+            CSS colours for up-volume bars, down-volume bars, and the POC
+            line.
         chart_id : str, optional
             Target chart instance ID.
         """
         name = "Volume Profile Fixed Range" if mode == "fixed" else "Volume Profile Visible Range"
-        payload: dict[str, Any] = {"name": name, "period": int(bucket_count)}
+        payload: dict[str, Any] = {
+            "name": name,
+            "period": int(bucket_count),
+            "placement": placement,
+            "widthPercent": float(width_percent),
+            "valueAreaPct": float(value_area_pct),
+            "showPOC": bool(show_poc),
+            "showValueArea": bool(show_value_area),
+        }
         if mode == "fixed" and from_index is not None and to_index is not None:
             payload["fromIndex"] = int(from_index)
             payload["toIndex"] = int(to_index)
+        if up_color is not None:
+            payload["upColor"] = up_color
+        if down_color is not None:
+            payload["downColor"] = down_color
+        if poc_color is not None:
+            payload["pocColor"] = poc_color
         if chart_id is not None:
             payload["chartId"] = chart_id
         self.emit("tvchart:add-indicator", payload)

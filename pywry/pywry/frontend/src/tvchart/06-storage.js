@@ -1073,6 +1073,8 @@ function _tvApplyLayout(chartId, layout) {
             _color: ind.color || undefined,
             _fromIndex: ind.fromIndex != null ? ind.fromIndex : undefined,
             _toIndex: ind.toIndex != null ? ind.toIndex : undefined,
+            _widthPercent: ind.widthPercent != null ? ind.widthPercent : undefined,
+            _placement: ind.placement || undefined,
         }, chartId);
     }
 

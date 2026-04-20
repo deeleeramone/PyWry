@@ -46,15 +46,28 @@ var _INDICATOR_CATALOG = [
     { name: 'SMA', fullName: 'Simple Moving Average', category: 'Moving Averages', defaultPeriod: 20 },
     { name: 'EMA', fullName: 'Exponential Moving Average', category: 'Moving Averages', defaultPeriod: 20 },
     { name: 'WMA', fullName: 'Weighted Moving Average', category: 'Moving Averages', defaultPeriod: 20 },
+    { name: 'HMA', fullName: 'Hull Moving Average', category: 'Moving Averages', defaultPeriod: 9 },
+    { name: 'VWMA', fullName: 'Volume-Weighted Moving Average', category: 'Moving Averages', defaultPeriod: 20 },
     { name: 'SMA (50)', fullName: 'Simple Moving Average (50)', category: 'Moving Averages', defaultPeriod: 50 },
     { name: 'SMA (200)', fullName: 'Simple Moving Average (200)', category: 'Moving Averages', defaultPeriod: 200 },
     { name: 'EMA (12)', fullName: 'Exponential Moving Average (12)', category: 'Moving Averages', defaultPeriod: 12 },
     { name: 'EMA (26)', fullName: 'Exponential Moving Average (26)', category: 'Moving Averages', defaultPeriod: 26 },
+    { name: 'Ichimoku Cloud', fullName: 'Ichimoku Kinko Hyo', category: 'Moving Averages', defaultPeriod: 26 },
     { name: 'Bollinger Bands', fullName: 'Bollinger Bands', category: 'Volatility', defaultPeriod: 20 },
-    { name: 'RSI', fullName: 'Relative Strength Index', category: 'Momentum', defaultPeriod: 14 },
+    { name: 'Keltner Channels', fullName: 'Keltner Channels', category: 'Volatility', defaultPeriod: 20 },
     { name: 'ATR', fullName: 'Average True Range', category: 'Volatility', defaultPeriod: 14 },
+    { name: 'Historical Volatility', fullName: 'Historical Volatility', category: 'Volatility', defaultPeriod: 10, subplot: true },
+    { name: 'Parabolic SAR', fullName: 'Parabolic Stop and Reverse', category: 'Trend', defaultPeriod: 0 },
+    { name: 'RSI', fullName: 'Relative Strength Index', category: 'Momentum', defaultPeriod: 14, subplot: true },
+    { name: 'MACD', fullName: 'Moving Average Convergence/Divergence', category: 'Momentum', defaultPeriod: 12, subplot: true },
+    { name: 'Stochastic', fullName: 'Stochastic Oscillator', category: 'Momentum', defaultPeriod: 14, subplot: true },
+    { name: 'Williams %R', fullName: 'Williams %R', category: 'Momentum', defaultPeriod: 14, subplot: true },
+    { name: 'CCI', fullName: 'Commodity Channel Index', category: 'Momentum', defaultPeriod: 20, subplot: true },
+    { name: 'ADX', fullName: 'Average Directional Index', category: 'Momentum', defaultPeriod: 14, subplot: true },
+    { name: 'Aroon', fullName: 'Aroon Up/Down', category: 'Momentum', defaultPeriod: 14, subplot: true },
     { name: 'VWAP', fullName: 'Volume Weighted Average Price', category: 'Volume', defaultPeriod: 0 },
     { name: 'Volume SMA', fullName: 'Volume Simple Moving Average', category: 'Volume', defaultPeriod: 20 },
+    { name: 'Accumulation/Distribution', fullName: 'Accumulation / Distribution Line', category: 'Volume', defaultPeriod: 0, subplot: true },
     { key: 'volume-profile-fixed', name: 'Volume Profile Fixed Range', fullName: 'Volume Profile (Fixed Range)', category: 'Volume', defaultPeriod: 24, primitive: true },
     { key: 'volume-profile-visible', name: 'Volume Profile Visible Range', fullName: 'Volume Profile (Visible Range)', category: 'Volume', defaultPeriod: 24, primitive: true },
 ];
@@ -342,13 +355,13 @@ function _tvUpdateBBFill(chartId) {
 }
 
 // ---------------------------------------------------------------------------
-// Volume Profile (port of tradingview/lightweight-charts volume-profile plugin)
+// Volume Profile (VPVR / VPFR — volume-by-price histogram pinned to pane edge)
 // ---------------------------------------------------------------------------
 
-// Per-chart registry: { [indicatorId]: { primitive, seriesId, mode, bucketCount, anchorTime, anchorWidth, vpData } }
+// Per-chart registry: { [indicatorId]: { primitive, seriesId, mode, bucketCount, vpData, opts } }
 var _volumeProfilePrimitives = {};
 
-/** positionsBox — media→bitmap pixel alignment helper (ported from upstream plugin). */
+/** positionsBox — media→bitmap pixel alignment helper. */
 function _tvPositionsBox(a, b, pixelRatio) {
     var lo = Math.min(a, b);
     var hi = Math.max(a, b);
@@ -360,12 +373,18 @@ function _tvPositionsBox(a, b, pixelRatio) {
 }
 
 /**
- * Bucket bars into a volume-by-price histogram.
- * @param {Array} bars - OHLCV bar objects with {time, high, low, close, volume}
+ * Bucket bars into a volume-by-price histogram with up/down split.
+ *
+ * Net volume at each price level is computed by distributing each bar's
+ * volume uniformly across the buckets its (low..high) range spans.  The
+ * volume is tagged as "up" when the bar closed at or above its open,
+ * "down" otherwise.
+ *
+ * @param {Array} bars - OHLCV bar objects with {time, open, high, low, close, volume}
  * @param {number} fromIdx - inclusive start index
  * @param {number} toIdx - inclusive end index
  * @param {number} bucketCount - number of price buckets
- * @returns {{time, profile, width, minPrice, maxPrice}|null}
+ * @returns {{profile, minPrice, maxPrice, step, totalVolume}|null}
  */
 function _tvComputeVolumeProfile(bars, fromIdx, toIdx, bucketCount) {
     if (!bars || !bars.length) return null;
@@ -386,14 +405,16 @@ function _tvComputeVolumeProfile(bars, fromIdx, toIdx, bucketCount) {
 
     var nBuckets = Math.max(2, Math.floor(bucketCount || 24));
     var step = (maxP - minP) / nBuckets;
-    var volumes = new Array(nBuckets);
-    for (var k = 0; k < nBuckets; k++) volumes[k] = 0;
+    var up = new Array(nBuckets), down = new Array(nBuckets);
+    for (var k = 0; k < nBuckets; k++) { up[k] = 0; down[k] = 0; }
 
-    // Distribute each bar's volume uniformly across the buckets it spans.
+    var totalVol = 0;
     for (var j = lo; j <= hi; j++) {
         var bar = bars[j];
         var bH = bar.high !== undefined ? bar.high : bar.close;
         var bL = bar.low !== undefined ? bar.low : bar.close;
+        var bO = bar.open !== undefined ? bar.open : bar.close;
+        var bC = bar.close !== undefined ? bar.close : bar.value;
         var vol = bar.volume !== undefined && bar.volume !== null ? Number(bar.volume) : 0;
         if (!isFinite(vol) || vol <= 0) continue;
         if (bH === undefined || bL === undefined) continue;
@@ -401,126 +422,184 @@ function _tvComputeVolumeProfile(bars, fromIdx, toIdx, bucketCount) {
         var hiIdx = Math.max(0, Math.min(nBuckets - 1, Math.floor((bH - minP) / step)));
         var span = hiIdx - loIdx + 1;
         var share = vol / span;
-        for (var bi = loIdx; bi <= hiIdx; bi++) volumes[bi] += share;
+        var isUp = bC !== undefined && bC >= bO;
+        for (var bi = loIdx; bi <= hiIdx; bi++) {
+            if (isUp) up[bi] += share; else down[bi] += share;
+        }
+        totalVol += vol;
     }
 
     var profile = [];
     for (var p = 0; p < nBuckets; p++) {
-        // Bucket price = centre of the bucket
-        profile.push({ price: minP + step * (p + 0.5), vol: volumes[p] });
+        profile.push({
+            price: minP + step * (p + 0.5),   // centre of bucket
+            priceLo: minP + step * p,
+            priceHi: minP + step * (p + 1),
+            upVol: up[p],
+            downVol: down[p],
+            totalVol: up[p] + down[p],
+        });
     }
 
     return {
-        time: bars[lo].time,
         profile: profile,
-        width: hi - lo + 1,
         minPrice: minP,
         maxPrice: maxP,
+        step: step,
+        totalVolume: totalVol,
     };
 }
 
-/** Build an ISeriesPrimitive that renders the volume profile histogram. */
-function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData) {
-    var _requestUpdate = null;
-    var _cache = {
-        x: null,
-        top: null,
-        columnHeight: 0,
-        barWidth: 6,
-        items: [],
-    };
+/** Compute the Point of Control (POC) and Value Area for a profile. */
+function _tvComputePOCAndValueArea(profile, totalVolume, valueAreaPct) {
+    if (!profile || !profile.length) return null;
+    var pocIdx = 0;
+    for (var i = 1; i < profile.length; i++) {
+        if (profile[i].totalVol > profile[pocIdx].totalVol) pocIdx = i;
+    }
+    var target = totalVolume * (valueAreaPct || 0.70);
+    var accumulated = profile[pocIdx].totalVol;
+    var loIdx = pocIdx, hiIdx = pocIdx;
+    while (accumulated < target && (loIdx > 0 || hiIdx < profile.length - 1)) {
+        var nextLow = loIdx > 0 ? profile[loIdx - 1].totalVol : -1;
+        var nextHigh = hiIdx < profile.length - 1 ? profile[hiIdx + 1].totalVol : -1;
+        if (nextLow < 0 && nextHigh < 0) break;
+        if (nextHigh >= nextLow) {
+            hiIdx += 1;
+            accumulated += profile[hiIdx].totalVol;
+        } else {
+            loIdx -= 1;
+            accumulated += profile[loIdx].totalVol;
+        }
+    }
+    return { pocIdx: pocIdx, vaLowIdx: loIdx, vaHighIdx: hiIdx };
+}
 
-    function updateCache() {
+/**
+ * Build an ISeriesPrimitive that renders the volume profile as horizontal
+ * rows pinned to one side of the price pane.  Each row is a horizontal
+ * bar at a price bucket, split into up-volume (teal) and down-volume
+ * (pink), with a POC line and translucent value-area band overlay.
+ */
+function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData, getOpts) {
+    var _requestUpdate = null;
+
+    function draw(scope) {
         var entry = window.__PYWRY_TVCHARTS__[chartId];
         if (!entry || !entry.chart) return;
         var series = entry.seriesMap[seriesId];
         if (!series) return;
         var vp = getData();
-        if (!vp || !vp.profile || vp.profile.length < 2) {
-            _cache.x = null;
-            return;
-        }
-        var timeScale = entry.chart.timeScale();
-        _cache.x = timeScale.timeToCoordinate(vp.time);
-        var bs = (timeScale.options && timeScale.options().barSpacing) || 6;
-        _cache.barWidth = bs * vp.width;
+        if (!vp || !vp.profile || !vp.profile.length) return;
+        var opts = (getOpts && getOpts()) || {};
 
-        var y1 = series.priceToCoordinate(vp.profile[0].price);
-        var y2 = series.priceToCoordinate(vp.profile[1].price);
-        if (y1 === null || y2 === null) {
-            _cache.x = null;
-            return;
-        }
-        _cache.columnHeight = Math.max(1, y1 - y2);
-        _cache.top = y1;
+        var ctx = scope.context;
+        var paneW = scope.bitmapSize.width;
+        var paneH = scope.bitmapSize.height;
+        var hpr = scope.horizontalPixelRatio;
+        var vpr = scope.verticalPixelRatio;
+
+        var widthPct = Math.max(5, Math.min(60, opts.widthPercent || 25)); // % of pane width
+        var placement = opts.placement === 'left' ? 'left' : 'right';
+        var upColor = opts.upColor || 'rgba(38, 166, 154, 0.55)';
+        var downColor = opts.downColor || 'rgba(239, 83, 80, 0.55)';
+        var vaUpColor = opts.vaUpColor || 'rgba(38, 166, 154, 0.85)';
+        var vaDownColor = opts.vaDownColor || 'rgba(239, 83, 80, 0.85)';
+        var pocColor = opts.pocColor || '#ffffff';
+        var showPOC = opts.showPOC !== false;
+        var showVA = opts.showValueArea !== false;
+        var valueAreaPct = opts.valueAreaPct || 0.70;
 
         var maxVol = 0;
         for (var i = 0; i < vp.profile.length; i++) {
-            if (vp.profile[i].vol > maxVol) maxVol = vp.profile[i].vol;
+            if (vp.profile[i].totalVol > maxVol) maxVol = vp.profile[i].totalVol;
         }
-        if (maxVol <= 0) {
-            _cache.x = null;
-            return;
+        if (maxVol <= 0) return;
+
+        var poc = _tvComputePOCAndValueArea(vp.profile, vp.totalVolume, valueAreaPct);
+
+        var maxBarBitmap = paneW * (widthPct / 100);
+        // Row half-height — half of the bucket's pixel span.  We cap at
+        // a reasonable minimum so very dense profiles still render.
+        var y0 = series.priceToCoordinate(vp.profile[0].price);
+        var y1 = vp.profile.length > 1 ? series.priceToCoordinate(vp.profile[1].price) : null;
+        if (y0 === null) return;
+        var pxPerBucket = (y1 !== null) ? Math.abs(y0 - y1) : 4;
+        var rowHalfBitmap = Math.max(1, (pxPerBucket * vpr) / 2 - 1);
+
+        // Draw rows
+        for (var r = 0; r < vp.profile.length; r++) {
+            var row = vp.profile[r];
+            if (row.totalVol <= 0) continue;
+            var y = series.priceToCoordinate(row.price);
+            if (y === null) continue;
+
+            var yBitmap = y * vpr;
+            var yTop = yBitmap - rowHalfBitmap;
+            var rowHeight = Math.max(1, rowHalfBitmap * 2 - 2);
+
+            var barLenBitmap = maxBarBitmap * (row.totalVol / maxVol) * hpr;
+            var upRatio = row.totalVol > 0 ? row.upVol / row.totalVol : 0;
+            var upLen = barLenBitmap * upRatio;
+            var downLen = barLenBitmap - upLen;
+
+            var inValueArea = poc && r >= poc.vaLowIdx && r <= poc.vaHighIdx;
+            var curUp = inValueArea && showVA ? vaUpColor : upColor;
+            var curDown = inValueArea && showVA ? vaDownColor : downColor;
+
+            // Up volume is drawn on the "inner" side (nearest price axis),
+            // down on the "outer" side.  For right placement, inner = right.
+            if (placement === 'right') {
+                var rightEdge = paneW * hpr;
+                ctx.fillStyle = curUp;
+                ctx.fillRect(rightEdge - upLen, yTop, upLen, rowHeight);
+                ctx.fillStyle = curDown;
+                ctx.fillRect(rightEdge - upLen - downLen, yTop, downLen, rowHeight);
+            } else {
+                ctx.fillStyle = curUp;
+                ctx.fillRect(0, yTop, upLen, rowHeight);
+                ctx.fillStyle = curDown;
+                ctx.fillRect(upLen, yTop, downLen, rowHeight);
+            }
         }
-        _cache.items = vp.profile.map(function(row) {
-            return {
-                y: series.priceToCoordinate(row.price),
-                width: _cache.barWidth * row.vol / maxVol,
-            };
-        });
+
+        // POC line: horizontal dashed line at the price level with the
+        // highest volume, spanning the full pane width.
+        if (showPOC && poc) {
+            var pocPrice = vp.profile[poc.pocIdx].price;
+            var pocY = series.priceToCoordinate(pocPrice);
+            if (pocY !== null) {
+                ctx.save();
+                ctx.strokeStyle = pocColor;
+                ctx.lineWidth = Math.max(1, Math.round(vpr));
+                ctx.setLineDash([4 * hpr, 3 * hpr]);
+                ctx.beginPath();
+                ctx.moveTo(0, pocY * vpr);
+                ctx.lineTo(paneW * hpr, pocY * vpr);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
     }
 
     var renderer = {
         draw: function(target) {
-            target.useBitmapCoordinateSpace(function(scope) {
-                if (_cache.x === null || _cache.top === null) return;
-                var ctx = scope.context;
-                var horiz = _tvPositionsBox(_cache.x, _cache.x + _cache.barWidth, scope.horizontalPixelRatio);
-                var vert = _tvPositionsBox(
-                    _cache.top,
-                    _cache.top - _cache.columnHeight * _cache.items.length,
-                    scope.verticalPixelRatio
-                );
-
-                // Background rectangle (translucent bounding box of the histogram)
-                ctx.fillStyle = 'rgba(80, 130, 220, 0.12)';
-                ctx.fillRect(horiz.position, vert.position, horiz.length, vert.length);
-
-                // Histogram bars
-                ctx.fillStyle = 'rgba(80, 130, 220, 0.75)';
-                for (var i = 0; i < _cache.items.length; i++) {
-                    var row = _cache.items[i];
-                    if (row.y === null) continue;
-                    var rv = _tvPositionsBox(row.y, row.y - _cache.columnHeight, scope.verticalPixelRatio);
-                    var rh = _tvPositionsBox(_cache.x, _cache.x + row.width, scope.horizontalPixelRatio);
-                    ctx.fillRect(rh.position, rv.position, rh.length, Math.max(1, rv.length - 2));
-                }
-            });
+            target.useBitmapCoordinateSpace(draw);
         },
     };
 
     var paneView = {
         zOrder: function() { return 'top'; },
         renderer: function() { return renderer; },
-        update: updateCache,
+        update: function() {},
     };
 
     return {
-        attached: function(params) { _requestUpdate = params.requestUpdate; updateCache(); },
+        attached: function(params) { _requestUpdate = params.requestUpdate; },
         detached: function() { _requestUpdate = null; },
-        updateAllViews: updateCache,
+        updateAllViews: function() {},
         paneViews: function() { return [paneView]; },
-        triggerUpdate: function() { updateCache(); if (_requestUpdate) _requestUpdate(); },
-        autoscaleInfo: function() {
-            var vp = getData();
-            if (!vp) return null;
-            return {
-                priceRange: {
-                    minValue: vp.minPrice,
-                    maxValue: vp.maxPrice,
-                },
-            };
-        },
+        triggerUpdate: function() { if (_requestUpdate) _requestUpdate(); },
     };
 }
 
@@ -562,8 +641,8 @@ function _tvRefreshVisibleVolumeProfiles(chartId) {
         var vp = _tvComputeVolumeProfile(bars, fromIdx, toIdx, slot.bucketCount);
         if (!vp) continue;
         slot.vpData = vp;
-        ai.anchorTime = vp.time;
-        ai.anchorWidth = vp.width;
+        ai.fromIndex = fromIdx;
+        ai.toIndex = toIdx;
         if (slot.primitive && slot.primitive.triggerUpdate) slot.primitive.triggerUpdate();
     }
 }
@@ -582,6 +661,447 @@ function _computeVWAP(data) {
         result.push({ time: data[i].time, value: cumVol > 0 ? cumTP / cumVol : tp });
     }
     return result;
+}
+
+// ---------------------------------------------------------------------------
+// Additional built-in indicators (textbook formulas)
+// ---------------------------------------------------------------------------
+
+/** Volume-Weighted Moving Average: sum(close*vol) / sum(vol) over a window. */
+function _computeVWMA(data, period) {
+    var result = [];
+    for (var i = 0; i < data.length; i++) {
+        if (i < period - 1) { result.push({ time: data[i].time }); continue; }
+        var numer = 0, denom = 0;
+        for (var j = i - period + 1; j <= i; j++) {
+            var c = data[j].close !== undefined ? data[j].close : data[j].value || 0;
+            var v = data[j].volume || 0;
+            numer += c * v;
+            denom += v;
+        }
+        result.push({ time: data[i].time, value: denom > 0 ? numer / denom : undefined });
+    }
+    return result;
+}
+
+/** Hull Moving Average: WMA(2 * WMA(src, n/2) - WMA(src, n), sqrt(n)). */
+function _computeHMA(data, period) {
+    var half = Math.max(1, Math.floor(period / 2));
+    var sqrtN = Math.max(1, Math.floor(Math.sqrt(period)));
+    var wmaHalf = _computeWMA(data, half);
+    var wmaFull = _computeWMA(data, period);
+    var diff = [];
+    for (var i = 0; i < data.length; i++) {
+        var a = wmaHalf[i].value;
+        var b = wmaFull[i].value;
+        diff.push({
+            time: data[i].time,
+            value: (a !== undefined && b !== undefined) ? (2 * a - b) : undefined,
+        });
+    }
+    return _computeWMA(diff, sqrtN, 'value');
+}
+
+/** Commodity Channel Index: (TP - SMA(TP, n)) / (0.015 * meanDev(TP, n)). */
+function _computeCCI(data, period) {
+    var tp = [];
+    for (var i = 0; i < data.length; i++) {
+        var h = data[i].high !== undefined ? data[i].high : data[i].close;
+        var l = data[i].low !== undefined ? data[i].low : data[i].close;
+        var c = data[i].close !== undefined ? data[i].close : data[i].value || 0;
+        tp.push({ time: data[i].time, value: (h + l + c) / 3 });
+    }
+    var sma = _computeSMA(tp, period, 'value');
+    var result = [];
+    for (var k = 0; k < tp.length; k++) {
+        if (k < period - 1 || sma[k].value === undefined) {
+            result.push({ time: tp[k].time });
+            continue;
+        }
+        var mean = sma[k].value;
+        var dev = 0;
+        for (var j = k - period + 1; j <= k; j++) {
+            dev += Math.abs(tp[j].value - mean);
+        }
+        dev /= period;
+        result.push({
+            time: tp[k].time,
+            value: dev > 0 ? (tp[k].value - mean) / (0.015 * dev) : 0,
+        });
+    }
+    return result;
+}
+
+/** Williams %R: -100 * (highestHigh - close) / (highestHigh - lowestLow). */
+function _computeWilliamsR(data, period) {
+    var result = [];
+    for (var i = 0; i < data.length; i++) {
+        if (i < period - 1) { result.push({ time: data[i].time }); continue; }
+        var hh = -Infinity, ll = Infinity;
+        for (var j = i - period + 1; j <= i; j++) {
+            var h = data[j].high !== undefined ? data[j].high : data[j].close;
+            var l = data[j].low !== undefined ? data[j].low : data[j].close;
+            if (h > hh) hh = h;
+            if (l < ll) ll = l;
+        }
+        var c = data[i].close !== undefined ? data[i].close : data[i].value || 0;
+        var range = hh - ll;
+        result.push({
+            time: data[i].time,
+            value: range > 0 ? -100 * (hh - c) / range : 0,
+        });
+    }
+    return result;
+}
+
+/** Stochastic Oscillator %K and %D. */
+function _computeStochastic(data, kPeriod, dPeriod) {
+    var kRaw = [];
+    for (var i = 0; i < data.length; i++) {
+        if (i < kPeriod - 1) { kRaw.push({ time: data[i].time }); continue; }
+        var hh = -Infinity, ll = Infinity;
+        for (var j = i - kPeriod + 1; j <= i; j++) {
+            var h = data[j].high !== undefined ? data[j].high : data[j].close;
+            var l = data[j].low !== undefined ? data[j].low : data[j].close;
+            if (h > hh) hh = h;
+            if (l < ll) ll = l;
+        }
+        var c = data[i].close !== undefined ? data[i].close : data[i].value || 0;
+        var range = hh - ll;
+        kRaw.push({ time: data[i].time, value: range > 0 ? 100 * (c - ll) / range : 50 });
+    }
+    var d = _computeSMA(kRaw, dPeriod, 'value');
+    return { k: kRaw, d: d };
+}
+
+/** Aroon Up and Down: 100 * (period - barsSince {high|low}) / period. */
+function _computeAroon(data, period) {
+    var up = [], down = [];
+    for (var i = 0; i < data.length; i++) {
+        if (i < period) {
+            up.push({ time: data[i].time });
+            down.push({ time: data[i].time });
+            continue;
+        }
+        var hh = -Infinity, ll = Infinity;
+        var hIdx = i, lIdx = i;
+        for (var j = i - period; j <= i; j++) {
+            var h = data[j].high !== undefined ? data[j].high : data[j].close;
+            var l = data[j].low !== undefined ? data[j].low : data[j].close;
+            if (h >= hh) { hh = h; hIdx = j; }
+            if (l <= ll) { ll = l; lIdx = j; }
+        }
+        up.push({ time: data[i].time, value: 100 * (period - (i - hIdx)) / period });
+        down.push({ time: data[i].time, value: 100 * (period - (i - lIdx)) / period });
+    }
+    return { up: up, down: down };
+}
+
+/** Average Directional Index (ADX) with +DI and -DI. Wilder smoothing. */
+function _computeADX(data, period) {
+    var plusDM = [], minusDM = [], tr = [];
+    for (var i = 0; i < data.length; i++) {
+        if (i === 0) { plusDM.push(0); minusDM.push(0); tr.push(0); continue; }
+        var h = data[i].high !== undefined ? data[i].high : data[i].close;
+        var l = data[i].low !== undefined ? data[i].low : data[i].close;
+        var pH = data[i - 1].high !== undefined ? data[i - 1].high : data[i - 1].close;
+        var pL = data[i - 1].low !== undefined ? data[i - 1].low : data[i - 1].close;
+        var pC = data[i - 1].close !== undefined ? data[i - 1].close : data[i - 1].value || 0;
+        var upMove = h - pH;
+        var downMove = pL - l;
+        plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
+        minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
+        tr.push(Math.max(h - l, Math.abs(h - pC), Math.abs(l - pC)));
+    }
+
+    // Wilder smoothing (same formula as RMA / ATR's recursive smoothing)
+    function wilder(arr) {
+        var out = new Array(arr.length);
+        var sum = 0;
+        for (var i = 0; i < arr.length; i++) {
+            if (i < period) { sum += arr[i]; out[i] = undefined; if (i === period - 1) out[i] = sum; continue; }
+            out[i] = out[i - 1] - out[i - 1] / period + arr[i];
+        }
+        return out;
+    }
+
+    var trS = wilder(tr);
+    var plusS = wilder(plusDM);
+    var minusS = wilder(minusDM);
+
+    var plusDI = [], minusDI = [], dx = [];
+    for (var k = 0; k < data.length; k++) {
+        if (trS[k] === undefined || trS[k] === 0) {
+            plusDI.push({ time: data[k].time });
+            minusDI.push({ time: data[k].time });
+            dx.push(undefined);
+            continue;
+        }
+        var pdi = 100 * plusS[k] / trS[k];
+        var mdi = 100 * minusS[k] / trS[k];
+        plusDI.push({ time: data[k].time, value: pdi });
+        minusDI.push({ time: data[k].time, value: mdi });
+        dx.push(pdi + mdi > 0 ? 100 * Math.abs(pdi - mdi) / (pdi + mdi) : 0);
+    }
+
+    // ADX = Wilder smoothing of DX, starting once we have `period` valid DX values
+    var adx = [];
+    var adxVal = null;
+    var dxSum = 0, dxCount = 0, dxStart = -1;
+    for (var m = 0; m < data.length; m++) {
+        if (dx[m] === undefined) { adx.push({ time: data[m].time }); continue; }
+        if (dxStart < 0) dxStart = m;
+        if (m - dxStart < period) {
+            dxSum += dx[m];
+            dxCount += 1;
+            if (dxCount === period) {
+                adxVal = dxSum / period;
+                adx.push({ time: data[m].time, value: adxVal });
+            } else {
+                adx.push({ time: data[m].time });
+            }
+        } else {
+            adxVal = (adxVal * (period - 1) + dx[m]) / period;
+            adx.push({ time: data[m].time, value: adxVal });
+        }
+    }
+
+    return { adx: adx, plusDI: plusDI, minusDI: minusDI };
+}
+
+/** MACD: EMA(fast) - EMA(slow), signal EMA of MACD, histogram = MACD - signal. */
+function _computeMACD(data, fast, slow, signal) {
+    var emaFast = _computeEMA(data, fast);
+    var emaSlow = _computeEMA(data, slow);
+    var macd = [];
+    for (var i = 0; i < data.length; i++) {
+        var f = emaFast[i].value;
+        var s = emaSlow[i].value;
+        macd.push({
+            time: data[i].time,
+            value: (f !== undefined && s !== undefined) ? f - s : undefined,
+        });
+    }
+    var sig = _computeEMA(macd, signal, 'value');
+    var hist = [];
+    for (var k = 0; k < data.length; k++) {
+        var mv = macd[k].value;
+        var sv = sig[k].value;
+        hist.push({
+            time: data[k].time,
+            value: (mv !== undefined && sv !== undefined) ? mv - sv : undefined,
+        });
+    }
+    return { macd: macd, signal: sig, histogram: hist };
+}
+
+/** Accumulation/Distribution: cumulative CLV * volume. */
+function _computeAccumulationDistribution(data) {
+    var out = [];
+    var ad = 0;
+    for (var i = 0; i < data.length; i++) {
+        var h = data[i].high !== undefined ? data[i].high : data[i].close;
+        var l = data[i].low !== undefined ? data[i].low : data[i].close;
+        var c = data[i].close !== undefined ? data[i].close : data[i].value || 0;
+        var v = data[i].volume || 0;
+        var range = h - l;
+        var clv = range > 0 ? ((c - l) - (h - c)) / range : 0;
+        ad += clv * v;
+        out.push({ time: data[i].time, value: ad });
+    }
+    return out;
+}
+
+/** Historical Volatility: stdev of log returns * sqrt(annualizationFactor) * 100. */
+function _computeHistoricalVolatility(data, period, annualization) {
+    var ann = annualization || 252;
+    var returns = [];
+    for (var i = 0; i < data.length; i++) {
+        if (i === 0) { returns.push({ time: data[i].time, value: undefined }); continue; }
+        var pC = data[i - 1].close !== undefined ? data[i - 1].close : data[i - 1].value || 0;
+        var c = data[i].close !== undefined ? data[i].close : data[i].value || 0;
+        if (pC > 0 && c > 0) {
+            returns.push({ time: data[i].time, value: Math.log(c / pC) });
+        } else {
+            returns.push({ time: data[i].time, value: undefined });
+        }
+    }
+    var out = [];
+    for (var k = 0; k < data.length; k++) {
+        if (k < period) { out.push({ time: data[k].time }); continue; }
+        var sum = 0, count = 0;
+        for (var j = k - period + 1; j <= k; j++) {
+            if (returns[j].value !== undefined) { sum += returns[j].value; count += 1; }
+        }
+        if (count === 0) { out.push({ time: data[k].time }); continue; }
+        var mean = sum / count;
+        var sq = 0;
+        for (var jj = k - period + 1; jj <= k; jj++) {
+            if (returns[jj].value !== undefined) sq += (returns[jj].value - mean) * (returns[jj].value - mean);
+        }
+        var stdev = Math.sqrt(sq / count);
+        out.push({ time: data[k].time, value: stdev * Math.sqrt(ann) * 100 });
+    }
+    return out;
+}
+
+/** Keltner Channels: EMA(n) ± multiplier * ATR(n). */
+function _computeKeltnerChannels(data, period, multiplier, maType) {
+    multiplier = multiplier || 2;
+    maType = maType || 'EMA';
+    var maFn = maType === 'SMA' ? _computeSMA : (maType === 'WMA' ? _computeWMA : _computeEMA);
+    var mid = maFn(data, period);
+    var atr = _computeATR(data, period);
+    var upper = [], lower = [];
+    for (var i = 0; i < data.length; i++) {
+        var m = mid[i].value;
+        var a = atr[i].value;
+        if (m === undefined || a === undefined) {
+            upper.push({ time: data[i].time });
+            lower.push({ time: data[i].time });
+            continue;
+        }
+        upper.push({ time: data[i].time, value: m + multiplier * a });
+        lower.push({ time: data[i].time, value: m - multiplier * a });
+    }
+    return { middle: mid, upper: upper, lower: lower };
+}
+
+/** Ichimoku Cloud: five lines (Tenkan, Kijun, Span A, Span B, Chikou). */
+function _computeIchimoku(data, tenkanP, kijunP, senkouBP) {
+    function highestHigh(lo, hi) {
+        var best = -Infinity;
+        for (var i = lo; i <= hi; i++) {
+            var h = data[i].high !== undefined ? data[i].high : data[i].close;
+            if (h > best) best = h;
+        }
+        return best;
+    }
+    function lowestLow(lo, hi) {
+        var best = Infinity;
+        for (var i = lo; i <= hi; i++) {
+            var l = data[i].low !== undefined ? data[i].low : data[i].close;
+            if (l < best) best = l;
+        }
+        return best;
+    }
+
+    var tenkan = [], kijun = [];
+    for (var i = 0; i < data.length; i++) {
+        if (i >= tenkanP - 1) {
+            tenkan.push({ time: data[i].time, value: (highestHigh(i - tenkanP + 1, i) + lowestLow(i - tenkanP + 1, i)) / 2 });
+        } else {
+            tenkan.push({ time: data[i].time });
+        }
+        if (i >= kijunP - 1) {
+            kijun.push({ time: data[i].time, value: (highestHigh(i - kijunP + 1, i) + lowestLow(i - kijunP + 1, i)) / 2 });
+        } else {
+            kijun.push({ time: data[i].time });
+        }
+    }
+
+    // Senkou Span A/B are shifted FORWARD by kijunP bars — we skip the
+    // forward-plotted values because LWC can't extrapolate times; instead
+    // we attach the span at the bar where its inputs are known.  For the
+    // textbook shift, callers can pass their own time index.
+    var spanA = [], spanB = [];
+    for (var k = 0; k < data.length; k++) {
+        if (tenkan[k].value !== undefined && kijun[k].value !== undefined) {
+            spanA.push({ time: data[k].time, value: (tenkan[k].value + kijun[k].value) / 2 });
+        } else {
+            spanA.push({ time: data[k].time });
+        }
+        if (k >= senkouBP - 1) {
+            spanB.push({ time: data[k].time, value: (highestHigh(k - senkouBP + 1, k) + lowestLow(k - senkouBP + 1, k)) / 2 });
+        } else {
+            spanB.push({ time: data[k].time });
+        }
+    }
+
+    // Chikou Span = close shifted BACKWARD by kijunP bars — attach each
+    // close to the bar kijunP ahead is impossible without future times;
+    // instead map close[i] onto time[i - kijunP] so it plots in the past.
+    var chikou = [];
+    for (var m = 0; m < data.length; m++) {
+        var src = m + kijunP;
+        if (src < data.length) {
+            var c = data[src].close !== undefined ? data[src].close : data[src].value || 0;
+            chikou.push({ time: data[m].time, value: c });
+        } else {
+            chikou.push({ time: data[m].time });
+        }
+    }
+
+    return { tenkan: tenkan, kijun: kijun, spanA: spanA, spanB: spanB, chikou: chikou };
+}
+
+/** Parabolic SAR: trailing stop flipped when price crosses, with acceleration. */
+function _computeParabolicSAR(data, step, maxStep) {
+    step = step || 0.02;
+    maxStep = maxStep || 0.2;
+    if (data.length < 2) return data.map(function(d) { return { time: d.time }; });
+
+    var out = [];
+    var uptrend = true;
+    var af = step;
+    var ep = data[0].high !== undefined ? data[0].high : data[0].close;
+    var sar = data[0].low !== undefined ? data[0].low : data[0].close;
+
+    out.push({ time: data[0].time });  // undefined — need 2 bars to seed
+
+    // Decide initial trend from first two bars
+    var c0 = data[0].close !== undefined ? data[0].close : data[0].value || 0;
+    var c1 = data[1].close !== undefined ? data[1].close : data[1].value || 0;
+    uptrend = c1 >= c0;
+    if (uptrend) {
+        sar = data[0].low !== undefined ? data[0].low : c0;
+        ep = data[1].high !== undefined ? data[1].high : c1;
+    } else {
+        sar = data[0].high !== undefined ? data[0].high : c0;
+        ep = data[1].low !== undefined ? data[1].low : c1;
+    }
+    out.push({ time: data[1].time, value: sar });
+
+    for (var i = 2; i < data.length; i++) {
+        var h = data[i].high !== undefined ? data[i].high : data[i].close;
+        var l = data[i].low !== undefined ? data[i].low : data[i].close;
+        var prevHigh = data[i - 1].high !== undefined ? data[i - 1].high : data[i - 1].close;
+        var prevLow = data[i - 1].low !== undefined ? data[i - 1].low : data[i - 1].close;
+
+        sar = sar + af * (ep - sar);
+
+        if (uptrend) {
+            // SAR can't exceed prior two lows
+            sar = Math.min(sar, prevLow, data[i - 2].low !== undefined ? data[i - 2].low : data[i - 2].close);
+            if (l < sar) {
+                // Flip to downtrend
+                uptrend = false;
+                sar = ep;
+                ep = l;
+                af = step;
+            } else {
+                if (h > ep) {
+                    ep = h;
+                    af = Math.min(af + step, maxStep);
+                }
+            }
+        } else {
+            sar = Math.max(sar, prevHigh, data[i - 2].high !== undefined ? data[i - 2].high : data[i - 2].close);
+            if (h > sar) {
+                uptrend = true;
+                sar = ep;
+                ep = h;
+                af = step;
+            } else {
+                if (l < ep) {
+                    ep = l;
+                    af = Math.min(af + step, maxStep);
+                }
+            }
+        }
+        out.push({ time: data[i].time, value: sar });
+    }
+    return out;
 }
 
 function _tvIndicatorValue(point, source) {
