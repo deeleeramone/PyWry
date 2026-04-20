@@ -280,23 +280,32 @@ function _tvApplySessionFilter() {
         if (window.__PYWRY_TVCHARTS__[_sessIds[_si]] === entry) { _sessChartId = _sessIds[_si]; break; }
     }
 
+    // fitContent FIRST so the visible logical range re-seats on the
+    // shorter filtered bar set — otherwise _tvRefreshVisibleVolumeProfiles
+    // reads a stale range that points PAST the end of the new array, the
+    // compute clamps to one bar at index N-1, and VPVR ends up showing a
+    // single bar's volume (looks like "877K up, 0 down" on an RTH toggle
+    // when the previous ETH view was scrolled right).
+    if (entry.chart) entry.chart.timeScale().fitContent();
+
     // Recompute every indicator against the now-filtered bar set so
     // SMA(9) etc. reflects 9 RTH bars, not 9 ETH bars with an overnight
-    // gap baked in.  _tvSeriesRawData now returns _seriesDisplayData
-    // when _sessionMode === 'RTH', so the compute paths pick up the
-    // right source automatically.
+    // gap baked in.  _tvSeriesRawData returns _seriesDisplayData when
+    // _sessionMode === 'RTH', so compute paths pick up the right source
+    // automatically.
     if (_sessChartId && typeof _tvRecomputeIndicatorsForChart === 'function') {
         try { _tvRecomputeIndicatorsForChart(_sessChartId, 'main'); } catch (_e) {}
     }
 
     // Volume Profile Visible Range reads from _seriesRawData inside
-    // _tvRefreshVisibleVolumeProfiles — the above raw-data shim kicks
-    // in there too, so the profile re-pins over the filtered bar set.
+    // _tvRefreshVisibleVolumeProfiles — the above raw-data shim kicks in
+    // there too, so the profile re-pins over the filtered bar set.  Now
+    // that fitContent has updated the visible range, the VP compute sees
+    // the right [0, N-1] span.
     if (_sessChartId && typeof _tvRefreshVisibleVolumeProfiles === 'function') {
         try { _tvRefreshVisibleVolumeProfiles(_sessChartId); } catch (_e2) {}
     }
 
-    if (entry.chart) entry.chart.timeScale().fitContent();
     if (_sessChartId) _tvRenderHoverLegend(_sessChartId, null);
 }
 

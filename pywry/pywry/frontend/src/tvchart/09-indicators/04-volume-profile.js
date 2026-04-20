@@ -520,10 +520,14 @@ function _tvRefreshVisibleVolumeProfiles(chartId) {
         var bars = _tvSeriesRawData(entry, ai.sourceSeriesId || 'main');
         if (!bars || !bars.length) continue;
         var fromIdx, toIdx;
-        if (range) {
+        if (range && range.from < bars.length && range.to > 0) {
             fromIdx = Math.max(0, Math.floor(range.from));
             toIdx = Math.min(bars.length - 1, Math.ceil(range.to));
         } else {
+            // No range, or range sits entirely outside the new bar set
+            // (common right after a session-filter toggle shrinks the
+            // bars before the time scale catches up).  Fall back to the
+            // full span so the profile covers every visible bar.
             fromIdx = 0;
             toIdx = bars.length - 1;
         }
