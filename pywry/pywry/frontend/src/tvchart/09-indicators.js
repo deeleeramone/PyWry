@@ -544,10 +544,11 @@ function _tvComputePOCAndValueArea(profile, totalVolume, valueAreaPct) {
  * bar at a price bucket, split into up-volume (teal) and down-volume
  * (pink), with a POC line and translucent value-area band overlay.
  */
-function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData, getOpts) {
+function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData, getOpts, getHidden) {
     var _requestUpdate = null;
 
     function draw(scope) {
+        if (getHidden && getHidden()) return;
         var entry = window.__PYWRY_TVCHARTS__[chartId];
         if (!entry || !entry.chart) return;
         var series = entry.seriesMap[seriesId];
@@ -1674,6 +1675,13 @@ function _tvSetIndicatorVisibility(chartId, seriesId, visible) {
         if (s && typeof s.applyOptions === 'function') {
             try { s.applyOptions({ visible: !!visible }); } catch (e) {}
         }
+        // Volume Profile primitives have no real series — toggle the
+        // primitive's own hidden flag and request a redraw.
+        var vpSlot = _volumeProfilePrimitives[sid];
+        if (vpSlot) {
+            vpSlot.hidden = !visible;
+            if (vpSlot.primitive && vpSlot.primitive.triggerUpdate) vpSlot.primitive.triggerUpdate();
+        }
         info.hidden = !visible;
     }
 }
@@ -2267,17 +2275,33 @@ function _tvRebuildIndicatorLegend(chartId) {
             row.dataset.hidden = info.hidden ? '1' : '0';
             var dot = document.createElement('span');
             dot.className = 'tvchart-ind-dot';
-            dot.style.background = info.color;
+            // Volume Profile primitives have no line colour — use the
+            // up-volume swatch so the dot still reflects the indicator.
+            var dotColor = info.color;
+            if (!dotColor && (info.type === 'volume-profile-fixed' || info.type === 'volume-profile-visible')) {
+                dotColor = info.upColor || _cssVar('--pywry-tvchart-vp-up');
+            }
+            dot.style.background = dotColor || _cssVar('--pywry-tvchart-text');
             row.appendChild(dot);
             var nameSp = document.createElement('span');
             nameSp.className = 'tvchart-ind-name';
-            nameSp.style.color = info.color;
+            nameSp.style.color = dotColor || _cssVar('--pywry-tvchart-text');
             // Extract base name (remove any trailing period in parentheses from the stored name)
             var baseName = info.group ? 'BB' : (info.name || '').replace(/\s*\(\d+\)\s*$/, '');
             var indLabel;
             if (info.group && info.type === 'bollinger-bands') {
                 // TradingView format: "BB 20 2 0 SMA"
                 indLabel = 'BB ' + (info.period || 20) + ' ' + (info.multiplier || 2) + ' ' + (info.offset || 0) + ' ' + (info.maType || 'SMA');
+            } else if (info.type === 'volume-profile-fixed' || info.type === 'volume-profile-visible') {
+                // TradingView VPVR format: "VPVR Number Of Rows 24 Up/Down 70"
+                var vpShort = info.type === 'volume-profile-visible' ? 'VPVR' : 'VPFR';
+                var rowsLabel = info.rowsLayout === 'ticks' ? 'Ticks Per Row' : 'Number Of Rows';
+                var volLabel = info.volumeMode === 'total'
+                    ? 'Total'
+                    : (info.volumeMode === 'delta' ? 'Delta' : 'Up/Down');
+                var vaPct = Math.round((info.valueAreaPct != null ? info.valueAreaPct : 0.70) * 100);
+                indLabel = vpShort + ' ' + rowsLabel + ' ' + (info.rowSize || info.period || 24)
+                    + ' ' + volLabel + ' ' + vaPct;
             } else {
                 indLabel = baseName + (info.period ? ' ' + info.period : '');
             }

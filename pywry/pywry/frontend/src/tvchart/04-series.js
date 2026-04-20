@@ -1735,7 +1735,8 @@ function _tvAddIndicator(indicatorDef, chartId) {
             chartId,
             primarySeriesId,
             function() { return vpSlot.vpData; },
-            function() { return vpSlot.opts; }
+            function() { return vpSlot.opts; },
+            function() { return !!vpSlot.hidden; }
         );
         try {
             entry.seriesMap[primarySeriesId].attachPrimitive(vpSlot.primitive);
