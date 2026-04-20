@@ -1052,6 +1052,8 @@
                 _multiplier: data.multiplier || undefined,
                 _maType: data.maType || undefined,
                 _offset: data.offset || undefined,
+                _fromIndex: data.fromIndex,
+                _toIndex: data.toIndex,
             };
             _tvAddIndicator(def, chartId);
         });

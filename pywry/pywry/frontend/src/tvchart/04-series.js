@@ -1450,6 +1450,79 @@ function _tvAddIndicator(indicatorDef, chartId) {
         var volSmaPeriod = period || 20;
         var volSmaData = _computeSMA(rawData, volSmaPeriod, 'volume');
         addSingleSeriesIndicator('volsma', volSmaData, { type: 'volume-sma', period: volSmaPeriod }, 1, false);
+    } else if (key === 'volume-profile-fixed' || key === 'volume-profile-visible') {
+        var vpMode = key === 'volume-profile-fixed' ? 'fixed' : 'visible';
+        var vpBuckets = Math.max(2, Math.floor(period || 24));
+        var vpFromIdx, vpToIdx;
+
+        if (vpMode === 'fixed') {
+            // Fixed anchor: prefer caller-supplied _fromTime/_toTime; default to
+            // the last 20% of bars so the histogram is visible immediately.
+            if (indicatorDef._fromIndex != null && indicatorDef._toIndex != null) {
+                vpFromIdx = Math.max(0, Math.floor(indicatorDef._fromIndex));
+                vpToIdx = Math.min(rawData.length - 1, Math.floor(indicatorDef._toIndex));
+            } else {
+                var defaultWidth = Math.max(20, Math.floor(rawData.length * 0.2));
+                vpFromIdx = Math.max(0, rawData.length - defaultWidth);
+                vpToIdx = rawData.length - 1;
+            }
+        } else {
+            // Visible range: initial anchor covers everything; refresh hook
+            // will narrow it on the next visible-range-change event.
+            var vr = null;
+            try { vr = entry.chart.timeScale().getVisibleLogicalRange(); } catch (e) {}
+            if (vr) {
+                vpFromIdx = Math.max(0, Math.floor(vr.from));
+                vpToIdx = Math.min(rawData.length - 1, Math.ceil(vr.to));
+            } else {
+                vpFromIdx = 0;
+                vpToIdx = rawData.length - 1;
+            }
+        }
+
+        var vpData = _tvComputeVolumeProfile(rawData, vpFromIdx, vpToIdx, vpBuckets);
+        if (!vpData) {
+            console.warn('[pywry:tvchart] Volume Profile: insufficient data / no volume');
+            return;
+        }
+
+        var vpId = 'ind_vp_' + vpMode + '_' + Date.now();
+        var vpSlot = {
+            chartId: chartId,
+            seriesId: primarySeriesId,
+            mode: vpMode,
+            bucketCount: vpBuckets,
+            vpData: vpData,
+            primitive: null,
+        };
+        vpSlot.primitive = _tvMakeVolumeProfilePrimitive(chartId, primarySeriesId, function() {
+            return vpSlot.vpData;
+        });
+        try {
+            entry.seriesMap[primarySeriesId].attachPrimitive(vpSlot.primitive);
+        } catch (e) {
+            console.warn('[pywry:tvchart] Volume Profile attach failed:', e);
+            return;
+        }
+        _volumeProfilePrimitives[vpId] = vpSlot;
+
+        _activeIndicators[vpId] = {
+            name: name,
+            period: vpBuckets,
+            chartId: chartId,
+            color: null,
+            paneIndex: 0,
+            isSubplot: false,
+            type: key,
+            sourceSeriesId: primarySeriesId,
+            secondarySeriesId: null,
+            mode: vpMode,
+            bucketCount: vpBuckets,
+            anchorTime: vpData.time,
+            anchorWidth: vpData.width,
+            fromIndex: vpFromIdx,
+            toIndex: vpToIdx,
+        };
     } else {
         console.error('[pywry:tvchart] Unknown indicator:', name, 'key:', key);
     }

@@ -55,6 +55,8 @@ var _INDICATOR_CATALOG = [
     { name: 'ATR', fullName: 'Average True Range', category: 'Volatility', defaultPeriod: 14 },
     { name: 'VWAP', fullName: 'Volume Weighted Average Price', category: 'Volume', defaultPeriod: 0 },
     { name: 'Volume SMA', fullName: 'Volume Simple Moving Average', category: 'Volume', defaultPeriod: 20 },
+    { key: 'volume-profile-fixed', name: 'Volume Profile Fixed Range', fullName: 'Volume Profile (Fixed Range)', category: 'Volume', defaultPeriod: 24, primitive: true },
+    { key: 'volume-profile-visible', name: 'Volume Profile Visible Range', fullName: 'Volume Profile (Visible Range)', category: 'Volume', defaultPeriod: 24, primitive: true },
 ];
 
 // ---- Indicator computation functions ----
@@ -339,6 +341,233 @@ function _tvUpdateBBFill(chartId) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Volume Profile (port of tradingview/lightweight-charts volume-profile plugin)
+// ---------------------------------------------------------------------------
+
+// Per-chart registry: { [indicatorId]: { primitive, seriesId, mode, bucketCount, anchorTime, anchorWidth, vpData } }
+var _volumeProfilePrimitives = {};
+
+/** positionsBox — media→bitmap pixel alignment helper (ported from upstream plugin). */
+function _tvPositionsBox(a, b, pixelRatio) {
+    var lo = Math.min(a, b);
+    var hi = Math.max(a, b);
+    var scaled = Math.round(lo * pixelRatio);
+    return {
+        position: scaled,
+        length: Math.max(1, Math.round(hi * pixelRatio) - scaled),
+    };
+}
+
+/**
+ * Bucket bars into a volume-by-price histogram.
+ * @param {Array} bars - OHLCV bar objects with {time, high, low, close, volume}
+ * @param {number} fromIdx - inclusive start index
+ * @param {number} toIdx - inclusive end index
+ * @param {number} bucketCount - number of price buckets
+ * @returns {{time, profile, width, minPrice, maxPrice}|null}
+ */
+function _tvComputeVolumeProfile(bars, fromIdx, toIdx, bucketCount) {
+    if (!bars || !bars.length) return null;
+    var lo = Math.max(0, Math.min(fromIdx, toIdx, bars.length - 1));
+    var hi = Math.min(bars.length - 1, Math.max(fromIdx, toIdx, 0));
+    if (hi < lo) return null;
+
+    var minP = Infinity, maxP = -Infinity;
+    for (var i = lo; i <= hi; i++) {
+        var b = bars[i];
+        var h = b.high !== undefined ? b.high : b.close;
+        var l = b.low !== undefined ? b.low : b.close;
+        if (h === undefined || l === undefined) continue;
+        if (h > maxP) maxP = h;
+        if (l < minP) minP = l;
+    }
+    if (!isFinite(minP) || !isFinite(maxP) || maxP === minP) return null;
+
+    var nBuckets = Math.max(2, Math.floor(bucketCount || 24));
+    var step = (maxP - minP) / nBuckets;
+    var volumes = new Array(nBuckets);
+    for (var k = 0; k < nBuckets; k++) volumes[k] = 0;
+
+    // Distribute each bar's volume uniformly across the buckets it spans.
+    for (var j = lo; j <= hi; j++) {
+        var bar = bars[j];
+        var bH = bar.high !== undefined ? bar.high : bar.close;
+        var bL = bar.low !== undefined ? bar.low : bar.close;
+        var vol = bar.volume !== undefined && bar.volume !== null ? Number(bar.volume) : 0;
+        if (!isFinite(vol) || vol <= 0) continue;
+        if (bH === undefined || bL === undefined) continue;
+        var loIdx = Math.max(0, Math.min(nBuckets - 1, Math.floor((bL - minP) / step)));
+        var hiIdx = Math.max(0, Math.min(nBuckets - 1, Math.floor((bH - minP) / step)));
+        var span = hiIdx - loIdx + 1;
+        var share = vol / span;
+        for (var bi = loIdx; bi <= hiIdx; bi++) volumes[bi] += share;
+    }
+
+    var profile = [];
+    for (var p = 0; p < nBuckets; p++) {
+        // Bucket price = centre of the bucket
+        profile.push({ price: minP + step * (p + 0.5), vol: volumes[p] });
+    }
+
+    return {
+        time: bars[lo].time,
+        profile: profile,
+        width: hi - lo + 1,
+        minPrice: minP,
+        maxPrice: maxP,
+    };
+}
+
+/** Build an ISeriesPrimitive that renders the volume profile histogram. */
+function _tvMakeVolumeProfilePrimitive(chartId, seriesId, getData) {
+    var _requestUpdate = null;
+    var _cache = {
+        x: null,
+        top: null,
+        columnHeight: 0,
+        barWidth: 6,
+        items: [],
+    };
+
+    function updateCache() {
+        var entry = window.__PYWRY_TVCHARTS__[chartId];
+        if (!entry || !entry.chart) return;
+        var series = entry.seriesMap[seriesId];
+        if (!series) return;
+        var vp = getData();
+        if (!vp || !vp.profile || vp.profile.length < 2) {
+            _cache.x = null;
+            return;
+        }
+        var timeScale = entry.chart.timeScale();
+        _cache.x = timeScale.timeToCoordinate(vp.time);
+        var bs = (timeScale.options && timeScale.options().barSpacing) || 6;
+        _cache.barWidth = bs * vp.width;
+
+        var y1 = series.priceToCoordinate(vp.profile[0].price);
+        var y2 = series.priceToCoordinate(vp.profile[1].price);
+        if (y1 === null || y2 === null) {
+            _cache.x = null;
+            return;
+        }
+        _cache.columnHeight = Math.max(1, y1 - y2);
+        _cache.top = y1;
+
+        var maxVol = 0;
+        for (var i = 0; i < vp.profile.length; i++) {
+            if (vp.profile[i].vol > maxVol) maxVol = vp.profile[i].vol;
+        }
+        if (maxVol <= 0) {
+            _cache.x = null;
+            return;
+        }
+        _cache.items = vp.profile.map(function(row) {
+            return {
+                y: series.priceToCoordinate(row.price),
+                width: _cache.barWidth * row.vol / maxVol,
+            };
+        });
+    }
+
+    var renderer = {
+        draw: function(target) {
+            target.useBitmapCoordinateSpace(function(scope) {
+                if (_cache.x === null || _cache.top === null) return;
+                var ctx = scope.context;
+                var horiz = _tvPositionsBox(_cache.x, _cache.x + _cache.barWidth, scope.horizontalPixelRatio);
+                var vert = _tvPositionsBox(
+                    _cache.top,
+                    _cache.top - _cache.columnHeight * _cache.items.length,
+                    scope.verticalPixelRatio
+                );
+
+                // Background rectangle (translucent bounding box of the histogram)
+                ctx.fillStyle = 'rgba(80, 130, 220, 0.12)';
+                ctx.fillRect(horiz.position, vert.position, horiz.length, vert.length);
+
+                // Histogram bars
+                ctx.fillStyle = 'rgba(80, 130, 220, 0.75)';
+                for (var i = 0; i < _cache.items.length; i++) {
+                    var row = _cache.items[i];
+                    if (row.y === null) continue;
+                    var rv = _tvPositionsBox(row.y, row.y - _cache.columnHeight, scope.verticalPixelRatio);
+                    var rh = _tvPositionsBox(_cache.x, _cache.x + row.width, scope.horizontalPixelRatio);
+                    ctx.fillRect(rh.position, rv.position, rh.length, Math.max(1, rv.length - 2));
+                }
+            });
+        },
+    };
+
+    var paneView = {
+        zOrder: function() { return 'top'; },
+        renderer: function() { return renderer; },
+        update: updateCache,
+    };
+
+    return {
+        attached: function(params) { _requestUpdate = params.requestUpdate; updateCache(); },
+        detached: function() { _requestUpdate = null; },
+        updateAllViews: updateCache,
+        paneViews: function() { return [paneView]; },
+        triggerUpdate: function() { updateCache(); if (_requestUpdate) _requestUpdate(); },
+        autoscaleInfo: function() {
+            var vp = getData();
+            if (!vp) return null;
+            return {
+                priceRange: {
+                    minValue: vp.minPrice,
+                    maxValue: vp.maxPrice,
+                },
+            };
+        },
+    };
+}
+
+/** Remove a volume-profile primitive by indicator id. */
+function _tvRemoveVolumeProfilePrimitive(indicatorId) {
+    var slot = _volumeProfilePrimitives[indicatorId];
+    if (!slot) return;
+    var entry = window.__PYWRY_TVCHARTS__[slot.chartId];
+    if (entry && entry.seriesMap[slot.seriesId] && slot.primitive) {
+        try { entry.seriesMap[slot.seriesId].detachPrimitive(slot.primitive); } catch (e) {}
+    }
+    delete _volumeProfilePrimitives[indicatorId];
+}
+
+/** Recompute all visible-range volume profiles on the given chart. */
+function _tvRefreshVisibleVolumeProfiles(chartId) {
+    var entry = window.__PYWRY_TVCHARTS__[chartId];
+    if (!entry || !entry.chart) return;
+    var timeScale = entry.chart.timeScale();
+    var range = typeof timeScale.getVisibleLogicalRange === 'function'
+        ? timeScale.getVisibleLogicalRange()
+        : null;
+    var ids = Object.keys(_volumeProfilePrimitives);
+    for (var i = 0; i < ids.length; i++) {
+        var slot = _volumeProfilePrimitives[ids[i]];
+        if (!slot || slot.chartId !== chartId || slot.mode !== 'visible') continue;
+        var ai = _activeIndicators[ids[i]];
+        if (!ai) continue;
+        var bars = _tvSeriesRawData(entry, ai.sourceSeriesId || 'main');
+        if (!bars || !bars.length) continue;
+        var fromIdx, toIdx;
+        if (range) {
+            fromIdx = Math.max(0, Math.floor(range.from));
+            toIdx = Math.min(bars.length - 1, Math.ceil(range.to));
+        } else {
+            fromIdx = 0;
+            toIdx = bars.length - 1;
+        }
+        var vp = _tvComputeVolumeProfile(bars, fromIdx, toIdx, slot.bucketCount);
+        if (!vp) continue;
+        slot.vpData = vp;
+        ai.anchorTime = vp.time;
+        ai.anchorWidth = vp.width;
+        if (slot.primitive && slot.primitive.triggerUpdate) slot.primitive.triggerUpdate();
+    }
+}
+
 function _computeVWAP(data) {
     var result = [];
     var cumVol = 0, cumTP = 0;
@@ -587,6 +816,11 @@ function _tvRemoveIndicator(seriesId) {
         var sinfo = _activeIndicators[sid];
         if (!sinfo) continue;
         var sEntry = window.__PYWRY_TVCHARTS__[sinfo.chartId];
+        // Primitive-only indicators (volume profile) don't have an entry in
+        // seriesMap — detach the primitive from the host series instead.
+        if (_volumeProfilePrimitives[sid]) {
+            _tvRemoveVolumeProfilePrimitive(sid);
+        }
         if (sEntry && sEntry.seriesMap[sid]) {
             try { sEntry.chart.removeSeries(sEntry.seriesMap[sid]); } catch(e) {}
             delete sEntry.seriesMap[sid];

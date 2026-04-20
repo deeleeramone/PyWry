@@ -1071,6 +1071,8 @@ function _tvApplyLayout(chartId, layout) {
             name: ind.name,
             defaultPeriod: ind.period,
             _color: ind.color || undefined,
+            _fromIndex: ind.fromIndex != null ? ind.fromIndex : undefined,
+            _toIndex: ind.toIndex != null ? ind.toIndex : undefined,
         }, chartId);
     }
 

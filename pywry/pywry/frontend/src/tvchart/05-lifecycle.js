@@ -869,7 +869,10 @@ function _tvSetupEventBridge(chartId, chart) {
         });
     });
 
-    // Visible range change
+    // Visible range change — emits Python event + locally refreshes any
+    // visible-range volume-profile primitives on this chart.  The refresh
+    // is debounced via rAF so panning/zooming stays smooth.
+    var vpRefreshHandle = null;
     chart.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
         if (!range) return;
         bridge.emit('tvchart:visible-range-change', {
@@ -877,6 +880,13 @@ function _tvSetupEventBridge(chartId, chart) {
             from: range.from,
             to: range.to,
         });
+        if (typeof _tvRefreshVisibleVolumeProfiles === 'function') {
+            if (vpRefreshHandle) cancelAnimationFrame(vpRefreshHandle);
+            vpRefreshHandle = requestAnimationFrame(function() {
+                vpRefreshHandle = null;
+                _tvRefreshVisibleVolumeProfiles(chartId);
+            });
+        }
     });
 }
 
@@ -1036,6 +1046,11 @@ function _tvExportLayout(chartId) {
             if (ai.maType) indEntry.maType = ai.maType;
             if (ai.offset != null) indEntry.offset = ai.offset;
             if (ai.source) indEntry.source = ai.source;
+            // Volume Profile: preserve mode + bucket count + fixed-range anchor
+            if (ai.mode) indEntry.mode = ai.mode;
+            if (ai.bucketCount != null) indEntry.bucketCount = ai.bucketCount;
+            if (ai.fromIndex != null) indEntry.fromIndex = ai.fromIndex;
+            if (ai.toIndex != null) indEntry.toIndex = ai.toIndex;
             indicators.push(indEntry);
         }
     }

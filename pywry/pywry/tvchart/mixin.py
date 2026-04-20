@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from ..state_mixins import EmittingWidget
 
@@ -248,7 +248,8 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
 
         Available indicators (by name):
             SMA, EMA, WMA, SMA (50), SMA (200), EMA (12), EMA (26),
-            RSI, ATR, VWAP, Volume SMA, Bollinger Bands
+            RSI, ATR, VWAP, Volume SMA, Bollinger Bands,
+            Volume Profile Fixed Range, Volume Profile Visible Range
 
         Parameters
         ----------
@@ -288,6 +289,45 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
             payload["maType"] = ma_type
         if offset is not None:
             payload["offset"] = offset
+        if chart_id is not None:
+            payload["chartId"] = chart_id
+        self.emit("tvchart:add-indicator", payload)
+
+    def add_volume_profile(
+        self,
+        mode: Literal["fixed", "visible"] = "visible",
+        *,
+        bucket_count: int = 24,
+        from_index: int | None = None,
+        to_index: int | None = None,
+        chart_id: str | None = None,
+    ) -> None:
+        """Add a Volume Profile histogram overlay to the main price pane.
+
+        Draws a horizontal volume-by-price histogram using the TradingView
+        Lightweight Charts series-primitive API (ported from the upstream
+        ``plugin-examples/src/plugins/volume-profile`` example).
+
+        Parameters
+        ----------
+        mode : {"fixed", "visible"}
+            ``"fixed"`` anchors the histogram to a specific bar-index
+            range (``from_index`` / ``to_index``).  ``"visible"`` anchors
+            it to the current viewport and recomputes on every pan/zoom.
+        bucket_count : int
+            Number of price buckets (default 24).
+        from_index, to_index : int, optional
+            Inclusive bar-index bounds for fixed mode.  Ignored when
+            ``mode="visible"``.  If omitted under fixed mode, defaults
+            to the last 20% of bars.
+        chart_id : str, optional
+            Target chart instance ID.
+        """
+        name = "Volume Profile Fixed Range" if mode == "fixed" else "Volume Profile Visible Range"
+        payload: dict[str, Any] = {"name": name, "period": int(bucket_count)}
+        if mode == "fixed" and from_index is not None and to_index is not None:
+            payload["fromIndex"] = int(from_index)
+            payload["toIndex"] = int(to_index)
         if chart_id is not None:
             payload["chartId"] = chart_id
         self.emit("tvchart:add-indicator", payload)
