@@ -61,9 +61,26 @@ function _tvRebuildIndicatorLegend(chartId) {
             } else {
                 baseName = (info.name || '').replace(/\s*\(\d+\)\s*$/, '');
             }
+            // The `inputsInStatusLine` flag toggles the numeric parameter
+            // suffix — off → just the short name, on (default) → full
+            // TradingView-style string "BB 20 2 0 SMA".
+            var showInputs = info.inputsInStatusLine !== false;
+            var shortName;
+            if (info.group && info.type === 'bollinger-bands') shortName = 'BB';
+            else if (info.group && info.type === 'macd') shortName = 'MACD';
+            else if (info.group && info.type === 'stochastic') shortName = 'Stoch';
+            else if (info.group && info.type === 'aroon') shortName = 'Aroon';
+            else if (info.group && info.type === 'adx') shortName = 'ADX';
+            else if (info.group && info.type === 'keltner-channels') shortName = 'KC';
+            else if (info.group && info.type === 'ichimoku') shortName = 'Ichimoku';
+            else if (info.type === 'volume-profile-fixed') shortName = 'VPFR';
+            else if (info.type === 'volume-profile-visible') shortName = 'VPVR';
+            else shortName = baseName;
+
             var indLabel;
-            if (info.group && info.type === 'bollinger-bands') {
-                // TradingView format: "BB 20 2 0 SMA"
+            if (!showInputs) {
+                indLabel = shortName;
+            } else if (info.group && info.type === 'bollinger-bands') {
                 indLabel = 'BB ' + (info.period || 20) + ' ' + (info.multiplier || 2) + ' ' + (info.offset || 0) + ' ' + (info.maType || 'SMA');
             } else if (info.group && info.type === 'macd') {
                 indLabel = 'MACD ' + (info.fast || 12) + ' ' + (info.slow || 26) + ' ' + (info.signal || 9);
@@ -83,14 +100,12 @@ function _tvRebuildIndicatorLegend(chartId) {
                     + (info.laggingPeriod || 26) + ' '
                     + (info.leadingShiftPeriod || 26);
             } else if (info.type === 'volume-profile-fixed' || info.type === 'volume-profile-visible') {
-                // TradingView VPVR format: "VPVR Number Of Rows 24 Up/Down 70"
-                var vpShort = info.type === 'volume-profile-visible' ? 'VPVR' : 'VPFR';
                 var rowsLabel = info.rowsLayout === 'ticks' ? 'Ticks Per Row' : 'Number Of Rows';
                 var volLabel = info.volumeMode === 'total'
                     ? 'Total'
                     : (info.volumeMode === 'delta' ? 'Delta' : 'Up/Down');
                 var vaPct = Math.round((info.valueAreaPct != null ? info.valueAreaPct : 0.70) * 100);
-                indLabel = vpShort + ' ' + rowsLabel + ' ' + (info.rowSize || info.period || 24)
+                indLabel = shortName + ' ' + rowsLabel + ' ' + (info.rowSize || info.period || 24)
                     + ' ' + volLabel + ' ' + vaPct;
             } else {
                 indLabel = baseName + (info.period ? ' ' + info.period : '');
@@ -113,33 +128,40 @@ function _tvRebuildIndicatorLegend(chartId) {
             }
             nameSp.textContent = indLabel;
             row.appendChild(nameSp);
-            // For grouped indicators (BB), add a value span per group member
-            if (info.group) {
-                var gKeys = Object.keys(_activeIndicators);
-                for (var gvi = 0; gvi < gKeys.length; gvi++) {
-                    if (_activeIndicators[gKeys[gvi]].group === info.group) {
-                        var gValSp = document.createElement('span');
-                        gValSp.className = 'tvchart-ind-val';
-                        gValSp.id = 'tvchart-ind-val-' + gKeys[gvi];
-                        gValSp.style.color = _activeIndicators[gKeys[gvi]].color;
-                        row.appendChild(gValSp);
+            // The `valuesInStatusLine` flag toggles the live per-bar
+            // readout (crosshair values for normal indicators, running
+            // up/down/total for Volume Profile).  When off we skip the
+            // span entirely so _tvUpdateIndicatorLegendValues silently
+            // no-ops its next lookup.
+            var showValues = info.valuesInStatusLine !== false;
+            if (showValues) {
+                if (info.group) {
+                    var gKeys = Object.keys(_activeIndicators);
+                    for (var gvi = 0; gvi < gKeys.length; gvi++) {
+                        if (_activeIndicators[gKeys[gvi]].group === info.group) {
+                            var gValSp = document.createElement('span');
+                            gValSp.className = 'tvchart-ind-val';
+                            gValSp.id = 'tvchart-ind-val-' + gKeys[gvi];
+                            gValSp.style.color = _activeIndicators[gKeys[gvi]].color;
+                            row.appendChild(gValSp);
+                        }
                     }
-                }
-            } else {
-                var valSp = document.createElement('span');
-                valSp.className = 'tvchart-ind-val';
-                valSp.id = 'tvchart-ind-val-' + seriesId;
-                // Volume Profile: show running totals (up / down / total).
-                if (info.type === 'volume-profile-fixed' || info.type === 'volume-profile-visible') {
-                    var vpSlotForLabel = _volumeProfilePrimitives[seriesId];
-                    if (vpSlotForLabel) {
-                        var t = _tvVolumeProfileTotals(vpSlotForLabel.vpData);
-                        valSp.textContent = _tvFormatVolume(t.up) + '  '
-                            + _tvFormatVolume(t.down) + '  '
-                            + _tvFormatVolume(t.total);
+                } else {
+                    var valSp = document.createElement('span');
+                    valSp.className = 'tvchart-ind-val';
+                    valSp.id = 'tvchart-ind-val-' + seriesId;
+                    // Volume Profile: show running totals (up / down / total).
+                    if (info.type === 'volume-profile-fixed' || info.type === 'volume-profile-visible') {
+                        var vpSlotForLabel = _volumeProfilePrimitives[seriesId];
+                        if (vpSlotForLabel) {
+                            var t = _tvVolumeProfileTotals(vpSlotForLabel.vpData);
+                            valSp.textContent = _tvFormatVolume(t.up) + '  '
+                                + _tvFormatVolume(t.down) + '  '
+                                + _tvFormatVolume(t.total);
+                        }
                     }
+                    row.appendChild(valSp);
                 }
-                row.appendChild(valSp);
             }
             var ctrl = document.createElement('span');
             ctrl.className = 'tvchart-legend-row-actions tvchart-ind-ctrl';

@@ -233,6 +233,24 @@ function _tvShowIndicatorSettings(seriesId) {
     // Snapshot the original draft so "Reset Settings" restores the
     // values the dialog opened with.
     var _draftSnapshot = JSON.parse(JSON.stringify(draft));
+
+    // Live preview: push every draft edit straight to the chart so the
+    // user sees their change the moment they make it.  Apply is cheap
+    // (single setData + applyOptions), so debounce is unnecessary — but
+    // coalesce with rAF so a burst of number-spinner ticks still render
+    // as one frame.
+    var _livePreviewScheduled = false;
+    function _livePreview() {
+        if (_livePreviewScheduled) return;
+        _livePreviewScheduled = true;
+        var schedule = typeof requestAnimationFrame === 'function'
+            ? requestAnimationFrame
+            : function(cb) { return setTimeout(cb, 0); };
+        schedule(function() {
+            _livePreviewScheduled = false;
+            try { _tvApplyIndicatorSettings(seriesId, draft); } catch (_e) {}
+        });
+    }
     var defaultsWrap = document.createElement('div');
     defaultsWrap.style.cssText = 'position:relative;margin-right:auto;';
     var defaultsBtn = document.createElement('button');
@@ -311,6 +329,7 @@ function _tvShowIndicatorSettings(seriesId) {
                     swatch.dataset.opacity = String(newOpacity);
                     swatch.style.background = _tvColorWithOpacity(newColor, newOpacity, newColor);
                     onChange(newColor, newOpacity);
+                    _livePreview();
                 }
             );
         });
@@ -325,7 +344,7 @@ function _tvShowIndicatorSettings(seriesId) {
             var opt = document.createElement('option'); opt.value = o.v; opt.textContent = o.l;
             if (String(o.v) === String(val)) opt.selected = true; sel.appendChild(opt);
         });
-        sel.addEventListener('change', function() { onChange(sel.value); });
+        sel.addEventListener('change', function() { onChange(sel.value); _livePreview(); });
         row.appendChild(sel); parent.appendChild(row);
     }
     function addNumberRow(parent, label, min, max, step, val, onChange) {
@@ -335,7 +354,10 @@ function _tvShowIndicatorSettings(seriesId) {
         var inp = document.createElement('input'); inp.type = 'number'; inp.className = 'ts-input';
         inp.min = min; inp.max = max; inp.step = step; inp.value = val;
         inp.addEventListener('keydown', function(e) { e.stopPropagation(); });
-        inp.addEventListener('input', function() { var v = parseFloat(inp.value); if (!isNaN(v) && v >= parseFloat(min)) onChange(v); });
+        inp.addEventListener('input', function() {
+            var v = parseFloat(inp.value);
+            if (!isNaN(v) && v >= parseFloat(min)) { onChange(v); _livePreview(); }
+        });
         row.appendChild(inp); parent.appendChild(row);
     }
     function addCheckRow(parent, label, val, onChange) {
@@ -344,7 +366,7 @@ function _tvShowIndicatorSettings(seriesId) {
         var lbl = document.createElement('label'); lbl.textContent = label; row.appendChild(lbl);
         var cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'ts-checkbox';
         cb.checked = !!val;
-        cb.addEventListener('change', function() { onChange(cb.checked); });
+        cb.addEventListener('change', function() { onChange(cb.checked); _livePreview(); });
         row.appendChild(cb); parent.appendChild(row);
     }
 
@@ -355,7 +377,7 @@ function _tvShowIndicatorSettings(seriesId) {
         row.style.cssText = 'display:flex;align-items:center;gap:8px;';
         var cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'ts-checkbox';
         cb.checked = plotDraft.visible !== false;
-        cb.addEventListener('change', function() { plotDraft.visible = cb.checked; });
+        cb.addEventListener('change', function() { plotDraft.visible = cb.checked; _livePreview(); });
         row.appendChild(cb);
         var lbl = document.createElement('label'); lbl.textContent = label; lbl.style.flex = '1'; row.appendChild(lbl);
         var swatch = document.createElement('div'); swatch.className = 'ts-swatch';
@@ -374,6 +396,7 @@ function _tvShowIndicatorSettings(seriesId) {
                     swatch.dataset.opacity = String(newOpacity);
                     swatch.style.background = _tvColorWithOpacity(newColor, newOpacity, newColor);
                     plotDraft.color = _tvColorWithOpacity(newColor, newOpacity, newColor);
+                    _livePreview();
                 }
             );
         });
@@ -383,7 +406,7 @@ function _tvShowIndicatorSettings(seriesId) {
             var opt = document.createElement('option'); opt.value = o.v; opt.textContent = o.l;
             if (Number(o.v) === Number(plotDraft.lineWidth)) opt.selected = true; wSel.appendChild(opt);
         });
-        wSel.addEventListener('change', function() { plotDraft.lineWidth = Number(wSel.value); });
+        wSel.addEventListener('change', function() { plotDraft.lineWidth = Number(wSel.value); _livePreview(); });
         row.appendChild(wSel);
         // Line style selector
         var lsSel = document.createElement('select'); lsSel.className = 'ts-select'; lsSel.style.width = '80px';
@@ -391,7 +414,7 @@ function _tvShowIndicatorSettings(seriesId) {
             var opt = document.createElement('option'); opt.value = o.v; opt.textContent = o.l;
             if (Number(o.v) === Number(plotDraft.lineStyle || 0)) opt.selected = true; lsSel.appendChild(opt);
         });
-        lsSel.addEventListener('change', function() { plotDraft.lineStyle = Number(lsSel.value); });
+        lsSel.addEventListener('change', function() { plotDraft.lineStyle = Number(lsSel.value); _livePreview(); });
         row.appendChild(lsSel);
         parent.appendChild(row);
     }
