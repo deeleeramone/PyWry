@@ -2501,21 +2501,17 @@ class TestTVChartIndicatorCatalog:
         cat_start = js.index("_INDICATOR_CATALOG = [")
         cat_end = js.index("];", cat_start)
         catalog_src = js[cat_start:cat_end]
-        assert f"name: '{name}'" in catalog_src, (
-            f"Indicator catalog missing entry for '{name}'"
-        )
+        assert f"name: '{name}'" in catalog_src, f"Indicator catalog missing entry for '{name}'"
 
     def test_volume_profile_entries_are_primitive(self, js: str) -> None:
         cat_start = js.index("_INDICATOR_CATALOG = [")
         cat_end = js.index("];", cat_start)
         catalog_src = js[cat_start:cat_end]
         for key in ("'volume-profile-fixed'", "'volume-profile-visible'"):
-            block = catalog_src[catalog_src.index(key):]
+            block = catalog_src[catalog_src.index(key) :]
             first_close = block.index("}")
             entry = block[:first_close]
-            assert "primitive: true" in entry, (
-                f"Expected VP entry {key} to have primitive: true"
-            )
+            assert "primitive: true" in entry, f"Expected VP entry {key} to have primitive: true"
 
     # ------------------------------------------------------------------
     # Compute functions
@@ -2546,9 +2542,7 @@ class TestTVChartIndicatorCatalog:
 
     @pytest.mark.parametrize("fn_name", EXPECTED_COMPUTE_FNS)
     def test_compute_function_defined(self, js: str, fn_name: str) -> None:
-        assert f"function {fn_name}(" in js, (
-            f"Missing compute function {fn_name} in bundled JS"
-        )
+        assert f"function {fn_name}(" in js, f"Missing compute function {fn_name} in bundled JS"
 
     # ------------------------------------------------------------------
     # Add-indicator branches
@@ -2685,9 +2679,7 @@ class TestTVChartVolumeProfile:
         fn_end = js.index("\nfunction ", fn_start + 1)
         body = js[fn_start:fn_end]
         for key in ("pocIdx", "vaLowIdx", "vaHighIdx"):
-            assert key in body, (
-                f"POC/VA helper must expose '{key}' so renderer can draw lines"
-            )
+            assert key in body, f"POC/VA helper must expose '{key}' so renderer can draw lines"
 
     def test_vp_refresh_visible_exposed(self, js: str) -> None:
         """Visible-range refresh must exist for the recompute path to call it."""
@@ -2732,9 +2724,7 @@ class TestTVChartLegendVolumeRemoval:
         assert "entry.chart.removeSeries(volSeries)" in body, (
             "Remove-volume must actually call chart.removeSeries"
         )
-        assert "delete entry.volumeMap.main" in body, (
-            "Remove-volume must clear the volumeMap entry"
-        )
+        assert "delete entry.volumeMap.main" in body, "Remove-volume must clear the volumeMap entry"
 
     def test_disable_volume_removes_pane(self, js: str) -> None:
         body = self._fn_or_nested(js, "_legendDisableVolume")
@@ -2775,11 +2765,7 @@ class TestTVChartThemeVariables:
         from pathlib import Path
 
         return (
-            Path(__file__).parents[1]
-            / "pywry"
-            / "frontend"
-            / "style"
-            / "tvchart.css"
+            Path(__file__).parents[1] / "pywry" / "frontend" / "style" / "tvchart.css"
         ).read_text(encoding="utf-8")
 
     VP_VARS = (
