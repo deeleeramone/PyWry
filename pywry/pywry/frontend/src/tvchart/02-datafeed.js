@@ -116,6 +116,13 @@ function _tvWireScrollback(entry, sid, series, symbolInfo, resolution, sType) {
         if (!range || loading || exhausted) return;
         // Only fire when user scrolls near the left edge
         if (range.from > _TV_SCROLLBACK_THRESHOLD) return;
+        // Once the user has dragged past the data into pure empty space
+        // (range.from negative beyond the threshold), stop firing — the
+        // first request already came back NO_DATA so further scrolling
+        // shouldn't keep asking.  The `exhausted` flag normally catches
+        // this, but this guard cuts off any pre-exhaustion overshoot
+        // where the user yanks the scroll wheel hard.
+        if (range.from < -_TV_SCROLLBACK_THRESHOLD * 4) return;
 
         // Find the oldest bar currently loaded
         var raw = entry._seriesRawData[sid];
@@ -133,13 +140,31 @@ function _tvWireScrollback(entry, sid, series, symbolInfo, resolution, sType) {
 
         _tvRequestDatafeedHistory(chartId, symbolInfo, resolution, periodParams, function(resp) {
             loading = false;
-            if (!resp || resp.error) return;
+            // Treat any non-success outcome as exhaustion so the
+            // visible-range-change handler stops retrying — otherwise
+            // every scroll-tick fires another fetch and overloads the
+            // bridge.  This includes:
+            //   - missing/error response (transport failure)
+            //   - explicit noData / status:"no_data"
+            //   - empty bars array (UDF "no more history" signal)
+            if (!resp || resp.error
+                    || (resp.noData != null && resp.noData)
+                    || resp.status === 'no_data'
+                    || resp.status === 'error') {
+                exhausted = true;
+                return;
+            }
             var bars = resp.bars || [];
-
-            // If the server signalled no more data, stop asking
-            if (bars.length === 0 ||
-                (resp.noData != null && resp.noData) ||
-                resp.status === 'no_data') {
+            if (bars.length === 0) {
+                exhausted = true;
+                return;
+            }
+            // Server returned bars whose newest timestamp is at or after
+            // our current oldest — no actual older data was added, so
+            // continuing to ask would loop forever requesting the same
+            // window.  Stop.
+            var newestNew = bars[bars.length - 1] && bars[bars.length - 1].time;
+            if (typeof newestNew === 'number' && newestNew >= oldestTime) {
                 exhausted = true;
                 return;
             }
@@ -173,10 +198,11 @@ function _tvWireScrollback(entry, sid, series, symbolInfo, resolution, sType) {
 
             // When RTH filter is active, push the merged bars through
             // the session filter so both the main series and every
-            // indicator see the refreshed set.  Otherwise just setData
-            // the merged bars directly.
+            // indicator see the refreshed set.  Pass skipFitContent so
+            // the user's scroll position is preserved AND we don't
+            // retrigger the scrollback handler in an infinite loop.
             if (entry._sessionMode === 'RTH' && typeof _tvApplySessionFilter === 'function') {
-                _tvApplySessionFilter();
+                _tvApplySessionFilter({ skipFitContent: true });
             } else {
                 series.setData(merged);
                 if (entry.volumeMap[sid] && volData && volData.length > 0) {
@@ -821,10 +847,18 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                         entry._datafeedSubscriptions[sid] = guid;
 
                         datafeed.subscribeBars(symbolInfo, resolution, function(bar) {
-                            // Skip bars outside regular session when RTH is active.
-                            // market_hours field from the data source: 2 = Regular/Market Open.
-                            if (entry._sessionMode === 'RTH' && bar.market_hours != null && bar.market_hours !== 2) {
-                                return;
+                            // Skip bars outside the regular session when RTH
+                            // is active.  Prefer the session-string check
+                            // (works for every datafeed) and fall back to the
+                            // per-bar market_hours field when present.
+                            if (entry._sessionMode === 'RTH') {
+                                if (typeof _tvIsBarInCurrentSession === 'function'
+                                        && !_tvIsBarInCurrentSession(bar.time)) {
+                                    return;
+                                }
+                                if (bar.market_hours != null && bar.market_hours !== 2) {
+                                    return;
+                                }
                             }
                             var normalized = _tvNormalizeBarsForSeriesType([bar], sType);
                             if (normalized.length > 0) {

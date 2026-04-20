@@ -245,7 +245,8 @@ function _tvIsBarInCurrentSession(barTime) {
  * either passes them through (ETH) or filters them (RTH) before
  * calling series.setData().
  */
-function _tvApplySessionFilter() {
+function _tvApplySessionFilter(opts) {
+    opts = opts || {};
     var entry = _tvGetFirstEntry();
     if (!entry) return;
 
@@ -303,7 +304,13 @@ function _tvApplySessionFilter() {
     // compute clamps to one bar at index N-1, and VPVR ends up showing a
     // single bar's volume (looks like "877K up, 0 down" on an RTH toggle
     // when the previous ETH view was scrolled right).
-    if (entry.chart) entry.chart.timeScale().fitContent();
+    //
+    // Skip when called from scrollback though — the user just dragged the
+    // viewport, jumping back to fitContent would yank their scroll
+    // position AND retrigger the scrollback handler in an infinite loop
+    // (range.from snaps to 0, scrollback wants more data, loads it,
+    // session-filters again, fitContent again, loop).
+    if (entry.chart && !opts.skipFitContent) entry.chart.timeScale().fitContent();
 
     // Recompute every indicator against the now-filtered bar set so
     // SMA(9) etc. reflects 9 RTH bars, not 9 ETH bars with an overnight

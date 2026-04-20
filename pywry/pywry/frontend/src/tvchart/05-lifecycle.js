@@ -891,15 +891,32 @@ function _tvSetupEventBridge(chartId, chart) {
     });
 
     // Visible range change — emits Python event + locally refreshes any
-    // visible-range volume-profile primitives on this chart.  The refresh
-    // is debounced via rAF so panning/zooming stays smooth.
+    // visible-range volume-profile primitives on this chart.  Both are
+    // coalesced via rAF so panning/zooming or scrolling past the loaded
+    // bar set doesn't fire 60+ events per second to Python (which would
+    // overload the WebSocket/IPC bridge and freeze the UI).
     var vpRefreshHandle = null;
+    var emitHandle = null;
+    var lastEmittedRange = null;
     chart.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
         if (!range) return;
-        bridge.emit('tvchart:visible-range-change', {
-            chartId: chartId,
-            from: range.from,
-            to: range.to,
+        if (emitHandle) cancelAnimationFrame(emitHandle);
+        emitHandle = requestAnimationFrame(function() {
+            emitHandle = null;
+            // Skip emit when the range hasn't changed meaningfully —
+            // scrolling past the data range can fire dozens of identical
+            // ticks per frame as LWC re-clamps the viewport.
+            if (lastEmittedRange
+                    && Math.abs(lastEmittedRange.from - range.from) < 0.5
+                    && Math.abs(lastEmittedRange.to - range.to) < 0.5) {
+                return;
+            }
+            lastEmittedRange = { from: range.from, to: range.to };
+            bridge.emit('tvchart:visible-range-change', {
+                chartId: chartId,
+                from: range.from,
+                to: range.to,
+            });
         });
         if (typeof _tvRefreshVisibleVolumeProfiles === 'function') {
             if (vpRefreshHandle) cancelAnimationFrame(vpRefreshHandle);
