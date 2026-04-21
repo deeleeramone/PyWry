@@ -35,17 +35,28 @@ function _tvRebuildIndicatorLegend(chartId) {
             row.dataset.hidden = info.hidden ? '1' : '0';
             var dot = document.createElement('span');
             dot.className = 'tvchart-ind-dot';
-            // Volume Profile primitives have no line colour — use the
-            // up-volume swatch so the dot still reflects the indicator.
-            var dotColor = info.color;
-            if (!dotColor && (info.type === 'volume-profile-fixed' || info.type === 'volume-profile-visible')) {
+            // Volume Profile primitives have no line colour — always use
+            // the up-volume swatch for the dot so the indicator reads as
+            // "Volume Profile" regardless of any stray info.color that a
+            // generic settings-apply pass might have written.
+            var isVPIndicator = info.type === 'volume-profile-fixed' || info.type === 'volume-profile-visible';
+            var dotColor;
+            if (isVPIndicator) {
                 dotColor = info.upColor || _cssVar('--pywry-tvchart-vp-up');
+            } else {
+                dotColor = info.color || _cssVar('--pywry-tvchart-text');
             }
-            dot.style.background = dotColor || _cssVar('--pywry-tvchart-text');
+            dot.style.background = dotColor;
             row.appendChild(dot);
             var nameSp = document.createElement('span');
             nameSp.className = 'tvchart-ind-name';
-            nameSp.style.color = dotColor || _cssVar('--pywry-tvchart-text');
+            // For VP, keep the name text in the default legend colour —
+            // tinting it the low-opacity up-volume blue would render
+            // unreadably dim.  Only colour the name when the indicator
+            // has a real line colour (SMA/EMA/RSI/etc.).
+            nameSp.style.color = isVPIndicator
+                ? _cssVar('--pywry-tvchart-text')
+                : (info.color || _cssVar('--pywry-tvchart-text'));
             // Extract base name (remove any trailing period in parentheses from the stored name)
             var baseName;
             if (info.group) {

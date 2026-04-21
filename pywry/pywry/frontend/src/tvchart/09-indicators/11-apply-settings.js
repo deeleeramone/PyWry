@@ -47,12 +47,19 @@ function _tvApplyIndicatorSettings(seriesId, newSettings) {
         || stepChanged || maxStepChanged || annualizationChanged;
     var type = info.type || info.name;
 
-    // Apply per-plot styles
+    // Apply per-plot styles.
+    // Volume Profile has no line series — its colours live on
+    // opts.upColor / downColor / vaUpColor / vaDownColor / pocColor and
+    // are applied by the VP-specific branch further down.  Skipping it
+    // here avoids clobbering info.color (which stays null for VP) with
+    // the generic draft.color default, which the legend then picks up
+    // as the indicator's display colour.
+    var isVP = type === 'volume-profile-fixed' || type === 'volume-profile-visible';
     var styleSids = [];
     if (info.group) {
         var allKeys = Object.keys(_activeIndicators);
         for (var k = 0; k < allKeys.length; k++) { if (_activeIndicators[allKeys[k]].group === info.group) styleSids.push(allKeys[k]); }
-    } else { styleSids = [seriesId]; }
+    } else if (!isVP) { styleSids = [seriesId]; }
     for (var si = 0; si < styleSids.length; si++) {
         var ss = entry.seriesMap[styleSids[si]];
         var plotDraft = newSettings.plotStyles && newSettings.plotStyles[styleSids[si]];
