@@ -106,6 +106,13 @@
                     var container = entry.container;
                     var oldPayload = entry.payload || {};
                     var savedDisplayStyle = entry._chartDisplayStyle || null;
+                    // _chartPrefs holds user-tuned settings (timeScale
+                    // rightOffset / barSpacing, priceScale mode + invert,
+                    // kineticScroll toggles, locale, etc.). Destroy-recreate
+                    // would reset them to defaults without this snapshot.
+                    var savedChartPrefs = entry._chartPrefs ? _tvMerge({}, entry._chartPrefs) : null;
+                    var savedSessionMode = entry._sessionMode || null;
+                    var savedTimezone = entry._selectedTimezone || null;
 
                     // Capture the visible *time* range before destroy so we
                     // can restore the user's zoom on the new chart.  Time-
@@ -272,6 +279,26 @@
                     // 30ms safety buffer.
                     var _applyDefaultDone = _track();
                     setTimeout(_applyDefaultDone, 180);
+
+                    // Restore chart-level preferences (scale mode, time-scale
+                    // tuning, navigation toggles, locale, session/timezone).
+                    // These live on the new entry and feed every subsequent
+                    // build of chartOptions via _tvApplySettingsToChart.
+                    var _reEntryForPrefs = window.__PYWRY_TVCHARTS__[cid];
+                    if (_reEntryForPrefs) {
+                        if (savedChartPrefs) _reEntryForPrefs._chartPrefs = savedChartPrefs;
+                        if (savedSessionMode) _reEntryForPrefs._sessionMode = savedSessionMode;
+                        if (savedTimezone) _reEntryForPrefs._selectedTimezone = savedTimezone;
+                        // Push the saved prefs into the fresh chart so its
+                        // timeScale / priceScale / interaction wiring reflects
+                        // what the user had before the destroy-recreate.
+                        if (savedChartPrefs && savedChartPrefs.settings
+                                && typeof _tvApplySettingsToChart === 'function') {
+                            try {
+                                _tvApplySettingsToChart(cid, _reEntryForPrefs, savedChartPrefs.settings);
+                            } catch (_eApply) {}
+                        }
+                    }
 
                     // Re-apply chart display style once the new main
                     // series is attached.  Event-driven via
