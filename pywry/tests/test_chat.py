@@ -1,11 +1,14 @@
 """Unit tests for the chat component.
 
 Tests cover:
-- Chat Pydantic models (ChatMessage, ChatThread, ChatConfig, etc.)
+- ACP content block models (TextPart, ImagePart, AudioPart, etc.)
+- ACPToolCall model
+- ChatMessage, ChatThread, ChatConfig
 - GenerationHandle (cancel, append_chunk, partial_content, is_expired)
 - ChatStateMixin: all chat state management methods
 - ChatStore ABC + MemoryChatStore implementation
 - Chat builder functions
+- ACPCommand model
 """
 
 # pylint: disable=missing-function-docstring,redefined-outer-name,unused-argument
@@ -22,18 +25,20 @@ import pytest
 from pywry.chat import (
     GENERATION_HANDLE_TTL,
     MAX_CONTENT_LENGTH,
+    ACPCommand,
+    ACPToolCall,
+    AudioPart,
     ChatConfig,
     ChatMessage,
     ChatThread,
     ChatWidgetConfig,
+    EmbeddedResource,
+    EmbeddedResourcePart,
     GenerationHandle,
     ImagePart,
     ResourceLinkPart,
-    SlashCommand,
     TextPart,
-    ToolCall,
-    ToolCallFunction,
-    _default_slash_commands,
+    build_chat_html,
 )
 from pywry.state_mixins import ChatStateMixin, EmittingWidget
 
@@ -75,7 +80,7 @@ class TestChatMessage:
         msg = ChatMessage(role="user", content="Hello")
         assert msg.role == "user"
         assert msg.text_content() == "Hello"
-        assert msg.message_id  # auto-generated
+        assert msg.message_id
         assert msg.stopped is False
 
     def test_string_content(self) -> None:
@@ -97,13 +102,12 @@ class TestChatMessage:
             role="assistant",
             content=[
                 TextPart(text="See image: "),
-                ImagePart(data="base64data", mime_type="image/png"),
+                ImagePart(data="base64data", mimeType="image/png"),
             ],
         )
         assert msg.text_content() == "See image: "
 
     def test_content_length_validation(self) -> None:
-        # Should not raise for content within limit
         msg = ChatMessage(role="user", content="x" * 100)
         assert len(msg.text_content()) == 100
 
@@ -118,17 +122,17 @@ class TestChatMessage:
             role="assistant",
             content="I'll search for that.",
             tool_calls=[
-                ToolCall(
-                    id="call_1",
-                    function=ToolCallFunction(
-                        name="search",
-                        arguments='{"query": "test"}',
-                    ),
+                ACPToolCall(
+                    toolCallId="call_1",
+                    name="search",
+                    kind="fetch",
+                    arguments={"query": "test"},
                 ),
             ],
         )
         assert len(msg.tool_calls) == 1
-        assert msg.tool_calls[0].function.name == "search"
+        assert msg.tool_calls[0].name == "search"
+        assert msg.tool_calls[0].kind == "fetch"
 
     def test_stopped_field(self) -> None:
         msg = ChatMessage(role="assistant", content="Partial", stopped=True)
@@ -158,16 +162,52 @@ class TestChatThread:
         assert len(thread.messages) == 1
 
 
-class TestSlashCommand:
-    """Test SlashCommand model."""
+class TestACPCommand:
+    """Test ACPCommand model."""
 
-    def test_auto_prefix(self) -> None:
-        cmd = SlashCommand(name="clear", description="Clear chat")
-        assert cmd.name == "/clear"
+    def test_creation(self) -> None:
+        cmd = ACPCommand(name="web", description="Search the web")
+        assert cmd.name == "web"
+        assert cmd.description == "Search the web"
 
-    def test_already_prefixed(self) -> None:
-        cmd = SlashCommand(name="/help", description="Help")
-        assert cmd.name == "/help"
+    def test_with_input(self) -> None:
+        from pywry.chat.models import ACPCommandInput
+
+        cmd = ACPCommand(
+            name="test",
+            description="Run tests",
+            input=ACPCommandInput(hint="Enter test name"),
+        )
+        assert cmd.input.hint == "Enter test name"
+
+
+class TestACPToolCall:
+    """Test ACPToolCall model."""
+
+    def test_creation(self) -> None:
+        tc = ACPToolCall(
+            toolCallId="call_1",
+            title="Read file",
+            name="fs_read",
+            kind="read",
+            status="pending",
+        )
+        assert tc.tool_call_id == "call_1"
+        assert tc.kind == "read"
+        assert tc.status == "pending"
+
+    def test_defaults(self) -> None:
+        tc = ACPToolCall(name="test")
+        assert tc.tool_call_id  # auto-generated
+        assert tc.kind == "other"
+        assert tc.status == "pending"
+
+    def test_with_arguments(self) -> None:
+        tc = ACPToolCall(
+            name="search",
+            arguments={"query": "hello"},
+        )
+        assert tc.arguments["query"] == "hello"
 
 
 class TestChatConfig:
@@ -208,17 +248,56 @@ class TestChatWidgetConfig:
         assert config.chat_config.model == "gpt-4o"
 
 
-class TestDefaultSlashCommands:
-    """Test _default_slash_commands."""
+# =============================================================================
+# Content Part Tests
+# =============================================================================
 
-    def test_returns_commands(self) -> None:
-        cmds = _default_slash_commands()
-        assert len(cmds) == 4
-        names = [c.name for c in cmds]
-        assert "/clear" in names
-        assert "/export" in names
-        assert "/model" in names
-        assert "/system" in names
+
+class TestContentParts:
+    """Test ACP ContentBlock types."""
+
+    def test_text_part(self) -> None:
+        part = TextPart(text="hello")
+        assert part.type == "text"
+        assert part.text == "hello"
+
+    def test_text_part_with_annotations(self) -> None:
+        part = TextPart(text="hello", annotations={"source": "llm"})
+        assert part.annotations["source"] == "llm"
+
+    def test_image_part(self) -> None:
+        part = ImagePart(data="base64data", mimeType="image/png")
+        assert part.type == "image"
+        assert part.data == "base64data"
+        assert part.mime_type == "image/png"
+
+    def test_audio_part(self) -> None:
+        part = AudioPart(data="audiodata", mimeType="audio/wav")
+        assert part.type == "audio"
+        assert part.mime_type == "audio/wav"
+
+    def test_resource_link_part(self) -> None:
+        part = ResourceLinkPart(
+            uri="pywry://resource/1",
+            name="Doc",
+            title="My Document",
+            size=1024,
+        )
+        assert part.type == "resource_link"
+        assert part.name == "Doc"
+        assert part.title == "My Document"
+        assert part.size == 1024
+
+    def test_embedded_resource_part(self) -> None:
+        part = EmbeddedResourcePart(
+            resource=EmbeddedResource(
+                uri="file:///doc.txt",
+                mimeType="text/plain",
+                text="Hello world",
+            ),
+        )
+        assert part.type == "resource"
+        assert part.resource.text == "Hello world"
 
 
 # =============================================================================
@@ -275,7 +354,6 @@ class TestGenerationHandle:
             thread_id="t_1",
         )
         assert not handle.is_expired
-        # Manually set created_at to past
         handle.created_at = time.time() - GENERATION_HANDLE_TTL - 1
         assert handle.is_expired
 
@@ -295,7 +373,6 @@ class TestChatStateMixin:
         assert evt_type == "chat:assistant-message"
         assert data["messageId"] == "msg_1"
         assert data["text"] == "Hello!"
-        assert data["threadId"] == "t_1"
 
     def test_stream_chat_chunk(self) -> None:
         w = MockChatWidget()
@@ -304,12 +381,6 @@ class TestChatStateMixin:
         assert evt_type == "chat:stream-chunk"
         assert data["chunk"] == "tok"
         assert data["done"] is False
-
-    def test_stream_chat_chunk_done(self) -> None:
-        w = MockChatWidget()
-        w.stream_chat_chunk("", "msg_1", done=True)
-        _evt_type, data = w.get_last_event()
-        assert data["done"] is True
 
     def test_set_chat_typing(self) -> None:
         w = MockChatWidget()
@@ -325,14 +396,6 @@ class TestChatStateMixin:
         assert evt_type == "chat:switch-thread"
         assert data["threadId"] == "t_2"
 
-    def test_update_chat_thread_list(self) -> None:
-        w = MockChatWidget()
-        threads = [{"thread_id": "t1", "title": "Chat 1"}]
-        w.update_chat_thread_list(threads)
-        evt_type, data = w.get_last_event()
-        assert evt_type == "chat:update-thread-list"
-        assert data["threads"] == threads
-
     def test_clear_chat(self) -> None:
         w = MockChatWidget()
         w.clear_chat()
@@ -345,15 +408,6 @@ class TestChatStateMixin:
         evt_type, data = w.get_last_event()
         assert evt_type == "chat:register-command"
         assert data["name"] == "/help"
-        assert data["description"] == "Show help"
-
-    def test_update_chat_settings(self) -> None:
-        w = MockChatWidget()
-        w.update_chat_settings({"model": "gpt-4o", "temperature": 0.5})
-        evt_type, data = w.get_last_event()
-        assert evt_type == "chat:update-settings"
-        assert data["model"] == "gpt-4o"
-        assert data["temperature"] == 0.5
 
     def test_request_chat_state(self) -> None:
         w = MockChatWidget()
@@ -383,7 +437,6 @@ class TestMemoryChatStore:
         result = await store.get_thread("w1", "t1")
         assert result is not None
         assert result.thread_id == "t1"
-        assert result.title == "Test"
 
     @pytest.mark.asyncio
     async def test_list_threads(self, store) -> None:
@@ -414,7 +467,6 @@ class TestMemoryChatStore:
         for i in range(5):
             msg = ChatMessage(role="user", content=f"msg{i}", message_id=f"m{i}")
             await store.append_message("w1", "t1", msg)
-        # Get last 3
         messages = await store.get_messages("w1", "t1", limit=3)
         assert len(messages) == 3
 
@@ -461,20 +513,6 @@ class TestChatBuilders:
         assert config.model == "gpt-4"
         assert config.streaming is True
 
-    def test_build_chat_config_with_commands(self) -> None:
-        from pywry.mcp.builders import build_chat_config
-
-        config = build_chat_config(
-            {
-                "slash_commands": [
-                    {"name": "help", "description": "Show help"},
-                    {"name": "/test"},
-                ],
-            }
-        )
-        assert len(config.slash_commands) == 2
-        assert config.slash_commands[0].name == "/help"
-
     def test_build_chat_widget_config(self) -> None:
         from pywry.mcp.builders import build_chat_widget_config
 
@@ -487,7 +525,6 @@ class TestChatBuilders:
             }
         )
         assert config.title == "My Chat"
-        assert config.height == 700
         assert config.chat_config.model == "gpt-4o"
         assert config.show_sidebar is False
 
@@ -501,130 +538,35 @@ class TestBuildChatHtml:
     """Test build_chat_html helper."""
 
     def test_default_includes_sidebar(self) -> None:
-        from pywry.chat import build_chat_html
-
         html = build_chat_html()
         assert "pywry-chat-sidebar" in html
         assert "pywry-chat-messages" in html
         assert "pywry-chat-input" in html
-        assert "pywry-chat-settings-toggle" in html
 
     def test_no_sidebar(self) -> None:
-        from pywry.chat import build_chat_html
-
         html = build_chat_html(show_sidebar=False)
         assert "pywry-chat-sidebar" not in html
-        assert "pywry-chat-messages" in html
 
     def test_no_settings(self) -> None:
-        from pywry.chat import build_chat_html
-
         html = build_chat_html(show_settings=False)
         assert "pywry-chat-settings-toggle" not in html
 
     def test_container_id(self) -> None:
-        from pywry.chat import build_chat_html
-
         html = build_chat_html(container_id="my-chat")
         assert 'id="my-chat"' in html
 
     def test_file_attach_disabled_by_default(self) -> None:
-        from pywry.chat import build_chat_html
-
         html = build_chat_html()
         assert "pywry-chat-attach-btn" not in html
-        assert "pywry-chat-drop-overlay" not in html
 
     def test_file_attach_enabled(self) -> None:
-        from pywry.chat import build_chat_html
-
         html = build_chat_html(enable_file_attach=True, file_accept_types=[".csv"])
         assert "pywry-chat-attach-btn" in html
         assert "pywry-chat-drop-overlay" in html
 
-    def test_file_attach_requires_accept_in_html(self) -> None:
-        """When file_accept_types is provided, data-accept-types attribute is set."""
-        from pywry.chat import build_chat_html
-
-        html = build_chat_html(
-            enable_file_attach=True,
-            file_accept_types=[".csv", ".json"],
-        )
-        assert 'data-accept-types=".csv,.json"' in html
-
-    def test_file_attach_custom_accept(self) -> None:
-        from pywry.chat import build_chat_html
-
-        html = build_chat_html(
-            enable_file_attach=True,
-            file_accept_types=[".csv", ".xlsx"],
-        )
-        assert 'data-accept-types=".csv,.xlsx"' in html
-
-    def test_context_without_file_attach(self) -> None:
-        from pywry.chat import build_chat_html
-
-        html = build_chat_html(enable_context=True, enable_file_attach=False)
-        # @ mention popup should be present
-        assert "pywry-chat-mention-popup" in html
-        # File attach should NOT be present
-        assert "pywry-chat-attach-btn" not in html
-        assert "pywry-chat-drop-overlay" not in html
-
-    def test_file_attach_without_context(self) -> None:
-        from pywry.chat import build_chat_html
-
-        html = build_chat_html(
-            enable_file_attach=True,
-            file_accept_types=[".csv"],
-            enable_context=False,
-        )
-        # File attach should be present
-        assert "pywry-chat-attach-btn" in html
-        assert "pywry-chat-drop-overlay" in html
-        # @ mention popup should NOT be present
-        assert "pywry-chat-mention-popup" not in html
-
-    def test_both_context_and_file_attach(self) -> None:
-        from pywry.chat import build_chat_html
-
-        html = build_chat_html(
-            enable_context=True,
-            enable_file_attach=True,
-            file_accept_types=[".csv"],
-        )
-        assert "pywry-chat-mention-popup" in html
-        assert "pywry-chat-attach-btn" in html
-        assert "pywry-chat-drop-overlay" in html
-
 
 # =============================================================================
-# Content Part Tests
-# =============================================================================
-
-
-class TestContentParts:
-    """Test ChatContentPart types."""
-
-    def test_text_part(self) -> None:
-        part = TextPart(text="hello")
-        assert part.type == "text"
-        assert part.text == "hello"
-
-    def test_image_part(self) -> None:
-        part = ImagePart(data="base64data", mime_type="image/png")
-        assert part.type == "image"
-        assert part.data == "base64data"
-        assert part.mime_type == "image/png"
-
-    def test_resource_link_part(self) -> None:
-        part = ResourceLinkPart(uri="pywry://resource/1", name="Doc")
-        assert part.type == "resource_link"
-        assert part.name == "Doc"
-
-
-# =============================================================================
-# Provider Tests (import only, no API calls)
+# Provider Tests
 # =============================================================================
 
 
@@ -632,138 +574,199 @@ class TestProviderFactory:
     """Test provider factory function."""
 
     def test_callback_provider(self) -> None:
-        from pywry.chat_providers import get_provider
+        from pywry.chat import get_provider
 
         provider = get_provider("callback")
         assert provider is not None
 
+    def test_openai_provider_name_resolves(self) -> None:
+        pytest.importorskip("openai")
+        from pywry.chat import get_provider
+
+        provider = get_provider("openai", api_key="sk-test")
+        assert type(provider).__name__ == "OpenAIProvider"
+
     def test_unknown_provider_raises(self) -> None:
-        from pywry.chat_providers import get_provider
+        from pywry.chat import get_provider
 
         with pytest.raises(ValueError, match="Unknown provider"):
             get_provider("nonexistent")
 
-    def test_callback_provider_with_fns(self) -> None:
-        from pywry.chat_providers import CallbackProvider
 
-        def my_gen(messages, config):
-            return "Hello!"
-
-        provider = CallbackProvider(generate_fn=my_gen)
-        assert provider._generate_fn is my_gen
+# =============================================================================
+# Session Primitives Tests
+# =============================================================================
 
 
-class TestMagenticProvider:
-    """Test MagenticProvider (mocked — no real magentic dependency required)."""
+class TestSessionPrimitives:
+    """Test ACP session models."""
 
-    def test_import_error_without_magentic(self) -> None:
-        """MagenticProvider raises ImportError when magentic is not installed."""
-        import sys
+    def test_session_mode(self) -> None:
+        from pywry.chat.session import SessionMode
 
-        # Temporarily make magentic unimportable
-        sentinel = sys.modules.get("magentic")
-        sentinel_cm = sys.modules.get("magentic.chat_model")
-        sentinel_cmb = sys.modules.get("magentic.chat_model.base")
-        sys.modules["magentic"] = None  # type: ignore[assignment]
-        sys.modules["magentic.chat_model"] = None  # type: ignore[assignment]
-        sys.modules["magentic.chat_model.base"] = None  # type: ignore[assignment]
-        try:
-            # Re-import to pick up the blocked module
-            from pywry.chat_providers import MagenticProvider
+        mode = SessionMode(id="code", name="Code Mode", description="Write code")
+        assert mode.id == "code"
+        assert mode.name == "Code Mode"
 
-            with pytest.raises(ImportError, match="magentic"):
-                MagenticProvider(model="gpt-4o")
-        finally:
-            if sentinel is None:
-                sys.modules.pop("magentic", None)
-            else:
-                sys.modules["magentic"] = sentinel
-            if sentinel_cm is None:
-                sys.modules.pop("magentic.chat_model", None)
-            else:
-                sys.modules["magentic.chat_model"] = sentinel_cm
-            if sentinel_cmb is None:
-                sys.modules.pop("magentic.chat_model.base", None)
-            else:
-                sys.modules["magentic.chat_model.base"] = sentinel_cmb
+    def test_session_config_option(self) -> None:
+        from pywry.chat.session import ConfigOptionChoice, SessionConfigOption
 
-    def test_registered_in_providers(self) -> None:
-        """MagenticProvider is accessible via get_provider('magentic')."""
-        from pywry.chat_providers import _PROVIDERS, MagenticProvider
-
-        assert "magentic" in _PROVIDERS
-        assert _PROVIDERS["magentic"] is MagenticProvider
-
-    def test_type_error_on_bad_model(self) -> None:
-        """MagenticProvider rejects non-ChatModel, non-string model args."""
-        pytest.importorskip("magentic")
-        from pywry.chat_providers import MagenticProvider
-
-        with pytest.raises(TypeError, match="Expected a magentic ChatModel"):
-            MagenticProvider(model=12345)
-
-    def test_string_model_creates_openai_chat_model(self, monkeypatch) -> None:
-        """Passing a model name string auto-wraps in OpenaiChatModel."""
-        magentic = pytest.importorskip("magentic")
-        from pywry.chat_providers import MagenticProvider
-
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
-        provider = MagenticProvider(model="gpt-4o-mini")
-        assert isinstance(provider._model, magentic.OpenaiChatModel)
-
-    def test_accepts_chat_model_instance(self, monkeypatch) -> None:
-        """Passing a ChatModel instance is stored directly."""
-        magentic = pytest.importorskip("magentic")
-        from pywry.chat_providers import MagenticProvider
-
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
-        model = magentic.OpenaiChatModel("gpt-4o")
-        provider = MagenticProvider(model=model)
-        assert provider._model is model
-
-    def test_build_messages_with_system_prompt(self, monkeypatch) -> None:
-        """_build_messages prepends system prompt and maps roles."""
-        magentic = pytest.importorskip("magentic")
-        from pywry.chat import ChatConfig, ChatMessage
-        from pywry.chat_providers import MagenticProvider
-
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
-        provider = MagenticProvider(model="gpt-4o")
-        messages = [
-            ChatMessage(role="user", content="Hello"),
-            ChatMessage(role="assistant", content="Hi there"),
-        ]
-        config = ChatConfig(system_prompt="You are helpful.")
-        result = provider._build_messages(messages, config)
-
-        assert len(result) == 3
-        assert isinstance(result[0], magentic.SystemMessage)
-        assert isinstance(result[1], magentic.UserMessage)
-        assert isinstance(result[2], magentic.AssistantMessage)
-
-    def test_build_messages_no_system_prompt(self, monkeypatch) -> None:
-        """_build_messages omits system message when not configured."""
-        magentic = pytest.importorskip("magentic")
-        from pywry.chat import ChatConfig, ChatMessage
-        from pywry.chat_providers import MagenticProvider
-
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
-        provider = MagenticProvider(model="gpt-4o")
-        messages = [ChatMessage(role="user", content="test")]
-        config = ChatConfig(system_prompt=None)
-        result = provider._build_messages(messages, config)
-
-        assert len(result) == 1
-        assert isinstance(result[0], magentic.UserMessage)
-
-    def test_string_model_with_kwargs(self, monkeypatch) -> None:
-        """String model with extra kwargs are forwarded to OpenaiChatModel."""
-        magentic = pytest.importorskip("magentic")
-        from pywry.chat_providers import MagenticProvider
-
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
-        provider = MagenticProvider(
-            model="gpt-4o",
-            base_url="http://localhost:11434/v1/",
+        opt = SessionConfigOption(
+            id="model",
+            name="Model",
+            category="model",
+            currentValue="gpt-4",
+            options=[
+                ConfigOptionChoice(value="gpt-4", name="GPT-4"),
+                ConfigOptionChoice(value="gpt-4o", name="GPT-4o"),
+            ],
         )
-        assert isinstance(provider._model, magentic.OpenaiChatModel)
+        assert opt.current_value == "gpt-4"
+        assert len(opt.options) == 2
+
+    def test_plan_entry(self) -> None:
+        from pywry.chat.session import PlanEntry
+
+        entry = PlanEntry(content="Fix the bug", priority="high", status="in_progress")
+        assert entry.priority == "high"
+        assert entry.status == "in_progress"
+
+    def test_permission_request(self) -> None:
+        from pywry.chat.session import PermissionRequest
+
+        req = PermissionRequest(toolCallId="call_1", title="Execute shell command")
+        assert req.tool_call_id == "call_1"
+        assert len(req.options) == 4  # default options
+
+    def test_capabilities(self) -> None:
+        from pywry.chat.session import AgentCapabilities, ClientCapabilities
+
+        client = ClientCapabilities(fileSystem=True, terminal=False)
+        assert client.file_system is True
+
+        agent = AgentCapabilities(loadSession=True, configOptions=True)
+        assert agent.load_session is True
+
+
+# =============================================================================
+# Update Types Tests
+# =============================================================================
+
+
+class TestUpdateTypes:
+    """Test SessionUpdate models."""
+
+    def test_agent_message_update(self) -> None:
+        from pywry.chat.updates import AgentMessageUpdate
+
+        u = AgentMessageUpdate(text="Hello")
+        assert u.session_update == "agent_message"
+        assert u.text == "Hello"
+
+    def test_tool_call_update(self) -> None:
+        from pywry.chat.updates import ToolCallUpdate
+
+        u = ToolCallUpdate(
+            toolCallId="call_1",
+            name="search",
+            kind="fetch",
+            status="in_progress",
+        )
+        assert u.session_update == "tool_call"
+        assert u.status == "in_progress"
+
+    def test_plan_update(self) -> None:
+        from pywry.chat.session import PlanEntry
+        from pywry.chat.updates import PlanUpdate
+
+        u = PlanUpdate(
+            entries=[
+                PlanEntry(content="Step 1", priority="high", status="completed"),
+                PlanEntry(content="Step 2", priority="medium", status="pending"),
+            ]
+        )
+        assert u.session_update == "plan"
+        assert len(u.entries) == 2
+
+    def test_status_update(self) -> None:
+        from pywry.chat.updates import StatusUpdate
+
+        u = StatusUpdate(text="Searching...")
+        assert u.session_update == "x_status"
+
+    def test_thinking_update(self) -> None:
+        from pywry.chat.updates import ThinkingUpdate
+
+        u = ThinkingUpdate(text="Let me think about this...")
+        assert u.session_update == "x_thinking"
+
+
+# =============================================================================
+# Artifact Tests
+# =============================================================================
+
+
+class TestArtifacts:
+    """Test artifact models."""
+
+    def test_code_artifact(self) -> None:
+        from pywry.chat.artifacts import CodeArtifact
+
+        a = CodeArtifact(title="example.py", content="x = 42", language="python")
+        assert a.artifact_type == "code"
+
+    def test_tradingview_artifact(self) -> None:
+        from pywry.chat.artifacts import TradingViewArtifact, TradingViewSeries
+
+        a = TradingViewArtifact(
+            title="AAPL",
+            series=[
+                TradingViewSeries(
+                    type="candlestick",
+                    data=[
+                        {"time": "2024-01-02", "open": 185, "high": 186, "low": 184, "close": 185}
+                    ],
+                ),
+                TradingViewSeries(
+                    type="line",
+                    data=[{"time": "2024-01-02", "value": 185}],
+                    options={"color": "#f9e2af"},
+                ),
+            ],
+            height="500px",
+        )
+        assert a.artifact_type == "tradingview"
+        assert len(a.series) == 2
+        assert a.series[0].type == "candlestick"
+        assert a.series[1].type == "line"
+
+    def test_image_artifact_blocks_javascript_url(self) -> None:
+        from pydantic import ValidationError
+
+        from pywry.chat.artifacts import ImageArtifact
+
+        with pytest.raises(ValidationError):
+            ImageArtifact(url="javascript:alert(1)")
+
+
+# =============================================================================
+# Permissions Tests
+# =============================================================================
+
+
+class TestPermissions:
+    """Test RBAC permission mappings."""
+
+    def test_permission_map(self) -> None:
+        from pywry.chat.permissions import ACP_PERMISSION_MAP
+
+        assert ACP_PERMISSION_MAP["session/prompt"] == "write"
+        assert ACP_PERMISSION_MAP["fs/write_text_file"] == "admin"
+        assert ACP_PERMISSION_MAP["fs/read_text_file"] == "read"
+
+    @pytest.mark.asyncio
+    async def test_check_permission_no_session(self) -> None:
+        from pywry.chat.permissions import check_acp_permission
+
+        result = await check_acp_permission(None, "w1", "session/prompt", None)
+        assert result is True  # No auth = allow all

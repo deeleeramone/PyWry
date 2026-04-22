@@ -653,27 +653,160 @@ function _tvSetupLegendControls(chartId) {
     }
 
     function _legendDisableVolume() {
-        if (typeof window._tvBuildCurrentSettings === 'function' && typeof window._tvApplySettingsToChart === 'function') {
-            var settings = window._tvBuildCurrentSettings(entry);
-            settings['Volume'] = false;
-            window._tvApplySettingsToChart(chartId, entry, settings);
-        } else {
-            var volSeries = entry.volumeMap && entry.volumeMap.main ? entry.volumeMap.main : null;
-            if (volSeries) {
-                try { entry.chart.removeSeries(volSeries); } catch (e) {}
-                delete entry.volumeMap.main;
+        var volSeries = entry.volumeMap && entry.volumeMap.main ? entry.volumeMap.main : null;
+        if (!volSeries) {
+            legendUiState.volumeHidden = false;
+            if (volRowEl) volRowEl.style.display = 'none';
+            return;
+        }
+
+        var removedPane = -1;
+        if (entry._volumePaneBySeries && entry._volumePaneBySeries.main != null) {
+            removedPane = entry._volumePaneBySeries.main;
+        }
+
+        try { entry.chart.removeSeries(volSeries); } catch (_e) {}
+        delete entry.volumeMap.main;
+        if (entry._volumePaneBySeries) delete entry._volumePaneBySeries.main;
+
+        if (removedPane > 0 && entry.chart && typeof entry.chart.removePane === 'function') {
+            var paneStillUsed = false;
+            if (entry._volumePaneBySeries) {
+                var volKeys = Object.keys(entry._volumePaneBySeries);
+                for (var vk = 0; vk < volKeys.length; vk++) {
+                    if (entry._volumePaneBySeries[volKeys[vk]] === removedPane) { paneStillUsed = true; break; }
+                }
+            }
+            if (!paneStillUsed && typeof _activeIndicators === 'object') {
+                var indKeys = Object.keys(_activeIndicators);
+                for (var ik = 0; ik < indKeys.length; ik++) {
+                    var ai = _activeIndicators[indKeys[ik]];
+                    if (ai && ai.chartId === chartId && ai.paneIndex === removedPane) { paneStillUsed = true; break; }
+                }
+            }
+            if (!paneStillUsed) {
+                var paneRemoved = false;
+                try { entry.chart.removePane(removedPane); paneRemoved = true; } catch (_e2) {
+                    try {
+                        if (typeof entry.chart.panes === 'function') {
+                            var paneObj = entry.chart.panes()[removedPane];
+                            if (paneObj) { entry.chart.removePane(paneObj); paneRemoved = true; }
+                        }
+                    } catch (_e3) {}
+                }
+                if (paneRemoved) {
+                    if (entry._volumePaneBySeries) {
+                        var vk2 = Object.keys(entry._volumePaneBySeries);
+                        for (var vi = 0; vi < vk2.length; vi++) {
+                            if (entry._volumePaneBySeries[vk2[vi]] > removedPane) {
+                                entry._volumePaneBySeries[vk2[vi]] -= 1;
+                            }
+                        }
+                    }
+                    if (typeof _activeIndicators === 'object') {
+                        var iks = Object.keys(_activeIndicators);
+                        for (var ii = 0; ii < iks.length; ii++) {
+                            var aii = _activeIndicators[iks[ii]];
+                            if (aii && aii.chartId === chartId && aii.isSubplot && aii.paneIndex > removedPane) {
+                                aii.paneIndex -= 1;
+                            }
+                        }
+                    }
+                    if (entry._nextPane && entry._nextPane > 1) entry._nextPane -= 1;
+                }
             }
         }
+
+        if (typeof _tvEnforceMainScaleDividerClearance === 'function') {
+            try { _tvEnforceMainScaleDividerClearance(entry, 0.1, 0.08); } catch (_e4) {}
+        }
+
+        entry._paneState = { mode: 'normal', pane: -1 };
+        delete entry._savedPaneHeights;
+
         legendUiState.volumeHidden = false;
+        if (volRowEl) volRowEl.style.display = 'none';
+
+        if (typeof window._tvBuildCurrentSettings === 'function' && typeof window._tvApplySettingsToChart === 'function') {
+            try {
+                var settings = window._tvBuildCurrentSettings(entry);
+                settings['Volume'] = false;
+                window._tvApplySettingsToChart(chartId, entry, settings);
+            } catch (_e5) {}
+        }
+
+        if (typeof _tvRebuildIndicatorLegend === 'function') {
+            try { _tvRebuildIndicatorLegend(chartId); } catch (_e6) {}
+        }
+
+        try { window.dispatchEvent(new CustomEvent('pywry:legend-refresh', { detail: { chartId: chartId } })); } catch (_e7) {}
     }
 
     function _legendEnableVolume() {
-        if (typeof window._tvBuildCurrentSettings === 'function' && typeof window._tvApplySettingsToChart === 'function') {
-            var settings = window._tvBuildCurrentSettings(entry);
-            settings['Volume'] = true;
-            window._tvApplySettingsToChart(chartId, entry, settings);
+        if (entry.volumeMap && entry.volumeMap.main) {
+            try { entry.volumeMap.main.applyOptions({ visible: true }); } catch (_e) {}
+            legendUiState.volumeHidden = false;
+            if (volRowEl) volRowEl.style.display = 'flex';
+            return;
         }
+
+        if (typeof _tvBuildVolumeOptions !== 'function' ||
+            typeof _tvExtractVolumeFromBars !== 'function' ||
+            typeof _tvAddSeriesCompat !== 'function' ||
+            typeof _tvReserveVolumePane !== 'function') {
+            return;
+        }
+
+        var payload = entry.payload || {};
+        var seriesDesc = (payload.series && payload.series[0]) ? payload.series[0] : payload;
+        var bars = entry._rawData;
+        if (!bars && entry._seriesRawData && entry._seriesRawData.main) bars = entry._seriesRawData.main;
+        if (!bars && seriesDesc && seriesDesc.bars) bars = seriesDesc.bars;
+        if (!Array.isArray(bars) || bars.length === 0) return;
+
+        var theme = entry.theme || (typeof _tvDetectTheme === 'function' ? _tvDetectTheme() : 'dark');
+        var explicitVol = (seriesDesc && seriesDesc.volume && seriesDesc.volume.length > 0) ? seriesDesc.volume : null;
+        var volData = explicitVol || _tvExtractVolumeFromBars(bars, theme, entry);
+        if (!volData || volData.length === 0) return;
+
+        var volOptions = _tvBuildVolumeOptions(seriesDesc || {}, theme);
+        if (typeof _tvRegisterCustomPriceScaleId === 'function') {
+            try { _tvRegisterCustomPriceScaleId(entry, volOptions.priceScaleId); } catch (_e2) {}
+        }
+        var vPaneIndex = _tvReserveVolumePane(entry, 'main');
+        var volSeries;
+        try {
+            volSeries = _tvAddSeriesCompat(entry.chart, 'Histogram', volOptions, vPaneIndex);
+        } catch (_e3) { return; }
+        try { volSeries.setData(volData); } catch (_e4) {}
+        entry.volumeMap.main = volSeries;
+
+        if (typeof _tvApplyDefaultVolumePaneHeight === 'function') {
+            try { _tvApplyDefaultVolumePaneHeight(entry, vPaneIndex); } catch (_e5) {}
+        }
+        if (typeof _tvEnforceMainScaleDividerClearance === 'function') {
+            try { _tvEnforceMainScaleDividerClearance(entry, 0.1, 0.08); } catch (_e6) {}
+        }
+
+        entry._paneState = { mode: 'normal', pane: -1 };
+        delete entry._savedPaneHeights;
+
         legendUiState.volumeHidden = false;
+        if (volRowEl) volRowEl.style.display = 'flex';
+
+        if (typeof window._tvBuildCurrentSettings === 'function' && typeof window._tvApplySettingsToChart === 'function') {
+            try {
+                var settings = window._tvBuildCurrentSettings(entry);
+                settings['Volume'] = true;
+                window._tvApplySettingsToChart(chartId, entry, settings);
+            } catch (_e7) {}
+        }
+
+        if (typeof _tvRebuildIndicatorLegend === 'function') {
+            try { _tvRebuildIndicatorLegend(chartId); } catch (_e8) {}
+        }
+
+        try { window.dispatchEvent(new CustomEvent('pywry:legend-refresh', { detail: { chartId: chartId } })); } catch (_e9) {}
     }
 
     function _legendSetDatasetFlag(key, enabled) {
@@ -743,6 +876,7 @@ function _tvSetupLegendControls(chartId) {
         var sessionPre = String(info.session_premarket || '').trim();
         var sessionReg = String(info.session_regular || '').trim();
         var sessionPost = String(info.session_postmarket || '').trim();
+        var sessionOvernight = String(info.session_overnight || '').trim();
 
         var sessionSchedule = info.session_schedule || null;
 
@@ -808,8 +942,38 @@ function _tvSetupLegendControls(chartId) {
             if (sessionReg) addWindow(sessionReg, 'regular', weekdays);
             if (sessionPost) addWindow(sessionPost, 'post', weekdays);
 
+            // Overnight window (e.g. 20:00-04:00 for Blue Ocean ATS).
+            // Wraps midnight so the "2000-0400" string fails the usual
+            // HHMM-HHMM addWindow(); split it into an evening segment
+            // (post-market close → 24:00) and a next-day early segment
+            // (00:00 → pre-market open).  The evening segment attaches
+            // to each weekday + Sunday (Sun 20:00 is the start of Mon's
+            // overnight); the early segment attaches to Mon-Fri + Sat
+            // (Fri's overnight carries into Sat 04:00... actually no —
+            // Fri post-market is the session's last piece; overnight
+            // only runs before trading days.  Use Mon-Fri for both ends
+            // plus Sun 2000-2400, matching real Blue Ocean ATS hours).
+            if (sessionOvernight) {
+                var oParts = sessionOvernight.split('-');
+                if (oParts.length === 2) {
+                    var oStart = _parseHHMM(oParts[0]);
+                    var oEnd = _parseHHMM(oParts[1]);
+                    if (!isNaN(oStart) && !isNaN(oEnd) && oEnd <= oStart) {
+                        var eveningStr = oParts[0] + '-2400';
+                        var earlyStr = '0000-' + oParts[1];
+                        // Evening leg: Sun-Thu (each "pre-Mon/Tue/.../Fri overnight")
+                        addWindow(eveningStr, 'overnight', ['SUN', 'MON', 'TUE', 'WED', 'THU']);
+                        // Early leg: Mon-Fri (morning continuation of prior day's overnight)
+                        addWindow(earlyStr, 'overnight', weekdays);
+                    } else if (!isNaN(oStart) && !isNaN(oEnd) && oEnd > oStart) {
+                        // Doesn't wrap — treat like any other window.
+                        addWindow(sessionOvernight, 'overnight', weekdays);
+                    }
+                }
+            }
+
             // Fallback: parse the combined session string if no separate parts
-            if (!sessionPre && !sessionReg && !sessionPost) {
+            if (!sessionPre && !sessionReg && !sessionPost && !sessionOvernight) {
                 var segments = rawSession.split(',');
                 for (var si = 0; si < segments.length; si++) {
                     addWindow(segments[si].trim(), 'regular', weekdays);
@@ -821,6 +985,7 @@ function _tvSetupLegendControls(chartId) {
         function _sessionColorForKind(kind) {
             if (kind === 'pre') return _dimColor;
             if (kind === 'post') return _dimColor;
+            if (kind === 'overnight') return _dimColor;
             return _activeColor;
         }
 

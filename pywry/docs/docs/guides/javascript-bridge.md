@@ -33,7 +33,8 @@ In Python, register a callback for the event:
 
 ```python
 def on_save(data, event_type, label):
-    print(f"Saving ID {data['id']} from window {label}")
+    record_id = data["id"]
+    app.emit("pywry:set-content", {"id": "status", "text": f"Saved {record_id}"}, label)
 
 handle = app.show(html, callbacks={"app:save": on_save})
 ```

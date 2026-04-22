@@ -40,7 +40,7 @@ from typing import Any
 import pytest
 
 from pywry.chat import MAX_CONTENT_LENGTH, ChatMessage, ChatThread
-from pywry.chat_manager import ChatManager
+from pywry.chat.manager import ChatManager
 from pywry.state.memory import MemoryChatStore
 
 

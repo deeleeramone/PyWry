@@ -14,9 +14,9 @@ html.dark,
     --pywry-tvchart-hover: #17191f;
     --pywry-tvchart-active-bg: rgba(41, 98, 255, 0.16);
     --pywry-tvchart-active-text: #2962ff;
-    --pywry-tvchart-text: #d1d4dc;
-    --pywry-tvchart-text-muted: #aeb4c2;
-    --pywry-tvchart-text-dim: #787b86;
+    --pywry-tvchart-text: #e6e9f0;
+    --pywry-tvchart-text-muted: #c4c9d4;
+    --pywry-tvchart-text-dim: #a3a8b5;
     --pywry-tvchart-grid: rgba(255, 255, 255, 0.05);
     --pywry-tvchart-crosshair: #758696;
     --pywry-tvchart-crosshair-label-bg: #1b1f27;
@@ -42,6 +42,23 @@ html.dark,
     --pywry-tvchart-baseline-top-fill2: rgba(8, 153, 129, 0.05);
     --pywry-tvchart-baseline-bottom-fill1: rgba(242, 54, 69, 0.05);
     --pywry-tvchart-baseline-bottom-fill2: rgba(242, 54, 69, 0.28);
+    /* Chart style patch values — used by _tvResolveChartStyle() in JS to
+       build the optionPatch for style switches.  Defined as CSS vars so
+       themes stay the source of truth (and a future theme could, say,
+       tint the hollow body rather than make it fully transparent). */
+    --pywry-tvchart-hollow-up-body: rgba(0, 0, 0, 0);
+    --pywry-tvchart-hidden: rgba(0, 0, 0, 0);
+    /* Price line (right-axis horizontal marker) — kept on its own selector
+       so styles that override upColor/downColor (e.g. Hollow candles'
+       transparent up-body) don't erase the price line too.  Default to the
+       theme's up color. */
+    --pywry-tvchart-price-line: #089981;
+    /* Settings-dialog defaults for series that don't ship with explicit
+       colors (line, area, baseline fills).  Keeping them here means a
+       theme change recolors the "Reset" state of the dialog. */
+    --pywry-tvchart-line-default: #4c87ff;
+    --pywry-tvchart-area-top-default: #4c87ff;
+    --pywry-tvchart-area-bottom-default: #10223f;
     --pywry-bg-primary: #0a0a0d;
     --pywry-bg-secondary: #0a0a0d;
     --pywry-bg-hover: #17191f;
@@ -85,6 +102,22 @@ html.dark,
     /* Session breaks and crosshair */
     --pywry-tvchart-session-breaks: #4c87ff;
     --pywry-tvchart-crosshair-color: rgba(235, 180, 194, 0.8);
+    /* Volume Profile (VPVR / VPFR) — deliberately blue/violet so the
+       histogram doesn't camouflage the green/red candles, with a low
+       fill opacity so price action stays readable through it. */
+    --pywry-tvchart-vp-up: rgba(95, 145, 255, 0.28);
+    --pywry-tvchart-vp-down: rgba(220, 110, 220, 0.28);
+    --pywry-tvchart-vp-va-up: rgba(95, 145, 255, 0.50);
+    --pywry-tvchart-vp-va-down: rgba(220, 110, 220, 0.50);
+    --pywry-tvchart-vp-poc: rgba(243, 193, 39, 0.85);
+    /* Indicator multi-plot palette (MACD / Stoch / ADX / Aroon / Ichimoku / KC / SAR) */
+    --pywry-tvchart-ind-primary: #4c87ff;
+    --pywry-tvchart-ind-secondary: #f3c127;
+    --pywry-tvchart-ind-tertiary: #9598a1;
+    --pywry-tvchart-ind-positive: #089981;
+    --pywry-tvchart-ind-negative: #f23645;
+    --pywry-tvchart-ind-positive-dim: rgba(8, 153, 129, 0.6);
+    --pywry-tvchart-ind-negative-dim: rgba(242, 54, 69, 0.6);
 }
 
 html.light,
@@ -97,9 +130,12 @@ html.light,
     --pywry-tvchart-hover: #edf2f7;
     --pywry-tvchart-active-bg: rgba(41, 98, 255, 0.12);
     --pywry-tvchart-active-text: #2962ff;
-    --pywry-tvchart-text: #1c2430;
-    --pywry-tvchart-text-muted: #5a6472;
-    --pywry-tvchart-text-dim: #7b8796;
+    /* Contrast-heavy text palette: the chart sits on pure #ffffff, so
+       text needs to land well above WCAG AA to feel crisp rather than
+       "technically readable".  text: 18.1:1, muted: 11.1:1, dim: 8.1:1. */
+    --pywry-tvchart-text: #050912;
+    --pywry-tvchart-text-muted: #1f2530;
+    --pywry-tvchart-text-dim: #4a5160;
     --pywry-tvchart-grid: rgba(197, 203, 206, 0.5);
     --pywry-tvchart-crosshair: #9598a1;
     --pywry-tvchart-crosshair-label-bg: #e1ecf2;
@@ -125,6 +161,19 @@ html.light,
     --pywry-tvchart-baseline-top-fill2: rgba(38, 166, 154, 0.05);
     --pywry-tvchart-baseline-bottom-fill1: rgba(239, 83, 80, 0.05);
     --pywry-tvchart-baseline-bottom-fill2: rgba(239, 83, 80, 0.28);
+    /* Chart style patch values — used by _tvResolveChartStyle() in JS to
+       build the optionPatch for style switches.  Defined as CSS vars so
+       themes stay the source of truth. */
+    --pywry-tvchart-hollow-up-body: rgba(0, 0, 0, 0);
+    --pywry-tvchart-hidden: rgba(0, 0, 0, 0);
+    /* Price line (right-axis horizontal marker) — kept on its own selector
+       so Hollow candles' transparent up-body doesn't erase the price line. */
+    --pywry-tvchart-price-line: #26a69a;
+    /* Settings-dialog defaults for series that don't ship with explicit
+       colors (line, area, baseline fills). */
+    --pywry-tvchart-line-default: #2962ff;
+    --pywry-tvchart-area-top-default: #2962ff;
+    --pywry-tvchart-area-bottom-default: #e3ecff;
     --pywry-tvchart-selected-bg: #1f2937;
     --pywry-tvchart-selected-text: #ffffff;
     --pywry-tvchart-overlay: rgba(245, 248, 252, 0.64);
@@ -165,6 +214,20 @@ html.light,
     /* Session breaks and crosshair */
     --pywry-tvchart-session-breaks: #4c87ff;
     --pywry-tvchart-crosshair-color: #9598a1;
+    /* Volume Profile (VPVR / VPFR) — different hue from candles + low opacity. */
+    --pywry-tvchart-vp-up: rgba(41, 98, 255, 0.22);
+    --pywry-tvchart-vp-down: rgba(180, 70, 200, 0.22);
+    --pywry-tvchart-vp-va-up: rgba(41, 98, 255, 0.45);
+    --pywry-tvchart-vp-va-down: rgba(180, 70, 200, 0.45);
+    --pywry-tvchart-vp-poc: rgba(31, 41, 55, 0.85);
+    /* Indicator multi-plot palette */
+    --pywry-tvchart-ind-primary: #2962ff;
+    --pywry-tvchart-ind-secondary: #f09614;
+    --pywry-tvchart-ind-tertiary: #6b7280;
+    --pywry-tvchart-ind-positive: #26a69a;
+    --pywry-tvchart-ind-negative: #ef5350;
+    --pywry-tvchart-ind-positive-dim: rgba(38, 166, 154, 0.6);
+    --pywry-tvchart-ind-negative-dim: rgba(239, 83, 80, 0.6);
 }
 
 .pywry-icon-btn {
@@ -489,7 +552,7 @@ html.light,
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.6px;
-    color: var(--pywry-tvchart-muted, #787b86);
+    color: var(--pywry-tvchart-text-muted);
     text-transform: uppercase;
 }
 
@@ -534,7 +597,7 @@ html.light,
 
 .pywry-tool-flyout-shortcut {
     font-size: 11px;
-    color: var(--pywry-tvchart-muted, #787b86);
+    color: var(--pywry-tvchart-text-muted);
     margin-left: auto;
     padding-left: 16px;
 }
@@ -579,15 +642,15 @@ html.light,
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 .tvchart-bottom-btn:hover {
-    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.08));
+    background: var(--pywry-tvchart-hover);
     border-color: var(--pywry-tvchart-border, rgba(255,255,255,0.12));
     color: var(--pywry-tvchart-text);
 }
 .tvchart-bottom-btn:active {
-    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.12));
+    background: var(--pywry-tvchart-active-bg);
 }
 .tvchart-bottom-btn.active {
-    color: var(--pywry-tvchart-accent, #2962FF);
+    color: var(--pywry-tvchart-active-text);
 }
 .tvchart-bottom-btn-caret {
     opacity: 0.6;
@@ -615,7 +678,7 @@ html.light,
     font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
     font-weight: 700;
     color: var(--pywry-tvchart-text-muted);
-    background: var(--pywry-tvchart-btn-bg, rgba(255,255,255,0.04));
+    background: transparent;
     border: none;
     cursor: pointer;
     padding: 2px 8px;
@@ -628,15 +691,15 @@ html.light,
     transition: background 0.12s ease, color 0.12s ease;
 }
 .tvchart-scale-btn:hover {
-    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.08));
+    background: var(--pywry-tvchart-hover);
     color: var(--pywry-tvchart-text);
 }
 .tvchart-scale-btn:active {
-    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.12));
+    background: var(--pywry-tvchart-active-bg);
 }
 .tvchart-scale-btn.active {
     color: var(--pywry-tvchart-text);
-    background: var(--pywry-tvchart-btn-active-bg, rgba(255,255,255,0.12));
+    background: var(--pywry-tvchart-active-bg);
 }
 
 /* Timezone dropdown menu */
@@ -682,10 +745,10 @@ html.light,
     white-space: nowrap;
 }
 .tvchart-tz-menu-item:hover {
-    background: var(--pywry-tvchart-btn-hover, rgba(255,255,255,0.08));
+    background: var(--pywry-tvchart-hover);
 }
 .tvchart-tz-menu-item.selected {
-    color: var(--pywry-tvchart-accent, #2962FF);
+    color: var(--pywry-tvchart-active-text);
 }
 .tvchart-tz-menu-item .tz-check {
     width: 16px;
@@ -735,8 +798,8 @@ html.light,
     left: 8px;
     z-index: 10;
     font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
-    font-size: 12px;
-    line-height: 1.35;
+    font-size: 13px;
+    line-height: 1.4;
     color: var(--pywry-tvchart-text);
     pointer-events: none;
     white-space: normal;
@@ -806,8 +869,8 @@ html.light,
     border-radius: 6px;
     background: var(--pywry-tvchart-legend-bg);
     box-sizing: border-box;
-    font-weight: 400;
-    font-size: 11px;
+    font-weight: 500;
+    font-size: 13px;
     color: var(--pywry-tvchart-text);
     letter-spacing: 0;
     max-width: fit-content;
@@ -816,7 +879,7 @@ html.light,
 
 .tvchart-legend-ohlc {
     display: inline-block;
-    font-size: 12px;
+    font-size: 13px;
     vertical-align: middle;
     white-space: nowrap;
 }
@@ -824,7 +887,7 @@ html.light,
 .tvchart-legend-vol {
     display: inline-block;
     color: var(--pywry-tvchart-text);
-    font-size: 11px;
+    font-size: 13px;
     margin-left: 2px;
     white-space: nowrap;
 }
@@ -865,8 +928,8 @@ html.light,
     left: 8px;
     z-index: 10;
     font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, sans-serif;
-    font-size: 11px;
-    line-height: 1.35;
+    font-size: 13px;
+    line-height: 1.4;
     color: var(--pywry-tvchart-text);
     pointer-events: none;
     white-space: normal;
@@ -877,7 +940,7 @@ html.light,
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 11px;
+    font-size: 13px;
     line-height: 20px;
     pointer-events: auto;
 }
@@ -2426,7 +2489,7 @@ html.light,
 }
 
 .ts-line-style-btn.active {
-    background: color-mix(in srgb, var(--pywry-tvchart-accent) 25%, var(--pywry-tvchart-panel-bg-strong) 75%);
+    background: color-mix(in srgb, var(--pywry-tvchart-active-text) 25%, var(--pywry-tvchart-panel-bg-strong) 75%);
     color: var(--pywry-tvchart-text);
 }
 

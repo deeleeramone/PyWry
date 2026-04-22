@@ -45,22 +45,21 @@ select = [
 ]
 
 ignore = [
-    "E501",
-    "D100",
-    "D104",
-    "D105",
-    "D107",
-    "D203",
-    "D213",
-    "S101",
-    "TRY003",
-    "PLR0913",
-    "PLR2004",
-    "D401",
-    "B008",
-    "N818",
-    "PERF203",
-    "PLC0415",
+    "E501",     # line-length — handled by `line-length = 100`
+    "D100",     # missing docstring in public module
+    "D104",     # missing docstring in public package
+    "D105",     # missing docstring in magic method
+    "D107",     # missing docstring in __init__
+    "D203",     # 1 blank line before class docstring (conflicts with D211)
+    "D213",     # multi-line summary should start at the second line (conflicts with D212)
+    "TRY003",   # long messages outside exception class
+    "PLR0913",  # too many arguments — relaxed for Pydantic constructors
+    "PLR2004",  # magic value used in comparison
+    "D401",     # first-line imperative mood
+    "B008",     # function call in argument defaults — Pydantic Field()
+    "N818",     # exception name must end with Error (we follow stdlib naming)
+    "PERF203",  # try/except in a loop is intentional in a few dispatch paths
+    "PLC0415",  # import-outside-toplevel — used for lazy optional imports
 ]
 
 fixable = ["ALL"]
@@ -73,22 +72,35 @@ unfixable = [
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.per-file-ignores]
+# Rule ignores below are deliberately scoped to the test suite so they
+# can't mask real issues in shipped code.  Each entry explains why the
+# rule is inappropriate under ``tests/`` specifically.
 "tests/**/*.py" = [
-    "S101",
-    "D",
-    "PLR2004",
-    "S104",
-    "S105",
-    "S106",
-    "S310",
-    "ARG",
-    "ASYNC240",
+    "S101",     # `assert` is the primary test mechanism
+    "D",        # pydocstyle rules do not apply to test fixtures / cases
+    "PLR2004",  # magic numbers are expected in assertions
+    "S104",     # binding to 0.0.0.0 in integration tests (testcontainers, etc.)
+    "S105",     # hard-coded "password" / secret fixtures
+    "S106",     # hard-coded passwords in test kwargs (e.g. OAuth fixtures)
+    "S108",     # hard-coded /tmp paths in fixtures
+    "S310",     # unverified urllib calls against fixture URLs
+    "ARG",      # unused fixture / mock arguments are idiomatic in pytest
+    "ASYNC240", # deliberately blocking calls in async tests (e.g. assertions)
+    "PERF401",  # readability beats micro-optimisation in tests
 ]
 
 "__init__.py" = [
     "E402",
     "F401",
     "D104",
+]
+
+"pywry/chat/providers/callback.py" = [
+    "TC003",
+]
+
+"pywry/state/sqlite.py" = [
+    "D102",
 ]
 
 "pywry/__main__.py" = [

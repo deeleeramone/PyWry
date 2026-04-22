@@ -49,7 +49,7 @@ def _read_chart_template_state(label: str) -> dict | None:
     - fontFamily: str - the rendered font family (if set)
     - storedDark: bool - whether __pywry_user_template_dark__ is on the div
     - storedLight: bool - whether __pywry_user_template_light__ is on the div
-    - storedLegacy: bool - whether __pywry_user_template__ is on the div
+    - storedSingle: bool - whether __pywry_user_template__ is on the div
     - baseDarkPaperBg: str - the base plotly_dark template's paper_bgcolor
     - baseLightPaperBg: str - the base plotly_white template's paper_bgcolor
     """
@@ -72,7 +72,7 @@ def _read_chart_template_state(label: str) -> dict | None:
                 fontFamily: plotDiv && plotDiv._fullLayout ? (plotDiv._fullLayout.font.family || null) : null,
                 storedDark: plotDiv ? !!plotDiv.__pywry_user_template_dark__ : false,
                 storedLight: plotDiv ? !!plotDiv.__pywry_user_template_light__ : false,
-                storedLegacy: plotDiv ? !!plotDiv.__pywry_user_template__ : false,
+                storedSingle: plotDiv ? !!plotDiv.__pywry_user_template__ : false,
                 baseDarkPaperBg: templates.plotly_dark ? templates.plotly_dark.layout.paper_bgcolor : null,
                 baseLightPaperBg: templates.plotly_white ? templates.plotly_white.layout.paper_bgcolor : null
             });
@@ -161,9 +161,8 @@ class TestDarkThemeMergeE2E:
         # Both templates must be persisted on the DOM element
         assert result["storedDark"], "template_dark not stored on plot div!"
         assert result["storedLight"], "template_light not stored on plot div!"
-        # Legacy single template should NOT be stored when dual templates are used
-        assert not result["storedLegacy"], (
-            "Legacy template should NOT be stored when dual templates given!"
+        assert not result["storedSingle"], (
+            "Single template should not be stored when dual templates are given"
         )
 
     def test_base_theme_values_kept_where_not_overridden(self, dark_app) -> None:

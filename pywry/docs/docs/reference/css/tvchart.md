@@ -36,6 +36,13 @@ This stylesheet defines ~67 CSS custom properties per theme (dark and light) for
     --pywry-tvchart-border-down: /* bearish border */;
     --pywry-tvchart-wick-up: /* bullish wick */;
     --pywry-tvchart-wick-down: /* bearish wick */;
+
+    /* Chart-style patch values — read by _tvResolveChartStyle() in JS
+       to build the optionPatch for style switches.  Defined as CSS
+       vars so themes stay the source of truth. */
+    --pywry-tvchart-hollow-up-body: /* hollow-candles up-body fill (default: transparent) */;
+    --pywry-tvchart-hidden: /* body/border/wick hide marker (default: transparent) */;
+    --pywry-tvchart-price-line: /* right-axis price marker color — stays visible even when the body is hollow */;
 }
 ```
 
@@ -72,6 +79,44 @@ This stylesheet defines ~67 CSS custom properties per theme (dark and light) for
     --pywry-tvchart-baseline-top-fill2: /* above baseline gradient end */;
     --pywry-tvchart-baseline-bottom-fill1: /* below baseline gradient start */;
     --pywry-tvchart-baseline-bottom-fill2: /* below baseline gradient end */;
+
+    /* Settings-dialog defaults — read by the series-settings modal
+       when populating initial color pickers for Line / Area series. */
+    --pywry-tvchart-line-default: /* default line-style series color */;
+    --pywry-tvchart-area-top-default: /* default area top fill */;
+    --pywry-tvchart-area-bottom-default: /* default area bottom fill */;
+}
+```
+
+### Volume Profile (VPVR / VPFR)
+
+Colours for the **Volume Profile Fixed Range** and **Volume Profile Visible Range** indicators. Every value is kept low-opacity so the profile rows never drown the candles underneath:
+
+```css
+:root {
+    --pywry-tvchart-vp-up:       /* up-volume bar (dim, left half of each row) */;
+    --pywry-tvchart-vp-down:     /* down-volume bar (dim, right half of each row) */;
+    --pywry-tvchart-vp-va-up:    /* up-volume INSIDE the value area (higher opacity) */;
+    --pywry-tvchart-vp-va-down:  /* down-volume INSIDE the value area (higher opacity) */;
+    --pywry-tvchart-vp-poc:      /* Point of Control line (accent, highest opacity) */;
+}
+```
+
+The renderer reads these via `_cssVar()` inside `_tvMakeVolumeProfilePrimitive()` so the palette stays theme-driven — never hard-coded.
+
+### Indicator Palette
+
+Shared colour palette used by every multi-series indicator (MACD, Stochastic, ADX, Aroon, Keltner, Ichimoku, etc.) so each subplot stays visually consistent across themes:
+
+```css
+:root {
+    --pywry-tvchart-ind-primary:      /* primary line (MACD line, Stoch %K, ADX, KC mid) */;
+    --pywry-tvchart-ind-secondary:    /* secondary line (MACD signal, Stoch %D, Ichimoku Kijun) */;
+    --pywry-tvchart-ind-tertiary:     /* tertiary accent (Ichimoku Chikou, fallback dim) */;
+    --pywry-tvchart-ind-positive:     /* up / +DI / Aroon-up (green accent) */;
+    --pywry-tvchart-ind-negative:     /* down / -DI / Aroon-down (red accent) */;
+    --pywry-tvchart-ind-positive-dim: /* MACD histogram positive bar fill */;
+    --pywry-tvchart-ind-negative-dim: /* MACD histogram negative bar fill */;
 }
 ```
 
@@ -117,6 +162,16 @@ This stylesheet defines ~67 CSS custom properties per theme (dark and light) for
 ```
 
 All variables are duplicated for the light theme with appropriate light-mode values.
+
+---
+
+## Container
+
+The outer wrapper that hosts the chart and its toolbars:
+
+```css
+.pywry-tvchart-container { /* Root container holding the chart canvas, header toolbar, bottom status bar, and the drawing overlay */ }
+```
 
 ---
 

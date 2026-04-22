@@ -560,7 +560,31 @@ function initChatHandlers(container, pywry) {
       attachBadges += '</div>';
     }
 
-    el.innerHTML = roleLabel + attachBadges + '<div class="pywry-chat-msg-content">' + content + '</div>';
+    // Action toolbar — edit/resend on user messages, resend on assistant
+    var actions = '';
+    // Edit / Resend on user messages only — the user rerun flow is
+    // "edit or resend YOUR prompt"; assistant bubbles (including the
+    // welcome message) carry no retry action because there is no
+    // prior user turn to rerun from.
+    if (msg.role === 'user') {
+      actions =
+        '<div class="pywry-chat-msg-actions">' +
+          '<button class="pywry-chat-msg-action" data-action="edit" data-tooltip="Edit and resend">' +
+            '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M11.3 2.3a1.4 1.4 0 012 2L5.7 11.9 2 13l1.1-3.7z"/></svg>' +
+            ' Edit' +
+          '</button>' +
+          '<button class="pywry-chat-msg-action" data-action="resend" data-tooltip="Resend from this message">' +
+            '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M3 8a5 5 0 019.5-2.2"/><polyline points="13 2 13 6 9 6"/>' +
+            '<path d="M13 8a5 5 0 01-9.5 2.2"/><polyline points="3 14 3 10 7 10"/></svg>' +
+            ' Resend' +
+          '</button>' +
+        '</div>';
+    }
+
+    el.innerHTML = roleLabel + attachBadges +
+      '<div class="pywry-chat-msg-content">' + content + '</div>' + actions;
     return el;
   }
 
@@ -766,6 +790,7 @@ function initChatHandlers(container, pywry) {
 
     // Emit to backend (include attachments if any)
     var payload = {
+      messageId: msgId,
       text: text,
       threadId: state.activeThreadId,
       timestamp: Date.now()
@@ -1141,6 +1166,49 @@ function initChatHandlers(container, pywry) {
   // =========================================================================
   // Event Listeners — incoming from Python via pywry.on()
   // =========================================================================
+
+  // Edit / resend bookkeeping — drop messages the backend has discarded.
+  pywry.on('chat:messages-deleted', function (data) {
+    if (!chatArea) return;
+    var ids = (data && data.messageIds) || [];
+    if (!ids.length) return;
+    var idSet = {};
+    for (var i = 0; i < ids.length; i++) idSet[ids[i]] = true;
+    // Drop from frontend state
+    state.messages = state.messages.filter(function (m) { return !idSet[m.id]; });
+    // Drop from DOM
+    for (var j = 0; j < ids.length; j++) {
+      var node = chatArea.querySelector('[data-msg-id="' + ids[j] + '"]');
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+    }
+    // Drop tool-call / thinking / artifact blocks tied to the deleted messages
+    var related = chatArea.querySelectorAll(
+      '.pywry-chat-tool-call, .pywry-chat-thinking, [data-thinking-id], [data-tool-id]',
+    );
+    related.forEach(function (n) {
+      var tid = n.getAttribute('data-thinking-id') || n.getAttribute('data-tool-id') || '';
+      // tool-id format is the run_id (no msg correlation), so skip;
+      // thinking-id is "thinking-<messageId>"
+      if (tid.indexOf('thinking-') === 0) {
+        var msgIdPart = tid.substring(9);
+        if (idSet[msgIdPart] && n.parentNode) n.parentNode.removeChild(n);
+      }
+    });
+    // If the edited user message text changed, refresh its rendered content
+    if (data.editedMessageId && data.editedText !== undefined) {
+      var editedEl = chatArea.querySelector('[data-msg-id="' + data.editedMessageId + '"]');
+      if (editedEl) {
+        var contentEl = editedEl.querySelector('.pywry-chat-msg-content');
+        if (contentEl) contentEl.innerHTML = renderMarkdown(data.editedText);
+      }
+      for (var k = 0; k < state.messages.length; k++) {
+        if (state.messages[k].id === data.editedMessageId) {
+          state.messages[k].text = data.editedText;
+          break;
+        }
+      }
+    }
+  });
 
   // Complete assistant message
   pywry.on('chat:assistant-message', function (data) {
@@ -1892,6 +1960,56 @@ function initChatHandlers(container, pywry) {
     el.appendChild(body);
   }
 
+  function renderTradingViewArtifact(el, data) {
+    var chartId = 'pywry-chat-tv-' + (++__artifactCounter);
+    var chartDiv = document.createElement('div');
+    chartDiv.id = chartId;
+    chartDiv.className = 'pywry-tradingview';
+    chartDiv.style.height = data.height || '400px';
+    chartDiv.style.width = '100%';
+    el.appendChild(chartDiv);
+
+    function tryInit() {
+      if (typeof LightweightCharts === 'undefined') {
+        setTimeout(tryInit, 100);
+        return;
+      }
+      var opts = Object.assign({
+        layout: { background: { color: '#1e1e2e' }, textColor: '#cdd6f4' },
+        grid: { vertLines: { color: '#313244' }, horzLines: { color: '#313244' } },
+        crosshair: { mode: 0 },
+        timeScale: { borderColor: '#45475a', timeVisible: true },
+        rightPriceScale: { borderColor: '#45475a' }
+      }, data.options || {});
+
+      var chart = LightweightCharts.createChart(chartDiv, opts);
+
+      (data.series || []).forEach(function (s) {
+        var series;
+        switch (s.type) {
+          case 'candlestick': series = chart.addCandlestickSeries(s.options || {}); break;
+          case 'line':        series = chart.addLineSeries(s.options || {}); break;
+          case 'area':        series = chart.addAreaSeries(s.options || {}); break;
+          case 'bar':         series = chart.addBarSeries(s.options || {}); break;
+          case 'baseline':    series = chart.addBaselineSeries(s.options || {}); break;
+          case 'histogram':   series = chart.addHistogramSeries(s.options || {}); break;
+          default:            series = chart.addLineSeries(s.options || {}); break;
+        }
+        if (series) {
+          series.setData(s.data || []);
+          if (s.markers) series.setMarkers(s.markers);
+        }
+      });
+
+      chart.timeScale().fitContent();
+
+      new ResizeObserver(function () {
+        chart.applyOptions({ width: chartDiv.clientWidth });
+      }).observe(chartDiv);
+    }
+    tryInit();
+  }
+
   // Artifact — multi-type artifact rendering (collapsible)
   pywry.on('chat:artifact', function (data) {
     if (!chatArea) return;
@@ -1921,6 +2039,7 @@ function initChatHandlers(container, pywry) {
     else if (type === 'plotly') renderPlotlyArtifact(bodyWrap, data);
     else if (type === 'image') renderImageArtifact(bodyWrap, data);
     else if (type === 'json') renderJsonArtifact(bodyWrap, data);
+    else if (type === 'tradingview') renderTradingViewArtifact(bodyWrap, data);
     else renderCodeArtifact(bodyWrap, data);
 
     // Toggle collapse on header click
@@ -2222,6 +2341,103 @@ function initChatHandlers(container, pywry) {
       if (expandIcon) expandIcon.style.display = isFullscreen ? 'none' : '';
       if (collapseIcon) collapseIcon.style.display = isFullscreen ? '' : 'none';
       fullscreenBtn.setAttribute('data-tooltip', isFullscreen ? 'Exit full width' : 'Toggle full width');
+    });
+  }
+
+  // Edit / resend / retry buttons on message bubbles (delegated)
+  if (chatArea) {
+    chatArea.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest && e.target.closest('.pywry-chat-msg-action');
+      if (!btn) return;
+      var msgEl = btn.closest('.pywry-chat-msg');
+      if (!msgEl) return;
+      var msgId = msgEl.getAttribute('data-msg-id') || '';
+      if (!msgId) return;
+      var action = btn.getAttribute('data-action');
+
+      if (action === 'edit') {
+        startEditingMessage(msgEl, msgId);
+      } else if (action === 'resend') {
+        emitResend(msgId);
+      }
+    });
+  }
+
+  function emitResend(messageId) {
+    if (!pywry || !pywry.emit) return;
+    pywry.emit('chat:resend-from', {
+      messageId: messageId,
+      threadId: state.activeThreadId,
+    });
+  }
+
+  function startEditingMessage(msgEl, msgId) {
+    if (msgEl.classList.contains('pywry-chat-msg-editing')) return;
+    var contentEl = msgEl.querySelector('.pywry-chat-msg-content');
+    if (!contentEl) return;
+    // Find the underlying text from state.messages — content has been markdown-rendered
+    var msgObj = null;
+    for (var i = 0; i < state.messages.length; i++) {
+      if (state.messages[i].id === msgId) { msgObj = state.messages[i]; break; }
+    }
+    var originalText = msgObj ? (msgObj.text || '') : (contentEl.textContent || '');
+    msgEl.classList.add('pywry-chat-msg-editing');
+
+    var ta = document.createElement('textarea');
+    ta.className = 'pywry-chat-msg-edit-textarea';
+    ta.value = originalText;
+    ta.rows = Math.max(2, Math.min(10, originalText.split('\n').length + 1));
+
+    var actionsEl = msgEl.querySelector('.pywry-chat-msg-actions');
+    var savedActionsHtml = actionsEl ? actionsEl.innerHTML : '';
+    var savedContentHtml = contentEl.innerHTML;
+    contentEl.innerHTML = '';
+    contentEl.appendChild(ta);
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+
+    if (actionsEl) {
+      actionsEl.innerHTML =
+        '<button class="pywry-chat-msg-action" data-edit-action="save" data-tooltip="Save and resend">Save &amp; Resend</button>' +
+        '<button class="pywry-chat-msg-action" data-edit-action="cancel" data-tooltip="Cancel edit">Cancel</button>';
+    }
+
+    function cancel() {
+      contentEl.innerHTML = savedContentHtml;
+      if (actionsEl) actionsEl.innerHTML = savedActionsHtml;
+      msgEl.classList.remove('pywry-chat-msg-editing');
+    }
+
+    function save() {
+      var newText = ta.value.trim();
+      if (!newText) { cancel(); return; }
+      msgEl.classList.remove('pywry-chat-msg-editing');
+      // Restore the original markdown render of the new text immediately
+      contentEl.innerHTML = renderMarkdown(newText);
+      if (actionsEl) actionsEl.innerHTML = savedActionsHtml;
+      // Update state.messages too
+      if (msgObj) msgObj.text = newText;
+      if (pywry && pywry.emit) {
+        pywry.emit('chat:edit-message', {
+          messageId: msgId,
+          threadId: state.activeThreadId,
+          text: newText,
+        });
+      }
+    }
+
+    if (actionsEl) {
+      actionsEl.addEventListener('click', function (ev) {
+        var btn = ev.target && ev.target.closest && ev.target.closest('[data-edit-action]');
+        if (!btn) return;
+        ev.stopPropagation();
+        if (btn.getAttribute('data-edit-action') === 'save') save();
+        else cancel();
+      });
+    }
+    ta.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+      else if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); save(); }
     });
   }
 
@@ -2567,6 +2783,114 @@ function initChatHandlers(container, pywry) {
   // --- Context sources from backend ---
   pywry.on('chat:context-sources', function (data) {
     state.contextSources = data.sources || [];
+  });
+
+  // --- ACP: Permission request ---
+  pywry.on('chat:permission-request', function (data) {
+    if (!chatArea) return;
+    var el = document.createElement('div');
+    el.className = 'pywry-chat-permission-request';
+    el.innerHTML =
+      '<div class="pywry-chat-permission-title">' + escapeHtml(data.title || 'Permission required') + '</div>' +
+      '<div class="pywry-chat-permission-actions"></div>';
+    var actions = el.querySelector('.pywry-chat-permission-actions');
+    (data.options || []).forEach(function (opt) {
+      var btn = document.createElement('button');
+      btn.className = 'pywry-chat-permission-btn pywry-chat-permission-btn-' + (opt.id || '').replace(/[^a-z_]/gi, '');
+      btn.textContent = opt.label || opt.id;
+      btn.addEventListener('click', function () {
+        pywry.emit('chat:permission-response', {
+          requestId: data.requestId,
+          optionId: opt.id,
+          threadId: data.threadId
+        });
+        el.remove();
+      });
+      actions.appendChild(btn);
+    });
+    chatArea.appendChild(el);
+    maybeAutoScroll();
+  });
+
+  // --- ACP: Plan update ---
+  // Reuses the styled ``pywry-chat-todo-*`` classes so the plan card
+  // gets the same collapsible details/summary + progress bar look as
+  // the agent-driven todo list.  (The plan and todo renderers share
+  // one container — ``#pywry-chat-todo`` — and one stylesheet; using
+  // separate ``pywry-chat-plan-*`` classes here would produce
+  // unstyled markup and the card would appear to never render.)
+  pywry.on('chat:plan-update', function (data) {
+    if (!todoEl) return;
+    var entries = data.entries || [];
+    if (entries.length === 0) {
+      todoEl.innerHTML = '';
+      todoEl.style.display = 'none';
+      return;
+    }
+
+    var total = entries.length;
+    var completed = 0;
+    var inProgress = 0;
+    for (var ci = 0; ci < entries.length; ci++) {
+      var st = entries[ci].status;
+      if (st === 'completed') completed += 1;
+      else if (st === 'in_progress') inProgress += 1;
+    }
+    var allDone = completed === total && total > 0;
+    var pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+    var summaryLabel = allDone
+      ? 'All tasks completed (' + total + '/' + total + ')'
+      : (inProgress > 0
+        ? 'Working... (' + completed + '/' + total + ' done)'
+        : 'Plan (' + completed + '/' + total + ' done)');
+
+    var html = '<details class="pywry-chat-todo-details"' + (allDone ? '' : ' open') + '>'
+      + '<summary class="pywry-chat-todo-summary">'
+      + '<span class="pywry-chat-todo-label">' + escapeHtml(summaryLabel) + '</span>'
+      + '<div class="pywry-chat-todo-actions">'
+      + '<div class="pywry-chat-todo-progress"><div class="pywry-chat-todo-progress-fill" style="width:' + pct + '%"></div></div>'
+      + '</div>'
+      + '</summary>'
+      + '<ul class="pywry-chat-todo-list">';
+    entries.forEach(function (e) {
+      var status = e.status || 'pending';
+      var icon = status === 'completed'
+        ? '<span class="pywry-chat-todo-icon pywry-chat-todo-done">&#10003;</span>'
+        : status === 'in_progress'
+          ? '<span class="pywry-chat-todo-icon pywry-chat-todo-active">&#9654;</span>'
+          : '<span class="pywry-chat-todo-icon">&#9679;</span>';
+      var cls = 'pywry-chat-todo-item'
+        + (status === 'completed' ? ' pywry-chat-todo-item-done' : '')
+        + (status === 'in_progress' ? ' pywry-chat-todo-item-active' : '');
+      html += '<li class="' + cls + '">' + icon +
+        '<span>' + escapeHtml(e.content || '') + '</span></li>';
+    });
+    html += '</ul></details>';
+    todoEl.innerHTML = html;
+    todoEl.style.display = 'block';
+  });
+
+  // --- ACP: Mode update ---
+  pywry.on('chat:mode-update', function (data) {
+    // Store mode state for settings panel rendering
+    state.currentModeId = data.currentModeId || '';
+    state.availableModes = data.availableModes || [];
+  });
+
+  // --- ACP: Config option update ---
+  pywry.on('chat:config-update', function (data) {
+    // Store config options for settings panel rendering
+    state.configOptions = data.options || [];
+  });
+
+  // --- ACP: Commands update ---
+  pywry.on('chat:commands-update', function (data) {
+    var commands = data.commands || [];
+    state.slashCommands = [];
+    commands.forEach(function (cmd) {
+      var cmdName = cmd.name.charAt(0) === '/' ? cmd.name : '/' + cmd.name;
+      state.slashCommands.push({ name: cmdName, description: cmd.description || '' });
+    });
   });
 
   // =========================================================================

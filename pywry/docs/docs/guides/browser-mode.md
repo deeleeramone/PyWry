@@ -107,8 +107,8 @@ h2 = app.show("<h1>Table</h1>", label="table")
 # Two browser tabs open:
 #   http://127.0.0.1:8765/widget/chart
 #   http://127.0.0.1:8765/widget/table
-print(h1.url)  # Full URL for the chart widget
-print(h2.url)  # Full URL for the table widget
+chart_url = h1.url  # e.g. http://127.0.0.1:8765/widget/chart
+table_url = h2.url  # e.g. http://127.0.0.1:8765/widget/table
 
 app.block()
 ```

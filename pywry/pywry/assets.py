@@ -409,10 +409,16 @@ def get_tvchart_defaults_js() -> str:
         debug("Loading TV chart defaults JS from src")
         return js_file.read_text(encoding="utf-8")
 
-    # Fall back to modular files in tvchart/ directory (sorted by filename)
+    # Fall back to modular files in tvchart/ directory.  Files load in
+    # alphabetical path order, recursively — so a subfolder like
+    # ``07-drawing/`` slots between ``06-storage.js`` and ``08-settings/``
+    # without disturbing existing dependency order.  Inside each folder,
+    # files are sorted by name so a ``00-state.js`` loads before the
+    # later helpers that use its globals.
     tvchart_dir = SRC_DIR / "tvchart"
     if tvchart_dir.is_dir():
-        parts = [f.read_text(encoding="utf-8") for f in sorted(tvchart_dir.glob("*.js"))]
+        js_paths = sorted(tvchart_dir.rglob("*.js"))
+        parts = [f.read_text(encoding="utf-8") for f in js_paths]
         if parts:
             debug(f"Loading TV chart defaults JS from {len(parts)} modular files")
             return "\n".join(parts)

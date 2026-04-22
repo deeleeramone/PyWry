@@ -17,17 +17,36 @@
         // instead of 'main' (which is a SERIES id, not a chart id).
         var _cid = bridge._chartId || null;
 
-        // In native mode, bridge._chartId is undefined at onReady time
-        // because the chart is created later via a direct call to
-        // PYWRY_TVCHART_CREATE (bypassing the tvchart:create event).
-        // Wire a property accessor so that when PYWRY_TVCHART_CREATE sets
-        // bridge._chartId, the closure variable _cid updates automatically.
+        // In native mode, ``bridge._chartId`` is undefined at onReady
+        // time because the chart is created later via a direct call
+        // to ``PYWRY_TVCHART_CREATE`` (bypassing the ``tvchart:create``
+        // event).  Wire a property accessor so that when
+        // ``PYWRY_TVCHART_CREATE`` later sets ``bridge._chartId``, the
+        // closure variable ``_cid`` updates automatically.
         if (!_cid) {
             Object.defineProperty(bridge, '_chartId', {
                 get: function() { return _cid; },
                 set: function(v) { _cid = v; },
                 configurable: true,
             });
+        }
+
+        // Resolve a chart id from event data, falling back to the
+        // bridge's owned ``_cid`` and finally to whatever chart is
+        // registered on ``__PYWRY_TVCHARTS__``.  Single-widget native-
+        // window mode doesn't always have ``_cid`` populated in time
+        // (e.g. an event fires before the create handler runs), so the
+        // registry fallback keeps handlers that operate on the live
+        // chart (visibility / lock / state) from silently no-op'ing.
+        function _resolveCid(data) {
+            if (data && data.chartId) return data.chartId;
+            if (_cid) return _cid;
+            var reg = window.__PYWRY_TVCHARTS__;
+            if (reg) {
+                var keys = Object.keys(reg);
+                if (keys.length) return keys[0];
+            }
+            return null;
         }
 
         // Python → JS: create chart
@@ -54,18 +73,55 @@
             if (!entry || !entry.chart) return;
             var seriesId = data.seriesId || 'main';
 
-            // When the main series receives new bars with a different interval,
-            // destroy and fully recreate the chart so candles + volume stay in
-            // perfect 1-to-1 sync.  This is the only reliable path — partial
-            // updates cannot rebuild the volume histogram pane.
-            if (seriesId === 'main' && data.interval) {
+            // When the main series receives new bars with a different
+            // interval OR a different symbol, destroy and fully recreate
+            // the chart so candles + volume stay in perfect 1-to-1 sync
+            // and no stale compare / overlay / aux series (e.g. HLC fill
+            // layers from a prior chart type) linger on the canvas.
+            // Partial updates replace ``main``'s data but can't scrub
+            // other series out of the chart object.
+            //
+            // The rebuild window briefly makes the chart entry
+            // unavailable; ``tvchart:request-state`` answers
+            // ``{chartId, error: "not found"}`` during that gap.  The
+            // Python-side ``_fetch_tvchart_state`` helper treats any
+            // response with an ``error`` field as ``None`` so the
+            // mutation-confirmation poll keeps retrying until the new
+            // chart is back up with real state.  Don't try to avoid
+            // the rebuild — the ghost-series and volume-alignment bugs
+            // that destroy-recreate cures are worse than a ~200ms poll
+            // retry window.
+            if (seriesId === 'main' && (data.interval || data.symbol)) {
                 var hasBars = data.bars && data.bars.length > 0;
                 var isDatafeed = entry.payload && entry.payload.useDatafeed;
                 var currentInterval = (entry.payload && entry.payload.interval) || '';
-                if (data.interval !== currentInterval && (hasBars || isDatafeed)) {
+                var currentMainSymbol = '';
+                if (entry.payload && entry.payload.series && entry.payload.series[0]) {
+                    currentMainSymbol = String(entry.payload.series[0].symbol || '').toUpperCase();
+                }
+                var incomingSymbol = data.symbol ? String(data.symbol).toUpperCase() : '';
+                var intervalChanged = data.interval && data.interval !== currentInterval;
+                var symbolChanged = incomingSymbol && currentMainSymbol && incomingSymbol !== currentMainSymbol;
+                if ((intervalChanged || symbolChanged) && (hasBars || isDatafeed)) {
                     var container = entry.container;
                     var oldPayload = entry.payload || {};
                     var savedDisplayStyle = entry._chartDisplayStyle || null;
+                    // _chartPrefs holds user-tuned settings (timeScale
+                    // rightOffset / barSpacing, priceScale mode + invert,
+                    // kineticScroll toggles, locale, etc.). Destroy-recreate
+                    // would reset them to defaults without this snapshot.
+                    var savedChartPrefs = entry._chartPrefs ? _tvMerge({}, entry._chartPrefs) : null;
+                    var savedSessionMode = entry._sessionMode || null;
+                    var savedTimezone = entry._selectedTimezone || null;
+
+                    // Capture the visible *time* range before destroy so we
+                    // can restore the user's zoom on the new chart.  Time-
+                    // based (not logical/bar-index) so it works across
+                    // interval changes where bar counts differ.
+                    var savedVisibleTimeRange = null;
+                    try {
+                        savedVisibleTimeRange = entry.chart.timeScale().getVisibleRange();
+                    } catch (e) {}
 
                     // Save compare symbols and indicators before destroy
                     var savedCompareSymbols = entry._compareSymbols ? _tvMerge(entry._compareSymbols, {}) : null;
@@ -84,20 +140,27 @@
                         }
                     }
 
-                    // Merge new bars into the rebuilt payload
+                    // Merge new bars into the rebuilt payload.  Interval and
+                    // symbol may each be unchanged (symbol-only change keeps
+                    // the old interval; interval-only change keeps the old
+                    // symbol) — fall back to the current value in either case.
+                    var effectiveInterval = data.interval || currentInterval;
+                    var effectiveSymbol = incomingSymbol || currentMainSymbol;
                     var newPayload = _tvMerge(oldPayload, {});
-                    newPayload.interval = data.interval;
+                    newPayload.interval = effectiveInterval;
 
                     if (newPayload.useDatafeed) {
                         // Datafeed mode: pre-fill bars from provider.get_bars() so
                         // _tvInitDatafeedMode can skip the redundant getBars call.
                         if (newPayload.series && Array.isArray(newPayload.series) && newPayload.series[0]) {
-                            newPayload.series[0].resolution = data.interval;
+                            newPayload.series[0].resolution = effectiveInterval;
+                            if (effectiveSymbol) newPayload.series[0].symbol = effectiveSymbol;
                             newPayload.series[0].bars = data.bars || [];
                             newPayload.series[0].volume = [];
                         }
                     } else {
                         if (newPayload.series && Array.isArray(newPayload.series) && newPayload.series[0]) {
+                            if (effectiveSymbol) newPayload.series[0].symbol = effectiveSymbol;
                             newPayload.series[0].bars = data.bars;
                             newPayload.series[0].volume = [];
                         } else {
@@ -105,19 +168,161 @@
                             newPayload.volume = [];
                         }
                     }
+                    if (effectiveSymbol) newPayload.title = effectiveSymbol;
+
+                    // Indicators + compare overlays survive across both
+                    // interval and symbol changes.  An SMA(20) on AAPL is
+                    // still an SMA(20) on MSFT; the new chart should pick
+                    // up the same indicators with the new ticker's bars.
+                    // Purge the old _activeIndicators entries so the
+                    // post-recreate re-add starts with a clean slate —
+                    // otherwise the legend rebuild iterates both the
+                    // dead (chartless) entries and the freshly-added
+                    // ones and duplicates every row.
+                    var wipeKeys = Object.keys(_activeIndicators);
+                    for (var wi = 0; wi < wipeKeys.length; wi++) {
+                        if (_activeIndicators[wipeKeys[wi]] && _activeIndicators[wipeKeys[wi]].chartId === cid) {
+                            delete _activeIndicators[wipeKeys[wi]];
+                        }
+                    }
+                    // Same cleanup for VP primitives — the old chart's
+                    // primitive references are about to become unreachable.
+                    if (typeof _volumeProfilePrimitives === 'object') {
+                        var vpKeys = Object.keys(_volumeProfilePrimitives);
+                        for (var vpi = 0; vpi < vpKeys.length; vpi++) {
+                            if (_volumeProfilePrimitives[vpKeys[vpi]] && _volumeProfilePrimitives[vpKeys[vpi]].chartId === cid) {
+                                delete _volumeProfilePrimitives[vpKeys[vpi]];
+                            }
+                        }
+                    }
                     // Destroy then recreate
                     window.PYWRY_TVCHART_DESTROY(cid);
                     container.innerHTML = '';
                     window.PYWRY_TVCHART_CREATE(cid, container, newPayload);
 
-                    _tvSetIntervalUi(cid, data.interval);
+                    // Hand the pre-destroy zoom off to the new chart so its
+                    // ``applyDefault`` (setTimeout 150ms in lifecycle) honours
+                    // the user's prior zoom instead of falling through to
+                    // fitContent.  Clamp to the new data bounds so a symbol
+                    // with shorter history doesn't end up pointing off the
+                    // end of its bars.
+                    (function() {
+                        var reEntry = window.__PYWRY_TVCHARTS__[cid];
+                        if (!reEntry || !savedVisibleTimeRange) return;
+                        var newBars = Array.isArray(data.bars) ? data.bars : [];
+                        if (!newBars.length) return;
+                        var firstTime = newBars[0].time;
+                        var lastTime = newBars[newBars.length - 1].time;
+                        var from = savedVisibleTimeRange.from;
+                        var to = savedVisibleTimeRange.to;
+                        if (from == null || to == null || firstTime == null || lastTime == null) return;
+                        if (to <= firstTime || from >= lastTime) {
+                            // Saved range is entirely outside the new data
+                            // (e.g. viewing old AAPL history on a short-
+                            // history ticker).  Re-anchor to the end with
+                            // the same width.
+                            var width = to - from;
+                            if (!(width > 0)) return;
+                            to = lastTime;
+                            from = Math.max(firstTime, lastTime - width);
+                        } else {
+                            from = Math.max(from, firstTime);
+                            to = Math.min(to, lastTime);
+                        }
+                        if (!(from < to)) return;
+                        reEntry._preservedVisibleTimeRange = { from: from, to: to };
+                    })();
 
-                    // Re-apply chart display style if user changed it from default
-                    if (savedDisplayStyle) {
-                        bridge.emit('tvchart:chart-type-change', {
-                            value: savedDisplayStyle,
-                            chartId: cid,
+                    _tvSetIntervalUi(cid, effectiveInterval);
+
+                    // Track every piece of deferred post-CREATE work so
+                    // ``tvchart:data-settled`` fires ONLY when the chart is
+                    // actually stable.  Python tools that chain mutation
+                    // calls (symbol → interval → zoom) use this signal to
+                    // sequence their calls — if it fires early, the next
+                    // tool races the still-in-flight rebuild and its
+                    // effect gets clobbered (e.g. a zoom reverts when the
+                    // late-firing applyDefault restores the pre-destroy
+                    // range).
+                    //
+                    // Work to wait on, in order of scheduled time:
+                    //   1. ``entry.whenMainSeriesReady`` — main series
+                    //      attached (sync in static-bar mode, async via
+                    //      resolveSymbol in datafeed mode).
+                    //   2. chart-type-change re-apply — chains off (1).
+                    //   3. indicator re-add — setTimeout(100).
+                    //   4. lifecycle applyDefault — setTimeout(150), owns
+                    //      ``_preservedVisibleTimeRange``.
+                    var _pending = 0;
+                    var _settledFired = false;
+                    var _fireSettled = function() {
+                        if (_pending > 0 || _settledFired) return;
+                        _settledFired = true;
+                        var finalState = _tvExportState(cid);
+                        bridge.emit('tvchart:data-settled', finalState || {
+                            chartId: cid, error: 'not found',
                         });
+                    };
+                    var _track = function() {
+                        _pending++;
+                        var settled = false;
+                        return function() {
+                            if (settled) return;
+                            settled = true;
+                            _pending--;
+                            _fireSettled();
+                        };
+                    };
+
+                    // Wait for lifecycle applyDefault to consume the
+                    // preserved range.  Its setTimeout is 150ms; add a
+                    // 30ms safety buffer.
+                    var _applyDefaultDone = _track();
+                    setTimeout(_applyDefaultDone, 180);
+
+                    // Restore chart-level preferences (scale mode, time-scale
+                    // tuning, navigation toggles, locale, session/timezone).
+                    // These live on the new entry and feed every subsequent
+                    // build of chartOptions via _tvApplySettingsToChart.
+                    var _reEntryForPrefs = window.__PYWRY_TVCHARTS__[cid];
+                    if (_reEntryForPrefs) {
+                        if (savedChartPrefs) _reEntryForPrefs._chartPrefs = savedChartPrefs;
+                        if (savedSessionMode) _reEntryForPrefs._sessionMode = savedSessionMode;
+                        if (savedTimezone) _reEntryForPrefs._selectedTimezone = savedTimezone;
+                        // Push the saved prefs into the fresh chart so its
+                        // timeScale / priceScale / interaction wiring reflects
+                        // what the user had before the destroy-recreate.
+                        if (savedChartPrefs && savedChartPrefs.settings
+                                && typeof _tvApplySettingsToChart === 'function') {
+                            try {
+                                _tvApplySettingsToChart(cid, _reEntryForPrefs, savedChartPrefs.settings);
+                            } catch (_eApply) {}
+                        }
+                    }
+
+                    // Re-apply chart display style once the new main
+                    // series is attached.  Event-driven via
+                    // ``whenMainSeriesReady`` — no polling.
+                    if (savedDisplayStyle) {
+                        var _styleDone = _track();
+                        var _reEntryForStyle = window.__PYWRY_TVCHARTS__[cid];
+                        if (_reEntryForStyle && typeof _reEntryForStyle.whenMainSeriesReady === 'function') {
+                            _reEntryForStyle.whenMainSeriesReady(function() {
+                                // Seed ``_chartDisplayStyle`` before the
+                                // emit so legend/settings pick it up
+                                // during the switch.
+                                _reEntryForStyle._chartDisplayStyle = savedDisplayStyle;
+                                bridge.emit('tvchart:chart-type-change', {
+                                    value: savedDisplayStyle,
+                                    chartId: cid,
+                                });
+                                _styleDone();
+                            });
+                        } else {
+                            // Entry gone before we could register — nothing
+                            // to do, but still settle the tracker.
+                            _styleDone();
+                        }
                     }
 
                     // Re-request compare symbols at the new interval
@@ -136,8 +341,8 @@
                                 symbol: cmpSym,
                                 symbolInfo: savedCompareSymbolInfo ? savedCompareSymbolInfo[cmpSid] : null,
                                 seriesId: cmpSid,
-                                interval: data.interval,
-                                resolution: data.interval,
+                                interval: effectiveInterval,
+                                resolution: effectiveInterval,
                                 periodParams: {
                                     from: 0,
                                     to: Math.floor(Date.now() / 1000),
@@ -148,31 +353,118 @@
                         }
                     }
 
-                    // Re-add indicators after a short delay to allow main series
-                    // data to be set (indicators compute from raw bar data)
+                    // Re-add indicators once the main series actually has
+                    // data — whenMainSeriesReady fires AFTER setData has
+                    // populated _seriesRawData so every indicator's compute
+                    // sees the new bars.  A fixed setTimeout races the
+                    // async datafeed path and produces silent empty lines.
+                    // Grouped indicators (BB, MACD, Stochastic, etc.) add
+                    // multiple series sharing the same ``group`` id — only
+                    // re-add the FIRST member per group, `_tvAddIndicator`
+                    // materialises the rest.
                     if (savedIndicators.length > 0) {
-                        setTimeout(function() {
+                        var _indDone = _track();
+                        var _reAddIndicators = function() {
                             var reEntry = window.__PYWRY_TVCHARTS__[cid];
-                            if (!reEntry) return;
+                            if (!reEntry) { _indDone(); return; }
+                            var seenGroups = {};
                             for (var si = 0; si < savedIndicators.length; si++) {
                                 var ind = savedIndicators[si];
+                                if (ind.group) {
+                                    if (seenGroups[ind.group]) continue;
+                                    seenGroups[ind.group] = true;
+                                }
+                                // Every tunable info.* field is re-marshalled as
+                                // indicatorDef._* so _tvAddIndicator reconstructs
+                                // the indicator at the user's settings — period,
+                                // method, MACD lengths, Ichimoku lines, VP range
+                                // + layout, status-line toggles, etc.
                                 _tvAddIndicator({
                                     name: ind.name,
                                     key: ind.type,
                                     defaultPeriod: ind.period,
+                                    requiresSecondary: !!ind.secondarySeriesId,
                                     _color: ind.color,
                                     _source: ind.source,
                                     _method: ind.method,
+                                    _maType: ind.maType,
                                     _multiplier: ind.multiplier,
-                                    requiresSecondary: !!ind.secondarySeriesId,
+                                    _offset: ind.offset,
+                                    _primarySource: ind.primarySource,
+                                    _secondarySource: ind.secondarySource,
+                                    // MACD / Stochastic / Aroon / ADX / PSAR / HV
+                                    _fast: ind.fast,
+                                    _slow: ind.slow,
+                                    _signal: ind.signal,
+                                    _macdSource: ind.macdSource,
+                                    _oscMaType: ind.oscMaType,
+                                    _signalMaType: ind.signalMaType,
+                                    _kSmoothing: ind.kSmoothing,
+                                    _dPeriod: ind.dPeriod,
+                                    _diLength: ind.diLength,
+                                    _adxSmoothing: ind.adxSmoothing,
+                                    _step: ind.step,
+                                    _maxStep: ind.maxStep,
+                                    _annualization: ind.annualization,
+                                    // Ichimoku
+                                    _conversionPeriod: ind.conversionPeriod,
+                                    _basePeriod: ind.basePeriod,
+                                    _leadingSpanPeriod: ind.leadingSpanPeriod,
+                                    _laggingPeriod: ind.laggingPeriod,
+                                    _leadingShiftPeriod: ind.leadingShiftPeriod,
+                                    // Volume Profile
+                                    _rowSize: ind.rowSize,
+                                    _rowsLayout: ind.rowsLayout,
+                                    _volumeMode: ind.volumeMode,
+                                    _valueAreaPct: ind.valueAreaPct,
+                                    _showDevelopingPOC: ind.showDevelopingPOC,
+                                    _showDevelopingVA: ind.showDevelopingVA,
+                                    _fromIndex: ind.fromIndex,
+                                    _toIndex: ind.toIndex,
+                                    _widthPercent: ind.widthPercent,
+                                    _placement: ind.placement,
+                                    _upColor: ind.upColor,
+                                    _downColor: ind.downColor,
+                                    _vaUpColor: ind.vaUpColor,
+                                    _vaDownColor: ind.vaDownColor,
+                                    _pocColor: ind.pocColor,
+                                    _developingPOCColor: ind.developingPOCColor,
+                                    _developingVAColor: ind.developingVAColor,
+                                    _showPOC: ind.showPOC,
+                                    _showValueArea: ind.showValueArea,
+                                    // Status-line toggles
+                                    _labelsOnPriceScale: ind.labelsOnPriceScale,
+                                    _valuesInStatusLine: ind.valuesInStatusLine,
+                                    _inputsInStatusLine: ind.inputsInStatusLine,
                                 }, cid);
                             }
-                        }, 100);
+                            // Belt-and-braces: force a recompute pass once
+                            // every indicator has been attached so each one
+                            // picks up the freshly-loaded bars (matters if
+                            // async compute paths raced the main-series
+                            // ready fire).
+                            if (typeof _tvRecomputeIndicatorsForChart === 'function') {
+                                try { _tvRecomputeIndicatorsForChart(cid, 'main'); } catch (_e) {}
+                            }
+                            _indDone();
+                        };
+                        var reEntryForInd = window.__PYWRY_TVCHARTS__[cid];
+                        if (reEntryForInd && typeof reEntryForInd.whenMainSeriesReady === 'function') {
+                            reEntryForInd.whenMainSeriesReady(_reAddIndicators);
+                        } else {
+                            // Entry vanished before we could register — still
+                            // settle the tracker so data-settled can fire.
+                            _indDone();
+                        }
                     }
 
                     _tvRefreshLegendTitle(cid);
                     _tvEmitLegendRefresh(cid);
                     _tvRenderHoverLegend(cid, null);
+
+                    // All deferred tasks are registered — if none were
+                    // queued this call settles immediately.
+                    _fireSettled();
                     return;
                 }
             }
@@ -230,18 +522,72 @@
                 try { _savedRange = entry.chart.timeScale().getVisibleLogicalRange(); } catch (e) {}
             }
 
-            // Symbol change on main series (same interval): preserve zoom/viewport
+            // Symbol change on main series (same interval): preserve the
+            // WIDTH of the previous zoom but re-anchor the right edge to
+            // the new symbol's last bar.  Restoring the old logical range
+            // verbatim puts the viewport off the end of shorter-history
+            // symbols (one lonely candle stranded on the left).
             var _isSymbolChange = (seriesId === 'main' && data.interval &&
                 data.interval === ((entry.payload && entry.payload.interval) || ''));
+            var _savedWidth = null;
             if (_isSymbolChange) {
-                try { _savedRange = entry.chart.timeScale().getVisibleLogicalRange(); } catch (e) {}
+                try {
+                    var _pre = entry.chart.timeScale().getVisibleLogicalRange();
+                    if (_pre) _savedWidth = Math.max(1, _pre.to - _pre.from);
+                } catch (e) {}
             }
 
-            var _suppressFit = _isIndicatorFlow || _isSymbolChange;
+            // Compare / overlay add on a non-main series should preserve the
+            // user's current zoom — the default ``fitContent: true`` in the
+            // data-response payload would otherwise reset the view every
+            // time a compare or overlay arrives.  The binary-indicator
+            // flow handles its own range save below, so skip this path
+            // when that's in effect.
+            var _isCompareAdd = !_isIndicatorFlow && !_isSymbolChange && seriesId !== 'main';
+            var _savedCompareTimeRange = null;
+            if (_isCompareAdd) {
+                try { _savedCompareTimeRange = entry.chart.timeScale().getVisibleRange(); } catch (e) {}
+            }
+
+            var _suppressFit = _isIndicatorFlow || _isSymbolChange || _isCompareAdd;
             window.PYWRY_TVCHART_UPDATE(chartId, _suppressFit ? _tvMerge(data, { fitContent: false }) : data);
 
-            if (_isSymbolChange && _savedRange) {
-                try { entry.chart.timeScale().setVisibleLogicalRange(_savedRange); } catch (e) {}
+            if (_isCompareAdd && _savedCompareTimeRange
+                && _savedCompareTimeRange.from != null && _savedCompareTimeRange.to != null) {
+                try {
+                    entry.chart.timeScale().setVisibleRange({
+                        from: _savedCompareTimeRange.from,
+                        to: _savedCompareTimeRange.to,
+                    });
+                } catch (e) {}
+            }
+
+            if (_isSymbolChange) {
+                var _bars = Array.isArray(data.bars) ? data.bars : [];
+                if (_bars.length > 0) {
+                    var _last = _bars[_bars.length - 1];
+                    var _width = _savedWidth && _savedWidth < _bars.length ? _savedWidth : _bars.length;
+                    var _firstIdx = Math.max(0, _bars.length - Math.ceil(_width));
+                    var _first = _bars[_firstIdx];
+                    if (_first && _last && _first.time != null && _last.time != null) {
+                        try {
+                            entry.chart.timeScale().setVisibleRange({
+                                from: _first.time,
+                                to: _last.time,
+                            });
+                        } catch (e) {
+                            // setVisibleRange can reject if the range is
+                            // degenerate — fall back to scrolling to the
+                            // real-time edge so the last bar is at least
+                            // on-screen.
+                            try { entry.chart.timeScale().scrollToRealTime(); } catch (e2) {}
+                        }
+                    } else {
+                        try { entry.chart.timeScale().scrollToRealTime(); } catch (e) {}
+                    }
+                } else {
+                    try { entry.chart.timeScale().fitContent(); } catch (e) {}
+                }
             }
 
             // Binary indicator flow: hide the raw compare series and compute
@@ -278,6 +624,16 @@
             _tvRefreshLegendTitle(resolved ? resolved.chartId : chartId);
             _tvEmitLegendRefresh(resolved ? resolved.chartId : chartId);
             _tvRenderHoverLegend(resolved ? resolved.chartId : chartId, null);
+
+            // Signal that this data-response has been fully processed
+            // (compare/overlay add, in-place symbol swap, etc.) so the
+            // Python mutation handler waiting on this round-trip can
+            // return deterministic confirmed state instead of polling.
+            var _settledCid = resolved ? resolved.chartId : chartId;
+            var _settledState = _tvExportState(_settledCid);
+            bridge.emit('tvchart:data-settled', _settledState || {
+                chartId: _settledCid, error: 'not found',
+            });
         });
 
         bridge.on('tvchart:update', function(data) {
@@ -474,7 +830,8 @@
 
         // Python → JS: fit content / scroll to position
         bridge.on('tvchart:time-scale', function(data) {
-            var entry = window.__PYWRY_TVCHARTS__[data.chartId || _cid];
+            var chartId = data.chartId || _cid;
+            var entry = window.__PYWRY_TVCHARTS__[chartId];
             if (!entry || !entry.chart) return;
             if (data.fitContent) {
                 entry.chart.timeScale().fitContent();
@@ -485,11 +842,20 @@
             if (data.visibleRange) {
                 entry.chart.timeScale().setVisibleLogicalRange(data.visibleRange);
             }
+            // Signal the Python-side mutation handler that the zoom /
+            // fit / scroll has been applied so it can return the
+            // confirmed post-mutation state instead of blocking on a
+            // timeout.  Same event name as data-response's settled
+            // signal — the payload is the live chart state.
+            var settledState = _tvExportState(chartId);
+            bridge.emit('tvchart:data-settled', settledState || {
+                chartId: chartId, error: 'not found',
+            });
         });
 
         // Python → JS: request state export
         bridge.on('tvchart:request-state', function(data) {
-            var chartId = data.chartId || _cid;
+            var chartId = _resolveCid(data);
             var state = _tvExportState(chartId);
             var response = state || { chartId: chartId, error: 'not found' };
             if (data && data.context) {
@@ -707,10 +1073,17 @@
             // Store the display name so settings and legend can reference it
             entry._chartDisplayStyle = displayName;
 
+            // Persist only the new seriesType and bars — NOT sOpts.  sOpts
+            // contains the style-specific optionPatch (e.g. Hollow candles'
+            // transparent ``upColor``), and merging it into the persisted
+            // baseline contaminates future switches: "Hollow candles" →
+            // "Candles" would leave ``upColor`` transparent because Candles'
+            // empty optionPatch has nothing to reset it with.  The pristine
+            // baseline in ``payloadSeries.seriesOptions`` is re-read on
+            // every switch via ``_tvBuildSeriesOptions`` — don't poison it.
             _tvUpsertPayloadSeries(entry, mainKey, {
                 seriesType: baseType,
                 bars: rawBars,
-                seriesOptions: _tvMerge((payloadSeries && payloadSeries.seriesOptions) ? payloadSeries.seriesOptions : {}, sOpts),
             });
 
             if (entry.payload) {
@@ -786,6 +1159,92 @@
         bridge.on('tvchart:show-indicators', function(data) {
             var chartId = data.chartId || _cid;
             _tvShowIndicatorsPanel(chartId);
+        });
+
+        bridge.on('tvchart:add-indicator', function(data) {
+            var chartId = data.chartId || _cid;
+            var def = {
+                name: data.name || '',
+                key: data.key || undefined,
+                defaultPeriod: data.period !== undefined ? data.period : (data.defaultPeriod || 0),
+                _color: data.color || undefined,
+                _source: data.source || undefined,
+                _method: data.method || undefined,
+                _multiplier: data.multiplier || undefined,
+                _maType: data.maType || undefined,
+                _offset: data.offset || undefined,
+                _fromIndex: data.fromIndex,
+                _toIndex: data.toIndex,
+                // Volume Profile styling
+                _widthPercent: data.widthPercent,
+                _placement: data.placement,
+                _upColor: data.upColor,
+                _downColor: data.downColor,
+                _vaUpColor: data.vaUpColor,
+                _vaDownColor: data.vaDownColor,
+                _pocColor: data.pocColor,
+                _showPOC: data.showPOC,
+                _showValueArea: data.showValueArea,
+                _valueAreaPct: data.valueAreaPct,
+                // MACD / Stochastic extras
+                _fast: data.fast,
+                _slow: data.slow,
+                _signal: data.signal,
+                _dPeriod: data.dPeriod,
+                // Parabolic SAR
+                _step: data.step,
+                _maxStep: data.maxStep,
+                // Ichimoku
+                _tenkan: data.tenkan,
+                _kijun: data.kijun,
+                _senkouB: data.senkouB,
+                // Historical volatility
+                _annualization: data.annualization,
+            };
+            _tvAddIndicator(def, chartId);
+        });
+
+        bridge.on('tvchart:remove-indicator', function(data) {
+            var seriesId = data.seriesId;
+            if (seriesId) _tvRemoveIndicator(seriesId);
+        });
+
+        bridge.on('tvchart:list-indicators', function(data) {
+            var chartId = data.chartId || _cid;
+            var resolved = _tvResolveChartEntry(chartId);
+            var listEntry = resolved ? resolved.entry : null;
+            var result = [];
+            var keys = Object.keys(_activeIndicators);
+            for (var i = 0; i < keys.length; i++) {
+                var info = _activeIndicators[keys[i]];
+                if (!info || info.chartId !== chartId) continue;
+                var out = {
+                    seriesId: keys[i],
+                    name: info.name,
+                    type: info.type,
+                    period: info.period || 0,
+                    color: info.color,
+                    group: info.group || null,
+                    sourceSeriesId: info.sourceSeriesId || null,
+                    secondarySeriesId: info.secondarySeriesId || null,
+                    isSubplot: !!info.isSubplot,
+                    primarySource: info.primarySource || null,
+                    secondarySource: info.secondarySource || null,
+                };
+                // Resolve the secondary series back to its ticker symbol
+                // so agents describing e.g. a Spread indicator know what
+                // it's spreading against.
+                if (info.secondarySeriesId && listEntry && listEntry._compareSymbols) {
+                    var sym = listEntry._compareSymbols[info.secondarySeriesId];
+                    out.secondarySymbol = sym ? String(sym) : null;
+                }
+                result.push(out);
+            }
+            bridge.emit('tvchart:list-indicators-response', {
+                chartId: chartId,
+                indicators: result,
+                context: data.context || null,
+            });
         });
 
         // Log scale toggle (legacy event fallback)
@@ -881,6 +1340,14 @@
             if (entry && entry.chart) {
                 _tvApplyTimeRangeSelection(entry, range);
             }
+            // Signal mutation completion for Python-side
+            // ``_wait_for_data_settled`` so the tool returns confirmed
+            // state instead of blocking on the timeout.
+            var settledCid = resolved ? resolved.chartId : chartId;
+            var settledState = _tvExportState(settledCid);
+            bridge.emit('tvchart:data-settled', settledState || {
+                chartId: settledCid, error: 'not found',
+            });
         });
 
         bridge.on('tvchart:time-range-picker', function(data) {
@@ -921,16 +1388,34 @@
             _tvPerformRedo();
         });
 
-        // Compare — open symbol entry panel and emit compare-request to host
+        // Compare — open symbol entry panel.  Optional ``query`` drives
+        // the panel programmatically: search + auto-add the matching
+        // ticker as a compare series, so MCP callers can confirm the
+        // compare actually appeared in state.compareSymbols.
         bridge.on('tvchart:compare', function(data) {
-            var chartId = _tvResolveChartId(data.chartId || _cid);
-            if (chartId) _tvShowComparePanel(chartId);
+            var chartId = _tvResolveChartId((data && data.chartId) || _cid);
+            if (!chartId) return;
+            _tvShowComparePanel(chartId, {
+                query: data && data.query,
+                autoAdd: data && data.autoAdd !== false,
+                symbolType: data && data.symbolType,
+                exchange: data && data.exchange,
+            });
         });
 
-        // Symbol search — open the symbol search dialog
+        // Symbol search — open the symbol search dialog. Optional
+        // `query` pre-fills the input; `autoSelect` (default true when
+        // `query` is provided) picks the matching/first result.
+        // `symbolType` / `exchange` narrow the datafeed search.
         bridge.on('tvchart:symbol-search', function(data) {
             var chartId = _tvResolveChartId((data && data.chartId) || _cid);
-            if (chartId) _tvShowSymbolSearchDialog(chartId);
+            if (!chartId) return;
+            _tvShowSymbolSearchDialog(chartId, {
+                query: data && data.query,
+                autoSelect: data && data.autoSelect,
+                symbolType: data && data.symbolType,
+                exchange: data && data.exchange,
+            });
         });
 
         bridge.on('tvchart:datafeed-search-response', function(data) {
@@ -1047,8 +1532,8 @@
         });
 
         // Show/Hide drawings
-        bridge.on('tvchart:tool-visibility', function() {
-            var chartId = _cid;
+        bridge.on('tvchart:tool-visibility', function(data) {
+            var chartId = _resolveCid(data);
             var ds = chartId ? window.__PYWRY_DRAWINGS__[chartId] : null;
             if (ds && ds.canvas) {
                 var vis = ds.canvas.style.display !== 'none';
@@ -1058,8 +1543,8 @@
         });
 
         // Lock drawings (disable interaction)
-        bridge.on('tvchart:tool-lock', function() {
-            var chartId = _cid;
+        bridge.on('tvchart:tool-lock', function(data) {
+            var chartId = _resolveCid(data);
             var ds = chartId ? window.__PYWRY_DRAWINGS__[chartId] : null;
             if (ds) {
                 ds._locked = !ds._locked;

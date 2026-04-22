@@ -83,18 +83,23 @@ def _make_event_callback(widget_id: str) -> EventCallback:
 def _create_tool_function(
     tool_name: str, schema: dict[str, Any], handle_tool: Any, events: EventsDict
 ) -> Callable[..., Any]:
-    """Dynamically create a function with the right signature for the tool schema."""
+    """Dynamically create a function with the right signature for the tool schema.
+
+    Every JSON-schema property becomes a keyword parameter with a
+    ``=None`` default.  The server auto-resolves missing arguments
+    from registered state (e.g. filling ``widget_id`` from the sole
+    registered widget), so a model that forgets to pass ``widget_id``
+    on a single-widget server still gets a successful call instead
+    of a validation error the user has to recover from manually.
+
+    The hand-written JSON schema's ``required`` array is still used
+    as documentation — it appears in FastMCP's tool description so
+    callers know which arguments matter — but enforcement happens
+    in the handler where we have the registry context.
+    """
     properties = schema.get("properties", {})
-    required = set(schema.get("required", []))
 
-    # Build function parameters
-    params = []
-    for prop_name in properties:
-        if prop_name in required:
-            params.append(f"{prop_name}=None")  # Will be validated by MCP
-        else:
-            params.append(f"{prop_name}=None")
-
+    params = [f"{p}=None" for p in properties]
     params_str = ", ".join(params) if params else ""
 
     # Build the function code

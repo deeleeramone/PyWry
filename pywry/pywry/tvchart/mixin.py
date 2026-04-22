@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from ..state_mixins import EmittingWidget
 
@@ -227,6 +227,197 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
         if chart_id:
             payload["chartId"] = chart_id
         self.emit("tvchart:remove-series", payload)
+
+    def add_builtin_indicator(
+        self,
+        name: str,
+        period: int | None = None,
+        *,
+        color: str | None = None,
+        source: str | None = None,
+        method: str | None = None,
+        multiplier: float | None = None,
+        ma_type: str | None = None,
+        offset: int | None = None,
+        chart_id: str | None = None,
+    ) -> None:
+        """Add a built-in indicator computed on the JS frontend.
+
+        Uses the full indicator engine: legend integration, undo/redo,
+        subplot panes, and Bollinger Bands band-fill rendering.
+
+        Available indicators (by name):
+            Moving Average (pick SMA / EMA / WMA / HMA / VWMA via
+            ``method``), Ichimoku Cloud, Bollinger Bands, Keltner
+            Channels, ATR, Historical Volatility, Parabolic SAR, RSI,
+            MACD, Stochastic, Williams %R, CCI, ADX, Aroon, VWAP,
+            Volume SMA, Accumulation/Distribution, Volume Profile
+            Fixed Range, Volume Profile Visible Range.
+
+        Parameters
+        ----------
+        name : str
+            Indicator name from the catalog (e.g. ``"Moving Average"``,
+            ``"RSI"``, ``"MACD"``).
+        period : int, optional
+            Lookback period.  Falls back to the catalog default.
+        color : str, optional
+            Hex colour.  Auto-assigned from the palette when omitted.
+        source : str, optional
+            OHLC source: ``"close"``, ``"open"``, ``"high"``, ``"low"``,
+            ``"hl2"``, ``"hlc3"``, ``"ohlc4"``.
+        method : str, optional
+            Moving average method for the Moving Average indicator:
+            ``"SMA"``, ``"EMA"``, ``"WMA"``, ``"HMA"``, or ``"VWMA"``.
+        multiplier : float, optional
+            Bollinger Bands / Keltner Channels standard-deviation (or
+            ATR) multiplier (default 2).
+        ma_type : str, optional
+            Bollinger Bands moving-average type (default ``"SMA"``).
+        offset : int, optional
+            Bar offset for indicator shifting.
+        chart_id : str, optional
+            Target chart instance ID.
+        """
+        payload: dict[str, Any] = {"name": name}
+        if period is not None:
+            payload["period"] = period
+        if color is not None:
+            payload["color"] = color
+        if source is not None:
+            payload["source"] = source
+        if method is not None:
+            payload["method"] = method
+        if multiplier is not None:
+            payload["multiplier"] = multiplier
+        if ma_type is not None:
+            payload["maType"] = ma_type
+        if offset is not None:
+            payload["offset"] = offset
+        if chart_id is not None:
+            payload["chartId"] = chart_id
+        self.emit("tvchart:add-indicator", payload)
+
+    def add_volume_profile(
+        self,
+        mode: Literal["fixed", "visible"] = "visible",
+        *,
+        bucket_count: int = 24,
+        from_index: int | None = None,
+        to_index: int | None = None,
+        placement: Literal["right", "left"] = "right",
+        width_percent: float = 25.0,
+        value_area_pct: float = 0.70,
+        show_poc: bool = True,
+        show_value_area: bool = True,
+        up_color: str | None = None,
+        down_color: str | None = None,
+        poc_color: str | None = None,
+        chart_id: str | None = None,
+    ) -> None:
+        """Add a Volume Profile overlay pinned to the price pane edge.
+
+        Renders a volume-by-price histogram: one horizontal row per price
+        bucket, bar length proportional to net volume traded at that
+        level, split into up-volume and down-volume portions.  A
+        Point-of-Control (POC) line marks the bucket with the highest
+        volume; the value area (default 70%) is drawn in a deeper
+        colour.
+
+        Parameters
+        ----------
+        mode : {"fixed", "visible"}
+            ``"fixed"`` buckets a specific bar-index range.
+            ``"visible"`` tracks the current viewport and recomputes on
+            every pan/zoom.
+        bucket_count : int
+            Number of price buckets (default 24).
+        from_index, to_index : int, optional
+            Inclusive bar-index bounds for fixed mode.  Defaults to the
+            full bar set if omitted.
+        placement : {"right", "left"}
+            Which side of the pane the histogram is pinned to.
+        width_percent : float
+            Maximum histogram width as a percentage of the pane width
+            (default 25).
+        value_area_pct : float
+            Fraction of volume that defines the Value Area (default 0.70).
+        show_poc, show_value_area : bool
+            Toggle the POC line and Value Area colouring.
+        up_color, down_color, poc_color : str, optional
+            CSS colours for up-volume bars, down-volume bars, and the POC
+            line.
+        chart_id : str, optional
+            Target chart instance ID.
+        """
+        name = "Volume Profile Fixed Range" if mode == "fixed" else "Volume Profile Visible Range"
+        payload: dict[str, Any] = {
+            "name": name,
+            "period": int(bucket_count),
+            "placement": placement,
+            "widthPercent": float(width_percent),
+            "valueAreaPct": float(value_area_pct),
+            "showPOC": bool(show_poc),
+            "showValueArea": bool(show_value_area),
+        }
+        if mode == "fixed" and from_index is not None and to_index is not None:
+            payload["fromIndex"] = int(from_index)
+            payload["toIndex"] = int(to_index)
+        if up_color is not None:
+            payload["upColor"] = up_color
+        if down_color is not None:
+            payload["downColor"] = down_color
+        if poc_color is not None:
+            payload["pocColor"] = poc_color
+        if chart_id is not None:
+            payload["chartId"] = chart_id
+        self.emit("tvchart:add-indicator", payload)
+
+    def remove_builtin_indicator(
+        self,
+        series_id: str,
+        chart_id: str | None = None,
+    ) -> None:
+        """Remove a built-in indicator by its series ID.
+
+        Handles grouped indicators (e.g. Bollinger Bands upper/mid/lower
+        are removed together), subplot pane cleanup, and undo/redo.
+
+        Parameters
+        ----------
+        series_id : str
+            The indicator series ID (e.g. ``"ind_sma_1713200000"``).
+        chart_id : str, optional
+            Target chart instance ID.
+        """
+        payload: dict[str, Any] = {"seriesId": series_id}
+        if chart_id is not None:
+            payload["chartId"] = chart_id
+        self.emit("tvchart:remove-indicator", payload)
+
+    def list_indicators(
+        self,
+        chart_id: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> None:
+        """Request the list of active built-in indicators.
+
+        The frontend replies with a ``tvchart:list-indicators-response``
+        event containing an ``indicators`` array.
+
+        Parameters
+        ----------
+        chart_id : str, optional
+            Target chart instance ID.
+        context : dict, optional
+            Opaque context echoed back in the response.
+        """
+        payload: dict[str, Any] = {}
+        if chart_id is not None:
+            payload["chartId"] = chart_id
+        if context is not None:
+            payload["context"] = context
+        self.emit("tvchart:list-indicators", payload)
 
     def add_marker(
         self,

@@ -131,7 +131,20 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
     }
 
     var theme = _tvDetectTheme();
-    var chartOptions = _tvBuildChartOptions(payload.chartOptions || null, theme);
+    // Three LWC factories are routed by ``payload.chartKind``:
+    //   'default'      (default) — createChart          — time X axis
+    //   'price'        — createOptionsChart             — numeric price X
+    //   'yield-curve'  — createYieldCurveChart          — tenor-in-months X
+    // Each has its own options builder with the same PyWry palette.
+    var chartKind = (payload && payload.chartKind) || 'default';
+    var chartOptions;
+    if (chartKind === 'price') {
+        chartOptions = _tvBuildPriceChartOptions(payload.chartOptions || null, theme);
+    } else if (chartKind === 'yield-curve' || chartKind === 'yield_curve') {
+        chartOptions = _tvBuildYieldCurveChartOptions(payload.chartOptions || null, theme);
+    } else {
+        chartOptions = _tvBuildChartOptions(payload.chartOptions || null, theme);
+    }
     var measured = _tvMeasureContainerSize(container);
 
     // Prefer auto-size unless explicit dimensions are provided.
@@ -155,7 +168,27 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
         }
     }
 
-    var chart = LightweightCharts.createChart(container, chartOptions);
+    var chart;
+    if (chartKind === 'price' && typeof LightweightCharts.createOptionsChart === 'function') {
+        chart = LightweightCharts.createOptionsChart(container, chartOptions);
+    } else if ((chartKind === 'yield-curve' || chartKind === 'yield_curve')
+            && typeof LightweightCharts.createYieldCurveChart === 'function') {
+        chart = LightweightCharts.createYieldCurveChart(container, chartOptions);
+    } else {
+        if (chartKind !== 'default' && chartKind !== undefined) {
+            // Requested a specialty factory but the bundled LWC build
+            // doesn't expose it — surface the gap loudly instead of
+            // silently falling back to createChart with a time axis.
+            console.warn(
+                '[pywry:tvchart] chartKind=' + chartKind
+                + ' requested but LightweightCharts.'
+                + (chartKind === 'price' ? 'createOptionsChart' : 'createYieldCurveChart')
+                + ' is not a function — falling back to createChart.  '
+                + 'Check the bundled LWC version.'
+            );
+        }
+        chart = LightweightCharts.createChart(container, chartOptions);
+    }
     var crect = container.getBoundingClientRect();
     if (crect.width > 0 && crect.height > 0 && typeof chart.resize === 'function') {
         chart.resize(Math.floor(crect.width), Math.floor(crect.height));
@@ -165,6 +198,7 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
         chart: chart,
         container: container,
         chartId: chartId,
+        chartKind: chartKind,  // 'default' | 'price' | 'yield-curve'
         uiRoot: _tvResolveUiRootFromElement(container),
         seriesMap: {},       // seriesId → ISeriesApi
         volumeMap: {},       // seriesId → ISeriesApi (volume histogram)
@@ -182,6 +216,21 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
             gridVisible: true,
             crosshairEnabled: false,
         },
+        // One-shot callbacks that fire once seriesMap contains a main
+        // series (registered via entry.whenMainSeriesReady).  Needed
+        // because the destroy-recreate flow has to chain post-CREATE
+        // work (re-apply display style, etc.) but datafeed mode adds
+        // the series inside an async resolveSymbol callback — polling
+        // for seriesMap.main would be a race-condition workaround.
+        _mainSeriesReadyCallbacks: [],
+    };
+    entry.whenMainSeriesReady = function(cb) {
+        if (typeof cb !== 'function') return;
+        if (entry.seriesMap && (entry.seriesMap.main || entry.seriesMap['series-0'])) {
+            try { cb(); } catch (e) {}
+            return;
+        }
+        entry._mainSeriesReadyCallbacks.push(cb);
     };
 
     // Normalise: support both multi-series array and legacy flat format
@@ -222,6 +271,18 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
             var sType = s.seriesType || 'Candlestick';
             var sOptions = _tvBuildSeriesOptions(s.seriesOptions || {}, sType, theme);
 
+            // Non-default chart kinds plot sparse point sequences (option
+            // strikes, curve tenors) — render markers by default so each
+            // point is visible even when the line can't distinguish them.
+            if (chartKind !== 'default' && sType === 'Line') {
+                if (sOptions.pointMarkersVisible === undefined) {
+                    sOptions.pointMarkersVisible = true;
+                }
+                if (sOptions.pointMarkersRadius === undefined) {
+                    sOptions.pointMarkersRadius = 4;
+                }
+            }
+
             // For overlay/compare series (not first), use a separate price scale
             if (i > 0) {
                 sOptions.priceScaleId = s.seriesId || ('overlay-' + i);
@@ -247,6 +308,9 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
             if (_tvIsMainSeriesId(sid) && series && typeof series.moveToPane === 'function') {
                 try { series.moveToPane(0); } catch (e) {}
             }
+            if (_tvIsMainSeriesId(sid) || sid === 'series-0') {
+                _tvFireMainSeriesReady(entry);
+            }
             if (_tvLooksLikeOhlcBars(sourceBars)) {
                 entry._seriesCanonicalRawData[sid] = sourceBars;
             }
@@ -264,8 +328,11 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
             }
 
             // Auto-enable volume unless caller explicitly disables it.
-            // Accept an explicit volume array, or extract from bars' volume field.
-            if (payload && payload.enableVolume !== false) {
+            // Volume is a time-based concept (bars-per-period) — skip it
+            // entirely on price-axis / yield-curve charts, where the
+            // X-axis is strike or tenor and a "volume by strike"
+            // histogram is an indicator-level feature, not chart-level.
+            if (payload && payload.enableVolume !== false && chartKind === 'default') {
                 var volData = (s.volume && s.volume.length > 0) ? s.volume : _tvExtractVolumeFromBars(sourceBars, theme, entry);
                 if (volData && volData.length > 0) {
                     var volOptions = _tvBuildVolumeOptions(s, theme);
@@ -290,12 +357,34 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
         // (which resizes the chart at 0ms, double-rAF, and 120ms).
         (function(e, c) {
             function applyDefault() {
-                var sel = document.querySelector('.pywry-tab.pywry-tab-active[data-target-interval]');
-                if (sel) {
-                    var range = sel.getAttribute('data-value');
-                    if (range && range !== 'all') {
-                        _tvApplyTimeRangeSelection(e, range);
+                // Destroy-recreate flows (interval-change / symbol-change)
+                // hand us a pre-destroy zoom to restore — honour it instead
+                // of falling through to fitContent, which would wipe the
+                // user's zoom every time the data interval changes.
+                var preserved = e._preservedVisibleTimeRange;
+                if (preserved && preserved.from != null && preserved.to != null) {
+                    try {
+                        c.timeScale().setVisibleRange({
+                            from: preserved.from,
+                            to: preserved.to,
+                        });
+                        delete e._preservedVisibleTimeRange;
                         return;
+                    } catch (err) {
+                        delete e._preservedVisibleTimeRange;
+                    }
+                }
+                // Time-range tabs (1D / 5D / 1Y / ...) only make sense
+                // for time-axis charts.  Skip the lookup on price-axis
+                // and yield-curve charts and jump straight to fitContent.
+                if (chartKind === 'default') {
+                    var sel = document.querySelector('.pywry-tab.pywry-tab-active[data-target-interval]');
+                    if (sel) {
+                        var range = sel.getAttribute('data-value');
+                        if (range && range !== 'all') {
+                            _tvApplyTimeRangeSelection(e, range);
+                            return;
+                        }
                     }
                 }
                 c.timeScale().fitContent();
@@ -321,6 +410,16 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
     // (entry already stored above)
     _tvApplyHoverReadoutMode(entry);
     _tvScheduleVisibilityRecovery(entry);
+
+    // Provision the drawing overlay up front so the canvas element is
+    // part of every live chart, not lazy-created on first tool
+    // selection.  Tools that toggle drawing visibility / lock / state
+    // export rely on the overlay existing; requiring a prior draw
+    // action to instantiate it left those paths broken whenever the
+    // user / caller hadn't drawn yet.
+    if (typeof _tvEnsureDrawingLayer === "function") {
+        try { _tvEnsureDrawingLayer(chartId); } catch (e) { /* best-effort */ }
+    }
 
     // Register with unified component registry
     window.__PYWRY_COMPONENTS__[chartId] = {
@@ -467,12 +566,17 @@ window.PYWRY_TVCHART_RENDER = function(chartId, container, payload) {
  */
 function _tvBuildVolumeOptions(seriesEntry, theme) {
     var palette = TVCHART_THEMES._get(theme || 'dark');
+    // Use the pane's standard 'right' scale (visible by default) instead
+    // of a custom 'volume' overlay scale (hidden by default).  When the
+    // volume histogram lives in its own subplot pane, the right scale
+    // belongs to that pane and renders independently from the price
+    // pane's right scale.
     return _tvMerge({
         priceFormat: { type: 'volume' },
-        priceScaleId: 'volume',
-        scaleMargins: { top: 0.8, bottom: 0 },
+        priceScaleId: 'right',
+        scaleMargins: { top: 0.1, bottom: 0.05 },
         color: palette.volumeUp,
-        lastValueVisible: false,
+        lastValueVisible: true,
         priceLineVisible: false,
     }, seriesEntry.volumeOptions || {});
 }
@@ -694,6 +798,19 @@ function _tvApplyThemeToChart(chartId, newTheme) {
     entry.theme = newTheme;
     var palette = TVCHART_THEMES._get(newTheme || 'dark');
 
+    // Reset any stored override of text/grid/background colours so the new
+    // palette takes effect on the price scale as well as the time scale.
+    // Without this, _chartPrefs.textColor remembers the previous theme's
+    // value and the price scale stays unreadable after the toggle.
+    if (entry._chartPrefs) {
+        entry._chartPrefs.textColor = palette.textColor;
+        entry._chartPrefs.linesColor = palette.grid.vertLines.color;
+        if (entry._chartPrefs.settings) {
+            entry._chartPrefs.settings['Text-Color'] = palette.textColor;
+            entry._chartPrefs.settings['Lines-Color'] = palette.grid.vertLines.color;
+        }
+    }
+
     // Update chart layout, grid, and scale borders
     // Crosshair mode stays Normal (hover readout always active);
     // only lines visibility respects the user setting.
@@ -711,7 +828,10 @@ function _tvApplyThemeToChart(chartId, newTheme) {
             vertLine: { color: _chColor, visible: _chEnabled, labelVisible: true, style: 2, width: 1 },
             horzLine: { color: _chColor, visible: _chEnabled, labelVisible: _chEnabled, style: 2, width: 1 },
         },
-        rightPriceScale: { borderColor: palette.grid.vertLines.color },
+        // Both scales need an EXPLICIT textColor — the layout-level value
+        // doesn't always cascade to the price scale labels in LWC.
+        rightPriceScale: { borderColor: palette.grid.vertLines.color, textColor: palette.textColor },
+        leftPriceScale: { borderColor: palette.grid.vertLines.color, textColor: palette.textColor },
         timeScale: { borderColor: palette.grid.vertLines.color },
     });
 
@@ -824,14 +944,41 @@ function _tvSetupEventBridge(chartId, chart) {
         });
     });
 
-    // Visible range change
+    // Visible range change — emits Python event + locally refreshes any
+    // visible-range volume-profile primitives on this chart.  Both are
+    // coalesced via rAF so panning/zooming or scrolling past the loaded
+    // bar set doesn't fire 60+ events per second to Python (which would
+    // overload the WebSocket/IPC bridge and freeze the UI).
+    var vpRefreshHandle = null;
+    var emitHandle = null;
+    var lastEmittedRange = null;
     chart.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
         if (!range) return;
-        bridge.emit('tvchart:visible-range-change', {
-            chartId: chartId,
-            from: range.from,
-            to: range.to,
+        if (emitHandle) cancelAnimationFrame(emitHandle);
+        emitHandle = requestAnimationFrame(function() {
+            emitHandle = null;
+            // Skip emit when the range hasn't changed meaningfully —
+            // scrolling past the data range can fire dozens of identical
+            // ticks per frame as LWC re-clamps the viewport.
+            if (lastEmittedRange
+                    && Math.abs(lastEmittedRange.from - range.from) < 0.5
+                    && Math.abs(lastEmittedRange.to - range.to) < 0.5) {
+                return;
+            }
+            lastEmittedRange = { from: range.from, to: range.to };
+            bridge.emit('tvchart:visible-range-change', {
+                chartId: chartId,
+                from: range.from,
+                to: range.to,
+            });
         });
+        if (typeof _tvRefreshVisibleVolumeProfiles === 'function') {
+            if (vpRefreshHandle) cancelAnimationFrame(vpRefreshHandle);
+            vpRefreshHandle = requestAnimationFrame(function() {
+                vpRefreshHandle = null;
+                _tvRefreshVisibleVolumeProfiles(chartId);
+            });
+        }
     });
 }
 
@@ -851,15 +998,44 @@ function _tvExportState(chartId) {
         };
     }
 
-    var range;
-    try {
-        range = entry.chart.timeScale().getVisibleLogicalRange();
-    } catch (e) {
-        range = null;
-    }
+    var logicalRange;
+    var timeRange;
+    try { logicalRange = entry.chart.timeScale().getVisibleLogicalRange(); } catch (e) { logicalRange = null; }
+    try { timeRange = entry.chart.timeScale().getVisibleRange(); } catch (e) { timeRange = null; }
 
     // Collect raw bar data if stored
     var rawData = entry._rawData ? entry._rawData.slice() : null;
+
+    // Main symbol and interval (from the stored payload)
+    var mainSymbol = '';
+    if (entry.payload && entry.payload.series && entry.payload.series[0] && entry.payload.series[0].symbol) {
+        mainSymbol = String(entry.payload.series[0].symbol);
+    } else if (entry._resolvedSymbolInfo && entry._resolvedSymbolInfo.main) {
+        mainSymbol = String(entry._resolvedSymbolInfo.main.symbol || entry._resolvedSymbolInfo.main.ticker || '');
+    }
+    var interval = (entry.payload && entry.payload.interval) ? String(entry.payload.interval) : '';
+    var chartType = entry._chartDisplayStyle || 'Candles';
+
+    // Split compare-series entries into two buckets: user-facing
+    // compares (what the user added via the Compare dialog) vs.
+    // indicator-source compares (the secondary ticker that drives a
+    // Spread/Ratio/Sum/Product/Correlation indicator — hidden from
+    // the Compare panel, but still in the compare map because that's
+    // where the bar data lives).
+    var compareSymbols = {};
+    var indicatorSourceSymbols = {};
+    if (entry._compareSymbols) {
+        var csKeys = Object.keys(entry._compareSymbols);
+        for (var cs = 0; cs < csKeys.length; cs++) {
+            var sid = csKeys[cs];
+            var sym = String(entry._compareSymbols[sid]);
+            if (entry._indicatorSourceSeries && entry._indicatorSourceSeries[sid]) {
+                indicatorSourceSymbols[sid] = sym;
+            } else {
+                compareSymbols[sid] = sym;
+            }
+        }
+    }
 
     // Collect drawings
     var ds = window.__PYWRY_DRAWINGS__[chartId];
@@ -870,27 +1046,47 @@ function _tvExportState(chartId) {
         }
     }
 
-    // Collect active indicators for this chart
+    // Collect active indicators for this chart.  Binary indicators
+    // (Spread, Ratio, Sum, Product, Correlation) carry their secondary
+    // series id — resolve it back to the ticker symbol so agents
+    // describing the chart know *what* is being spread/ratioed without
+    // having to cross-reference seriesId maps themselves.
     var indicators = [];
     var aiKeys = Object.keys(_activeIndicators);
     for (var a = 0; a < aiKeys.length; a++) {
         var ai = _activeIndicators[aiKeys[a]];
-        if (ai.chartId === chartId) {
-            indicators.push({
-                seriesId: aiKeys[a],
-                name: ai.name,
-                period: ai.period,
-                color: ai.color || null,
-                group: ai.group || null,
-            });
+        if (ai.chartId !== chartId) continue;
+        var entryOut = {
+            seriesId: aiKeys[a],
+            name: ai.name,
+            type: ai.type || null,
+            period: ai.period,
+            color: ai.color || null,
+            group: ai.group || null,
+            sourceSeriesId: ai.sourceSeriesId || null,
+            secondarySeriesId: ai.secondarySeriesId || null,
+            isSubplot: !!ai.isSubplot,
+            primarySource: ai.primarySource || null,
+            secondarySource: ai.secondarySource || null,
+        };
+        if (ai.secondarySeriesId) {
+            var secSym = (entry._compareSymbols && entry._compareSymbols[ai.secondarySeriesId]) || null;
+            entryOut.secondarySymbol = secSym ? String(secSym) : null;
         }
+        indicators.push(entryOut);
     }
 
     return {
         chartId: chartId,
         theme: entry.theme,
+        symbol: mainSymbol,
+        interval: interval,
+        chartType: chartType,
+        compareSymbols: compareSymbols,
+        indicatorSourceSymbols: indicatorSourceSymbols,
         series: seriesData,
-        visibleRange: range,
+        visibleRange: timeRange,
+        visibleLogicalRange: logicalRange,
         rawData: rawData,
         drawings: drawings,
         indicators: indicators,
@@ -942,6 +1138,13 @@ function _tvExportLayout(chartId) {
             if (ai.maType) indEntry.maType = ai.maType;
             if (ai.offset != null) indEntry.offset = ai.offset;
             if (ai.source) indEntry.source = ai.source;
+            // Volume Profile: preserve mode + bucket count + fixed-range anchor
+            if (ai.mode) indEntry.mode = ai.mode;
+            if (ai.bucketCount != null) indEntry.bucketCount = ai.bucketCount;
+            if (ai.fromIndex != null) indEntry.fromIndex = ai.fromIndex;
+            if (ai.toIndex != null) indEntry.toIndex = ai.toIndex;
+            if (ai.widthPercent != null) indEntry.widthPercent = ai.widthPercent;
+            if (ai.placement) indEntry.placement = ai.placement;
             indicators.push(indEntry);
         }
     }

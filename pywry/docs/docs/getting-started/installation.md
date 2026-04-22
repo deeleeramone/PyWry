@@ -18,15 +18,18 @@ Core extras:
 | `pip install 'pywry[auth]'` | OAuth2 and secure token storage support |
 | `pip install 'pywry[freeze]'` | PyInstaller hook for frozen desktop apps |
 | `pip install 'pywry[mcp]'` | Model Context Protocol server support |
+| `pip install 'pywry[sqlite]'` | Encrypted SQLite state backend (SQLCipher) |
 | `pip install 'pywry[all]'` | Every optional dependency above |
 
-Provider SDK extras:
+Chat provider extras:
 
 | Extra | Installs |
 |-------|----------|
 | `pip install 'pywry[openai]'` | OpenAI SDK for `OpenAIProvider` |
 | `pip install 'pywry[anthropic]'` | Anthropic SDK for `AnthropicProvider` |
 | `pip install 'pywry[magentic]'` | Magentic package for `MagenticProvider` |
+| `pip install 'pywry[acp]'` | Agent Client Protocol for `StdioProvider` |
+| `pip install 'pywry[deepagent]'` | LangChain Deep Agents for `DeepagentProvider` (includes MCP adapters and ACP) |
 
 Chat UI support is part of the base package. Provider extras only install third-party SDKs for the matching adapter classes.
 

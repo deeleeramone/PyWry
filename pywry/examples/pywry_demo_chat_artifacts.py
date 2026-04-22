@@ -34,7 +34,8 @@ from pywry import (
     TableArtifact,
     Toolbar,
 )
-from pywry.chat_manager import ChatManager, SlashCommandDef
+from pywry.chat.manager import ChatManager
+from pywry.chat.models import ACPCommand
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +72,7 @@ async def poll_sensors(ids: list[str]) -> list[Sensor]:
 async def main():
     readings = await poll_sensors(["sensor-A", "sensor-B", "sensor-C"])
     for r in readings:
-        print(f"{r.device_id}: {r.temperature:.1f}°C, {r.humidity:.0f}%")
+        log.info("%s: %.1f°C, %.0f%%", r.device_id, r.temperature, r.humidity)
 
 asyncio.run(main())
 '''
@@ -449,14 +450,14 @@ chat = ChatManager(
         "Or just type **code**, **chart**, **table**, etc."
     ),
     slash_commands=[
-        SlashCommandDef(name="/code", description="Show a code artifact"),
-        SlashCommandDef(name="/markdown", description="Show a Markdown artifact"),
-        SlashCommandDef(name="/html", description="Show an HTML artifact"),
-        SlashCommandDef(name="/table", description="Show an AG Grid table"),
-        SlashCommandDef(name="/chart", description="Show a Plotly chart"),
-        SlashCommandDef(name="/image", description="Show an image artifact"),
-        SlashCommandDef(name="/json", description="Show a JSON tree artifact"),
-        SlashCommandDef(name="/all", description="Render all 7 artifact types"),
+        ACPCommand(name="/code", description="Show a code artifact"),
+        ACPCommand(name="/markdown", description="Show a Markdown artifact"),
+        ACPCommand(name="/html", description="Show an HTML artifact"),
+        ACPCommand(name="/table", description="Show an AG Grid table"),
+        ACPCommand(name="/chart", description="Show a Plotly chart"),
+        ACPCommand(name="/image", description="Show an image artifact"),
+        ACPCommand(name="/json", description="Show a JSON tree artifact"),
+        ACPCommand(name="/all", description="Render all 7 artifact types"),
     ],
     on_slash_command=on_slash,
     toolbar_width="420px",

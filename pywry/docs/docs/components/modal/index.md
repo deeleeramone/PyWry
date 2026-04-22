@@ -131,7 +131,7 @@ modal = Modal(
 )
 
 def on_dismissed(data, event_type, label):
-    print("User dismissed the confirmation dialog")
+    app.emit("pywry:set-content", {"id": "status", "text": "Action cancelled"}, label)
 
 app.show(content, modals=[modal], callbacks={"app:confirm-dismissed": on_dismissed})
 ```

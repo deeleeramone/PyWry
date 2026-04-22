@@ -35,11 +35,11 @@ app = PyWry()
 
 # ── Define handlers FIRST ────────────────────────────────────────
 def on_new(data, event_type, label):
-    print("Creating new file…")
+    app.show(HtmlContent(html="<h1>Untitled</h1>"), title="New File")
 
 
 def on_open(data, event_type, label):
-    print("Opening file…")
+    app.emit("pywry:alert", {"message": "Open file dialog triggered"}, label)
 
 
 def on_quit(data, event_type, label):
@@ -89,7 +89,7 @@ A normal clickable menu item. **`handler` is required.**
 from pywry import MenuItemConfig
 
 def on_save(data, event_type, label):
-    print("Saving…")
+    app.emit("app:save", {"path": "current.json"}, label)
 
 item = MenuItemConfig(
     id="save",                   # Unique ID — sent in menu:click events
@@ -121,7 +121,7 @@ A toggle item with a check mark. **`handler` is required.**
 from pywry import CheckMenuItemConfig
 
 def on_bold(data, event_type, label):
-    print("Bold toggled")
+    app.emit("editor:toggle-bold", {"checked": data.get("checked", False)}, label)
 
 item = CheckMenuItemConfig(
     id="bold",
@@ -149,7 +149,7 @@ A menu item with an icon (RGBA bytes or native OS icon). **`handler` is required
 from pywry import IconMenuItemConfig
 
 def on_doc(data, event_type, label):
-    print("Document clicked")
+    app.emit("editor:format", {"style": data.get("id", "plain")}, label)
 
 # With RGBA bytes
 item = IconMenuItemConfig(
@@ -223,10 +223,10 @@ A nested container that holds other menu items.
 from pywry import SubmenuConfig, MenuItemConfig
 
 def on_zoom_in(data, event_type, label):
-    print("Zoom in")
+    app.emit("view:zoom", {"direction": "in"}, label)
 
 def on_zoom_out(data, event_type, label):
-    print("Zoom out")
+    app.emit("view:zoom", {"direction": "out"}, label)
 
 view_menu = SubmenuConfig(
     id="view",
@@ -297,13 +297,13 @@ All mutations happen live — the native menu updates immediately.
 
 ```python
 def on_export(data, event_type, label):
-    print("Exporting…")
+    app.emit("app:export", {"format": "csv"}, label)
 
 def on_import(data, event_type, label):
-    print("Importing…")
+    app.emit("app:import", {"format": "csv"}, label)
 
 def on_save_as(data, event_type, label):
-    print("Save as…")
+    app.emit("app:save-as", {"path": ""}, label)
 
 # Add items (handler required on new items)
 menu.append(MenuItemConfig(id="export", text="Export", handler=on_export))
@@ -428,15 +428,15 @@ app = PyWry()
 
 # ── Handlers ──────────────────────────────────────────────────────
 def on_new(data, event_type, label):
-    print("Creating new file…")
+    app.show(HtmlContent(html="<h1>Untitled</h1>"), title="New File")
 
 
 def on_open(data, event_type, label):
-    print("Opening file…")
+    app.emit("pywry:alert", {"message": "Open file dialog triggered"}, label)
 
 
 def on_save(data, event_type, label):
-    print("Saving…")
+    app.emit("app:save", {"path": "current.json"}, label)
 
 
 def on_quit(data, event_type, label):
@@ -444,23 +444,23 @@ def on_quit(data, event_type, label):
 
 
 def on_sidebar(data, event_type, label):
-    print("Sidebar toggled")
+    app.emit("view:toggle-sidebar", {}, label)
 
 
 def on_statusbar(data, event_type, label):
-    print("Status bar toggled")
+    app.emit("view:toggle-statusbar", {}, label)
 
 
 def on_zoom_in(data, event_type, label):
-    print("Zoom in")
+    app.emit("view:zoom", {"direction": "in"}, label)
 
 
 def on_zoom_out(data, event_type, label):
-    print("Zoom out")
+    app.emit("view:zoom", {"direction": "out"}, label)
 
 
 def on_zoom_reset(data, event_type, label):
-    print("Zoom reset")
+    app.emit("view:zoom", {"direction": "reset"}, label)
 
 
 # ── Menu structure ────────────────────────────────────────────────

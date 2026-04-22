@@ -1,12 +1,10 @@
 # Tools Reference
 
-The MCP server exposes **38 tools** organized into eight groups.
-Every description, parameter name, type, and default below comes directly from the tool schemas in the source code.
+The MCP server groups tools by purpose: discovery, widget creation, widget manipulation, widget management, chat, TVChart manipulation, resources / export, and autonomous building.  Every description, parameter name, type, and default below comes directly from the tool schemas in the source code.
 
 !!! warning "Mandatory first step"
     Call `get_skills` with `skill="component_reference"` **before** creating any widget.
-    The component reference is the authoritative source for event signatures,
-    system events, and JSON schemas for all 18 toolbar component types.
+    The component reference is the authoritative source for every toolbar component's event signature, system events, and JSON schema.
 
 ---
 
@@ -104,7 +102,7 @@ Toolbar events that are **not** covered by an explicit `callbacks` entry are sti
   "position": "top",        // top | bottom | left | right | inside
   "items": [
     {
-      "type": "button",     // any of the 18 component types
+      "type": "button",     // any toolbar component type
       "label": "Save",
       "event": "app:save",  // namespace:action (avoid pywry/plotly/grid namespaces)
       "variant": "primary", // primary | neutral | danger | success
@@ -189,6 +187,429 @@ Create a TradingView Lightweight Charts widget from JSON data.
 | `series_options` | `string` | No | `null` | Series-level options as JSON string |
 
 **Returns:** `{"widget_id": "...", "path": "...", "created": true}`
+
+On creation the widget is wired to capture `tvchart:click`,
+`tvchart:crosshair-move`, `tvchart:visible-range-change`,
+`tvchart:drawing-added`, `tvchart:drawing-deleted`,
+`tvchart:open-layout-request`, `tvchart:interval-change`, and
+`tvchart:chart-type-change` into the MCP events dict — retrieve them
+later with `get_events`.
+
+---
+
+## TVChart Manipulation
+
+Every action the TradingView chart supports — data updates, indicators,
+chart type, symbol, interval, drawing tools, layout persistence — is
+exposed as a dedicated `tvchart_*` tool.  All tools take the owning
+`widget_id` plus an optional `chart_id` for widgets hosting multiple
+charts.
+
+### Data and series
+
+#### tvchart_update_series
+
+Replace the bar data for a chart series.  Emits `tvchart:update`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `bars` | `array` | **Yes** | OHLCV bar dicts (time in epoch seconds) |
+| `volume` | `array` | No | Optional separate volume series |
+| `series_id` | `string` | No | Target series (defaults to the main series) |
+| `chart_id` | `string` | No | |
+| `fit_content` | `boolean` | No | Default `true` |
+
+#### tvchart_update_bar
+
+Stream a single real-time bar update.  Emits `tvchart:stream`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `bar` | `object` | **Yes** | Bar dict with time/open/high/low/close/volume |
+| `series_id` | `string` | No | |
+| `chart_id` | `string` | No | |
+
+#### tvchart_add_series
+
+Add a pre-computed overlay series.  Emits `tvchart:add-series`.  Use
+`tvchart_add_indicator` instead when the JS indicator engine can
+compute the values for you.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `series_id` | `string` | **Yes** | Unique id for later removal |
+| `bars` | `array` | **Yes** | Series data (shape depends on series_type) |
+| `series_type` | `string` | No | `Line` / `Area` / `Histogram` / `Baseline` / `Candlestick` / `Bar` |
+| `series_options` | `object` | No | Color, lineWidth, priceScaleId, … |
+| `chart_id` | `string` | No | |
+
+#### tvchart_remove_series
+
+Remove a series or overlay by id.  Emits `tvchart:remove-series`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `series_id` | `string` | **Yes** | |
+| `chart_id` | `string` | No | |
+
+#### tvchart_add_markers
+
+Add buy/sell or event markers at specific bars.  Emits `tvchart:add-markers`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `markers` | `array` | **Yes** | `[{time, position, color, shape, text}]` |
+| `series_id` | `string` | No | |
+| `chart_id` | `string` | No | |
+
+#### tvchart_add_price_line
+
+Draw a horizontal price line.  Emits `tvchart:add-price-line`.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | |
+| `price` | `number` | **Yes** | — | |
+| `color` | `string` | No | `#2196F3` | |
+| `line_width` | `integer` | No | `1` | |
+| `title` | `string` | No | `""` | |
+| `series_id` | `string` | No | — | |
+| `chart_id` | `string` | No | — | |
+
+#### tvchart_apply_options
+
+Patch chart-level or series-level options.  Emits `tvchart:apply-options`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `chart_options` | `object` | No | Chart-level patches (layout, grid, crosshair, timeScale) |
+| `series_options` | `object` | No | Series-level patches |
+| `series_id` | `string` | No | Target series when patching series options |
+| `chart_id` | `string` | No | |
+
+### Built-in indicators
+
+The JS indicator engine computes these natively from the chart's bar
+data, manages the legend and subplot panes, and supports undo/redo.
+
+#### tvchart_add_indicator
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `name` | `string` | **Yes** | `SMA`, `EMA`, `WMA`, `SMA (50)`, `SMA (200)`, `EMA (12)`, `EMA (26)`, `Moving Average`, `RSI`, `Momentum`, `Bollinger Bands`, `ATR`, `VWAP`, `Volume SMA`, `Average Price`, `Median Price`, `Weighted Close`, `Percent Change`, `Correlation`, `Spread`, `Ratio`, `Sum`, `Product` |
+| `period` | `integer` | No | Lookback period (0 uses the indicator default) |
+| `color` | `string` | No | Hex colour (empty = auto-assign) |
+| `source` | `string` | No | OHLC source: `close` / `open` / `high` / `low` / `hl2` / `hlc3` / `ohlc4` |
+| `method` | `string` | No | For Moving Average: `SMA` / `EMA` / `WMA` |
+| `multiplier` | `number` | No | Bollinger Bands multiplier |
+| `ma_type` | `string` | No | Bollinger Bands MA type |
+| `offset` | `integer` | No | Bar offset for indicator shifting |
+| `chart_id` | `string` | No | |
+
+**Compare-derivative indicators** (`Spread`, `Ratio`, `Sum`, `Product`,
+`Correlation`) require a second series to compute against.  Add the
+secondary ticker first via `tvchart_compare(widget_id, query=...)`,
+then call `tvchart_add_indicator` with the derivative name — the
+chart picks up the most recent compare series as the secondary.
+`list_indicators` / `request_state` resolve the secondary back to its
+ticker in `secondarySymbol` so agents can describe the indicator as
+e.g. `Spread(AAPL, MSFT)` instead of `Spread(compare-msft)`.
+
+#### tvchart_remove_indicator
+
+Remove by series id.  Grouped indicators (e.g. the three Bollinger
+bands) are removed together.  Emits `tvchart:remove-indicator`.
+
+| Parameter | Type | Required |
+|:---|:---|:---|
+| `widget_id` | `string` | **Yes** |
+| `series_id` | `string` | **Yes** |
+| `chart_id` | `string` | No |
+
+#### tvchart_list_indicators
+
+Synchronously round-trips `tvchart:list-indicators` /
+`tvchart:list-indicators-response` and returns the indicator inventory.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | |
+| `chart_id` | `string` | No | — | |
+| `timeout` | `number` | No | `5.0` | Response wait, seconds |
+
+Each indicator entry in the result contains:
+
+- `seriesId` — stable id used by `tvchart_remove_indicator`
+- `name` — human-facing label, e.g. `"Spread"`
+- `type` — machine key, e.g. `"spread"`
+- `period`, `color`, `group`
+- `sourceSeriesId` — the primary input series id (usually `"main"`)
+- `secondarySeriesId` — the secondary compare series id for binary
+  indicators (`null` otherwise)
+- `secondarySymbol` — the ticker the secondary series holds
+  (`"MSFT"`), resolved back from the compare map; `null` when the
+  indicator is single-series
+- `primarySource`, `secondarySource` — OHLC source selectors per leg
+- `isSubplot` — true when the indicator lives in its own pane below
+  the main chart
+
+**Returns:** `{"widget_id": "...", "indicators": [...], "chartId": "..."}`
+
+#### tvchart_show_indicators
+
+Open the indicator picker panel UI.  Emits `tvchart:show-indicators`.
+
+### Symbol / interval / view
+
+#### tvchart_symbol_search
+
+Open the symbol search dialog and (optionally) auto-change the main
+ticker.  Emits `tvchart:symbol-search`.  When `query` is set the
+datafeed search runs with that query and — if `auto_select` (default
+`true`) — the exact-ticker match (or the first result otherwise) is
+selected when results arrive.  The handler then polls
+`tvchart:request-state` until the chart's reported `symbol` matches
+the target (up to ~3s) and returns the real post-change state.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | |
+| `query` | `string` | No | — | Pre-fill the search box and run the search |
+| `auto_select` | `boolean` | No | `true` | Auto-pick when results arrive (only applies if `query` is set) |
+| `symbol_type` | `string` | No | — | Security class filter — datafeed values such as `equity`, `etf`, `index`, `mutualfund`, `future`, `cryptocurrency`, `currency`.  Narrows the search so e.g. `SPY` finds the ETF rather than `SPYM`.  Case-insensitive. |
+| `exchange` | `string` | No | — | Exchange filter — datafeed-provided value.  Case-insensitive. |
+| `chart_id` | `string` | No | — | |
+
+Result fields (when `query` + `auto_select`):
+
+- `widget_id`, `event_sent`, `event_type` — standard emit confirmation
+- `symbol` — the confirmed main symbol after the change
+- `state` — the full `tvchart:request-state` snapshot
+- `note` — present only if the change didn't land within the timeout
+
+#### tvchart_compare
+
+Add a ticker as a compare-series overlay on the chart.  Emits
+`tvchart:compare`.  When `query` is set the compare panel searches and
+— if `auto_add` (default `true`) — commits the matching ticker as a
+compare series.  The handler polls chart state until the new ticker
+appears in `state.compareSymbols` and returns the confirmed state.
+Omit `query` to just open the panel for the user.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | |
+| `query` | `string` | No | — | Ticker / name to search and auto-add |
+| `auto_add` | `boolean` | No | `true` | Auto-commit the matching result when the search responds |
+| `symbol_type` | `string` | No | — | Security class filter — datafeed values such as `equity`, `etf`, `index`, `mutualfund`, `future`, `cryptocurrency`, `currency`.  Narrows the search so e.g. `SPY` finds the ETF rather than `SPYM`.  Case-insensitive. |
+| `exchange` | `string` | No | — | Exchange filter — datafeed-provided value.  Case-insensitive. |
+| `chart_id` | `string` | No | — | |
+
+Result fields (when `query` + `auto_add`):
+
+- `widget_id`, `event_sent`, `event_type` — standard emit confirmation
+- `compareSymbols` — the `{seriesId: ticker}` map from state after the
+  add (user-facing compares only; indicator-source compares are
+  excluded)
+- `state` — the full `tvchart:request-state` snapshot
+- `note` — present only if the compare didn't land within the timeout
+
+Compare series added via this tool are the *input* for compare-
+derivative indicators (`Spread`, `Ratio`, `Sum`, `Product`,
+`Correlation`).  After the compare lands, call
+`tvchart_add_indicator` to layer the derivative on top.
+
+#### tvchart_change_interval
+
+Change the chart timeframe.  Emits `tvchart:interval-change` and polls
+state until the chart reports the new interval.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `value` | `string` | **Yes** | `1m` … `12M` |
+| `chart_id` | `string` | No | |
+
+Result fields:
+
+- `widget_id`, `event_sent`, `event_type` — standard emit confirmation
+- `interval` — the confirmed interval after the change
+- `state` — the full `tvchart:request-state` snapshot
+- `note` — present only if the change didn't land within the timeout
+
+#### tvchart_set_visible_range
+
+Set the chart's visible time range.  Emits `tvchart:time-scale` with
+`{visibleRange: {from, to}}`.  Times are epoch seconds.
+
+| Parameter | Type | Required |
+|:---|:---|:---|
+| `widget_id` | `string` | **Yes** |
+| `from_time` | `integer` | **Yes** |
+| `to_time` | `integer` | **Yes** |
+| `chart_id` | `string` | No |
+
+#### tvchart_fit_content
+
+Fit all bars to the visible area.  Emits `tvchart:time-scale` with
+`{fitContent: true}`.
+
+#### tvchart_time_range
+
+Zoom to a preset range.  Emits `tvchart:time-range`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `value` | `string` | **Yes** | `1D`, `1W`, `1M`, `3M`, `6M`, `1Y`, `5Y`, `YTD`, … |
+| `chart_id` | `string` | No | |
+
+#### tvchart_time_range_picker
+
+Open the date-range picker dialog.  Emits `tvchart:time-range-picker`.
+
+#### tvchart_log_scale
+
+Toggle logarithmic price scale.  Emits `tvchart:log-scale`.
+
+| Parameter | Type | Required |
+|:---|:---|:---|
+| `widget_id` | `string` | **Yes** |
+| `value` | `boolean` | **Yes** |
+| `chart_id` | `string` | No |
+
+#### tvchart_auto_scale
+
+Toggle auto-scale on the price axis.  Emits `tvchart:auto-scale`.
+
+| Parameter | Type | Required |
+|:---|:---|:---|
+| `widget_id` | `string` | **Yes** |
+| `value` | `boolean` | **Yes** |
+| `chart_id` | `string` | No |
+
+### Chart type
+
+#### tvchart_chart_type
+
+Change the main series chart style.  Emits `tvchart:chart-type-change`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `value` | `string` | **Yes** | `Candles`, `Hollow Candles`, `Heikin Ashi`, `Bars`, `Line`, `Area`, `Baseline`, `Histogram` |
+| `series_id` | `string` | No | |
+| `chart_id` | `string` | No | |
+
+### Drawing tools
+
+#### tvchart_drawing_tool
+
+Activate a drawing mode or toggle drawing-layer state.  Emits one of
+`tvchart:tool-cursor`, `tvchart:tool-crosshair`, `tvchart:tool-magnet`,
+`tvchart:tool-eraser`, `tvchart:tool-visibility`, `tvchart:tool-lock`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `mode` | `string` | **Yes** | `cursor`, `crosshair`, `magnet`, `eraser`, `visibility`, `lock` |
+| `chart_id` | `string` | No | |
+
+#### tvchart_undo / tvchart_redo
+
+Undo/redo the last chart action.  Emits `tvchart:undo` / `tvchart:redo`.
+
+### Chart chrome
+
+#### tvchart_show_settings
+
+Open the chart settings modal.  Emits `tvchart:show-settings`.
+
+#### tvchart_toggle_dark_mode
+
+Toggle the chart's dark/light theme.  Emits `tvchart:toggle-dark-mode`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `value` | `boolean` | **Yes** | `true` = dark, `false` = light |
+| `chart_id` | `string` | No | |
+
+#### tvchart_screenshot
+
+Take a chart screenshot.  Emits `tvchart:screenshot`.
+
+#### tvchart_fullscreen
+
+Toggle chart fullscreen.  Emits `tvchart:fullscreen`.
+
+### Layout and state
+
+#### tvchart_save_layout
+
+Save the current chart layout (indicators + drawings).  Emits `tvchart:save-layout`.
+
+| Parameter | Type | Required | Description |
+|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | |
+| `name` | `string` | No | Display name for the saved layout |
+| `chart_id` | `string` | No | |
+
+#### tvchart_open_layout
+
+Open the layout picker dialog.  Emits `tvchart:open-layout`.
+
+#### tvchart_save_state
+
+Trigger a full state export from every chart in the widget.  The
+exported state is delivered back via the `tvchart:layout-response`
+event — retrieve it with `get_events`.  Emits `tvchart:save-state`.
+
+#### tvchart_request_state
+
+Synchronously read a single chart's state.  Round-trips
+`tvchart:request-state` / `tvchart:state-response` and returns the
+decoded state.  This is the authoritative source for what's on the
+chart — agents reporting symbol / interval / compares / indicators
+must quote values from this tool, never recall or fabricate.
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | |
+| `chart_id` | `string` | No | — | |
+| `timeout` | `number` | No | `5.0` | Response wait, seconds |
+
+**Returns:** `{"widget_id": "...", "state": {...}}` where `state`
+contains:
+
+- `chartId` — id of the chart pane within the widget
+- `theme` — `"dark"` or `"light"`
+- `symbol` — active main ticker (empty string if not yet resolved)
+- `interval` — active timeframe (e.g. `"1D"`, `"1W"`)
+- `chartType` — display style (`"Candles"`, `"Line"`, `"Heikin Ashi"`,
+  `"Bars"`, `"Area"`)
+- `compareSymbols` — `{seriesId: ticker}` map of **user-facing**
+  compare overlays.  Indicator-input compares are NOT in this map.
+- `indicatorSourceSymbols` — `{seriesId: ticker}` map of compares
+  that drive binary indicators (hidden from the Compare panel).
+  Exposed for agents that need to reason about where an indicator's
+  secondary data comes from.
+- `series` — `{seriesId: {type}}` summary of every series on the
+  chart (main + compares + indicator subplots)
+- `visibleRange` — `{from, to}` in unix seconds (null if unavailable)
+- `visibleLogicalRange` — `{from, to}` in fractional bar indices
+- `rawData` — last-known bars for the main series (may be null)
+- `drawings` — array of user drawings (trendlines, rectangles, etc.)
+- `indicators` — array matching the `tvchart_list_indicators`
+  format, including `secondarySeriesId` / `secondarySymbol` for
+  compare-derivative indicators
 
 ---
 
@@ -449,9 +870,11 @@ Destroy a widget and clean up all associated resources (event buffers, callbacks
 
 ---
 
-## send_event
+## Low-level event dispatch
 
-The low-level escape hatch. Send **any** event type to a widget's frontend. This is the same mechanism all the manipulation tools use internally — `set_content` emits `pywry:set-content`, `show_toast` emits `pywry:alert`, etc.
+### send_event
+
+The low-level escape hatch.  Send any event type to a widget's frontend.  Every manipulation tool above uses this mechanism internally — `set_content` emits `pywry:set-content`, `show_toast` emits `pywry:alert`, etc.
 
 | Parameter | Type | Required | Description |
 |:---|:---|:---|:---|

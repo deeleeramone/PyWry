@@ -44,7 +44,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[notebook,auth,mcp,acp,deepagent,openai,anthropic,magentic]"
+          pip install ruff mypy pylint pytauri-wheel plotly pandas cryptography
 
       - name: Run Ruff linter
         run: ruff check pywry/ tests/
@@ -65,19 +66,24 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
+      # ``deepagents`` (pulled in by ``.[dev]`` → ``features``) hard-
+      # requires Python >=3.11 — 3.10 can't resolve the dev extra.
+      # ``sqlcipher3`` is a source build against the SQLCipher C
+      # library installed in the ``Build SQLCipher`` step below, so
+      # any Python ABI works (no binary-wheel coverage gaps).
       matrix:
         include:
           - os: ubuntu-24.04
-            python-version: '3.10'
+            python-version: '3.11'
           - os: ubuntu-24.04
             python-version: '3.14'
           - os: windows-2025
-            python-version: '3.10'
+            python-version: '3.11'
           - os: windows-2025
             python-version: '3.14'
-          - os: macos-15
-            python-version: '3.10'
-          - os: macos-15
+          - os: macos-15-intel
+            python-version: '3.11'
+          - os: macos-15-intel
             python-version: '3.14'
           - os: ubuntu-24.04-arm
             python-version: '3.11'
@@ -88,7 +94,7 @@ jobs:
           - os: windows-11-arm
             python-version: '3.14'
           - os: macos-latest
-            python-version: '3.10'
+            python-version: '3.11'
           - os: macos-latest
             python-version: '3.14'
 
@@ -117,7 +123,77 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
-          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev && break || { sleep 30; sudo apt-get update; }; done
+          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev build-essential libssl-dev && break || { sleep 30; sudo apt-get update; }; done
+
+      - name: Build SQLCipher from source (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          # Build from the upstream source (https://github.com/sqlcipher/sqlcipher)
+          # so the ``sqlcipher3`` Python package's setup.py links
+          # against a known-good library on every Python ABI —
+          # binary wheels stop at Python 3.13.  ``--disable-tcl``
+          # skips the Tcl extension (not needed by the Python
+          # binding, and modern Tcl bottles break its compile).
+          git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
+          cd /tmp/sqlcipher
+          ./configure \
+            --disable-tcl \
+            --enable-tempstore=yes \
+            CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL" \
+            LDFLAGS="-lcrypto"
+          make -j$(nproc) libsqlcipher.la || make -j$(nproc)
+          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
+          sudo ldconfig
+
+      - name: Build SQLCipher from source (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          # Intentionally NOT installing ``tcl-tk`` from Homebrew:
+          # the current bottle is Tcl 9.0, whose headers drop the
+          # ``CONST`` macro and ``TCL_CHANNEL_VERSION_2``, so
+          # SQLCipher's ``tclsqlite.c`` (still Tcl-8 API) fails to
+          # compile.  SQLCipher's configure auto-disables the Tcl
+          # extension when no ``tclConfig.sh`` is on the usual
+          # search paths — we only need the C library anyway; the
+          # ``sqlcipher3`` Python binding doesn't touch Tcl.
+          brew install openssl@3
+          OPENSSL_PREFIX="$(brew --prefix openssl@3)"
+          git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
+          cd /tmp/sqlcipher
+          ./configure \
+            --disable-tcl \
+            --enable-tempstore=yes \
+            CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL -I$OPENSSL_PREFIX/include" \
+            LDFLAGS="-L$OPENSSL_PREFIX/lib -lcrypto"
+          # Build only the library target — the default ``make`` tries
+          # to build the ``sqlcipher`` shell which links against Tcl.
+          make -j$(sysctl -n hw.logicalcpu) libsqlcipher.la || make -j$(sysctl -n hw.logicalcpu)
+          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
+          echo "LDFLAGS=-L/usr/local/lib -L$OPENSSL_PREFIX/lib -lsqlcipher -lcrypto" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I/usr/local/include -I/usr/local/include/sqlcipher -I$OPENSSL_PREFIX/include" >> $GITHUB_ENV
+
+      - name: Install SQLCipher via vcpkg (Windows x64)
+        if: runner.os == 'Windows' && runner.arch != 'ARM64'
+        shell: pwsh
+        run: |
+          # vcpkg builds SQLCipher from source using the same upstream
+          # repo (https://github.com/sqlcipher/sqlcipher), just
+          # packaged as an MSVC-friendly port so we don't have to wire
+          # nmake + OpenSSL manually.  ``SQLCIPHER_PATH`` points
+          # ``sqlcipher3``'s setup.py at the install root.  Skipped on
+          # arm64-windows: the transitive ``tcl`` port doesn't build
+          # there even with ``--allow-unsupported``, and the
+          # ``SqliteStateBackend`` handles the missing binding by
+          # falling back to plain SQLite.
+          $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:x64-windows"
+          $sqlcipherDir = "$env:VCPKG_ROOT\installed\x64-windows"
+          echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
+          echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV
+          echo "LIB=$sqlcipherDir\lib;$env:LIB" >> $env:GITHUB_ENV
+          echo "PATH=$sqlcipherDir\bin;$env:PATH" >> $env:GITHUB_ENV
 
       - name: Cache vcpkg packages (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
@@ -170,16 +246,45 @@ jobs:
         if: runner.os == 'Linux'
         run: docker version
 
-      - name: Setup Docker (macOS Intel)
-        id: docker-macos
+      - name: Configure Docker (macOS Intel)
         if: runner.os == 'macOS' && runner.arch == 'X64'
-        uses: docker/setup-docker-action@v4
-
-      - name: Verify Docker (macOS Intel)
-        if: runner.os == 'macOS' && runner.arch == 'X64'
+        shell: bash
         run: |
-          echo "DOCKER_HOST=$DOCKER_HOST"
-          docker version
+          # ``docker/setup-docker-action@v4`` doesn't reliably bring up
+          # a Docker daemon on ``macos-15-intel`` runners — testcontainers
+          # then fails with ``FileNotFoundError: /var/run/docker.sock``
+          # during the Redis fixture setup.  Mirror the resilient
+          # Docker-Desktop → Colima fallback used in publish-pywry.yml.
+          set -euo pipefail
+
+          if docker info >/dev/null 2>&1; then
+            echo "Docker daemon already available"
+          else
+            if [ -d "/Applications/Docker.app" ]; then
+              echo "Starting Docker Desktop"
+              open -a Docker
+              for _ in {1..30}; do
+                if docker info >/dev/null 2>&1; then
+                  break
+                fi
+                sleep 5
+              done
+            fi
+          fi
+
+          if ! docker info >/dev/null 2>&1; then
+            echo "Falling back to Colima"
+            brew install docker colima
+            colima start --runtime docker --arch x86_64 --cpu 2 --memory 4 --disk 20
+          fi
+
+          if [ -S "$HOME/.colima/default/docker.sock" ]; then
+            sudo mkdir -p /var/run
+            sudo ln -sf "$HOME/.colima/default/docker.sock" /var/run/docker.sock
+          fi
+
+          echo "DOCKER_HOST=unix:///var/run/docker.sock" >> "$GITHUB_ENV"
+          docker info
 
       - name: Run tests (Linux)
         if: runner.os == 'Linux'

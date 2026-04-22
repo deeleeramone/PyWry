@@ -79,6 +79,32 @@ State management interfaces and implementations.
       heading_level: 2
       members_order: source
 
+::: pywry.state.ChatStore
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members_order: source
+
+---
+
+## SQLite Implementations
+
+::: pywry.state.sqlite.SqliteWidgetStore
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.state.sqlite.SqliteSessionStore
+    options:
+      show_root_heading: true
+      heading_level: 2
+
+::: pywry.state.sqlite.SqliteChatStore
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
 ---
 
 ## Data Types

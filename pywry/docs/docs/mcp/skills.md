@@ -19,25 +19,29 @@ Skills are **lazy-loaded** from markdown files on disk and cached in memory (LRU
 
 | ID | Priority | What it teaches |
 |:---|:---|:---|
-| `component_reference` | **Mandatory** | All 18 components — property tables, event signatures, JSON schemas, auto-wired actions, toolbar structure, event format rules |
+| `component_reference` | **Mandatory** | Every toolbar component — property tables, event signatures, JSON schemas, auto-wired actions, toolbar structure, event format rules |
 | `interactive_buttons` | High | The `elementId:action` auto-wiring pattern for buttons (increment, decrement, reset, toggle) |
+| `autonomous_building` | High | End-to-end app generation — `plan_widget`, `build_app`, `export_project`, `scaffold_app` workflows and chaining patterns |
 | `native` | Medium | Desktop native window mode — full-viewport layout, system integration, window management |
 | `jupyter` | Medium | Notebook integration — AnyWidget (recommended) and IFrame (fallback) approaches with code examples |
 | `iframe` | Medium | Sandboxed embedding — resize constraints, postMessage communication |
 | `deploy` | Medium | Production SSE server mode — stateless widgets, horizontal scaling, Redis patterns |
+| `authentication` | Medium | OAuth2 / OIDC sign-in (Google, GitHub, Microsoft, custom) and RBAC wiring for PyWry apps |
 | `css_selectors` | Medium | Targeting elements for `set_content` / `set_style` — component_id vs CSS selectors, selector patterns |
 | `styling` | Medium | CSS variables (all `--pywry-*` properties), theme switching, `inject_css` usage |
 | `data_visualization` | Medium | Plotly charts, AG Grid tables, Marquee tickers, live data polling and event-driven update patterns |
 | `forms_and_inputs` | Medium | Form building with TextInput, Select, Toggle, etc. — validation patterns, event-based data collection |
 | `modals` | Medium | Modal dialog schemas — sizes, nested components, open/close events, JS API, `reset_on_close` behavior |
-| `chat` | Medium | Conversational chat widget — streaming, threads, slash commands, LLM providers |
-| `autonomous_building` | Medium | End-to-end app generation — `plan_widget`, `build_app`, `export_project`, `scaffold_app` workflows and chaining patterns |
+| `chat` | Medium | Creating a chat widget — streaming, threads, slash commands, LLM providers (widget-builder perspective) |
+| `chat_agent` | Medium | Operating INSIDE a running chat widget — `@<name>` context attachments, `widget_id` routing, tool-result cards, edit/resend flow, reply style (agent perspective) |
+| `tvchart` | Medium | Driving a live TradingView chart via MCP — symbol/interval/chart-type, indicators including compare-derivative (Spread, Ratio, Sum, Product, Correlation), markers, price lines, compares, drawings, layouts, state reads |
+| `events` | Medium | PyWry event bus — namespaced `ns:name`, widget_id vs componentId, request/response correlation via `context` token, how mutating MCP tools poll state, `get_events` capture buffer |
 
 ### The Component Reference
 
 The `component_reference` skill is special — it's the **authoritative source** for all toolbar component definitions. It contains:
 
-- Property tables for all 18 component types
+- Property tables for every component type
 - Event payload signatures for each component
 - JSON schema examples for tool call construction
 - Auto-wired action documentation

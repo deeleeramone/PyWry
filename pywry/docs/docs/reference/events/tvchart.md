@@ -32,7 +32,8 @@ The `tvchart:*` namespace handles all communication between the Python `TVChartS
 | `tvchart:apply-options` | Python→JS | `{chartOptions?, seriesOptions?, seriesId?, chartId?}` | Apply runtime options to chart or series |
 | `tvchart:time-scale` | Python→JS | `{fitContent?, scrollTo?, visibleRange?, chartId?}` | Control time scale (fit, scroll, set visible range) |
 | `tvchart:request-state` | Python→JS | `{chartId?, context?}` | Request current chart state export |
-| `tvchart:state-response` | JS→Python | `{chartId, ...series info, viewport, context?, error?}` | Exported chart state response |
+| `tvchart:state-response` | JS→Python | `{chartId, theme, symbol, interval, chartType, compareSymbols, indicatorSourceSymbols, series, visibleRange, visibleLogicalRange, rawData, drawings, indicators, context?, error?}` | Exported chart state.  `symbol` / `interval` / `chartType` reflect the active main series.  `compareSymbols` is the user-facing compare overlay map; `indicatorSourceSymbols` is the compare map restricted to indicator inputs (hidden from the Compare panel).  Each entry in `indicators` carries `{seriesId, name, type, period, color, group, sourceSeriesId, secondarySeriesId, secondarySymbol, isSubplot, primarySource, secondarySource}` so compare-derivative indicators (Spread, Ratio, Sum, Product, Correlation) can be described with the ticker their secondary leg holds. |
+| `tvchart:data-settled` | JS→Python | same payload shape as `tvchart:state-response` | Emitted after every mutation that rebuilds or repaints the chart (symbol change, interval change, compare add, chart-type change, zoom preset, drawing add/remove) once every deferred post-CREATE task has finished.  Mutating MCP tools (`tvchart_symbol_search`, `tvchart_change_interval`, `tvchart_time_range`, etc.) block on this event to return a confirmation that the chart is fully stable — polling `tvchart:request-state` would race the destroy-recreate window. |
 
 ## User Interaction (JS → Python)
 
@@ -60,9 +61,56 @@ These events are fired by built-in toolbar buttons and handled by the chart fron
 | `tvchart:screenshot` | Python→JS | `{chartId?}` | Take and open chart screenshot |
 | `tvchart:undo` | Python→JS | — | Undo last chart action |
 | `tvchart:redo` | Python→JS | — | Redo last undone action |
-| `tvchart:compare` | Python→JS | `{chartId?}` | Open compare symbol panel |
-| `tvchart:symbol-search` | Python→JS | `{chartId?}` | Open symbol search dialog |
+| `tvchart:compare` | Python→JS | `{chartId?, query?, autoAdd?, symbolType?, exchange?}` | Open the compare-symbols panel.  When `query` is set, the panel runs a datafeed search with that query and — if `autoAdd` (default `true`) — adds the exact-ticker match (or the first result otherwise) as a compare series.  `symbolType` / `exchange` pre-select the filter dropdowns and narrow the datafeed search (e.g. `{query: "SPY", symbolType: "etf"}` resolves to the SPDR ETF instead of `SPYM`).  Without `query` the panel just opens for manual user entry. |
+| `tvchart:symbol-search` | Python→JS | `{chartId?, query?, autoSelect?, symbolType?, exchange?}` | Open the symbol search dialog.  `query` pre-fills the input and runs the datafeed search.  `autoSelect` (default `true` when `query` is set) picks the exact-ticker match — or the first result otherwise — as soon as the datafeed responds.  `symbolType` / `exchange` narrow the search the same way they do for `tvchart:compare`.  Agent tools drive main-ticker changes this way. |
 | `tvchart:fullscreen` | Python→JS | — | Toggle fullscreen on chart wrapper |
+
+### Example — programmatic symbol change
+
+```python
+# Open the search dialog pre-filled with "MSFT" and auto-pick the result
+app.emit("tvchart:symbol-search", {"query": "MSFT", "autoSelect": True})
+
+# Narrow to ETF so "SPY" resolves to SPDR S&P 500 rather than SPYM
+app.emit(
+    "tvchart:symbol-search",
+    {"query": "SPY", "autoSelect": True, "symbolType": "etf"},
+)
+```
+
+## Built-in Indicators
+
+These events drive the chart's native indicator engine — the same code path
+that runs when the user picks an indicator from the toolbar panel.  The JS
+frontend computes the indicator values from the current bar data, manages
+the legend, subplot panes, undo/redo, and (for Bollinger Bands) the band
+fill primitive.
+
+| Event | Direction | Payload | Description |
+|-------|-----------|---------|-------------|
+| `tvchart:add-indicator` | Python→JS | `{name, period?, color?, source?, method?, multiplier?, maType?, offset?, _kSmoothing?, _dPeriod?, _diLength?, _adxSmoothing?, _fast?, _slow?, _signal?, _oscMaType?, _signalMaType?, _conversionPeriod?, _basePeriod?, _spanPeriod?, _laggingPeriod?, _leadingShift?, _step?, _maxStep?, _annualization?, _rowSize?, _rowsLayout?, _valueAreaPct?, chartId?}` | Add a built-in indicator by name.  Accepted names: `SMA`, `EMA`, `WMA`, `HMA`, `VWMA` (all via the unified **Moving Average** entry with a `method` dropdown), `Ichimoku Cloud`, `Bollinger Bands`, `Keltner Channels`, `ATR`, `Historical Volatility`, `Parabolic SAR`, `RSI`, `MACD`, `Stochastic`, `Williams %R`, `CCI`, `ADX`, `Aroon`, `VWAP`, `Volume SMA`, `Accumulation/Distribution`, `Volume Profile Fixed Range`, `Volume Profile Visible Range`, plus the "Lightweight Examples" family (`Average Price`, `Median Price`, `Weighted Close`, `Momentum`, `Percent Change`, `Correlation`, `Product`, `Ratio`, `Spread`, `Sum`).  Each indicator also surfaces a settings dialog — see [TradingView Indicators](../../integrations/tradingview/tvchart-indicators.md) for the full parameter list. |
+| `tvchart:remove-indicator` | Python→JS | `{seriesId, chartId?}` | Remove an indicator series by its id.  Grouped indicators (e.g. the three Bollinger bands) are removed together.  Subplot panes are cleaned up automatically. |
+| `tvchart:list-indicators` | Python→JS | `{chartId?, context?}` | Request the current list of active indicators.  The frontend replies with `tvchart:list-indicators-response`. |
+| `tvchart:list-indicators-response` | JS→Python | `{indicators: [{seriesId, name, type, period, color, group?, sourceSeriesId?, secondarySeriesId?, secondarySymbol?, isSubplot?, primarySource?, secondarySource?}], chartId?, context?}` | Snapshot of every active indicator on the chart.  `secondarySeriesId` + `secondarySymbol` are populated on compare-derivative indicators (Spread, Ratio, Sum, Product, Correlation); `sourceSeriesId` identifies the primary input series (usually `"main"`).  `context` is echoed from the request for correlation. |
+
+### Example — adding indicators from Python
+
+```python
+# SMA(50) overlay using the charting engine's own computation
+app.add_builtin_indicator("Moving Average", period=50, method="SMA", color="#2196F3")
+
+# Bollinger Bands (creates three series: upper, middle, lower)
+app.add_builtin_indicator("Bollinger Bands", period=20, multiplier=2)
+
+# RSI in a subplot pane
+app.add_builtin_indicator("RSI", period=14)
+
+# Remove a specific indicator later
+app.remove_builtin_indicator("ind_sma_1713200000")
+
+# Ask the chart what's currently rendered
+app.list_indicators(context={"trigger": "inventory-check"})
+```
 
 ## Drawing Tools
 

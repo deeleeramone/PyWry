@@ -43,14 +43,14 @@ Complete API documentation for PyWry.
 
 | Module | Description |
 |--------|-------------|
-| [pywry.chat](chat.md) | Core chat models, config, and HTML builder |
-| [pywry.chat_manager](chat-manager.md) | High-level chat orchestration, artifacts, and UI state |
+| [pywry.chat](chat.md) | Core ACP-aligned chat models, config, and HTML builder |
+| [pywry.chat (manager, updates, artifacts)](chat-manager.md) | ChatManager orchestrator, ACP session updates, artifacts, and providers |
 
 ## State Management
 
 | Module | Description |
 |--------|-------------|
-| [State](state.md) | `WidgetStore`, `EventBus`, `CallbackRegistry`, Redis backend |
+| [State](state.md) | `WidgetStore`, `EventBus`, `ChatStore`, `SessionStore`, Memory/Redis/SQLite backends |
 | [State Mixins](state-mixins.md) | Grid, Plotly, TVChart, Toolbar state mixins |
 
 ## Toolbar & Modal

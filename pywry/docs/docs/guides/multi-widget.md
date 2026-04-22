@@ -142,7 +142,7 @@ def on_export(_data, _event_type, _label):
     widget.emit("pywry:download", {"content": df.to_csv(index=False), "filename": "data.csv", "mimeType": "text/csv"})
 ```
 
-See the [Event System guide](../guides/events.md) for the full list of system events (`pywry:set-content`, `pywry:download`, `plotly:update-figure`, `grid:update-data`, etc.).
+See the [Event System guide](events.md) for the full list of system events (`pywry:set-content`, `pywry:download`, `plotly:update-figure`, `grid:update-data`, etc.).
 
 ---
 
@@ -156,7 +156,7 @@ See [`examples/pywry_demo_multi_widget.py`](https://github.com/deeleeramone/PyWr
 
 - [Toolbar System](../components/toolbar/index.md) — all toolbar component types and their APIs
 - [Modals](../components/modal/index.md) — modal overlay components
-- [Event System](../guides/events.md) — event registration and dispatch
+- [Event System](events.md) — event registration and dispatch
 - [Theming & CSS](../components/theming.md) — `--pywry-*` variables and theme switching
 - [HtmlContent](../components/htmlcontent/index.md) — CSS files, script files, inline CSS, JSON data
 - [Content Assembly](../components/htmlcontent/content-assembly.md) — what PyWry injects into the document

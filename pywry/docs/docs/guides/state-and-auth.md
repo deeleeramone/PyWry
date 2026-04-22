@@ -14,7 +14,7 @@ The state layer is made of four pluggable stores and a callback registry:
 | **SessionStore** | User sessions, roles, and permissions |
 | **CallbackRegistry** | Python callback dispatch (always local) |
 
-Each store has two implementations — `Memory*` for single-process use and `Redis*` for multi-worker deployments. A factory layer auto-selects the right one based on configuration.
+Each store has three implementations — `Memory*` for ephemeral single-process use, `Sqlite*` for persistent local storage with encryption, and `Redis*` for multi-worker deployments. A factory layer auto-selects the right one based on configuration.
 
 ## State Backends
 
@@ -28,6 +28,27 @@ from pywry.state import get_widget_store, get_session_store
 store = get_widget_store()       # MemoryWidgetStore
 sessions = get_session_store()   # MemorySessionStore
 ```
+
+### SQLite (local persistent)
+
+Persists all state to an encrypted SQLite database file. Data survives process restarts without requiring an external server. The database is encrypted at rest using SQLCipher when available, with keys managed through the OS keyring.
+
+```bash
+export PYWRY_DEPLOY__STATE_BACKEND=sqlite
+export PYWRY_DEPLOY__SQLITE_PATH=~/.config/pywry/pywry.db
+```
+
+The SQLite backend includes a `ChatStore` with audit trail extensions not available in the Memory or Redis backends:
+
+- **Tool call logging** — every tool invocation with arguments, result, timing, and error status
+- **Artifact logging** — generated code blocks, charts, tables, and other artifacts
+- **Token usage tracking** — prompt tokens, completion tokens, total tokens, and cost per message
+- **Resource references** — URIs, MIME types, and sizes of files the agent read or produced
+- **Skill activations** — which skills were loaded during a conversation
+- **Full-text search** — search across all message content with `search_messages()`
+- **Cost aggregation** — `get_usage_stats()` and `get_total_cost()` across threads or widgets
+
+On first initialization, the SQLite backend auto-creates a default admin session (`session_id="local"`, `user_id="admin"`, `roles=["admin"]`) and seeds the standard role permission table. This means RBAC works identically to deploy mode — the same `check_permission()` calls, the same role hierarchy — with one permanent admin user.
 
 ### Redis (production)
 
@@ -56,7 +77,8 @@ All settings are controlled via `DeploySettings` and read from environment varia
 
 | Variable | Default | Description |
 |:---|:---|:---|
-| `STATE_BACKEND` | `memory` | `memory` or `redis` |
+| `STATE_BACKEND` | `memory` | `memory`, `sqlite`, or `redis` |
+| `SQLITE_PATH` | `~/.config/pywry/pywry.db` | Path to SQLite database file |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
 | `REDIS_PREFIX` | `pywry` | Key namespace prefix |
 | `REDIS_POOL_SIZE` | `10` | Connection pool size (1–100) |

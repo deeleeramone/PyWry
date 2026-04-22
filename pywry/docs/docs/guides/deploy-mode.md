@@ -128,7 +128,8 @@ Deploy mode is configured through environment variables (prefix `PYWRY_SERVER__`
 
 | Setting | Default | Environment variable | Description |
 |:---|:---|:---|:---|
-| State backend | `memory` | `PYWRY_DEPLOY__STATE_BACKEND` | `memory` or `redis` |
+| State backend | `memory` | `PYWRY_DEPLOY__STATE_BACKEND` | `memory`, `sqlite`, or `redis` |
+| SQLite path | `~/.config/pywry/pywry.db` | `PYWRY_DEPLOY__SQLITE_PATH` | Database file path (when backend is `sqlite`) |
 | Redis URL | `redis://localhost:6379/0` | `PYWRY_DEPLOY__REDIS_URL` | Redis connection string |
 | Redis prefix | `pywry` | `PYWRY_DEPLOY__REDIS_PREFIX` | Key namespace in Redis |
 | Redis pool size | `10` | `PYWRY_DEPLOY__REDIS_POOL_SIZE` | Connection pool size (1–100) |
@@ -169,14 +170,28 @@ python my_app.py
 
 Redis key structure: `{prefix}:widget:{widget_id}` (hash), `{prefix}:widgets:active` (set of active IDs).
 
+### SQLite
+
+Widget and session state is persisted to a local SQLite database file.  Suitable for single-host multi-worker deployments that don't want a Redis dependency.
+
+```bash
+PYWRY_DEPLOY__STATE_BACKEND=sqlite \
+PYWRY_DEPLOY__SQLITE_PATH=~/.config/pywry/pywry.db \
+python my_app.py
+```
+
+- State persists across restarts on the same host.
+- Multiple workers on one host can share the database via WAL journal mode.
+- **Encrypted at rest via SQLCipher** when `pywry[sqlite]` is installed.  The encryption key is sourced from `PYWRY_SQLITE_KEY` if set, otherwise from the OS keyring (`keyring`), otherwise derived from a per-host salt file.  Falls back to plain SQLite (with a warning) when the `sqlcipher3` binding isn't available.
+
 ## Detecting Deploy Mode
 
 ```python
 from pywry.state import is_deploy_mode, get_state_backend, get_worker_id
 
-print(f"Deploy mode: {is_deploy_mode()}")
-print(f"Backend: {get_state_backend().value}")  # "memory" or "redis"
-print(f"Worker: {get_worker_id()}")
+deploy_active = is_deploy_mode()        # True when PYWRY_DEPLOY__ENABLED=true
+backend = get_state_backend().value      # "memory", "redis", or "sqlite"
+worker_id = get_worker_id()              # Unique per-process identifier
 ```
 
 Deploy mode is active when any of these are true:

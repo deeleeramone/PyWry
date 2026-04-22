@@ -107,6 +107,106 @@ def _cid() -> str:
     )
 
 
+# JS helpers for driving the REAL drawing pipeline (tool-selection + a
+# synthetic ``click`` MouseEvent dispatched on the overlay canvas, not
+# a direct ``ds.drawings.push``).  The click handler computes the
+# time/price from the click pixel via ``_tvFromPixel``, pushes the
+# drawing itself, and calls ``_tvRenderDrawings`` — so the canvas
+# actually ends up with drawing pixels and the tests exercise the same
+# code the user would hit with a mouse.
+_DRAW_PIXEL_JS = (
+    "function _dispatchDrawClick(ds, fx, fy) {"
+    "  var rect = ds.canvas.getBoundingClientRect();"
+    "  var mx = rect.left + rect.width * fx;"
+    "  var my = rect.top + rect.height * fy;"
+    "  var ev = new MouseEvent('click', {"
+    "    bubbles: true, cancelable: true, view: window,"
+    "    clientX: mx, clientY: my, button: 0,"
+    "  });"
+    "  ds.canvas.dispatchEvent(ev);"
+    "}"
+    "function _canvasHasPixels(ds) {"
+    "  try {"
+    "    var w = ds.canvas.width, h = ds.canvas.height;"
+    "    if (!w || !h) return false;"
+    "    var data = ds.ctx.getImageData(0, 0, w, h).data;"
+    "    for (var i = 3; i < data.length; i += 4) if (data[i] !== 0) return true;"
+    "    return false;"
+    "  } catch (e) { return null; }"
+    "}"
+)
+
+
+def _draw_hline_script() -> str:
+    return (
+        _DRAW_PIXEL_JS
+        + "_tvSetDrawTool(cid, 'hline');"
+        + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+        + "if (!ds) { pywry.result({error:'no drawing state'}); return; }"
+        + "var before = ds.drawings.length;"
+        + "_dispatchDrawClick(ds, 0.5, 0.5);"
+        + "var rendered = _canvasHasPixels(ds);"
+        + "_tvSetDrawTool(cid, 'cursor');"
+        + "pywry.result({"
+        + "  count: ds.drawings.length,"
+        + "  added: ds.drawings.length - before,"
+        + "  type: ds.drawings.length ? ds.drawings[ds.drawings.length - 1].type : null,"
+        + "  rendered: rendered,"
+        + "});"
+    )
+
+
+def _draw_two_point_script(tool: str) -> str:
+    return (
+        _DRAW_PIXEL_JS
+        + "_tvSetDrawTool(cid, '"
+        + tool
+        + "');"
+        + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+        + "if (!ds) { pywry.result({error:'no drawing state'}); return; }"
+        + "var before = ds.drawings.length;"
+        + "_dispatchDrawClick(ds, 0.3, 0.4);"
+        + "_dispatchDrawClick(ds, 0.7, 0.6);"
+        + "_tvSetDrawTool(cid, 'cursor');"
+        + "pywry.result({"
+        + "  count: ds.drawings.length,"
+        + "  added: ds.drawings.length - before,"
+        + "  type: ds.drawings.length ? ds.drawings[ds.drawings.length - 1].type : null,"
+        + "});"
+    )
+
+
+def _draw_single_point_script(tool: str) -> str:
+    # The ``text`` tool's canvas-click handler auto-opens
+    # ``_tvShowDrawingSettings`` (so the user can name the label
+    # immediately).  That flips ``entry._interactionLocked`` to
+    # true.  Leaving the overlay up leaks locked state into every
+    # subsequent test in the class-scoped fixture — test 39's
+    # ``assert lockedBefore is False`` then fails.  Close the
+    # drawing-settings overlay and any floating toolbar, then
+    # clear the lock flag defensively so the idle-chart contract
+    # holds.
+    return (
+        _DRAW_PIXEL_JS
+        + "_tvSetDrawTool(cid, '"
+        + tool
+        + "');"
+        + "var ds = window.__PYWRY_DRAWINGS__[cid];"
+        + "if (!ds) { pywry.result({error:'no drawing state'}); return; }"
+        + "var before = ds.drawings.length;"
+        + "_dispatchDrawClick(ds, 0.4, 0.5);"
+        + "if (typeof _tvHideDrawingSettings === 'function') _tvHideDrawingSettings();"
+        + "if (typeof _tvHideFloatingToolbar === 'function') _tvHideFloatingToolbar();"
+        + "_tvSetDrawTool(cid, 'cursor');"
+        + "if (entry) entry._interactionLocked = false;"
+        + "pywry.result({"
+        + "  count: ds.drawings.length,"
+        + "  added: ds.drawings.length - before,"
+        + "  type: ds.drawings.length ? ds.drawings[ds.drawings.length - 1].type : null,"
+        + "});"
+    )
+
+
 # ============================================================================
 # Fixture -- ONE chart for the entire class
 # ============================================================================
@@ -160,6 +260,23 @@ def chart(request) -> dict[str, Any]:
             )
 
     time.sleep(CHART_RENDER_WAIT)
+
+    # BitMEX's public UDF is occasionally unreachable from CI runners and
+    # can return empty results even when the chart loaded.  Rather than
+    # firing 60+ follow-up tests against a half-initialised chart (which
+    # produces a cascade of misleading assertion errors), skip the whole
+    # class if no bars arrived within the render window.
+    state = _full_state(label)
+    if not state.get("barCount", 0) or not state.get("seriesIds"):
+        udf.close()
+        app.close()
+        _stop_runtime_sync()
+        _clear_registries()
+        pytest.skip(
+            f"BitMEX UDF returned no bars for {UDF_SYMBOL}@{UDF_RESOLUTION} "
+            f"within {CHART_RENDER_WAIT}s — public UDF unavailable or CI "
+            "runner has no outbound network.  Skipping lifecycle suite."
+        )
 
     yield {"app": app, "udf": udf, "label": label}
 
@@ -279,31 +396,37 @@ class TestTVChartFullLifecycle:
     # ------------------------------------------------------------------
 
     def test_08_add_sma_20(self, chart: dict[str, Any]) -> None:
-        """Add SMA overlay -- series count increases, metadata correct."""
+        """Add an SMA(20) overlay via the unified Moving Average entry."""
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var before = Object.keys(entry.seriesMap).length;"
             "_tvAddIndicator("
-            "  {name: 'SMA', key: 'sma', fullName: 'SMA',"
-            "   category: 'Moving Averages', defaultPeriod: 20},"
+            "  {name: 'Moving Average', key: 'moving-average-ex',"
+            "   fullName: 'Moving Average', category: 'Moving Averages',"
+            "   defaultPeriod: 20, _method: 'SMA'},"
             "  cid"
             ");"
             "var after = Object.keys(entry.seriesMap).length;"
             "var indKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "var info = indKey ? _activeIndicators[indKey] : null;"
             "pywry.result({"
             "  before: before, after: after,"
             "  name: info ? info.name : null,"
+            "  method: info ? info.method : null,"
             "  period: info ? info.period : null,"
             "  isSubplot: info ? !!info.isSubplot : null,"
             "  seriesId: indKey || null,"
             "});"
             "})();",
         )
-        assert r["after"] > r["before"], "SMA should add a new series"
-        assert r["name"] == "SMA"
+        assert r["after"] > r["before"], "Moving Average should add a new series"
+        assert r["name"] == "Moving Average"
+        assert r["method"] == "SMA"
         assert r["period"] == 20
         assert r["isSubplot"] is False
 
@@ -312,7 +435,10 @@ class TestTVChartFullLifecycle:
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var indKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "var series = indKey ? entry.seriesMap[indKey] : null;"
             "var data = [];"
@@ -334,7 +460,10 @@ class TestTVChartFullLifecycle:
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var indKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "_tvApplyIndicatorSettings(indKey, {period: 50});"
             "var info = _activeIndicators[indKey];"
@@ -347,7 +476,10 @@ class TestTVChartFullLifecycle:
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var indKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "_tvApplyIndicatorSettings(indKey, {color: '#ff6600'});"
             "var info = _activeIndicators[indKey];"
@@ -357,12 +489,13 @@ class TestTVChartFullLifecycle:
         assert r["color"] == "#ff6600"
 
     def test_12_add_ema_overlay(self, chart: dict[str, Any]) -> None:
-        """Add EMA(12) -- now two overlay indicators active."""
+        """Add an EMA(12) -- now two overlay indicators active."""
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "_tvAddIndicator("
-            "  {name: 'EMA', key: 'ema', fullName: 'EMA',"
-            "   category: 'Moving Averages', defaultPeriod: 12},"
+            "  {name: 'Moving Average', key: 'moving-average-ex',"
+            "   fullName: 'Moving Average', category: 'Moving Averages',"
+            "   defaultPeriod: 12, _method: 'EMA'},"
             "  cid"
             ");"
             "var indKeys = Object.keys(_activeIndicators);"
@@ -470,7 +603,7 @@ class TestTVChartFullLifecycle:
         assert any(c >= 3 for c in group_counts)
 
     def test_17_indicator_count_correct(self, chart: dict[str, Any]) -> None:
-        """SMA + EMA + RSI + BB(3) = at least 6 indicator series."""
+        """MA(SMA) + MA(EMA) + RSI + BB(3) = at least 6 indicator series."""
         r = _js(
             chart["label"],
             "(function() {pywry.result({count: Object.keys(_activeIndicators).length});})();",
@@ -486,7 +619,10 @@ class TestTVChartFullLifecycle:
             chart["label"],
             "(function() {"
             "var smaKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "var rsiKey = Object.keys(_activeIndicators).filter("
             "  function(k) { return _activeIndicators[k].name === 'RSI'; }"
@@ -534,86 +670,57 @@ class TestTVChartFullLifecycle:
     # ------------------------------------------------------------------
 
     def test_20_draw_hline(self, chart: dict[str, Any]) -> None:
+        # Drive the real drawing pipeline: select the tool (which flips
+        # the overlay canvas into ``pointer-events: auto``), dispatch a
+        # synthetic click, and let the click handler compute the price,
+        # push the drawing, call ``_tvRenderDrawings``, and create the
+        # native ``priceLine``.  No direct ``ds.drawings.push`` here.
         r = _js(
             chart["label"],
-            "(function() {" + _cid() + "_tvEnsureDrawingLayer(cid);"
-            "var ds = window.__PYWRY_DRAWINGS__[cid];"
-            "if (!ds) { pywry.result({error: 'no drawing state'}); return; }"
-            "var d = {type:'hline',color:'#ff0000',lineWidth:2,"
-            "  lineStyle:0,p1:{price:50000},p2:{price:50000}};"
-            "ds.drawings.push(d);"
-            "_tvPushUndo({label:'add hline',"
-            "  undo:function(){ds.drawings.splice(ds.drawings.indexOf(d),1);},"
-            "  redo:function(){ds.drawings.push(d);}});"
-            "pywry.result({count:ds.drawings.length,"
-            "  type:ds.drawings[ds.drawings.length-1].type});"
-            "})();",
+            "(function() {" + _cid() + _draw_hline_script() + "})();",
         )
         assert r.get("error") is None, r.get("error")
         assert r["count"] >= 1
         assert r["type"] == "hline"
+        assert r["rendered"] is True, "Canvas had no drawing pixels after click"
 
     def test_21_draw_trendline(self, chart: dict[str, Any]) -> None:
+        # Two-point tool: first click sets p1, second click commits.
         r = _js(
             chart["label"],
-            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
-            "var d = {type:'trendline',color:'#2962ff',lineWidth:2,"
-            "  lineStyle:0,p1:{x:100,y:200},p2:{x:400,y:150}};"
-            "ds.drawings.push(d);"
-            "_tvPushUndo({label:'add trendline',"
-            "  undo:function(){ds.drawings.splice(ds.drawings.indexOf(d),1);},"
-            "  redo:function(){ds.drawings.push(d);}});"
-            "pywry.result({count:ds.drawings.length,"
-            "  type:ds.drawings[ds.drawings.length-1].type});"
-            "})();",
+            "(function() {" + _cid() + _draw_two_point_script("trendline") + "})();",
         )
+        assert r.get("error") is None, r.get("error")
         assert r["count"] >= 2
         assert r["type"] == "trendline"
 
     def test_22_draw_rect(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
-            "var d = {type:'rect',color:'#089981',lineWidth:1,"
-            "  lineStyle:0,filled:true,p1:{x:150,y:100},p2:{x:350,y:300}};"
-            "ds.drawings.push(d);"
-            "_tvPushUndo({label:'add rect',"
-            "  undo:function(){ds.drawings.splice(ds.drawings.indexOf(d),1);},"
-            "  redo:function(){ds.drawings.push(d);}});"
-            "pywry.result({count:ds.drawings.length,type:'rect'});"
-            "})();",
+            "(function() {" + _cid() + _draw_two_point_script("rect") + "})();",
         )
+        assert r.get("error") is None, r.get("error")
         assert r["count"] >= 3
+        assert r["type"] == "rect"
 
     def test_23_draw_text_annotation(self, chart: dict[str, Any]) -> None:
+        # ``text`` is a single-click tool.
         r = _js(
             chart["label"],
-            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
-            "var d = {type:'text',color:'#d1d4dc',text:'Test Label',"
-            "  fontSize:14,p1:{x:200,y:250}};"
-            "ds.drawings.push(d);"
-            "_tvPushUndo({label:'add text',"
-            "  undo:function(){ds.drawings.splice(ds.drawings.indexOf(d),1);},"
-            "  redo:function(){ds.drawings.push(d);}});"
-            "pywry.result({count:ds.drawings.length,lastType:'text'});"
-            "})();",
+            "(function() {" + _cid() + _draw_single_point_script("text") + "})();",
         )
+        assert r.get("error") is None, r.get("error")
         assert r["count"] >= 4
+        assert r["type"] == "text"
 
     def test_24_draw_fibonacci(self, chart: dict[str, Any]) -> None:
         r = _js(
             chart["label"],
-            "(function() {" + _cid() + "var ds = window.__PYWRY_DRAWINGS__[cid];"
-            "var d = {type:'fibonacci',color:'#787b86',lineWidth:1,"
-            "  lineStyle:0,p1:{x:100,y:100},p2:{x:400,y:350}};"
-            "ds.drawings.push(d);"
-            "_tvPushUndo({label:'add fib',"
-            "  undo:function(){ds.drawings.splice(ds.drawings.indexOf(d),1);},"
-            "  redo:function(){ds.drawings.push(d);}});"
-            "pywry.result({count:ds.drawings.length,lastType:'fibonacci'});"
-            "})();",
+            "(function() {" + _cid() + _draw_two_point_script("fibonacci") + "})();",
         )
+        assert r.get("error") is None, r.get("error")
         assert r["count"] >= 5
+        assert r["type"] == "fibonacci"
 
     def test_25_drawing_count_correct(self, chart: dict[str, Any]) -> None:
         """hline + trendline + rect + text + fib = 5."""
@@ -1035,7 +1142,10 @@ class TestTVChartFullLifecycle:
             "(function() {"
             "var before = Object.keys(_activeIndicators).length;"
             "var smaKey = Object.keys(_activeIndicators).filter("
-            "  function(k) { return _activeIndicators[k].name === 'SMA'; }"
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
             ")[0];"
             "if (smaKey) _tvRemoveIndicator(smaKey);"
             "var after = Object.keys(_activeIndicators).length;"

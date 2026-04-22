@@ -21,14 +21,14 @@ PyWry integrates with popular data visualization and interaction libraries. Each
   </a>
   <a href="anywidget/" class="nav-card">
     <h4>Anywidget</h4>
-    <p>Jupyter widget protocol support</p>
+    <p>Jupyter widget traitlet protocol</p>
   </a>
-  <a href="multi-widget/" class="nav-card">
-    <h4>Multi-Widget</h4>
-    <p>Compose multiple widgets in a single window</p>
+  <a href="inline-widget/" class="nav-card">
+    <h4>IFrame + WebSocket</h4>
+    <p>FastAPI server, WebSocket bridge, and IFrame rendering</p>
   </a>
-  <a href="tauri-plugins/" class="nav-card">
-    <h4>Tauri Plugins</h4>
-    <p>Extend native capabilities via Tauri plugin system</p>
+  <a href="pytauri/" class="nav-card">
+    <h4>PyTauri</h4>
+    <p>Subprocess IPC, Tauri plugins, and OS webview rendering</p>
   </a>
 </div>

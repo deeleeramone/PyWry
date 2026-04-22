@@ -10,6 +10,7 @@ import os
 import uuid
 
 from functools import lru_cache
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 
@@ -73,7 +74,7 @@ def get_state_backend() -> StateBackend:
     Returns
     -------
     StateBackend
-        The configured backend (MEMORY or REDIS).
+        The configured backend (MEMORY, REDIS, or SQLITE).
 
     Notes
     -----
@@ -83,6 +84,8 @@ def get_state_backend() -> StateBackend:
     backend = os.environ.get("PYWRY_DEPLOY__STATE_BACKEND", "memory").lower()
     if backend == "redis":
         return StateBackend.REDIS
+    if backend == "sqlite":
+        return StateBackend.SQLITE
     return StateBackend.MEMORY
 
 
@@ -135,6 +138,21 @@ def _get_deploy_settings() -> DeploySettings:
     return DeploySettings()
 
 
+_DEFAULT_SQLITE_PATH = "~/.config/pywry/pywry.db"
+
+
+def _resolve_sqlite_path(settings: DeploySettings) -> str:
+    """Return the configured SQLite path with ``~`` expanded.
+
+    ``sqlite3`` / SQLCipher do not expand ``~`` themselves, so we normalise
+    here even though every bundled ``SqliteStateBackend`` subclass also
+    expands in its own ``__init__`` — cheaper than hunting down a future
+    caller that forgets.
+    """
+    raw = getattr(settings, "sqlite_path", None) or _DEFAULT_SQLITE_PATH
+    return str(Path(raw).expanduser())
+
+
 if TYPE_CHECKING:
     from pywry.config import DeploySettings
 
@@ -168,6 +186,12 @@ def get_widget_store() -> WidgetStore:
             pool_size=settings.redis_pool_size,
         )
 
+    if backend == StateBackend.SQLITE:
+        from .sqlite import SqliteWidgetStore
+
+        settings = _get_deploy_settings()
+        return SqliteWidgetStore(db_path=_resolve_sqlite_path(settings))
+
     return MemoryWidgetStore()
 
 
@@ -199,6 +223,9 @@ def get_event_bus() -> EventBus:
             pool_size=settings.redis_pool_size,
         )
 
+    if backend == StateBackend.SQLITE:
+        return MemoryEventBus()
+
     return MemoryEventBus()
 
 
@@ -229,6 +256,9 @@ def get_connection_router() -> ConnectionRouter:
             connection_ttl=settings.connection_ttl,
             pool_size=settings.redis_pool_size,
         )
+
+    if backend == StateBackend.SQLITE:
+        return MemoryConnectionRouter()
 
     return MemoryConnectionRouter()
 
@@ -262,6 +292,12 @@ def get_session_store() -> SessionStore:
             pool_size=settings.redis_pool_size,
         )
 
+    if backend == StateBackend.SQLITE:
+        from .sqlite import SqliteSessionStore
+
+        settings = _get_deploy_settings()
+        return SqliteSessionStore(db_path=_resolve_sqlite_path(settings))
+
     return MemorySessionStore()
 
 
@@ -293,6 +329,12 @@ def get_chat_store() -> ChatStore:
             chat_ttl=settings.widget_ttl,
             pool_size=settings.redis_pool_size,
         )
+
+    if backend == StateBackend.SQLITE:
+        from .sqlite import SqliteChatStore
+
+        settings = _get_deploy_settings()
+        return SqliteChatStore(db_path=_resolve_sqlite_path(settings))
 
     return MemoryChatStore()
 

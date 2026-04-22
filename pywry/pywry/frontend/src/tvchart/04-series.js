@@ -94,9 +94,16 @@ function _tvRecomputeIndicatorSeries(chartId, seriesId, recomputedGroups) {
     if (type === 'moving-average-ex') {
         var maSource = info.source || 'close';
         var maMethod = info.method || 'SMA';
-        var maBase = rawData.map(function(p) { return { time: p.time, value: _tvIndicatorValue(p, maSource) }; });
-        var maFn = maMethod === 'EMA' ? _computeEMA : (maMethod === 'WMA' ? _computeWMA : _computeSMA);
-        var maVals = maFn(maBase, period, 'value');
+        var maVals;
+        if (maMethod === 'HMA') {
+            maVals = _computeHMA(rawData, period, maSource);
+        } else if (maMethod === 'VWMA') {
+            maVals = _computeVWMA(rawData, period, maSource);
+        } else {
+            var maBase = rawData.map(function(p) { return { time: p.time, value: _tvIndicatorValue(p, maSource) }; });
+            var maFn = maMethod === 'EMA' ? _computeEMA : (maMethod === 'WMA' ? _computeWMA : _computeSMA);
+            maVals = maFn(maBase, period, 'value');
+        }
         var maSeries = entry.seriesMap[seriesId];
         if (maSeries) maSeries.setData(maVals.filter(function(v) { return v.value !== undefined; }));
         return;
@@ -152,13 +159,6 @@ function _tvRecomputeIndicatorSeries(chartId, seriesId, recomputedGroups) {
         return;
     }
 
-    if (baseName === 'SMA' || baseName === 'EMA' || baseName === 'WMA') {
-        var fn2 = baseName === 'SMA' ? _computeSMA : baseName === 'EMA' ? _computeEMA : _computeWMA;
-        var s2 = entry.seriesMap[seriesId];
-        if (s2) s2.setData(fn2(rawData, period).filter(function(v) { return v.value !== undefined; }));
-        return;
-    }
-
     if (info.group && type === 'bollinger-bands') {
         if (recomputedGroups && recomputedGroups[info.group]) return;
         if (recomputedGroups) recomputedGroups[info.group] = true;
@@ -189,7 +189,197 @@ function _tvRecomputeIndicatorSeries(chartId, seriesId, recomputedGroups) {
     if (info.name === 'Volume SMA') {
         var vN = entry.seriesMap[seriesId];
         if (vN) vN.setData(_computeSMA(rawData, period, 'volume').filter(function(v) { return v.value !== undefined; }));
+        return;
     }
+
+    if (info.name === 'VWAP') {
+        var vwSeries = entry.seriesMap[seriesId];
+        if (vwSeries) vwSeries.setData(_computeVWAP(rawData).filter(function(v) { return v.value !== undefined && isFinite(v.value); }));
+        return;
+    }
+
+    if (info.name === 'CCI') {
+        var cciSrc = info.source || 'hlc3';
+        var cciSer = entry.seriesMap[seriesId];
+        if (cciSer) cciSer.setData(_computeCCI(rawData, period, cciSrc).filter(function(v) { return v.value !== undefined; }));
+        return;
+    }
+
+    if (info.name === 'Williams %R') {
+        var wrSrc = info.source || 'close';
+        var wrSer = entry.seriesMap[seriesId];
+        if (wrSer) wrSer.setData(_computeWilliamsR(rawData, period, wrSrc).filter(function(v) { return v.value !== undefined; }));
+        return;
+    }
+
+    if (info.name === 'Accumulation/Distribution') {
+        var adSer = entry.seriesMap[seriesId];
+        if (adSer) adSer.setData(_computeAccumulationDistribution(rawData).filter(function(v) { return v.value !== undefined; }));
+        return;
+    }
+
+    if (info.name === 'Historical Volatility') {
+        var hvAnn = info.annualization || 252;
+        var hvSer = entry.seriesMap[seriesId];
+        if (hvSer) hvSer.setData(_computeHistoricalVolatility(rawData, period, hvAnn).filter(function(v) { return v.value !== undefined; }));
+        return;
+    }
+
+    if (type === 'parabolic-sar') {
+        var psStep = info.step || 0.02;
+        var psMax = info.maxStep || 0.2;
+        var psSer = entry.seriesMap[seriesId];
+        if (psSer) psSer.setData(_computeParabolicSAR(rawData, psStep, psMax).filter(function(v) { return v.value !== undefined; }));
+        return;
+    }
+
+    // Grouped multi-series indicators — recompute all members of the group at once.
+    if (info.group && type === 'macd') {
+        if (recomputedGroups && recomputedGroups[info.group]) return;
+        if (recomputedGroups) recomputedGroups[info.group] = true;
+        var macdFast = info.fast || 12;
+        var macdSlow = info.slow || 26;
+        var macdSig = info.signal || 9;
+        var macdSrc = info.macdSource || 'close';
+        var macdOsc = info.oscMaType || 'EMA';
+        var macdSigType = info.signalMaType || 'EMA';
+        var macdRes = _computeMACD(rawData, macdFast, macdSlow, macdSig, macdSrc, macdOsc, macdSigType);
+        var macdKeys = Object.keys(_activeIndicators);
+        var macdHistPos = _cssVar('--pywry-tvchart-ind-positive-dim');
+        var macdHistNeg = _cssVar('--pywry-tvchart-ind-negative-dim');
+        for (var mi = 0; mi < macdKeys.length; mi++) {
+            var mInfo = _activeIndicators[macdKeys[mi]];
+            if (!mInfo || mInfo.group !== info.group || mInfo.chartId !== chartId) continue;
+            var mSeries = entry.seriesMap[macdKeys[mi]];
+            if (!mSeries) continue;
+            var mKey = macdKeys[mi];
+            if (mKey.indexOf('_macd_hist_') >= 0) {
+                var histData = macdRes.histogram.filter(function(v) { return v.value !== undefined; }).map(function(v) {
+                    return { time: v.time, value: v.value, color: v.value >= 0 ? macdHistPos : macdHistNeg };
+                });
+                mSeries.setData(histData);
+            } else {
+                var mData = mKey.indexOf('_macd_line_') >= 0 ? macdRes.macd : macdRes.signal;
+                mSeries.setData(mData.filter(function(v) { return v.value !== undefined; }));
+            }
+        }
+        return;
+    }
+
+    if (info.group && type === 'stochastic') {
+        if (recomputedGroups && recomputedGroups[info.group]) return;
+        if (recomputedGroups) recomputedGroups[info.group] = true;
+        var stK = info.kPeriod || period;
+        var stSmooth = info.kSmoothing || 1;
+        var stD = info.dPeriod || 3;
+        var stRes = _computeStochastic(rawData, stK, stSmooth, stD);
+        var stKeys = Object.keys(_activeIndicators);
+        for (var si = 0; si < stKeys.length; si++) {
+            var sInfo = _activeIndicators[stKeys[si]];
+            if (!sInfo || sInfo.group !== info.group || sInfo.chartId !== chartId) continue;
+            var sSer = entry.seriesMap[stKeys[si]];
+            if (!sSer) continue;
+            sSer.setData((stKeys[si].indexOf('_stoch_d_') >= 0 ? stRes.d : stRes.k).filter(function(v) { return v.value !== undefined; }));
+        }
+        return;
+    }
+
+    if (info.group && type === 'aroon') {
+        if (recomputedGroups && recomputedGroups[info.group]) return;
+        if (recomputedGroups) recomputedGroups[info.group] = true;
+        var arRes = _computeAroon(rawData, period);
+        var arKeys = Object.keys(_activeIndicators);
+        for (var ai = 0; ai < arKeys.length; ai++) {
+            var aInfo = _activeIndicators[arKeys[ai]];
+            if (!aInfo || aInfo.group !== info.group || aInfo.chartId !== chartId) continue;
+            var aSer = entry.seriesMap[arKeys[ai]];
+            if (!aSer) continue;
+            aSer.setData((arKeys[ai].indexOf('_aroon_down_') >= 0 ? arRes.down : arRes.up).filter(function(v) { return v.value !== undefined; }));
+        }
+        return;
+    }
+
+    if (info.group && type === 'adx') {
+        if (recomputedGroups && recomputedGroups[info.group]) return;
+        if (recomputedGroups) recomputedGroups[info.group] = true;
+        var adxDiLen = info.diLength || period;
+        var adxSmooth = info.adxSmoothing || period;
+        var adxRes = _computeADX(rawData, adxDiLen, adxSmooth);
+        var adxKeys = Object.keys(_activeIndicators);
+        for (var xi = 0; xi < adxKeys.length; xi++) {
+            var xInfo = _activeIndicators[adxKeys[xi]];
+            if (!xInfo || xInfo.group !== info.group || xInfo.chartId !== chartId) continue;
+            var xSer = entry.seriesMap[adxKeys[xi]];
+            if (!xSer) continue;
+            var xKey = adxKeys[xi];
+            var xData = xKey.indexOf('_adx_plus_') >= 0 ? adxRes.plusDI
+                      : xKey.indexOf('_adx_minus_') >= 0 ? adxRes.minusDI
+                      : adxRes.adx;
+            xSer.setData(xData.filter(function(v) { return v.value !== undefined; }));
+        }
+        return;
+    }
+
+    if (info.group && type === 'keltner-channels') {
+        if (recomputedGroups && recomputedGroups[info.group]) return;
+        if (recomputedGroups) recomputedGroups[info.group] = true;
+        var kcMult = info.multiplier || 2;
+        var kcMa = info.maType || 'EMA';
+        var kcRes = _computeKeltnerChannels(rawData, period, kcMult, kcMa);
+        var kcKeys = Object.keys(_activeIndicators);
+        for (var ki = 0; ki < kcKeys.length; ki++) {
+            var kInfo = _activeIndicators[kcKeys[ki]];
+            if (!kInfo || kInfo.group !== info.group || kInfo.chartId !== chartId) continue;
+            var kSer = entry.seriesMap[kcKeys[ki]];
+            if (!kSer) continue;
+            var kKey = kcKeys[ki];
+            var kData = kKey.indexOf('_kc_upper_') >= 0 ? kcRes.upper
+                      : kKey.indexOf('_kc_lower_') >= 0 ? kcRes.lower
+                      : kcRes.middle;
+            kSer.setData(kData.filter(function(v) { return v.value !== undefined; }));
+        }
+        return;
+    }
+
+    if (info.group && type === 'ichimoku') {
+        if (recomputedGroups && recomputedGroups[info.group]) return;
+        if (recomputedGroups) recomputedGroups[info.group] = true;
+        var icConv = info.conversionPeriod || 9;
+        var icBase = info.basePeriod || 26;
+        var icSpan = info.spanPeriod || 52;
+        var icLag = info.laggingPeriod || 26;
+        var icShift = info.leadingShift || 26;
+        var icRes = _computeIchimoku(rawData, icConv, icBase, icSpan, icLag, icShift);
+        var icKeys = Object.keys(_activeIndicators);
+        for (var ii = 0; ii < icKeys.length; ii++) {
+            var iInfo = _activeIndicators[icKeys[ii]];
+            if (!iInfo || iInfo.group !== info.group || iInfo.chartId !== chartId) continue;
+            var iSer = entry.seriesMap[icKeys[ii]];
+            if (!iSer) continue;
+            var iKey = icKeys[ii];
+            var iData = iKey.indexOf('_ichi_tenkan_') >= 0 ? icRes.conversion
+                      : iKey.indexOf('_ichi_kijun_') >= 0 ? icRes.base
+                      : iKey.indexOf('_ichi_spanA_') >= 0 ? icRes.spanA
+                      : iKey.indexOf('_ichi_spanB_') >= 0 ? icRes.spanB
+                      : iKey.indexOf('_ichi_chikou_') >= 0 ? icRes.lagging
+                      : null;
+            if (iData) iSer.setData(iData.filter(function(v) { return v.value !== undefined; }));
+        }
+        if (typeof _tvUpdateIchimokuCloud === 'function') {
+            try { _tvUpdateIchimokuCloud(chartId); } catch (_e) {}
+        }
+        return;
+    }
+
+    if (type === 'volume-profile-visible') {
+        if (typeof _tvRefreshVisibleVolumeProfiles === 'function') {
+            try { _tvRefreshVisibleVolumeProfiles(chartId); } catch (_e) {}
+        }
+        return;
+    }
+    // Fixed-range VPs are anchored to a specific bar index range; the
+    // underlying chart redraws the primitive on its next frame, so no
+    // explicit recompute is required here.
 }
 
 function _tvRecomputeIndicatorsForChart(chartId, changedSeriesId) {
@@ -378,6 +568,7 @@ function _tvResolveRangeSpanDays(rangeValue) {
     var spans = {
         '1d': 1,
         '5d': 5,
+        '1w': 7,
         '1m': 30,
         '3m': 91,
         '6m': 182,
@@ -387,7 +578,11 @@ function _tvResolveRangeSpanDays(rangeValue) {
         '10y': 365 * 10,
         '20y': 365 * 20,
     };
-    return spans[rangeValue] || spans['1y'];
+    // Callers mix cases: the UI tabs use lowercase ("1d", "1y"), but the
+    // MCP tool doc and public API use uppercase ("1D", "1Y").  Normalise
+    // to lowercase so either works without a hidden fallback to "1y".
+    var key = String(rangeValue || '').toLowerCase();
+    return spans[key] || spans['1y'];
 }
 
 /**
@@ -493,6 +688,18 @@ function _tvApplyTimeRangeSelection(entry, range) {
     var bars = _tvResolvePrimaryBars(entry);
     var totalBars = bars.length;
     if (!totalBars) return false;
+
+    // Any preserved range from a prior destroy-recreate becomes stale the
+    // moment the caller picks a new range — clear it so the applyDefault
+    // setTimeout scheduled in lifecycle.js can't later overwrite our
+    // freshly-applied zoom with the pre-destroy view.
+    if (entry._preservedVisibleTimeRange) {
+        delete entry._preservedVisibleTimeRange;
+    }
+
+    // Normalise case — "1D" from the MCP tool and "1d" from the UI tab
+    // both need to resolve to the same range config.
+    range = String(range || '').toLowerCase();
 
     if (range === 'all') {
         entry.chart.timeScale().fitContent();
@@ -1092,6 +1299,16 @@ function _tvPromptDateRangeAndApply(entry) {
 }
 
 function _tvSeriesRawData(entry, seriesId) {
+    // When RTH session filter is active, prefer the displayed (filtered)
+    // bars so indicator compute paths align with what the user is
+    // actually looking at — SMA(9) on an RTH chart should be 9 RTH bars,
+    // not 9 ETH bars that straddle an overnight gap.
+    if (entry && entry._sessionMode === 'RTH'
+        && entry._seriesDisplayData
+        && entry._seriesDisplayData[seriesId]
+        && entry._seriesDisplayData[seriesId].length) {
+        return entry._seriesDisplayData[seriesId];
+    }
     if (entry._seriesRawData && entry._seriesRawData[seriesId]) return entry._seriesRawData[seriesId];
     if (seriesId === 'main' && entry._rawData) return entry._rawData;
     var s = entry.seriesMap[seriesId];
@@ -1203,7 +1420,11 @@ function _tvCreateIndicatorLine(entry, color, lineWidth, isSubplot, useBaseline)
         baseOpts = { color: color, lineWidth: lineWidth || 2, lastValueVisible: true, priceLineVisible: false };
     }
     if (isSubplot) {
-        if (!entry._nextPane) entry._nextPane = 1;
+        // Skip past the volume pane (index 1 when volume is rendered) so
+        // subplot indicators don't get merged into the volume histogram's
+        // own pane.  _tvReserveComparePane uses the same offset.
+        var subplotStart = entry.volumeMap && entry.volumeMap.main ? 2 : 1;
+        if (!entry._nextPane || entry._nextPane < subplotStart) entry._nextPane = subplotStart;
         paneIndex = entry._nextPane;
         try {
             series = entry.chart.addSeries(seriesCtor, baseOpts, paneIndex);
@@ -1302,12 +1523,21 @@ function _tvAddIndicator(indicatorDef, chartId) {
             source: indicatorDef._source || 'close',
         }, 2, true);
     } else if (key === 'moving-average-ex') {
-        var maLength = Math.max(1, period || 10);
+        // Single "Moving Average" entry — Type dropdown chooses the
+        // family (SMA / EMA / WMA / HMA / VWMA), Length is the window.
+        var maLength = Math.max(1, period || 9);
         var maSource = indicatorDef._source || 'close';
         var maMethod = indicatorDef._method || 'SMA';
-        var maBase = rawData.map(function(p) { return { time: p.time, value: _tvIndicatorValue(p, maSource) }; });
-        var maFn = maMethod === 'EMA' ? _computeEMA : (maMethod === 'WMA' ? _computeWMA : _computeSMA);
-        var maVals = maFn(maBase, maLength, 'value');
+        var maVals;
+        if (maMethod === 'HMA') {
+            maVals = _computeHMA(rawData, maLength, maSource);
+        } else if (maMethod === 'VWMA') {
+            maVals = _computeVWMA(rawData, maLength, maSource);
+        } else {
+            var maBase = rawData.map(function(p) { return { time: p.time, value: _tvIndicatorValue(p, maSource) }; });
+            var maFn = maMethod === 'EMA' ? _computeEMA : (maMethod === 'WMA' ? _computeWMA : _computeSMA);
+            maVals = maFn(maBase, maLength, 'value');
+        }
         addSingleSeriesIndicator('moving_avg_ex', maVals, {
             period: maLength,
             method: maMethod,
@@ -1365,23 +1595,6 @@ function _tvAddIndicator(indicatorDef, chartId) {
             isBaseline: true,
         }, 2, true, true);
 
-    // ========== MOVING AVERAGES ==========
-    } else if (name === 'SMA' || name === 'EMA' || name === 'WMA') {
-        var maFn = name === 'SMA' ? _computeSMA : name === 'EMA' ? _computeEMA : _computeWMA;
-        var maPeriod = period || 20;
-        addSingleSeriesIndicator(name.replace(/\s/g, '_').toLowerCase(), maFn(rawData, maPeriod), { 
-            type: name.toLowerCase(), 
-            period: maPeriod 
-        }, 2, false);
-    } else if (name === 'SMA (50)') {
-        addSingleSeriesIndicator('sma_50', _computeSMA(rawData, 50), { type: 'sma', period: 50 }, 2, false);
-    } else if (name === 'SMA (200)') {
-        addSingleSeriesIndicator('sma_200', _computeSMA(rawData, 200), { type: 'sma', period: 200 }, 2, false);
-    } else if (name === 'EMA (12)') {
-        addSingleSeriesIndicator('ema_12', _computeEMA(rawData, 12), { type: 'ema', period: 12 }, 2, false);
-    } else if (name === 'EMA (26)') {
-        addSingleSeriesIndicator('ema_26', _computeEMA(rawData, 26), { type: 'ema', period: 26 }, 2, false);
-
     // ========== VOLATILITY ==========
     } else if (name === 'Bollinger Bands') {
         var bbPeriod = period || 20;
@@ -1433,6 +1646,404 @@ function _tvAddIndicator(indicatorDef, chartId) {
         var volSmaPeriod = period || 20;
         var volSmaData = _computeSMA(rawData, volSmaPeriod, 'volume');
         addSingleSeriesIndicator('volsma', volSmaData, { type: 'volume-sma', period: volSmaPeriod }, 1, false);
+    } else if (name === 'Accumulation/Distribution') {
+        // A/D values are cumulative volume * price-position so they grow
+        // into the billions / trillions.  Shorten with a K / M / B / T
+        // formatter so the right-axis labels and crosshair readout are
+        // legible instead of a 12-digit number.
+        var __subStartAD = entry.volumeMap && entry.volumeMap.main ? 2 : 1;
+        if (!entry._nextPane || entry._nextPane < __subStartAD) entry._nextPane = __subStartAD;
+        var adPaneIdx = entry._nextPane;
+        var adColor = indicatorDef._color || _getNextIndicatorColor();
+        var adFormatter = function(price) {
+            var n = Number(price) || 0;
+            var sign = n < 0 ? '-' : '';
+            var a = Math.abs(n);
+            if (a >= 1e12) return sign + (a / 1e12).toFixed(2) + 'T';
+            if (a >= 1e9)  return sign + (a / 1e9).toFixed(2)  + 'B';
+            if (a >= 1e6)  return sign + (a / 1e6).toFixed(2)  + 'M';
+            if (a >= 1e3)  return sign + (a / 1e3).toFixed(2)  + 'K';
+            return sign + a.toFixed(0);
+        };
+        var adSeries;
+        try {
+            adSeries = entry.chart.addSeries(LightweightCharts.LineSeries, {
+                color: adColor,
+                lineWidth: 2,
+                priceLineVisible: false,
+                lastValueVisible: true,
+                priceFormat: { type: 'custom', formatter: adFormatter, minMove: 1 },
+            }, adPaneIdx);
+            entry._nextPane++;
+        } catch (e) {
+            console.error('[pywry:tvchart] A/D: unable to allocate subplot pane', e);
+            return;
+        }
+        adSeries.setData(_computeAccumulationDistribution(rawData).filter(function(v) { return v.value !== undefined; }));
+        var adId = 'ind_ad_' + Date.now();
+        entry.seriesMap[adId] = adSeries;
+        _activeIndicators[adId] = {
+            name: 'Accumulation/Distribution',
+            period: 0,
+            chartId: chartId,
+            color: adColor,
+            paneIndex: adPaneIdx,
+            isSubplot: true,
+            type: 'accumulation-distribution',
+            sourceSeriesId: primarySeriesId,
+        };
+    } else if (name === 'Williams %R') {
+        var wrPeriod = period || 14;
+        var wrSrc = indicatorDef._source || 'close';
+        addSingleSeriesIndicator('williams_r', _computeWilliamsR(rawData, wrPeriod, wrSrc), { type: 'williams-r', period: wrPeriod, source: wrSrc }, 2, true);
+    } else if (name === 'CCI') {
+        var cciPeriod = period || 20;
+        var cciSrc = indicatorDef._source || 'hlc3';
+        addSingleSeriesIndicator('cci', _computeCCI(rawData, cciPeriod, cciSrc), { type: 'cci', period: cciPeriod, source: cciSrc }, 2, true);
+    } else if (name === 'Historical Volatility') {
+        var hvPeriod = period || 10;
+        var hvAnn = indicatorDef._annualization || 252;
+        addSingleSeriesIndicator('hv', _computeHistoricalVolatility(rawData, hvPeriod, hvAnn), { type: 'historical-volatility', period: hvPeriod, annualization: hvAnn }, 2, true);
+    } else if (name === 'Parabolic SAR') {
+        var psStep = indicatorDef._step || 0.02;
+        var psMax = indicatorDef._maxStep || 0.2;
+        var psColor = indicatorDef._color || _cssVar('--pywry-tvchart-ind-secondary');
+        var psScaleId = _tvResolveScalePlacement(entry);
+        var psSeries = entry.chart.addSeries(LightweightCharts.LineSeries, {
+            color: psColor,
+            lineWidth: 1,
+            lineStyle: 3,       // dotted — SAR is conventionally drawn as dots
+            pointMarkersVisible: true,
+            pointMarkersRadius: 2,
+            priceScaleId: psScaleId,
+            lastValueVisible: false,
+            priceLineVisible: false,
+        });
+        psSeries.setData(_computeParabolicSAR(rawData, psStep, psMax).filter(function(v) { return v.value !== undefined; }));
+        var psId = 'ind_parabolic_sar_' + Date.now();
+        entry.seriesMap[psId] = psSeries;
+        _activeIndicators[psId] = {
+            name: 'Parabolic SAR', period: 0, chartId: chartId, color: psColor, paneIndex: 0,
+            isSubplot: false, type: 'parabolic-sar', sourceSeriesId: primarySeriesId,
+            step: psStep, maxStep: psMax,
+        };
+    } else if (name === 'MACD') {
+        var macdFast = indicatorDef._fast || 12;
+        var macdSlow = indicatorDef._slow || 26;
+        var macdSignal = indicatorDef._signal || 9;
+        var macdSource = indicatorDef._macdSource || indicatorDef._source || 'close';
+        var macdOscMa = indicatorDef._oscMaType || 'EMA';
+        var macdSigMa = indicatorDef._signalMaType || 'EMA';
+        var macd = _computeMACD(rawData, macdFast, macdSlow, macdSignal, macdSource, macdOscMa, macdSigMa);
+        var __subStart = entry.volumeMap && entry.volumeMap.main ? 2 : 1;
+        if (!entry._nextPane || entry._nextPane < __subStart) entry._nextPane = __subStart;
+        var macdPane = entry._nextPane++;
+        var macdColor = _cssVar('--pywry-tvchart-ind-primary');
+        var sigColor = _cssVar('--pywry-tvchart-ind-secondary');
+        var histPosColor = _cssVar('--pywry-tvchart-ind-positive-dim');
+        var histNegColor = _cssVar('--pywry-tvchart-ind-negative-dim');
+        var histData = macd.histogram.filter(function(v) { return v.value !== undefined; }).map(function(v) {
+            return { time: v.time, value: v.value, color: v.value >= 0 ? histPosColor : histNegColor };
+        });
+        var sHist, sMACD, sSig;
+        try {
+            sHist = entry.chart.addSeries(LightweightCharts.HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, macdPane);
+            sMACD = entry.chart.addSeries(LightweightCharts.LineSeries, { color: macdColor, lineWidth: 2, priceLineVisible: false }, macdPane);
+            sSig = entry.chart.addSeries(LightweightCharts.LineSeries, { color: sigColor, lineWidth: 2, priceLineVisible: false }, macdPane);
+        } catch (e) {
+            console.error('[pywry:tvchart] MACD: unable to allocate subplot pane', e);
+            return;
+        }
+        sHist.setData(histData);
+        sMACD.setData(macd.macd.filter(function(v) { return v.value !== undefined; }));
+        sSig.setData(macd.signal.filter(function(v) { return v.value !== undefined; }));
+        var macdGroup = 'macd_' + Date.now();
+        var sidHist = 'ind_macd_hist_' + Date.now();
+        var sidMACD = 'ind_macd_line_' + Date.now();
+        var sidSig = 'ind_macd_signal_' + Date.now();
+        entry.seriesMap[sidHist] = sHist; entry.seriesMap[sidMACD] = sMACD; entry.seriesMap[sidSig] = sSig;
+        var macdCommon = {
+            period: macdFast, chartId: chartId, group: macdGroup, paneIndex: macdPane,
+            isSubplot: true, type: 'macd', sourceSeriesId: primarySeriesId,
+            fast: macdFast, slow: macdSlow, signal: macdSignal,
+            macdSource: macdSource, oscMaType: macdOscMa, signalMaType: macdSigMa,
+            histPosColor: histPosColor, histNegColor: histNegColor,
+        };
+        _activeIndicators[sidHist] = _tvMerge(macdCommon, { name: 'MACD Histogram', color: histPosColor });
+        _activeIndicators[sidMACD] = _tvMerge(macdCommon, { name: 'MACD', color: macdColor });
+        _activeIndicators[sidSig] = _tvMerge(macdCommon, { name: 'MACD Signal', color: sigColor });
+    } else if (name === 'Stochastic') {
+        var kPeriod = period || 14;
+        var kSmoothing = indicatorDef._kSmoothing || 1;
+        var dPeriod = indicatorDef._dPeriod || 3;
+        var stoch = _computeStochastic(rawData, kPeriod, kSmoothing, dPeriod);
+        var __subStart = entry.volumeMap && entry.volumeMap.main ? 2 : 1;
+        if (!entry._nextPane || entry._nextPane < __subStart) entry._nextPane = __subStart;
+        var stochPane = entry._nextPane++;
+        var stochKColor = _cssVar('--pywry-tvchart-ind-primary');
+        var stochDColor = _cssVar('--pywry-tvchart-ind-secondary');
+        var sK, sD;
+        try {
+            sK = entry.chart.addSeries(LightweightCharts.LineSeries, { color: stochKColor, lineWidth: 2, priceLineVisible: false }, stochPane);
+            sD = entry.chart.addSeries(LightweightCharts.LineSeries, { color: stochDColor, lineWidth: 2, priceLineVisible: false }, stochPane);
+        } catch (e) { console.error('[pywry:tvchart] Stochastic: unable to allocate subplot pane', e); return; }
+        sK.setData(stoch.k.filter(function(v) { return v.value !== undefined; }));
+        sD.setData(stoch.d.filter(function(v) { return v.value !== undefined; }));
+        var stochGroup = 'stoch_' + Date.now();
+        var sidK = 'ind_stoch_k_' + Date.now();
+        var sidD = 'ind_stoch_d_' + Date.now();
+        entry.seriesMap[sidK] = sK; entry.seriesMap[sidD] = sD;
+        var stochCommon = { period: kPeriod, chartId: chartId, group: stochGroup, paneIndex: stochPane, isSubplot: true, type: 'stochastic', sourceSeriesId: primarySeriesId, kPeriod: kPeriod, kSmoothing: kSmoothing, dPeriod: dPeriod };
+        _activeIndicators[sidK] = _tvMerge(stochCommon, { name: 'Stoch %K', color: stochKColor });
+        _activeIndicators[sidD] = _tvMerge(stochCommon, { name: 'Stoch %D', color: stochDColor });
+    } else if (name === 'Aroon') {
+        var aroonPeriod = period || 14;
+        var aroon = _computeAroon(rawData, aroonPeriod);
+        var __subStart = entry.volumeMap && entry.volumeMap.main ? 2 : 1;
+        if (!entry._nextPane || entry._nextPane < __subStart) entry._nextPane = __subStart;
+        var aroonPane = entry._nextPane++;
+        var aroonUpColor = _cssVar('--pywry-tvchart-ind-positive');
+        var aroonDownColor = _cssVar('--pywry-tvchart-ind-negative');
+        var sUp, sDown;
+        try {
+            sUp = entry.chart.addSeries(LightweightCharts.LineSeries, { color: aroonUpColor, lineWidth: 2, priceLineVisible: false }, aroonPane);
+            sDown = entry.chart.addSeries(LightweightCharts.LineSeries, { color: aroonDownColor, lineWidth: 2, priceLineVisible: false }, aroonPane);
+        } catch (e) { console.error('[pywry:tvchart] Aroon: unable to allocate subplot pane', e); return; }
+        sUp.setData(aroon.up.filter(function(v) { return v.value !== undefined; }));
+        sDown.setData(aroon.down.filter(function(v) { return v.value !== undefined; }));
+        var aroonGroup = 'aroon_' + Date.now();
+        var sidUp = 'ind_aroon_up_' + Date.now();
+        var sidDown = 'ind_aroon_down_' + Date.now();
+        entry.seriesMap[sidUp] = sUp; entry.seriesMap[sidDown] = sDown;
+        var aroonCommon = { period: aroonPeriod, chartId: chartId, group: aroonGroup, paneIndex: aroonPane, isSubplot: true, type: 'aroon', sourceSeriesId: primarySeriesId };
+        _activeIndicators[sidUp] = _tvMerge(aroonCommon, { name: 'Aroon Up', color: aroonUpColor });
+        _activeIndicators[sidDown] = _tvMerge(aroonCommon, { name: 'Aroon Down', color: aroonDownColor });
+    } else if (name === 'ADX') {
+        var adxDi = indicatorDef._diLength || period || 14;
+        var adxSm = indicatorDef._adxSmoothing || period || 14;
+        var adxPeriod = adxSm;
+        var adx = _computeADX(rawData, adxDi, adxSm);
+        var __subStart = entry.volumeMap && entry.volumeMap.main ? 2 : 1;
+        if (!entry._nextPane || entry._nextPane < __subStart) entry._nextPane = __subStart;
+        var adxPane = entry._nextPane++;
+        var adxColor = _cssVar('--pywry-tvchart-ind-primary');
+        var plusDIColor = _cssVar('--pywry-tvchart-ind-positive');
+        var minusDIColor = _cssVar('--pywry-tvchart-ind-negative');
+        var sAdx, sPlus, sMinus;
+        try {
+            sAdx = entry.chart.addSeries(LightweightCharts.LineSeries, { color: adxColor, lineWidth: 2, priceLineVisible: false }, adxPane);
+            sPlus = entry.chart.addSeries(LightweightCharts.LineSeries, { color: plusDIColor, lineWidth: 1, priceLineVisible: false }, adxPane);
+            sMinus = entry.chart.addSeries(LightweightCharts.LineSeries, { color: minusDIColor, lineWidth: 1, priceLineVisible: false }, adxPane);
+        } catch (e) { console.error('[pywry:tvchart] ADX: unable to allocate subplot pane', e); return; }
+        sAdx.setData(adx.adx.filter(function(v) { return v.value !== undefined; }));
+        sPlus.setData(adx.plusDI.filter(function(v) { return v.value !== undefined; }));
+        sMinus.setData(adx.minusDI.filter(function(v) { return v.value !== undefined; }));
+        var adxGroup = 'adx_' + Date.now();
+        var sidAdx = 'ind_adx_' + Date.now();
+        var sidPlus = 'ind_adx_plus_' + Date.now();
+        var sidMinus = 'ind_adx_minus_' + Date.now();
+        entry.seriesMap[sidAdx] = sAdx; entry.seriesMap[sidPlus] = sPlus; entry.seriesMap[sidMinus] = sMinus;
+        var adxCommon = { period: adxPeriod, chartId: chartId, group: adxGroup, paneIndex: adxPane, isSubplot: true, type: 'adx', sourceSeriesId: primarySeriesId, adxSmoothing: adxSm, diLength: adxDi };
+        _activeIndicators[sidAdx] = _tvMerge(adxCommon, { name: 'ADX', color: adxColor });
+        _activeIndicators[sidPlus] = _tvMerge(adxCommon, { name: '+DI', color: plusDIColor });
+        _activeIndicators[sidMinus] = _tvMerge(adxCommon, { name: '-DI', color: minusDIColor });
+    } else if (name === 'Keltner Channels') {
+        var kcPeriod = period || 20;
+        var kcMult = indicatorDef._multiplier || 2;
+        var kcMaType = indicatorDef._maType || 'EMA';
+        var kc = _computeKeltnerChannels(rawData, kcPeriod, kcMult, kcMaType);
+        var kcScaleId = _tvResolveScalePlacement(entry);
+        var kcMidColor = _cssVar('--pywry-tvchart-ind-secondary');
+        var kcBandColor = _cssVar('--pywry-tvchart-ind-primary');
+        var kcM = entry.chart.addSeries(LightweightCharts.LineSeries, { color: kcMidColor, lineWidth: 1, priceScaleId: kcScaleId, lastValueVisible: false, priceLineVisible: false });
+        var kcU = entry.chart.addSeries(LightweightCharts.LineSeries, { color: kcBandColor, lineWidth: 1, priceScaleId: kcScaleId, lastValueVisible: false, priceLineVisible: false });
+        var kcL = entry.chart.addSeries(LightweightCharts.LineSeries, { color: kcBandColor, lineWidth: 1, priceScaleId: kcScaleId, lastValueVisible: false, priceLineVisible: false });
+        kcM.setData(kc.middle.filter(function(v) { return v.value !== undefined; }));
+        kcU.setData(kc.upper.filter(function(v) { return v.value !== undefined; }));
+        kcL.setData(kc.lower.filter(function(v) { return v.value !== undefined; }));
+        var sidKcM = 'ind_kc_mid_' + Date.now();
+        var sidKcU = 'ind_kc_upper_' + Date.now();
+        var sidKcL = 'ind_kc_lower_' + Date.now();
+        entry.seriesMap[sidKcM] = kcM; entry.seriesMap[sidKcU] = kcU; entry.seriesMap[sidKcL] = kcL;
+        var kcGroup = 'kc_' + Date.now();
+        var kcCommon = { period: kcPeriod, chartId: chartId, group: kcGroup, paneIndex: 0, isSubplot: false, multiplier: kcMult, maType: kcMaType, type: 'keltner-channels', sourceSeriesId: primarySeriesId };
+        _activeIndicators[sidKcM] = _tvMerge(kcCommon, { name: 'KC Basis', color: kcMidColor });
+        _activeIndicators[sidKcU] = _tvMerge(kcCommon, { name: 'KC Upper', color: kcBandColor });
+        _activeIndicators[sidKcL] = _tvMerge(kcCommon, { name: 'KC Lower', color: kcBandColor });
+    } else if (name === 'Ichimoku Cloud') {
+        var ichiConv = indicatorDef._conversionPeriod || indicatorDef._tenkan || 9;
+        var ichiBase = indicatorDef._basePeriod || indicatorDef._kijun || period || 26;
+        var ichiLead = indicatorDef._leadingSpanPeriod || indicatorDef._senkouB || 52;
+        var ichiLag = indicatorDef._laggingPeriod || 26;
+        var ichiShift = indicatorDef._leadingShiftPeriod || 26;
+        var ichi = _computeIchimoku(rawData, ichiConv, ichiBase, ichiLead, ichiLag, ichiShift);
+        var ichiScaleId = _tvResolveScalePlacement(entry);
+        var cTen = _cssVar('--pywry-tvchart-ind-primary');
+        var cKij = _cssVar('--pywry-tvchart-ind-negative');
+        var cSpA = _cssVar('--pywry-tvchart-ind-positive-dim');
+        var cSpB = _cssVar('--pywry-tvchart-ind-negative-dim');
+        var cChi = _cssVar('--pywry-tvchart-ind-tertiary');
+        var sTen = entry.chart.addSeries(LightweightCharts.LineSeries, { color: cTen, lineWidth: 1, priceScaleId: ichiScaleId, lastValueVisible: false, priceLineVisible: false });
+        var sKij = entry.chart.addSeries(LightweightCharts.LineSeries, { color: cKij, lineWidth: 1, priceScaleId: ichiScaleId, lastValueVisible: false, priceLineVisible: false });
+        var sSpA = entry.chart.addSeries(LightweightCharts.LineSeries, { color: cSpA, lineWidth: 1, priceScaleId: ichiScaleId, lastValueVisible: false, priceLineVisible: false });
+        var sSpB = entry.chart.addSeries(LightweightCharts.LineSeries, { color: cSpB, lineWidth: 1, priceScaleId: ichiScaleId, lastValueVisible: false, priceLineVisible: false });
+        var sChi = entry.chart.addSeries(LightweightCharts.LineSeries, { color: cChi, lineWidth: 1, lineStyle: 2, priceScaleId: ichiScaleId, lastValueVisible: false, priceLineVisible: false });
+        sTen.setData(ichi.tenkan.filter(function(v) { return v.value !== undefined; }));
+        sKij.setData(ichi.kijun.filter(function(v) { return v.value !== undefined; }));
+        sSpA.setData(ichi.spanA.filter(function(v) { return v.value !== undefined; }));
+        sSpB.setData(ichi.spanB.filter(function(v) { return v.value !== undefined; }));
+        sChi.setData(ichi.chikou.filter(function(v) { return v.value !== undefined; }));
+        var sidTen = 'ind_ichi_tenkan_' + Date.now();
+        var sidKij = 'ind_ichi_kijun_' + Date.now();
+        var sidSpA = 'ind_ichi_spanA_' + Date.now();
+        var sidSpB = 'ind_ichi_spanB_' + Date.now();
+        var sidChi = 'ind_ichi_chikou_' + Date.now();
+        entry.seriesMap[sidTen] = sTen; entry.seriesMap[sidKij] = sKij;
+        entry.seriesMap[sidSpA] = sSpA; entry.seriesMap[sidSpB] = sSpB;
+        entry.seriesMap[sidChi] = sChi;
+        var ichiGroup = 'ichi_' + Date.now();
+        var cloudUp = _cssVar('--pywry-tvchart-ind-positive');
+        var cloudDown = _cssVar('--pywry-tvchart-ind-negative');
+        var ichiCommon = {
+            period: ichiBase, chartId: chartId, group: ichiGroup, paneIndex: 0,
+            isSubplot: false, type: 'ichimoku', sourceSeriesId: primarySeriesId,
+            // TradingView's parameter names — kept on every group member
+            // so the apply path can read them off any of them.
+            conversionPeriod: ichiConv,
+            basePeriod: ichiBase,
+            leadingSpanPeriod: ichiLead,
+            laggingPeriod: ichiLag,
+            leadingShiftPeriod: ichiShift,
+            // Back-compat aliases used by older code paths.
+            tenkan: ichiConv, kijun: ichiBase, senkouB: ichiLead,
+            cloudUpColor: cloudUp, cloudDownColor: cloudDown, cloudOpacity: 0.20,
+        };
+        _activeIndicators[sidTen] = _tvMerge(ichiCommon, { name: 'Ichimoku Tenkan', color: cTen });
+        _activeIndicators[sidKij] = _tvMerge(ichiCommon, { name: 'Ichimoku Kijun', color: cKij });
+        _activeIndicators[sidSpA] = _tvMerge(ichiCommon, { name: 'Ichimoku Span A', color: cSpA });
+        _activeIndicators[sidSpB] = _tvMerge(ichiCommon, { name: 'Ichimoku Span B', color: cSpB });
+        _activeIndicators[sidChi] = _tvMerge(ichiCommon, { name: 'Ichimoku Chikou', color: cChi });
+
+        // Attach the Kumo (cloud) fill primitive — green when Span A is
+        // above Span B, red otherwise.
+        _tvEnsureIchimokuCloudPrimitive(chartId);
+    } else if (key === 'volume-profile-fixed' || key === 'volume-profile-visible') {
+        var vpMode = key === 'volume-profile-fixed' ? 'fixed' : 'visible';
+        var vpRowsLayout = indicatorDef._rowsLayout || 'rows';
+        var vpRowSize = indicatorDef._rowSize != null
+            ? Number(indicatorDef._rowSize)
+            : (vpRowsLayout === 'ticks' ? 1 : Math.max(2, Math.floor(period || 24)));
+        var vpVolumeMode = indicatorDef._volumeMode || 'updown';
+        var vpFromIdx, vpToIdx;
+
+        if (vpMode === 'fixed') {
+            if (indicatorDef._fromIndex != null && indicatorDef._toIndex != null) {
+                vpFromIdx = Math.max(0, Math.floor(indicatorDef._fromIndex));
+                vpToIdx = Math.min(rawData.length - 1, Math.floor(indicatorDef._toIndex));
+            } else {
+                vpFromIdx = 0;
+                vpToIdx = rawData.length - 1;
+            }
+        } else {
+            var vr = null;
+            try { vr = entry.chart.timeScale().getVisibleLogicalRange(); } catch (e) {}
+            if (vr) {
+                vpFromIdx = Math.max(0, Math.floor(vr.from));
+                vpToIdx = Math.min(rawData.length - 1, Math.ceil(vr.to));
+            } else {
+                vpFromIdx = 0;
+                vpToIdx = rawData.length - 1;
+            }
+        }
+
+        var vpValueAreaPct = indicatorDef._valueAreaPct || 0.70;
+        var vpShowDevPOC = indicatorDef._showDevelopingPOC === true;
+        var vpShowDevVA = indicatorDef._showDevelopingVA === true;
+        var vpData = _tvComputeVolumeProfile(rawData, vpFromIdx, vpToIdx, {
+            rowsLayout: vpRowsLayout,
+            rowSize: vpRowSize,
+            valueAreaPct: vpValueAreaPct,
+            withDeveloping: vpShowDevPOC || vpShowDevVA,
+        });
+        if (!vpData) {
+            console.warn('[pywry:tvchart] Volume Profile: insufficient data / no volume');
+            return;
+        }
+
+        var vpId = 'ind_vp_' + vpMode + '_' + Date.now();
+        // Colours resolve from the active theme via CSS vars when the
+        // caller doesn't override them, so a theme switch automatically
+        // recolours every Volume Profile on screen.
+        var vpOpts = {
+            rowsLayout: vpRowsLayout,
+            rowSize: vpRowSize,
+            volumeMode: vpVolumeMode,
+            widthPercent: indicatorDef._widthPercent || 15,
+            placement: indicatorDef._placement || 'right',
+            upColor: indicatorDef._upColor || _cssVar('--pywry-tvchart-vp-up'),
+            downColor: indicatorDef._downColor || _cssVar('--pywry-tvchart-vp-down'),
+            vaUpColor: indicatorDef._vaUpColor || _cssVar('--pywry-tvchart-vp-va-up'),
+            vaDownColor: indicatorDef._vaDownColor || _cssVar('--pywry-tvchart-vp-va-down'),
+            pocColor: indicatorDef._pocColor || _cssVar('--pywry-tvchart-vp-poc'),
+            developingPOCColor: indicatorDef._developingPOCColor || _cssVar('--pywry-tvchart-ind-tertiary'),
+            developingVAColor: indicatorDef._developingVAColor || _cssVar('--pywry-tvchart-vp-va-up'),
+            showPOC: indicatorDef._showPOC !== false,
+            showValueArea: indicatorDef._showValueArea !== false,
+            showDevelopingPOC: vpShowDevPOC,
+            showDevelopingVA: vpShowDevVA,
+            valueAreaPct: vpValueAreaPct,
+        };
+        var vpSlot = {
+            chartId: chartId,
+            seriesId: primarySeriesId,
+            mode: vpMode,
+            rowsLayout: vpRowsLayout,
+            rowSize: vpRowSize,
+            volumeMode: vpVolumeMode,
+            vpData: vpData,
+            opts: vpOpts,
+            primitive: null,
+        };
+        vpSlot.primitive = _tvMakeVolumeProfilePrimitive(
+            chartId,
+            primarySeriesId,
+            function() { return vpSlot.vpData; },
+            function() { return vpSlot.opts; },
+            function() { return !!vpSlot.hidden; }
+        );
+        try {
+            entry.seriesMap[primarySeriesId].attachPrimitive(vpSlot.primitive);
+        } catch (e) {
+            console.warn('[pywry:tvchart] Volume Profile attach failed:', e);
+            return;
+        }
+        _volumeProfilePrimitives[vpId] = vpSlot;
+
+        _activeIndicators[vpId] = {
+            name: name,
+            period: vpRowsLayout === 'rows' ? vpRowSize : 0,
+            chartId: chartId,
+            color: null,
+            paneIndex: 0,
+            isSubplot: false,
+            type: key,
+            sourceSeriesId: primarySeriesId,
+            secondarySeriesId: null,
+            mode: vpMode,
+            rowsLayout: vpRowsLayout,
+            rowSize: vpRowSize,
+            volumeMode: vpVolumeMode,
+            fromIndex: vpFromIdx,
+            toIndex: vpToIdx,
+            widthPercent: vpOpts.widthPercent,
+            placement: vpOpts.placement,
+            valueAreaPct: vpValueAreaPct,
+            showDevelopingPOC: vpShowDevPOC,
+            showDevelopingVA: vpShowDevVA,
+            labelsOnPriceScale: indicatorDef._labelsOnPriceScale !== false,
+            valuesInStatusLine: indicatorDef._valuesInStatusLine !== false,
+            inputsInStatusLine: indicatorDef._inputsInStatusLine !== false,
+        };
     } else {
         console.error('[pywry:tvchart] Unknown indicator:', name, 'key:', key);
     }
@@ -1611,6 +2222,21 @@ function _tvIsMainSeriesId(seriesId) {
 }
 
 /**
+ * Fire any one-shot ``whenMainSeriesReady`` callbacks registered on an
+ * entry.  Called by both the lifecycle static-bar path and the datafeed
+ * path right after a main series is attached to ``entry.seriesMap``.
+ */
+function _tvFireMainSeriesReady(entry) {
+    if (!entry || !Array.isArray(entry._mainSeriesReadyCallbacks)) return;
+    if (!entry.seriesMap || !(entry.seriesMap.main || entry.seriesMap['series-0'])) return;
+    var cbs = entry._mainSeriesReadyCallbacks;
+    entry._mainSeriesReadyCallbacks = [];
+    for (var i = 0; i < cbs.length; i++) {
+        try { cbs[i](); } catch (e) {}
+    }
+}
+
+/**
  * Compute a baseValue price for Baseline series from the data range.
  * TradingView uses a percentage-based "Base level" (default 50%) which
  * places the baseline at that percentile of the min-max range.
@@ -1643,9 +2269,16 @@ function _tvComputeBaselineValue(bars, pct) {
  */
 function _tvResolveChartStyle(styleName) {
     var s = String(styleName || 'Line');
+    // Pull the hollow-body value from the active theme's CSS variable so
+    // it respects light/dark/custom themes and is never hardcoded in JS.
+    // Fall back to fully transparent if the variable is undefined.
+    var hollowBody = _cssVar('--pywry-tvchart-hollow-up-body') || 'rgba(0, 0, 0, 0)';
+    // Price line lives on its own CSS selector so the transparent
+    // hollow-body doesn't also erase the right-axis price marker.
+    var priceLineColor = _cssVar('--pywry-tvchart-price-line') || _cssVar('--pywry-tvchart-up') || '#26a69a';
     if (s === 'Bars')              return { seriesType: 'Bar',         source: 'close',      optionPatch: {} };
     if (s === 'Candles')           return { seriesType: 'Candlestick', source: 'close',      optionPatch: {} };
-    if (s === 'Hollow candles')    return { seriesType: 'Candlestick', source: 'close',      optionPatch: { upColor: 'rgba(0, 0, 0, 0)' } };
+    if (s === 'Hollow candles')    return { seriesType: 'Candlestick', source: 'close',      optionPatch: { upColor: hollowBody, priceLineColor: priceLineColor } };
     if (s === 'HLC bars')          return { seriesType: 'Bar',         source: 'hlc3',       optionPatch: {} };
     if (s === 'Line')              return { seriesType: 'Line',        source: 'close',      optionPatch: {} };
     if (s === 'Line with markers') return { seriesType: 'Line',        source: 'close',      optionPatch: { pointMarkersVisible: true } };

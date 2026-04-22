@@ -116,6 +116,13 @@ function _tvWireScrollback(entry, sid, series, symbolInfo, resolution, sType) {
         if (!range || loading || exhausted) return;
         // Only fire when user scrolls near the left edge
         if (range.from > _TV_SCROLLBACK_THRESHOLD) return;
+        // Once the user has dragged past the data into pure empty space
+        // (range.from negative beyond the threshold), stop firing — the
+        // first request already came back NO_DATA so further scrolling
+        // shouldn't keep asking.  The `exhausted` flag normally catches
+        // this, but this guard cuts off any pre-exhaustion overshoot
+        // where the user yanks the scroll wheel hard.
+        if (range.from < -_TV_SCROLLBACK_THRESHOLD * 4) return;
 
         // Find the oldest bar currently loaded
         var raw = entry._seriesRawData[sid];
@@ -133,13 +140,31 @@ function _tvWireScrollback(entry, sid, series, symbolInfo, resolution, sType) {
 
         _tvRequestDatafeedHistory(chartId, symbolInfo, resolution, periodParams, function(resp) {
             loading = false;
-            if (!resp || resp.error) return;
+            // Treat any non-success outcome as exhaustion so the
+            // visible-range-change handler stops retrying — otherwise
+            // every scroll-tick fires another fetch and overloads the
+            // bridge.  This includes:
+            //   - missing/error response (transport failure)
+            //   - explicit noData / status:"no_data"
+            //   - empty bars array (UDF "no more history" signal)
+            if (!resp || resp.error
+                    || (resp.noData != null && resp.noData)
+                    || resp.status === 'no_data'
+                    || resp.status === 'error') {
+                exhausted = true;
+                return;
+            }
             var bars = resp.bars || [];
-
-            // If the server signalled no more data, stop asking
-            if (bars.length === 0 ||
-                (resp.noData != null && resp.noData) ||
-                resp.status === 'no_data') {
+            if (bars.length === 0) {
+                exhausted = true;
+                return;
+            }
+            // Server returned bars whose newest timestamp is at or after
+            // our current oldest — no actual older data was added, so
+            // continuing to ask would loop forever requesting the same
+            // window.  Stop.
+            var newestNew = bars[bars.length - 1] && bars[bars.length - 1].time;
+            if (typeof newestNew === 'number' && newestNew >= oldestTime) {
                 exhausted = true;
                 return;
             }
@@ -149,7 +174,6 @@ function _tvWireScrollback(entry, sid, series, symbolInfo, resolution, sType) {
             if (normalized.length === 0) { exhausted = true; return; }
 
             var merged = normalized.concat(raw);
-            series.setData(merged);
             entry._seriesRawData[sid] = merged;
 
             // Update canonical raw data for indicator computation
@@ -162,13 +186,33 @@ function _tvWireScrollback(entry, sid, series, symbolInfo, resolution, sType) {
             }
 
             // Prepend volume bars if present
+            var volData = null;
             if (entry.volumeMap[sid]) {
-                var volData = _tvExtractVolumeFromBars(bars, entry.theme || _tvDetectTheme(), entry);
+                volData = _tvExtractVolumeFromBars(bars, entry.theme || _tvDetectTheme(), entry);
                 if (volData && volData.length > 0) {
                     var existingVol = entry._seriesRawData['volume'] || [];
                     var mergedVol = volData.concat(existingVol);
-                    entry.volumeMap[sid].setData(mergedVol);
                     entry._seriesRawData['volume'] = mergedVol;
+                }
+            }
+
+            // When RTH filter is active, push the merged bars through
+            // the session filter so both the main series and every
+            // indicator see the refreshed set.  Pass skipFitContent so
+            // the user's scroll position is preserved AND we don't
+            // retrigger the scrollback handler in an infinite loop.
+            if (entry._sessionMode === 'RTH' && typeof _tvApplySessionFilter === 'function') {
+                _tvApplySessionFilter({ skipFitContent: true });
+            } else {
+                series.setData(merged);
+                if (entry.volumeMap[sid] && volData && volData.length > 0) {
+                    entry.volumeMap[sid].setData(entry._seriesRawData['volume']);
+                }
+                if (typeof _tvRecomputeIndicatorsForChart === 'function') {
+                    try { _tvRecomputeIndicatorsForChart(chartId, sid); } catch (_e) {}
+                }
+                if (typeof _tvRefreshVisibleVolumeProfiles === 'function') {
+                    try { _tvRefreshVisibleVolumeProfiles(chartId); } catch (_e2) {}
                 }
             }
         });
@@ -374,6 +418,7 @@ function _tvNormalizeSymbolInfoFull(item) {
         ['session_premarket', 'sessionPremarket'],
         ['session_regular', 'sessionRegular'],
         ['session_postmarket', 'sessionPostmarket'],
+        ['session_overnight', 'sessionOvernight'],
         ['corrections', 'corrections'],
         ['subsession_id', 'subsessionId'],
         ['variable_tick_size', 'variableTickSize'],
@@ -712,6 +757,12 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                         sOptions.color || sOptions.lineColor ||
                         sOptions.upColor || sOptions.borderUpColor || '#4c87ff'
                     );
+                    // `whenMainSeriesReady` must guarantee bars are loaded,
+                    // not just the series constructed.  Fire happens inside
+                    // `_onBarsLoaded` below, after setData + `_seriesRawData`
+                    // — otherwise indicator re-add after an interval/symbol
+                    // change computes from an empty bar set and silently
+                    // produces nothing.
 
                     // Request initial historical bars
                     var periodParams = {
@@ -730,6 +781,14 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                         var normalizedBars = _tvNormalizeBarsForSeriesType(bars, sType);
                         series.setData(normalizedBars);
                         entry._seriesRawData[sid] = normalizedBars;
+
+                        // Main series now has data — fire any pending
+                        // whenMainSeriesReady callbacks.  Callers waiting on
+                        // this event need `_seriesRawData[sid]` populated
+                        // (e.g., indicator re-add after interval change).
+                        if (_tvIsMainSeriesId(sid) || sid === 'series-0') {
+                            _tvFireMainSeriesReady(entry);
+                        }
 
                         // Ensure payload.interval is set so the data-response
                         // handler can compare intervals correctly on the first
@@ -788,14 +847,42 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                         entry._datafeedSubscriptions[sid] = guid;
 
                         datafeed.subscribeBars(symbolInfo, resolution, function(bar) {
-                            // Skip bars outside regular session when RTH is active.
-                            // market_hours field from the data source: 2 = Regular/Market Open.
-                            if (entry._sessionMode === 'RTH' && bar.market_hours != null && bar.market_hours !== 2) {
-                                return;
+                            // Skip bars outside the regular session when RTH
+                            // is active.  Prefer the session-string check
+                            // (works for every datafeed) and fall back to the
+                            // per-bar market_hours field when present.
+                            if (entry._sessionMode === 'RTH') {
+                                if (typeof _tvIsBarInCurrentSession === 'function'
+                                        && !_tvIsBarInCurrentSession(bar.time)) {
+                                    return;
+                                }
+                                if (bar.market_hours != null && bar.market_hours !== 2) {
+                                    return;
+                                }
+                            }
+                            // Drop ticks whose time is older than what's
+                            // already in the series — LWC's series.update
+                            // throws "Cannot update oldest data" if the
+                            // incoming bar comes before the last one (can
+                            // happen after a session-filter swap or a
+                            // late tick from a previous session).
+                            var lastRaw = entry._seriesRawData && entry._seriesRawData[sid];
+                            if (lastRaw && lastRaw.length) {
+                                var lastTime = lastRaw[lastRaw.length - 1].time;
+                                if (typeof bar.time === 'number' && typeof lastTime === 'number' && bar.time < lastTime) {
+                                    return;
+                                }
                             }
                             var normalized = _tvNormalizeBarsForSeriesType([bar], sType);
                             if (normalized.length > 0) {
-                                series.update(normalized[0]);
+                                try {
+                                    series.update(normalized[0]);
+                                } catch (_e) {
+                                    // LWC rejected the update (out-of-order
+                                    // time, format mismatch, etc.) — drop
+                                    // the tick rather than break the stream.
+                                    return;
+                                }
                             }
                             if (bar.volume != null && entry.volumeMap[sid]) {
                                 var palette = TVCHART_THEMES._get(entry.theme || _tvDetectTheme());
@@ -814,11 +901,13 @@ function _tvInitDatafeedMode(entry, seriesList, theme) {
                                 }
                                 var uc = prefs.upColor || palette.volumeUp;
                                 var dc = prefs.downColor || palette.volumeDown || palette.volumeUp;
-                                entry.volumeMap[sid].update({
-                                    time: bar.time,
-                                    value: bar.volume,
-                                    color: isUp ? uc : dc,
-                                });
+                                try {
+                                    entry.volumeMap[sid].update({
+                                        time: bar.time,
+                                        value: bar.volume,
+                                        color: isUp ? uc : dc,
+                                    });
+                                } catch (_ev) { /* same out-of-order guard */ }
                             }
                         }, guid, function() {
                             // onResetCacheNeeded — re-fetch all bars

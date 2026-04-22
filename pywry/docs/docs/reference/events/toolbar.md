@@ -277,7 +277,18 @@ Emitted by the frontend in response to `toolbar:request-state`.
         "num-5": {"type": "number", "value": 42},
         "date-6": {"type": "date", "value": "2025-03-15"},
         "range-7": {"type": "range", "value": 75.0},
-        "secret-8": {"type": "secret", "value": {"has_value": True}}
+        "secret-8": {"type": "secret", "value": {"has_value": True}},
+        "marquee-9": {
+            "type": "marquee",
+            "value": {
+                "text": "Breaking news…",              # data-text attribute
+                "items": {                              # every data-ticker child
+                    "AAPL": "195.20",
+                    "GOOGL": "142.20",
+                    "MSFT": "415.80"
+                }
+            }
+        }
     },
     "timestamp": 1712345678901,
     "context": "optional-context"        # echoed from request
@@ -293,6 +304,12 @@ Emitted by the frontend in response to `toolbar:request-state`.
     "context": "optional-context"
 }
 ```
+
+A marquee single-component response uses the same `{text, items}` shape as
+the entry above — `value: {text, items: {ticker_name: current_text}}`.
+Marquee items are read from the `[data-ticker]` children of the
+`.pywry-marquee` element, giving Python a live snapshot of what the user
+actually sees in the ticker strip.
 
 !!! note "Security"
     SecretInput values are **never** included in state responses. The state returns

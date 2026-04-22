@@ -171,11 +171,10 @@ Requires `anthropic` package and `ANTHROPIC_API_KEY` environment variable.
 
 ### Custom Callback
 ```python
-from pywry.chat_providers import CallbackProvider
+from pywry.chat.providers.callback import CallbackProvider
 
 provider = CallbackProvider(
-    generate_fn=my_generate,   # (messages, config) → str | ChatMessage
-    stream_fn=my_stream,       # (messages, config, cancel_event) → AsyncIterator[str]
+    prompt_fn=my_prompt,   # (session_id, content_blocks, cancel_event) → AsyncIterator[SessionUpdate]
 )
 ```
 

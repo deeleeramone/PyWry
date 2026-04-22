@@ -769,8 +769,33 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 self._register_inline_widget(widget)
                 return widget
 
-            # For notebook inline: use PyWryWidget (AnyWidget) for plain HTML
-            # Use InlineWidget only for Plotly/AG Grid (they need specialized handling)
+            # For notebook inline: prefer PyWryChatWidget when chat toolbar is present.
+            # The chat widget bundles chat-handlers.js and supports lazy asset
+            # injection via traits, so it doesn't need the InlineWidget HTTP path.
+            from .widget import HAS_ANYWIDGET as _HAS_AW
+
+            _has_chat_toolbar = toolbars and any(
+                any(
+                    getattr(item, "component_id", "") == "chat-container"
+                    for item in getattr(tb, "items", [])
+                )
+                for tb in toolbars
+            )
+            if _HAS_AW and _has_chat_toolbar:
+                from .widget import PyWryChatWidget
+
+                widget = PyWryChatWidget.from_html(
+                    html_str,
+                    plain_callbacks,
+                    theme="dark" if self._theme == ThemeMode.DARK else "light",
+                    toolbars=toolbars,
+                    modals=modals,
+                )
+                widget.display()
+                self._register_inline_widget(widget)
+                return widget
+
+            # For Plotly/AG Grid/TradingView without chat: use InlineWidget
             if include_plotly or include_aggrid or include_tvchart:
                 from . import inline as pywry_inline
 
@@ -1334,6 +1359,81 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             modals=modals,
         )
 
+    def _build_tvchart_series_payload(
+        self,
+        data: Any,
+        *,
+        use_datafeed: bool,
+        symbol: str | None,
+        resolution: str,
+        series_options: dict[str, Any] | None,
+        symbol_col: str | None,
+        max_bars: int,
+    ) -> list[dict[str, Any]]:
+        """Build the ``series`` array for the TVChart payload.
+
+        Datafeed mode returns a single placeholder series whose bars will
+        be streamed in later; static mode normalises the input data.
+        """
+        if use_datafeed:
+            return [
+                {
+                    "seriesId": "main",
+                    "symbol": symbol or "",
+                    "resolution": resolution,
+                    "seriesType": "Candlestick",
+                    "seriesOptions": series_options or {},
+                    "bars": [],
+                    "volume": [],
+                }
+            ]
+        from .tvchart import normalize_ohlcv
+
+        chart_data = normalize_ohlcv(data, symbol_col=symbol_col, max_bars=max_bars)
+        return [
+            {
+                "seriesId": s.series_id,
+                "bars": s.bars,
+                "volume": s.volume,
+                "seriesType": s.series_type.value.capitalize(),
+                "seriesOptions": series_options or {},
+            }
+            for s in chart_data.series
+        ]
+
+    def _build_tvchart_storage_config(
+        self,
+        storage: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """Build the storage-config block for the TVChart payload."""
+        from .state import is_deploy_mode
+
+        if isinstance(storage, dict):
+            raw_storage: dict[str, Any] = storage.copy()
+        else:
+            raw_storage = {
+                "backend": self._settings.tvchart.storage_backend,
+                "path": self._settings.tvchart.storage_path,
+                "namespace": self._settings.tvchart.storage_namespace,
+                "adapter": self._settings.tvchart.storage_adapter,
+            }
+        path_val = raw_storage.get("path")
+        adapter_val = raw_storage.get("adapter")
+        storage_config: dict[str, Any] = {
+            "backend": str(raw_storage.get("backend", "file")),
+            "path": str(path_val) if path_val is not None else "",
+            "namespace": str(raw_storage.get("namespace", "pywry.tvchart")),
+            "adapter": str(adapter_val) if adapter_val is not None else "",
+        }
+        use_server_backend = is_deploy_mode() or storage_config["backend"] in (
+            "file",
+            "server",
+        )
+        if use_server_backend:
+            storage_config["preload"] = self._preload_chart_data()
+            storage_config["backend"] = "server"
+        return storage_config
+
     def _preload_chart_data(self, user_id: str = "default") -> dict[str, str]:
         """Fetch all chart layouts and settings from ChartStore for JS preload."""
         from .state import get_chart_store
@@ -1383,6 +1483,9 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         symbol: str | None = None,
         resolution: str = "1D",
         provider: Any = None,
+        chart_id: str | None = None,
+        chart_kind: str = "default",
+        yield_curve: dict[str, Any] | None = None,
     ) -> NativeWindowHandle | BaseWidget:
         """Show a TradingView Lightweight Chart.
 
@@ -1426,6 +1529,35 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             A :class:`~pywry.tvchart.datafeed.DatafeedProvider` instance.
             When supplied, ``use_datafeed`` is set to ``True`` automatically
             and all datafeed IPC events are wired to the provider.
+        chart_id : str or None
+            Explicit identifier for the TradingView chart component.
+            Every TVChart event carries ``chartId`` so multiple charts
+            in one window can be addressed independently; passing a
+            caller-chosen ``chart_id`` here lets apps assign a
+            meaningful name (e.g. ``"chart"``) that agents and chat
+            context attachments can route MCP tool calls against.  If
+            omitted, a unique ``tvchart_<hex>`` id is auto-generated.
+        chart_kind : str, optional
+            Which Lightweight Charts factory to use.
+
+            * ``"default"`` (default) — ``createChart``, time X axis.
+              Standard OHLC / tick bars for equities, crypto, futures.
+            * ``"price"`` — ``createOptionsChart``, numeric X axis.
+              Use for option-chain payoff diagrams, IV smile/skew,
+              volume-by-strike bars, market-profile histograms,
+              probability distributions, order-book depth.  Data
+              points are ``{time: <price>, value: ...}``.
+            * ``"yield-curve"`` — ``createYieldCurveChart``, tenor-
+              in-months X axis with linear spacing.  Use for US
+              treasury / SOFR / OIS / swap / credit curves and any
+              term-structure (contango/backwardation) view.  Data
+              points are ``{time: <months>, value: <yield_pct>}``.
+        yield_curve : dict or None
+            Options forwarded to a yield-curve chart: ``baseResolution``
+            (minutes per step, default 1), ``minimumTimeRange``
+            (default 120 = 10 years), ``startTimeRange`` (default 0),
+            ``formatTime`` (optional custom tenor-label formatter).
+            Ignored unless ``chart_kind == "yield-curve"``.
 
         Returns
         -------
@@ -1451,6 +1583,11 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
 
             widget_width = "100%" if width is None else f"{width}px"
 
+            # Merge yield-curve options into chart_options so the inline
+            # widget's payload picks them up unchanged.
+            _inline_chart_options = dict(chart_options or {})
+            if yield_curve and chart_kind == "yield-curve":
+                _inline_chart_options["yieldCurve"] = yield_curve
             widget = pywry_inline.show_tvchart(
                 data=data,
                 callbacks=plain_callbacks,
@@ -1458,7 +1595,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 width=widget_width,
                 height=height or 700,
                 theme="dark" if self._theme == ThemeMode.DARK else "light",
-                chart_options=chart_options,
+                chart_options=_inline_chart_options or None,
                 series_options=series_options,
                 symbol_col=symbol_col,
                 max_bars=max_bars,
@@ -1470,79 +1607,47 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 symbol=symbol,
                 resolution=resolution,
                 provider=provider,
+                chart_kind=chart_kind,
             )
             self._register_inline_widget(widget)
             return widget  # type: ignore[no-any-return]
-        if use_datafeed:
-            series_payload: list[dict[str, Any]] = [
-                {
-                    "seriesId": "main",
-                    "symbol": symbol or "",
-                    "resolution": resolution,
-                    "seriesType": "Candlestick",
-                    "seriesOptions": series_options or {},
-                    "bars": [],
-                    "volume": [],
-                }
-            ]
-        else:
-            from .tvchart import normalize_ohlcv
-
-            chart_data = normalize_ohlcv(data, symbol_col=symbol_col, max_bars=max_bars)
-
-            series_payload = []
-            series_payload.extend(
-                {
-                    "seriesId": s.series_id,
-                    "bars": s.bars,
-                    "volume": s.volume,
-                    "seriesType": s.series_type.value.capitalize(),
-                    "seriesOptions": series_options or {},
-                }
-                for s in chart_data.series
-            )
-
-        from .state import is_deploy_mode
-
-        raw_storage = (
-            storage.copy()
-            if isinstance(storage, dict)
-            else {
-                "backend": self._settings.tvchart.storage_backend,
-                "path": self._settings.tvchart.storage_path,
-                "namespace": self._settings.tvchart.storage_namespace,
-                "adapter": self._settings.tvchart.storage_adapter,
-            }
+        series_payload = self._build_tvchart_series_payload(
+            data,
+            use_datafeed=use_datafeed,
+            symbol=symbol,
+            resolution=resolution,
+            series_options=series_options,
+            symbol_col=symbol_col,
+            max_bars=max_bars,
         )
-        storage_config: dict[str, Any] = {
-            "backend": str(raw_storage.get("backend", "file")),
-            "path": str(raw_storage.get("path", "")) if raw_storage.get("path") is not None else "",
-            "namespace": str(raw_storage.get("namespace", "pywry.tvchart")),
-            "adapter": str(raw_storage.get("adapter", ""))
-            if raw_storage.get("adapter") is not None
-            else "",
-        }
+        storage_config = self._build_tvchart_storage_config(storage)
 
-        # Preload from ChartStore for file/server backends (or deploy mode)
-        _use_server_backend = is_deploy_mode() or storage_config["backend"] in (
-            "file",
-            "server",
-        )
-        if _use_server_backend:
-            storage_config["preload"] = self._preload_chart_data()
-            storage_config["backend"] = "server"
-
+        # Non-default chart kinds route through the alternate LWC
+        # factories (createOptionsChart / createYieldCurveChart).  They
+        # use a numeric X axis instead of time, so the wrapper disables
+        # toolbar features that don't apply — interval tabs, sessions,
+        # volume auto-extract all gate on ``chartKind == 'default'``
+        # inside the frontend lifecycle.
+        merged_chart_options: dict[str, Any] = dict(chart_options or {})
+        if yield_curve and chart_kind == "yield-curve":
+            merged_chart_options["yieldCurve"] = yield_curve
         payload_json = json.dumps(
             {
-                "chartOptions": chart_options or {},
+                "chartOptions": merged_chart_options,
                 "title": title or "",
                 "series": series_payload,
                 "storage": storage_config,
                 "useDatafeed": use_datafeed,
+                "chartKind": chart_kind,
             }
         )
 
-        chart_id = f"tvchart_{uuid.uuid4().hex[:8]}"
+        # Caller-supplied chart_id lets apps assign a meaningful name to
+        # the TradingView chart component (e.g. "chart") so agents /
+        # context attachments can route MCP tool calls against it
+        # directly.  Fall back to an auto-generated unique id otherwise.
+        if not chart_id:
+            chart_id = f"tvchart_{uuid.uuid4().hex[:8]}"
 
         chart_html = f"""
         <div id="{chart_id}" class="pywry-tvchart-container"></div>
@@ -1596,7 +1701,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 wire_label = handle.label
             self._wire_datafeed_provider(provider, label=wire_label)
 
-        if _use_server_backend:
+        if storage_config.get("backend") == "server":
             self._wire_chart_storage(user_id="default")
 
         return handle

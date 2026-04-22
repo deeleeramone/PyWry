@@ -89,8 +89,6 @@ app = PyWry()
 
 def on_button_click(data, event_type, label):
     """Called when the button is clicked."""
-    print(f"Button clicked! Data: {data}")
-    # Update the page content
     app.emit("pywry:set-content", {"id": "greeting", "text": "Button was clicked!"}, label)
 
 html = """

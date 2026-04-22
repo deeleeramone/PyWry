@@ -37,15 +37,19 @@ jobs:
       contents: read
     strategy:
       fail-fast: true
+      # ``deepagents`` in ``.[dev]`` requires Python >=3.11 (3.10 is
+      # blocked upstream); ``sqlcipher3`` is built from source
+      # against the SQLCipher C library installed in the ``Build
+      # SQLCipher`` step, so 3.14 works too.
       matrix:
         include:
           - os: ubuntu-24.04
-            python-version: '3.10'
+            python-version: '3.11'
           - os: ubuntu-24.04
             python-version: '3.14'
           - os: windows-2025
             python-version: '3.12'
-          - os: macos-15
+          - os: macos-15-intel
             python-version: '3.12'
 
     steps:
@@ -67,7 +71,61 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
-          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev && break || { sleep 30; sudo apt-get update; }; done
+          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev build-essential libssl-dev && break || { sleep 30; sudo apt-get update; }; done
+
+      - name: Build SQLCipher from source (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          # ``--disable-tcl`` skips the Tcl extension; the Python
+          # ``sqlcipher3`` binding doesn't need it, and modern Tcl
+          # bottles break its compile on macOS.
+          git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
+          cd /tmp/sqlcipher
+          ./configure \
+            --disable-tcl \
+            --enable-tempstore=yes \
+            CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL" \
+            LDFLAGS="-lcrypto"
+          make -j$(nproc) libsqlcipher.la || make -j$(nproc)
+          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
+          sudo ldconfig
+
+      - name: Build SQLCipher from source (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          # No ``tcl-tk`` install — Homebrew ships Tcl 9.0, whose
+          # headers break SQLCipher's Tcl-8-era ``tclsqlite.c``.
+          # ``--disable-tcl`` is the fix.
+          brew install openssl@3
+          OPENSSL_PREFIX="$(brew --prefix openssl@3)"
+          git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
+          cd /tmp/sqlcipher
+          ./configure \
+            --disable-tcl \
+            --enable-tempstore=yes \
+            CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL -I$OPENSSL_PREFIX/include" \
+            LDFLAGS="-L$OPENSSL_PREFIX/lib -lcrypto"
+          make -j$(sysctl -n hw.logicalcpu) libsqlcipher.la || make -j$(sysctl -n hw.logicalcpu)
+          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
+          echo "LDFLAGS=-L/usr/local/lib -L$OPENSSL_PREFIX/lib -lsqlcipher -lcrypto" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I/usr/local/include -I/usr/local/include/sqlcipher -I$OPENSSL_PREFIX/include" >> $GITHUB_ENV
+
+      - name: Install SQLCipher via vcpkg (Windows x64)
+        if: runner.os == 'Windows' && runner.arch != 'ARM64'
+        shell: pwsh
+        run: |
+          # arm64-windows skipped: tcl (transitive port dep) doesn't
+          # build there under vcpkg; ``SqliteStateBackend`` handles
+          # missing ``sqlcipher3`` by falling back to plain SQLite.
+          $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:x64-windows"
+          $sqlcipherDir = "$env:VCPKG_ROOT\installed\x64-windows"
+          echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
+          echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV
+          echo "LIB=$sqlcipherDir\lib;$env:LIB" >> $env:GITHUB_ENV
+          echo "PATH=$sqlcipherDir\bin;$env:PATH" >> $env:GITHUB_ENV
 
       - name: Install dependencies
         run: |
@@ -548,7 +606,55 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           for i in 1 2 3; do sudo apt-get update && break || sleep 15; done
-          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev && break || { sleep 30; sudo apt-get update; }; done
+          for i in 1 2 3; do sudo apt-get install -y --fix-missing xvfb dbus-x11 at-spi2-core libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libgl1 libegl1 libwebkit2gtk-4.1-dev libgtk-3-dev build-essential libssl-dev && break || { sleep 30; sudo apt-get update; }; done
+
+      - name: Build SQLCipher from source (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
+          cd /tmp/sqlcipher
+          ./configure \
+            --disable-tcl \
+            --enable-tempstore=yes \
+            CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL" \
+            LDFLAGS="-lcrypto"
+          make -j$(nproc) libsqlcipher.la || make -j$(nproc)
+          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
+          sudo ldconfig
+
+      - name: Build SQLCipher from source (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install openssl@3
+          OPENSSL_PREFIX="$(brew --prefix openssl@3)"
+          git clone --depth=1 --branch=v4.6.1 https://github.com/sqlcipher/sqlcipher.git /tmp/sqlcipher
+          cd /tmp/sqlcipher
+          ./configure \
+            --disable-tcl \
+            --enable-tempstore=yes \
+            CFLAGS="-DSQLITE_HAS_CODEC -DSQLCIPHER_CRYPTO_OPENSSL -I$OPENSSL_PREFIX/include" \
+            LDFLAGS="-L$OPENSSL_PREFIX/lib -lcrypto"
+          make -j$(sysctl -n hw.logicalcpu) libsqlcipher.la || make -j$(sysctl -n hw.logicalcpu)
+          sudo make install-libLTLIBRARIES install-includeHEADERS || sudo make install
+          echo "LDFLAGS=-L/usr/local/lib -L$OPENSSL_PREFIX/lib -lsqlcipher -lcrypto" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I/usr/local/include -I/usr/local/include/sqlcipher -I$OPENSSL_PREFIX/include" >> $GITHUB_ENV
+
+      - name: Install SQLCipher via vcpkg (Windows x64)
+        if: runner.os == 'Windows' && runner.arch != 'ARM64'
+        shell: pwsh
+        run: |
+          # arm64-windows skipped: tcl (transitive port dep) doesn't
+          # build there under vcpkg; ``SqliteStateBackend`` handles
+          # missing ``sqlcipher3`` by falling back to plain SQLite.
+          $env:VCPKG_ROOT = "$env:VCPKG_INSTALLATION_ROOT"
+          & "$env:VCPKG_ROOT\vcpkg" install "sqlcipher:x64-windows"
+          $sqlcipherDir = "$env:VCPKG_ROOT\installed\x64-windows"
+          echo "SQLCIPHER_PATH=$sqlcipherDir" >> $env:GITHUB_ENV
+          echo "INCLUDE=$sqlcipherDir\include;$sqlcipherDir\include\sqlcipher;$env:INCLUDE" >> $env:GITHUB_ENV
+          echo "LIB=$sqlcipherDir\lib;$env:LIB" >> $env:GITHUB_ENV
+          echo "PATH=$sqlcipherDir\bin;$env:PATH" >> $env:GITHUB_ENV
 
       - name: Cache vcpkg packages (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'

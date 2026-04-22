@@ -41,23 +41,23 @@ def _get_widget_esm() -> str:
 
 def _get_hot_reload_js() -> str:
     """Get the JavaScript for native Tauri window mode (hot reload)."""
-    from pywry.scripts import HOT_RELOAD_JS
+    from pywry.scripts import _get_hot_reload_js as _load
 
-    return HOT_RELOAD_JS
+    return _load()
 
 
 def _get_system_events_js() -> str:
     """Get the JavaScript for system event handlers (pywry:inject-css, etc.)."""
-    from pywry.scripts import PYWRY_SYSTEM_EVENTS_JS
+    from pywry.scripts import _get_system_events_js as _load
 
-    return PYWRY_SYSTEM_EVENTS_JS
+    return _load()
 
 
 def _get_theme_manager_js() -> str:
     """Get the theme manager JavaScript."""
-    from pywry.scripts import THEME_MANAGER_JS
+    from pywry.scripts import _get_theme_manager_js as _load
 
-    return THEME_MANAGER_JS
+    return _load()
 
 
 # =============================================================================
@@ -302,21 +302,24 @@ class TestPywryBridgeSystemSupport:
 
     def test_bridge_defines_on_method(self) -> None:
         """Verify bridge JS defines the on() method for event registration."""
-        from pywry.scripts import PYWRY_BRIDGE_JS
+        from pywry.scripts import _get_bridge_js
 
-        assert ".on" in PYWRY_BRIDGE_JS
+        _js = _get_bridge_js()
+        assert ".on" in _js
 
     def test_bridge_defines_off_method(self) -> None:
         """Verify bridge JS defines the off() method for event unregistration."""
-        from pywry.scripts import PYWRY_BRIDGE_JS
+        from pywry.scripts import _get_bridge_js
 
-        assert ".off" in PYWRY_BRIDGE_JS
+        _js = _get_bridge_js()
+        assert ".off" in _js
 
     def test_bridge_defines_handlers_storage(self) -> None:
         """Verify bridge JS defines handlers storage."""
-        from pywry.scripts import PYWRY_BRIDGE_JS
+        from pywry.scripts import _get_bridge_js
 
-        assert "_handlers" in PYWRY_BRIDGE_JS
+        _js = _get_bridge_js()
+        assert "_handlers" in _js
 
     def test_theme_manager_update_theme_handler(self) -> None:
         """Verify theme manager registers pywry:update-theme handler."""

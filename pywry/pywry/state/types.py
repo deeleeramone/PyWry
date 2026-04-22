@@ -17,6 +17,7 @@ class StateBackend(str, Enum):
 
     MEMORY = "memory"
     REDIS = "redis"
+    SQLITE = "sqlite"
 
 
 @dataclass

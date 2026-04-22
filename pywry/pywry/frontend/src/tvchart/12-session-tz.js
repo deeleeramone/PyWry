@@ -156,10 +156,17 @@ function _tvFilterBarsBySession(bars, sessionStr, tz) {
     if (!bars || !bars.length || !sessionStr) return bars || [];
     if (sessionStr === '24x7') return bars;
 
-    var ranges = sessionStr.split(',');
+    // TradingView session strings may include a ``:weekdays`` suffix
+    // (``0930-1600:23456`` = Mon-Fri) and be separated by either ``,`` or
+    // ``|`` in multi-session feeds.  Normalise both so the regex below
+    // only has to handle ``HHMM-HHMM``.
+    var ranges = sessionStr.split(/[,|]/);
     var parsed = [];
     for (var i = 0; i < ranges.length; i++) {
-        var m = ranges[i].trim().match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+        var r = ranges[i].trim();
+        var colonIdx = r.indexOf(':');
+        if (colonIdx >= 0) r = r.substring(0, colonIdx);
+        var m = r.match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
         if (m) {
             parsed.push({
                 s: parseInt(m[1], 10) * 60 + parseInt(m[2], 10),
@@ -219,7 +226,12 @@ function _tvIsBarInCurrentSession(barTime) {
     if (mode !== 'RTH') return true;
 
     var info = _tvGetMainSymbolInfo();
-    var sessionStr = info.session_regular;
+    // For RTH-only filtering we want the regular-hours window
+    // explicitly — ``info.session`` is the FULL trading hours string
+    // (may include pre + regular + post concatenated), while
+    // ``info.session_regular`` is just the core 0930-1600 slot.  When
+    // the provider only ships ``info.session``, fall back to that.
+    var sessionStr = info.session_regular || info.session;
     if (!sessionStr || sessionStr === '24x7') return true;
 
     var tz = info.timezone || _tvGetExchangeTimezone();
@@ -233,19 +245,30 @@ function _tvIsBarInCurrentSession(barTime) {
  * either passes them through (ETH) or filters them (RTH) before
  * calling series.setData().
  */
-function _tvApplySessionFilter() {
+function _tvApplySessionFilter(opts) {
+    opts = opts || {};
     var entry = _tvGetFirstEntry();
     if (!entry) return;
 
     var mode = entry._sessionMode || 'ETH';
     var info = _tvGetMainSymbolInfo();
-    var sessionStr = info.session_regular;
+    // For RTH-only filtering we want the regular-hours window
+    // explicitly — ``info.session`` is the FULL trading hours string
+    // (may include pre + regular + post concatenated), while
+    // ``info.session_regular`` is just the core 0930-1600 slot.  When
+    // the provider only ships ``info.session``, fall back to that.
+    var sessionStr = info.session_regular || info.session;
     var tz = info.timezone || _tvGetExchangeTimezone();
     var sids = Object.keys(entry.seriesMap || {});
     entry._seriesDisplayData = entry._seriesDisplayData || {};
 
+    // Skip derived series that have no ``_seriesRawData`` entry —
+    // indicator lines are computed from the main bars and get refreshed
+    // below via the global recompute; session filter only applies to
+    // chart-data series (main + compare overlays).
     for (var i = 0; i < sids.length; i++) {
         var sid = sids[i];
+        if (typeof _activeIndicators === 'object' && _activeIndicators[sid]) continue;
         var series = entry.seriesMap[sid];
         var raw = entry._seriesRawData[sid];
         if (!series || !raw || !raw.length) continue;
@@ -268,13 +291,45 @@ function _tvApplySessionFilter() {
         }
     }
 
-    if (entry.chart) entry.chart.timeScale().fitContent();
-    // Find the chartId for the given entry from the registry
+    // Find the chartId for downstream per-chart refreshes.
     var _sessIds = Object.keys(window.__PYWRY_TVCHARTS__ || {});
     var _sessChartId = null;
     for (var _si = 0; _si < _sessIds.length; _si++) {
         if (window.__PYWRY_TVCHARTS__[_sessIds[_si]] === entry) { _sessChartId = _sessIds[_si]; break; }
     }
+
+    // fitContent FIRST so the visible logical range re-seats on the
+    // shorter filtered bar set — otherwise _tvRefreshVisibleVolumeProfiles
+    // reads a stale range that points PAST the end of the new array, the
+    // compute clamps to one bar at index N-1, and VPVR ends up showing a
+    // single bar's volume (looks like "877K up, 0 down" on an RTH toggle
+    // when the previous ETH view was scrolled right).
+    //
+    // Skip when called from scrollback though — the user just dragged the
+    // viewport, jumping back to fitContent would yank their scroll
+    // position AND retrigger the scrollback handler in an infinite loop
+    // (range.from snaps to 0, scrollback wants more data, loads it,
+    // session-filters again, fitContent again, loop).
+    if (entry.chart && !opts.skipFitContent) entry.chart.timeScale().fitContent();
+
+    // Recompute every indicator against the now-filtered bar set so
+    // SMA(9) etc. reflects 9 RTH bars, not 9 ETH bars with an overnight
+    // gap baked in.  _tvSeriesRawData returns _seriesDisplayData when
+    // _sessionMode === 'RTH', so compute paths pick up the right source
+    // automatically.
+    if (_sessChartId && typeof _tvRecomputeIndicatorsForChart === 'function') {
+        try { _tvRecomputeIndicatorsForChart(_sessChartId, 'main'); } catch (_e) {}
+    }
+
+    // Volume Profile Visible Range reads from _seriesRawData inside
+    // _tvRefreshVisibleVolumeProfiles — the above raw-data shim kicks in
+    // there too, so the profile re-pins over the filtered bar set.  Now
+    // that fitContent has updated the visible range, the VP compute sees
+    // the right [0, N-1] span.
+    if (_sessChartId && typeof _tvRefreshVisibleVolumeProfiles === 'function') {
+        try { _tvRefreshVisibleVolumeProfiles(_sessChartId); } catch (_e2) {}
+    }
+
     if (_sessChartId) _tvRenderHoverLegend(_sessChartId, null);
 }
 

@@ -108,7 +108,7 @@ handle = app.show(content, label="dashboard")
 
 # Auto-generated (UUID)
 handle = app.show(content)
-print(handle.label)  # e.g., "a3f1c2d4-..."
+window_label = handle.label  # e.g., "a3f1c2d4-..." — used to route events to this window
 ```
 
 Labels are used to:

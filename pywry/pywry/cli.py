@@ -329,7 +329,7 @@ def handle_mcp(args: argparse.Namespace) -> int:
     elif args.native:
         headless = False
     elif os.environ.get("PYWRY_HEADLESS") is not None:
-        # Env var takes precedence over config for backwards compatibility
+        # Env var takes precedence over config
         headless = os.environ.get("PYWRY_HEADLESS", "0") == "1"
     else:
         headless = mcp_config.headless

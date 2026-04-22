@@ -35,7 +35,8 @@ from magentic import (
 from magentic.chat_model.message import FunctionResultMessage
 
 from pywry import HtmlContent, PyWry, ThemeMode
-from pywry.chat_manager import ChatManager, ToolCallResponse, ToolResultResponse
+from pywry.chat.manager import ChatManager
+from pywry.chat.updates import ToolCallUpdate
 from pywry.grid import build_grid_config, build_grid_html
 from pywry.templates import build_plotly_init_script
 
@@ -298,12 +299,22 @@ async def handler(messages: list[dict], ctx):
     while isinstance(response.last_message.content, FunctionCall):
         fn_call = response.last_message.content
 
-        yield ToolCallResponse(name=fn_call.function.__name__, arguments=fn_call.arguments)
+        yield ToolCallUpdate(
+            toolCallId=f"call_{id(fn_call)}",
+            name=fn_call.function.__name__,
+            kind="fetch",
+            status="in_progress",
+        )
 
         result = fn_call()
-        yield ToolResultResponse(
-            tool_id="",
-            result=result if len(result) <= 300 else result[:300] + "…",
+        yield ToolCallUpdate(
+            toolCallId=f"call_{id(fn_call)}",
+            name=fn_call.function.__name__,
+            kind="fetch",
+            status="completed",
+            content=[
+                {"type": "text", "text": result if len(result) <= 300 else result[:300] + "…"}
+            ],
         )
 
         response = await response.add_message(
