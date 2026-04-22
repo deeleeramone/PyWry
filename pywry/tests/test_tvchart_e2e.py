@@ -261,6 +261,23 @@ def chart(request) -> dict[str, Any]:
 
     time.sleep(CHART_RENDER_WAIT)
 
+    # BitMEX's public UDF is occasionally unreachable from CI runners and
+    # can return empty results even when the chart loaded.  Rather than
+    # firing 60+ follow-up tests against a half-initialised chart (which
+    # produces a cascade of misleading assertion errors), skip the whole
+    # class if no bars arrived within the render window.
+    state = _full_state(label)
+    if not state.get("barCount", 0) or not state.get("seriesIds"):
+        udf.close()
+        app.close()
+        _stop_runtime_sync()
+        _clear_registries()
+        pytest.skip(
+            f"BitMEX UDF returned no bars for {UDF_SYMBOL}@{UDF_RESOLUTION} "
+            f"within {CHART_RENDER_WAIT}s — public UDF unavailable or CI "
+            "runner has no outbound network.  Skipping lifecycle suite."
+        )
+
     yield {"app": app, "udf": udf, "label": label}
 
     udf.close()

@@ -760,10 +760,11 @@ class TVChartConfig(BaseModel):
         return opts
 
     def to_payload(self) -> dict[str, Any]:
-        """Serialize the full payload (options + chartKind) expected by
-        ``PYWRY_TVCHART_CREATE``.  Preserves the chart-factory selector
-        alongside the options dict so the frontend can route to the
-        right LWC factory.
+        """Serialize the full payload (options + chartKind) for the frontend.
+
+        ``PYWRY_TVCHART_CREATE`` expects a dict with both the chart-factory
+        selector (``chartKind``) and the options dict (``chartOptions``)
+        so it can route to the right Lightweight Charts factory.
         """
         payload: dict[str, Any] = {
             "chartKind": self.chart_kind,

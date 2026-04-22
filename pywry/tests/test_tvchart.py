@@ -2891,7 +2891,7 @@ class TestTVChartSpecialtyChartKinds:
         assert "LightweightCharts.createYieldCurveChart(container, chartOptions)" in body
         assert "yield-curve" in body
 
-    def test_create_default_falls_back_to_createChart(self, tvchart_defaults_js: str):
+    def test_create_default_falls_back_to_create_chart(self, tvchart_defaults_js: str):
         body = TestTVChartFrontendStateContracts()._create_body(tvchart_defaults_js)
         assert "LightweightCharts.createChart(container, chartOptions)" in body
 
@@ -2944,6 +2944,7 @@ class TestTVChartChartKindConfig:
 
     def test_config_rejects_unknown_kind(self):
         import pydantic
+
         from pywry.tvchart.config import TVChartConfig
 
         with pytest.raises(pydantic.ValidationError):
@@ -3025,6 +3026,7 @@ class TestTVChartSpecialtyInlinePayload:
         sync with the public chart_kind / yield_curve API surface."""
         import ast
         import json
+
         from pathlib import Path
 
         nb_path = (
