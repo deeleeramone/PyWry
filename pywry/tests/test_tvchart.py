@@ -2767,9 +2767,9 @@ class TestTVChartThemeVariables:
 
         import pywry
 
-        return (
-            Path(pywry.__file__).parent / "frontend" / "style" / "tvchart.css"
-        ).read_text(encoding="utf-8")
+        return (Path(pywry.__file__).parent / "frontend" / "style" / "tvchart.css").read_text(
+            encoding="utf-8"
+        )
 
     VP_VARS = (
         "--pywry-tvchart-vp-up",
