@@ -708,7 +708,7 @@ jobs:
         shell: bash
         run: |
           PYWRY_VERSION="${{ needs.merge-artifacts.outputs.version }}"
-          pip install --find-links "$RUNNER_TEMP/dist/" "pywry[all]==$PYWRY_VERSION"
+          pip install --find-links "$RUNNER_TEMP/dist/" "pywry[all, pyinstaller]==$PYWRY_VERSION"
           pip install pytest pytest-asyncio pytest-timeout httpx plotly fakeredis testcontainers pandas
 
       - name: Install cryptography (non-Windows-ARM)
