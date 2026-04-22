@@ -95,11 +95,26 @@ class CustomBuildHook(BuildHookInterface[Any]):
 
     def initialize(self, version: str, build_data: dict[str, Any]) -> None:
         """Download and bundle pytauri-wheel for the target platform."""
-        # Skip for non-wheel builds (sdist, editable)
+        # Ensure frontend assets exist for every target (wheel, sdist, editable wheel).
+        # build_assets.py lives next to hatch_build.py at <self.root>/build_assets.py.
+        sys.path.insert(0, self.root)
+        try:
+            from build_assets import download_all_assets, verify_assets
+        finally:
+            sys.path.pop(0)
+
+        self.app.display_info("Ensuring frontend assets are present")
+        download_all_assets()
+        missing = [name for name, ok in verify_assets().items() if not ok]
+        if missing:
+            self.app.display_warning(
+                f"Frontend assets unavailable from CDN - placeholders used: {missing}"
+            )
+
+        # Skip pytauri-wheel bundling for non-wheel builds (sdist) and editable installs.
         if self.target_name != "wheel":
             return
 
-        # Skip for editable installs
         if version == "editable":
             self.app.display_info("Skipping pytauri-wheel bundling for editable install")
             return

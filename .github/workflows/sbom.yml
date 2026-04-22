@@ -45,7 +45,7 @@ jobs:
           python-version: '3.12'
           
       - name: Install project dependencies
-        run: pip install ".[all,dev]"
+        run: pip install ".[all,dev,freeze]"
           
       - name: Install CycloneDX BOM generator
         run: pip install cyclonedx-bom
