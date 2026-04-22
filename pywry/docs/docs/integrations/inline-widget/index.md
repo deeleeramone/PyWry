@@ -2,7 +2,7 @@
 
 PyWry's event system uses a unified protocol — `on()`, `emit()`, `update()`, `display()` — that works identically across native windows, IFrame+WebSocket, and anywidget. This page explains how that protocol is implemented over the IFrame+WebSocket transport, so you can build reusable components or introduce new integrations that work seamlessly in all three environments.
 
-For the anywidget transport, see [Anywidget Transport](../anywidget/index.md).
+For the anywidget transport, see [Anywidget Transport](../anywidget.md).
 
 ## How InlineWidget Implements the Protocol
 
