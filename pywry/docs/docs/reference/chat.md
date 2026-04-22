@@ -44,13 +44,13 @@ Core chat data models, configuration objects, and HTML builder helpers.
 
 ## Tool Call Models
 
-::: pywry.chat.ToolCallFunction
+::: pywry.chat.ACPToolCall
     options:
       show_root_heading: true
       heading_level: 2
       members: true
 
-::: pywry.chat.ToolCall
+::: pywry.chat.ToolCallLocation
     options:
       show_root_heading: true
       heading_level: 2
@@ -59,12 +59,6 @@ Core chat data models, configuration objects, and HTML builder helpers.
 ---
 
 ## Configuration
-
-::: pywry.chat.SlashCommand
-    options:
-      show_root_heading: true
-      heading_level: 2
-      members: true
 
 ::: pywry.chat.ChatConfig
     options:

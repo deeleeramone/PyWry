@@ -77,12 +77,12 @@ Built-in asset loaders for Plotly, AG Grid, CSS, icons, toasts, and modals.
 
 ## Icons
 
-::: pywry.assets.get_openbb_icon
+::: pywry.assets.get_pywry_icon
     options:
       show_root_heading: true
       heading_level: 2
 
-::: pywry.assets.get_openbb_icon_path
+::: pywry.assets.get_pywry_icon_path
     options:
       show_root_heading: true
       heading_level: 2

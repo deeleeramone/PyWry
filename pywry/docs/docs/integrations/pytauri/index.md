@@ -2,7 +2,7 @@
 
 PyWry's event system uses a unified protocol — `on()`, `emit()`, `update()`, `display()` — that works identically across PyTauri, IFrame+WebSocket, and anywidget. This page explains how that protocol is implemented over the PyTauri transport, so you can build reusable components that work seamlessly in all three environments.
 
-For the other transports, see [Anywidget Transport](../anywidget/index.md) and [IFrame + WebSocket Transport](../inline-widget/index.md).
+For the other transports, see [Anywidget Transport](../anywidget.md) and [IFrame + WebSocket Transport](../inline-widget/index.md).
 
 ## Architecture
 
