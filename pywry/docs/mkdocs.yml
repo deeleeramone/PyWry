@@ -232,6 +232,7 @@ nav:
       - PlotlyConfig API: integrations/plotly/plotly-config.md
     - TradingView:
       - integrations/tradingview/index.md
+      - Chart kinds: integrations/tradingview/tvchart-chart-kinds.md
       - Config: integrations/tradingview/tvchart-config.md
       - DatafeedProvider: integrations/tradingview/tvchart-datafeed.md
       - Indicators: integrations/tradingview/tvchart-indicators.md

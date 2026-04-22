@@ -131,7 +131,20 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
     }
 
     var theme = _tvDetectTheme();
-    var chartOptions = _tvBuildChartOptions(payload.chartOptions || null, theme);
+    // Three LWC factories are routed by ``payload.chartKind``:
+    //   'default'      (default) — createChart          — time X axis
+    //   'price'        — createOptionsChart             — numeric price X
+    //   'yield-curve'  — createYieldCurveChart          — tenor-in-months X
+    // Each has its own options builder with the same PyWry palette.
+    var chartKind = (payload && payload.chartKind) || 'default';
+    var chartOptions;
+    if (chartKind === 'price') {
+        chartOptions = _tvBuildPriceChartOptions(payload.chartOptions || null, theme);
+    } else if (chartKind === 'yield-curve' || chartKind === 'yield_curve') {
+        chartOptions = _tvBuildYieldCurveChartOptions(payload.chartOptions || null, theme);
+    } else {
+        chartOptions = _tvBuildChartOptions(payload.chartOptions || null, theme);
+    }
     var measured = _tvMeasureContainerSize(container);
 
     // Prefer auto-size unless explicit dimensions are provided.
@@ -155,7 +168,27 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
         }
     }
 
-    var chart = LightweightCharts.createChart(container, chartOptions);
+    var chart;
+    if (chartKind === 'price' && typeof LightweightCharts.createOptionsChart === 'function') {
+        chart = LightweightCharts.createOptionsChart(container, chartOptions);
+    } else if ((chartKind === 'yield-curve' || chartKind === 'yield_curve')
+            && typeof LightweightCharts.createYieldCurveChart === 'function') {
+        chart = LightweightCharts.createYieldCurveChart(container, chartOptions);
+    } else {
+        if (chartKind !== 'default' && chartKind !== undefined) {
+            // Requested a specialty factory but the bundled LWC build
+            // doesn't expose it — surface the gap loudly instead of
+            // silently falling back to createChart with a time axis.
+            console.warn(
+                '[pywry:tvchart] chartKind=' + chartKind
+                + ' requested but LightweightCharts.'
+                + (chartKind === 'price' ? 'createOptionsChart' : 'createYieldCurveChart')
+                + ' is not a function — falling back to createChart.  '
+                + 'Check the bundled LWC version.'
+            );
+        }
+        chart = LightweightCharts.createChart(container, chartOptions);
+    }
     var crect = container.getBoundingClientRect();
     if (crect.width > 0 && crect.height > 0 && typeof chart.resize === 'function') {
         chart.resize(Math.floor(crect.width), Math.floor(crect.height));
@@ -165,6 +198,7 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
         chart: chart,
         container: container,
         chartId: chartId,
+        chartKind: chartKind,  // 'default' | 'price' | 'yield-curve'
         uiRoot: _tvResolveUiRootFromElement(container),
         seriesMap: {},       // seriesId → ISeriesApi
         volumeMap: {},       // seriesId → ISeriesApi (volume histogram)
@@ -237,6 +271,18 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
             var sType = s.seriesType || 'Candlestick';
             var sOptions = _tvBuildSeriesOptions(s.seriesOptions || {}, sType, theme);
 
+            // Non-default chart kinds plot sparse point sequences (option
+            // strikes, curve tenors) — render markers by default so each
+            // point is visible even when the line can't distinguish them.
+            if (chartKind !== 'default' && sType === 'Line') {
+                if (sOptions.pointMarkersVisible === undefined) {
+                    sOptions.pointMarkersVisible = true;
+                }
+                if (sOptions.pointMarkersRadius === undefined) {
+                    sOptions.pointMarkersRadius = 4;
+                }
+            }
+
             // For overlay/compare series (not first), use a separate price scale
             if (i > 0) {
                 sOptions.priceScaleId = s.seriesId || ('overlay-' + i);
@@ -282,8 +328,11 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
             }
 
             // Auto-enable volume unless caller explicitly disables it.
-            // Accept an explicit volume array, or extract from bars' volume field.
-            if (payload && payload.enableVolume !== false) {
+            // Volume is a time-based concept (bars-per-period) — skip it
+            // entirely on price-axis / yield-curve charts, where the
+            // X-axis is strike or tenor and a "volume by strike"
+            // histogram is an indicator-level feature, not chart-level.
+            if (payload && payload.enableVolume !== false && chartKind === 'default') {
                 var volData = (s.volume && s.volume.length > 0) ? s.volume : _tvExtractVolumeFromBars(sourceBars, theme, entry);
                 if (volData && volData.length > 0) {
                     var volOptions = _tvBuildVolumeOptions(s, theme);
@@ -325,12 +374,17 @@ window.PYWRY_TVCHART_CREATE = function(chartId, container, payload) {
                         delete e._preservedVisibleTimeRange;
                     }
                 }
-                var sel = document.querySelector('.pywry-tab.pywry-tab-active[data-target-interval]');
-                if (sel) {
-                    var range = sel.getAttribute('data-value');
-                    if (range && range !== 'all') {
-                        _tvApplyTimeRangeSelection(e, range);
-                        return;
+                // Time-range tabs (1D / 5D / 1Y / ...) only make sense
+                // for time-axis charts.  Skip the lookup on price-axis
+                // and yield-curve charts and jump straight to fitContent.
+                if (chartKind === 'default') {
+                    var sel = document.querySelector('.pywry-tab.pywry-tab-active[data-target-interval]');
+                    if (sel) {
+                        var range = sel.getAttribute('data-value');
+                        if (range && range !== 'all') {
+                            _tvApplyTimeRangeSelection(e, range);
+                            return;
+                        }
                     }
                 }
                 c.timeScale().fitContent();

@@ -2822,3 +2822,230 @@ class TestMCPToolDefinition:
         from pywry.mcp.handlers import _HANDLERS
 
         assert "show_tvchart" in _HANDLERS
+
+
+# ---------------------------------------------------------------------------
+# Alternative chart factories: createOptionsChart + createYieldCurveChart
+# ---------------------------------------------------------------------------
+
+
+class TestTVChartSpecialtyChartKinds:
+    """Contract checks for the two non-temporal LWC chart factories.
+
+    Lightweight Charts 5.x exposes three factories:
+      * createChart              — time X axis (default)
+      * createOptionsChart       — numeric price / strike X axis
+      * createYieldCurveChart    — tenor-in-months X axis
+
+    PyWry routes these via ``payload.chartKind`` in
+    ``PYWRY_TVCHART_CREATE``.  These tests lock down both the dispatch
+    logic AND the option builders so future refactors can't silently
+    break either branch.
+    """
+
+    @pytest.fixture
+    def tvchart_defaults_js(self) -> str:
+        from pywry.assets import get_tvchart_defaults_js
+
+        return get_tvchart_defaults_js()
+
+    def test_bundle_ships_all_three_builders(self, tvchart_defaults_js: str):
+        assert "function _tvBuildChartOptions(" in tvchart_defaults_js
+        assert "function _tvBuildPriceChartOptions(" in tvchart_defaults_js
+        assert "function _tvBuildYieldCurveChartOptions(" in tvchart_defaults_js
+
+    def test_price_builder_inherits_base_defaults(self, tvchart_defaults_js: str):
+        src = tvchart_defaults_js
+        start = src.index("function _tvBuildPriceChartOptions(")
+        body = TestTVChartFrontendStateContracts._extract_braced(src, start)
+        assert "_tvBuildChartOptions(null, theme)" in body, (
+            "price chart options must inherit the base PyWry defaults so "
+            "palette / interaction / scales stay consistent across factories"
+        )
+
+    def test_yield_curve_builder_seeds_yield_curve_options(self, tvchart_defaults_js: str):
+        src = tvchart_defaults_js
+        start = src.index("function _tvBuildYieldCurveChartOptions(")
+        body = TestTVChartFrontendStateContracts._extract_braced(src, start)
+        assert "_tvBuildChartOptions(null, theme)" in body
+        assert "yieldCurve" in body
+        assert "baseResolution" in body
+        assert "minimumTimeRange" in body
+        assert "startTimeRange" in body
+
+    def test_yield_curve_builder_ignores_whitespace_indices(self, tvchart_defaults_js: str):
+        """The crosshair must snap to real tenors — a yield curve has
+        irregular whitespace between 2Y and 5Y, 5Y and 10Y, etc."""
+        src = tvchart_defaults_js
+        start = src.index("function _tvBuildYieldCurveChartOptions(")
+        body = TestTVChartFrontendStateContracts._extract_braced(src, start)
+        assert "ignoreWhitespaceIndices = true" in body
+
+    def test_create_dispatches_to_price_factory(self, tvchart_defaults_js: str):
+        body = TestTVChartFrontendStateContracts()._create_body(tvchart_defaults_js)
+        assert "LightweightCharts.createOptionsChart(container, chartOptions)" in body
+        assert "chartKind === 'price'" in body
+
+    def test_create_dispatches_to_yield_curve_factory(self, tvchart_defaults_js: str):
+        body = TestTVChartFrontendStateContracts()._create_body(tvchart_defaults_js)
+        assert "LightweightCharts.createYieldCurveChart(container, chartOptions)" in body
+        assert "yield-curve" in body
+
+    def test_create_default_falls_back_to_createChart(self, tvchart_defaults_js: str):
+        body = TestTVChartFrontendStateContracts()._create_body(tvchart_defaults_js)
+        assert "LightweightCharts.createChart(container, chartOptions)" in body
+
+    def test_volume_auto_enable_gated_on_default_chart_kind(self, tvchart_defaults_js: str):
+        """Auto-volume on price / yield-curve charts would histogram
+        by strike / tenor which is meaningless — gate it off."""
+        body = TestTVChartFrontendStateContracts()._create_body(tvchart_defaults_js)
+        assert "enableVolume !== false && chartKind === 'default'" in body
+
+    def test_time_range_tabs_gated_on_default_chart_kind(self, tvchart_defaults_js: str):
+        """'1D / 5D / 1Y / ...' tabs only make sense for time-axis
+        charts.  Skip the lookup on specialty kinds."""
+        body = TestTVChartFrontendStateContracts()._create_body(tvchart_defaults_js)
+        # Guard is an inline `if (chartKind === 'default')` ahead of the
+        # `.pywry-tab-active[data-target-interval]` query.
+        idx_guard = body.find("chartKind === 'default'")
+        idx_tab_query = body.find(".pywry-tab-active[data-target-interval]")
+        assert idx_guard != -1 and idx_tab_query != -1
+        assert idx_guard < idx_tab_query, (
+            "the chartKind guard must appear BEFORE the time-range tab "
+            "lookup so non-default charts skip the whole block"
+        )
+
+
+class TestTVChartChartKindConfig:
+    """Python typed surface for the chartKind selector.
+
+    Locks in the TVChartConfig literal + the to_payload shape that the
+    frontend consumes.
+    """
+
+    def test_config_default_is_time_axis(self):
+        from pywry.tvchart.config import TVChartConfig
+
+        cfg = TVChartConfig()
+        assert cfg.chart_kind == "default"
+        assert cfg.yield_curve is None
+
+    def test_config_accepts_price_kind(self):
+        from pywry.tvchart.config import TVChartConfig
+
+        cfg = TVChartConfig(chart_kind="price")
+        assert cfg.chart_kind == "price"
+
+    def test_config_accepts_yield_curve_kind(self):
+        from pywry.tvchart.config import TVChartConfig
+
+        cfg = TVChartConfig(chart_kind="yield-curve")
+        assert cfg.chart_kind == "yield-curve"
+
+    def test_config_rejects_unknown_kind(self):
+        import pydantic
+        from pywry.tvchart.config import TVChartConfig
+
+        with pytest.raises(pydantic.ValidationError):
+            TVChartConfig(chart_kind="candlestick")  # type: ignore[arg-type]
+
+    def test_to_payload_exposes_chart_kind_alongside_options(self):
+        from pywry.tvchart.config import TVChartConfig
+
+        cfg = TVChartConfig(chart_kind="price")
+        payload = cfg.to_payload()
+        assert payload["chartKind"] == "price"
+        assert isinstance(payload["chartOptions"], dict)
+
+    def test_to_payload_forwards_yield_curve_options(self):
+        from pywry.tvchart.config import TVChartConfig
+
+        cfg = TVChartConfig(
+            chart_kind="yield-curve",
+            yield_curve={
+                "baseResolution": 1,
+                "minimumTimeRange": 360,
+                "startTimeRange": 0,
+            },
+        )
+        payload = cfg.to_payload()
+        assert payload["chartKind"] == "yield-curve"
+        assert payload["chartOptions"]["yieldCurve"]["minimumTimeRange"] == 360
+
+    def test_to_chart_options_skips_yield_curve_when_unset(self):
+        from pywry.tvchart.config import TVChartConfig
+
+        cfg = TVChartConfig(chart_kind="yield-curve")
+        opts = cfg.to_chart_options()
+        assert "yieldCurve" not in opts, (
+            "yield_curve is optional — don't ship an empty block that the "
+            "frontend would treat as a wipe of the LWC defaults"
+        )
+
+
+class TestTVChartSpecialtyInlinePayload:
+    """The inline (notebook) path must carry chart_kind into the JSON
+    payload that gets dumped into the PyWryTVChartWidget's chart_config
+    traitlet — that's the only channel the frontend reads."""
+
+    def test_inline_payload_carries_chart_kind(self):
+        import inspect
+
+        from pywry import inline as pywry_inline
+
+        src = inspect.getsource(pywry_inline.show_tvchart)
+        assert '"chartKind": chart_kind' in src, (
+            "chart_kind must land in the JSON config_payload so the "
+            "frontend can route to createOptionsChart / "
+            "createYieldCurveChart"
+        )
+
+    def test_inline_show_tvchart_accepts_chart_kind(self):
+        import inspect
+
+        from pywry import inline as pywry_inline
+
+        sig = inspect.signature(pywry_inline.show_tvchart)
+        assert "chart_kind" in sig.parameters
+        assert sig.parameters["chart_kind"].default == "default"
+
+    def test_app_show_tvchart_accepts_chart_kind(self):
+        import inspect
+
+        from pywry.app import PyWry
+
+        sig = inspect.signature(PyWry.show_tvchart)
+        assert "chart_kind" in sig.parameters
+        assert "yield_curve" in sig.parameters
+        assert sig.parameters["chart_kind"].default == "default"
+
+    def test_specialty_demo_cells_in_notebook(self):
+        """The TVChart demo notebook must include runnable cells for
+        both alternative chart kinds — keeps the documented example in
+        sync with the public chart_kind / yield_curve API surface."""
+        import ast
+        import json
+        from pathlib import Path
+
+        nb_path = (
+            Path(__file__).resolve().parent.parent / "examples" / "pywry_demo_tvchart.ipynb"
+        )
+        if not nb_path.exists():
+            pytest.skip("demo notebook not bundled in this source tree")
+        nb = json.loads(nb_path.read_text(encoding="utf-8"))
+        code_cells = [
+            "".join(c.get("source", []))
+            for c in nb.get("cells", [])
+            if c.get("cell_type") == "code"
+        ]
+        assert any(
+            'chart_kind="yield-curve"' in src and "yield_curve" in src
+            for src in code_cells
+        ), "notebook missing a yield-curve chart cell"
+        assert any('chart_kind="price"' in src for src in code_cells), (
+            "notebook missing a price-axis (options payoff) chart cell"
+        )
+        # Every code cell must still parse as valid Python so stale
+        # snippets break this test loudly instead of silently rotting.
+        for src in code_cells:
+            ast.parse(src)

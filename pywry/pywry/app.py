@@ -1409,6 +1409,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         resolution: str = "1D",
         provider: Any = None,
         chart_id: str | None = None,
+        chart_kind: str = "default",
+        yield_curve: dict[str, Any] | None = None,
     ) -> NativeWindowHandle | BaseWidget:
         """Show a TradingView Lightweight Chart.
 
@@ -1460,6 +1462,27 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             meaningful name (e.g. ``"chart"``) that agents and chat
             context attachments can route MCP tool calls against.  If
             omitted, a unique ``tvchart_<hex>`` id is auto-generated.
+        chart_kind : str, optional
+            Which Lightweight Charts factory to use.
+
+            * ``"default"`` (default) — ``createChart``, time X axis.
+              Standard OHLC / tick bars for equities, crypto, futures.
+            * ``"price"`` — ``createOptionsChart``, numeric X axis.
+              Use for option-chain payoff diagrams, IV smile/skew,
+              volume-by-strike bars, market-profile histograms,
+              probability distributions, order-book depth.  Data
+              points are ``{time: <price>, value: ...}``.
+            * ``"yield-curve"`` — ``createYieldCurveChart``, tenor-
+              in-months X axis with linear spacing.  Use for US
+              treasury / SOFR / OIS / swap / credit curves and any
+              term-structure (contango/backwardation) view.  Data
+              points are ``{time: <months>, value: <yield_pct>}``.
+        yield_curve : dict or None
+            Options forwarded to a yield-curve chart: ``baseResolution``
+            (minutes per step, default 1), ``minimumTimeRange``
+            (default 120 = 10 years), ``startTimeRange`` (default 0),
+            ``formatTime`` (optional custom tenor-label formatter).
+            Ignored unless ``chart_kind == "yield-curve"``.
 
         Returns
         -------
@@ -1485,6 +1508,11 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
 
             widget_width = "100%" if width is None else f"{width}px"
 
+            # Merge yield-curve options into chart_options so the inline
+            # widget's payload picks them up unchanged.
+            _inline_chart_options = dict(chart_options or {})
+            if yield_curve and chart_kind == "yield-curve":
+                _inline_chart_options["yieldCurve"] = yield_curve
             widget = pywry_inline.show_tvchart(
                 data=data,
                 callbacks=plain_callbacks,
@@ -1492,7 +1520,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 width=widget_width,
                 height=height or 700,
                 theme="dark" if self._theme == ThemeMode.DARK else "light",
-                chart_options=chart_options,
+                chart_options=_inline_chart_options or None,
                 series_options=series_options,
                 symbol_col=symbol_col,
                 max_bars=max_bars,
@@ -1504,6 +1532,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 symbol=symbol,
                 resolution=resolution,
                 provider=provider,
+                chart_kind=chart_kind,
             )
             self._register_inline_widget(widget)
             return widget  # type: ignore[no-any-return]
@@ -1566,15 +1595,26 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             storage_config["preload"] = self._preload_chart_data()
             storage_config["backend"] = "server"
 
-        payload_json = json.dumps(
-            {
-                "chartOptions": chart_options or {},
-                "title": title or "",
-                "series": series_payload,
-                "storage": storage_config,
-                "useDatafeed": use_datafeed,
+        # Non-default chart kinds route through the alternate LWC
+        # factories (createOptionsChart / createYieldCurveChart).  They
+        # use a numeric X axis instead of time, so the wrapper disables
+        # toolbar features that don't apply — interval tabs, sessions,
+        # volume auto-extract all gate on ``chartKind == 'default'``
+        # inside the frontend lifecycle.
+        _payload: dict[str, Any] = {
+            "chartOptions": chart_options or {},
+            "title": title or "",
+            "series": series_payload,
+            "storage": storage_config,
+            "useDatafeed": use_datafeed,
+            "chartKind": chart_kind,
+        }
+        if yield_curve and chart_kind == "yield-curve":
+            _payload["chartOptions"] = {
+                **(chart_options or {}),
+                "yieldCurve": yield_curve,
             }
-        )
+        payload_json = json.dumps(_payload)
 
         # Caller-supplied chart_id lets apps assign a meaningful name to
         # the TradingView chart component (e.g. "chart") so agents /

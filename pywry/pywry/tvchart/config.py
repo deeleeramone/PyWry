@@ -18,7 +18,7 @@ Lightweight Charts API Reference:
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -651,6 +651,19 @@ class TVChartConfig(BaseModel):
     ----------
     series : SeriesConfig
         Main data series rendering options.
+    chart_kind : str
+        Which LWC factory to use.  ``"default"`` (time X axis) drives the
+        standard ``createChart`` — this is what every equity / intraday /
+        daily chart uses.  ``"price"`` drives ``createOptionsChart``
+        (numeric price / strike on X) for options chains, IV smile,
+        market-profile histograms, volume-by-strike.  ``"yield-curve"``
+        drives ``createYieldCurveChart`` (tenor-in-months on X) for
+        treasury / SOFR / swap / credit curves and any value-vs-tenor
+        visualisation.
+    yield_curve : dict or None
+        Extra options forwarded to the yield-curve chart
+        (``baseResolution``, ``minimumTimeRange``, ``startTimeRange``,
+        ``formatTime``).  Ignored unless ``chart_kind == "yield-curve"``.
     layout : LayoutConfig or None
         Chart layout (background, text color, font).
     grid : GridConfig or None
@@ -682,6 +695,9 @@ class TVChartConfig(BaseModel):
     model_config = _CAMEL_CONFIG
 
     series: SeriesConfig = Field(default_factory=SeriesConfig)
+
+    chart_kind: Literal["default", "price", "yield-curve"] = "default"
+    yield_curve: dict[str, Any] | None = None
 
     layout: LayoutConfig | None = None
     grid: GridConfig | None = None
@@ -735,7 +751,25 @@ class TVChartConfig(BaseModel):
         if self.locale:
             opts["locale"] = self.locale
 
+        # Yield-curve specific block.  Ignored by the non-yield-curve
+        # factories but forwarded here so to_chart_options captures
+        # the full config without a separate getter.
+        if self.yield_curve:
+            opts["yieldCurve"] = dict(self.yield_curve)
+
         return opts
+
+    def to_payload(self) -> dict[str, Any]:
+        """Serialize the full payload (options + chartKind) expected by
+        ``PYWRY_TVCHART_CREATE``.  Preserves the chart-factory selector
+        alongside the options dict so the frontend can route to the
+        right LWC factory.
+        """
+        payload: dict[str, Any] = {
+            "chartKind": self.chart_kind,
+            "chartOptions": self.to_chart_options(),
+        }
+        return payload
 
     def to_series_options(self) -> dict[str, Any]:
         """Serialize the main series configuration.

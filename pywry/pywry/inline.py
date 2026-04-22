@@ -3760,6 +3760,7 @@ def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
     symbol: str | None = None,
     resolution: str = "1D",
     provider: Any = None,
+    chart_kind: str = "default",
 ) -> Any:
     """Show a TradingView Lightweight Chart inline in a notebook.
 
@@ -3888,6 +3889,7 @@ def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
             "series": series_payload,
             "storage": storage_config,
             "useDatafeed": use_datafeed,
+            "chartKind": chart_kind,
         }
     )
 
