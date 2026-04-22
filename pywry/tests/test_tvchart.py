@@ -2765,8 +2765,10 @@ class TestTVChartThemeVariables:
     def css(self) -> str:
         from pathlib import Path
 
+        import pywry
+
         return (
-            Path(__file__).parents[1] / "pywry" / "frontend" / "style" / "tvchart.css"
+            Path(pywry.__file__).parent / "frontend" / "style" / "tvchart.css"
         ).read_text(encoding="utf-8")
 
     VP_VARS = (
