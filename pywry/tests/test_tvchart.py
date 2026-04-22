@@ -3029,9 +3029,7 @@ class TestTVChartSpecialtyInlinePayload:
 
         from pathlib import Path
 
-        nb_path = (
-            Path(__file__).resolve().parent.parent / "examples" / "pywry_demo_tvchart.ipynb"
-        )
+        nb_path = Path(__file__).resolve().parent.parent / "examples" / "pywry_demo_tvchart.ipynb"
         if not nb_path.exists():
             pytest.skip("demo notebook not bundled in this source tree")
         nb = json.loads(nb_path.read_text(encoding="utf-8"))
@@ -3041,8 +3039,7 @@ class TestTVChartSpecialtyInlinePayload:
             if c.get("cell_type") == "code"
         ]
         assert any(
-            'chart_kind="yield-curve"' in src and "yield_curve" in src
-            for src in code_cells
+            'chart_kind="yield-curve"' in src and "yield_curve" in src for src in code_cells
         ), "notebook missing a yield-curve chart cell"
         assert any('chart_kind="price"' in src for src in code_cells), (
             "notebook missing a price-axis (options payoff) chart cell"
