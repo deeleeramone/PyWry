@@ -1,7 +1,7 @@
 {
   "components": [
     {
-      "bom-ref": "Authlib==1.6.10",
+      "bom-ref": "Authlib==1.7.0",
       "description": "The ultimate Python library in building OAuth and OpenID Connect servers and clients.",
       "externalReferences": [
         {
@@ -50,9 +50,9 @@
         }
       ],
       "name": "Authlib",
-      "purl": "pkg:pypi/authlib@1.6.10",
+      "purl": "pkg:pypi/authlib@1.7.0",
       "type": "library",
-      "version": "1.6.10"
+      "version": "1.7.0"
     },
     {
       "bom-ref": "Jinja2==3.1.6",
@@ -342,6 +342,31 @@
       "version": "3.5.0"
     },
     {
+      "bom-ref": "agent-client-protocol==0.9.0",
+      "description": "A Python implement of Agent Client Protocol (ACP, by Zed Industries)",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://agentclientprotocol.github.io/python-sdk/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/agentclientprotocol/python-sdk"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://agentclientprotocol.github.io/python-sdk/"
+        }
+      ],
+      "name": "agent-client-protocol",
+      "purl": "pkg:pypi/agent-client-protocol@0.9.0",
+      "type": "library",
+      "version": "0.9.0"
+    },
+    {
       "bom-ref": "aiofile==3.9.0",
       "description": "Asynchronous file operations.",
       "externalReferences": [
@@ -490,7 +515,7 @@
       "version": "0.7.0"
     },
     {
-      "bom-ref": "anthropic==0.94.1",
+      "bom-ref": "anthropic==0.96.0",
       "description": "The official Python library for the anthropic API",
       "externalReferences": [
         {
@@ -513,9 +538,9 @@
         }
       ],
       "name": "anthropic",
-      "purl": "pkg:pypi/anthropic@0.94.1",
+      "purl": "pkg:pypi/anthropic@0.96.0",
       "type": "library",
-      "version": "0.94.1"
+      "version": "0.96.0"
     },
     {
       "bom-ref": "anyio==4.13.0",
@@ -841,9 +866,57 @@
       "version": "5.0"
     },
     {
-      "bom-ref": "cachetools==7.0.5",
+      "bom-ref": "bracex==2.6",
+      "description": "Bash style brace expander.",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://github.com/facelessuser/bracex"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "bracex",
+      "purl": "pkg:pypi/bracex@2.6",
+      "type": "library",
+      "version": "2.6"
+    },
+    {
+      "bom-ref": "cachetools==7.0.6",
       "description": "Extensible memoizing collections and decorators",
       "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://cachetools.readthedocs.io/en/stable/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Issues",
+          "type": "issue-tracker",
+          "url": "https://github.com/tkem/cachetools/issues"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/tkem/cachetools/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://github.com/tkem/cachetools/blob/master/CHANGELOG.rst"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/tkem/cachetools/"
+        },
         {
           "comment": "from packaging metadata Project-URL: Homepage",
           "type": "website",
@@ -859,9 +932,9 @@
         }
       ],
       "name": "cachetools",
-      "purl": "pkg:pypi/cachetools@7.0.5",
+      "purl": "pkg:pypi/cachetools@7.0.6",
       "type": "library",
-      "version": "7.0.5"
+      "version": "7.0.6"
     },
     {
       "bom-ref": "caio==0.9.25",
@@ -887,7 +960,7 @@
       "version": "0.9.25"
     },
     {
-      "bom-ref": "certifi==2026.2.25",
+      "bom-ref": "certifi==2026.4.22",
       "description": "Python package for providing Mozilla's CA Bundle.",
       "externalReferences": [
         {
@@ -916,9 +989,9 @@
         }
       ],
       "name": "certifi",
-      "purl": "pkg:pypi/certifi@2026.2.25",
+      "purl": "pkg:pypi/certifi@2026.4.22",
       "type": "library",
-      "version": "2026.2.25"
+      "version": "2026.4.22"
     },
     {
       "bom-ref": "cffi==2.0.0",
@@ -1045,7 +1118,7 @@
       "version": "3.4.7"
     },
     {
-      "bom-ref": "click==8.3.2",
+      "bom-ref": "click==8.3.3",
       "description": "Composable command line interface toolkit",
       "externalReferences": [
         {
@@ -1083,9 +1156,9 @@
         }
       ],
       "name": "click",
-      "purl": "pkg:pypi/click@8.3.2",
+      "purl": "pkg:pypi/click@8.3.3",
       "type": "library",
-      "version": "8.3.2"
+      "version": "8.3.3"
     },
     {
       "bom-ref": "colorama==0.4.6",
@@ -1365,6 +1438,59 @@
       "purl": "pkg:pypi/decorator@5.2.1",
       "type": "library",
       "version": "5.2.1"
+    },
+    {
+      "bom-ref": "deepagents==0.5.3",
+      "description": "General purpose 'deep agent' with sub-agent spawning, todo list capabilities, and mock file system. Built on LangGraph.",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://reference.langchain.com/python/deepagents/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Issues",
+          "type": "issue-tracker",
+          "url": "https://github.com/langchain-ai/deepagents/issues"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Slack",
+          "type": "other",
+          "url": "https://www.langchain.com/join-community"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Reddit",
+          "type": "other",
+          "url": "https://www.reddit.com/r/LangChain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Twitter",
+          "type": "other",
+          "url": "https://x.com/LangChain"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/langchain-ai/deepagents"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://docs.langchain.com/oss/python/deepagents/overview"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "deepagents",
+      "purl": "pkg:pypi/deepagents@0.5.3",
+      "type": "library",
+      "version": "0.5.3"
     },
     {
       "bom-ref": "defusedxml==0.7.1",
@@ -1763,7 +1889,7 @@
       "version": "2.35.1"
     },
     {
-      "bom-ref": "fastapi==0.135.3",
+      "bom-ref": "fastapi==0.136.0",
       "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production",
       "externalReferences": [
         {
@@ -1801,9 +1927,9 @@
         }
       ],
       "name": "fastapi",
-      "purl": "pkg:pypi/fastapi@0.135.3",
+      "purl": "pkg:pypi/fastapi@0.136.0",
       "type": "library",
-      "version": "0.135.3"
+      "version": "0.136.0"
     },
     {
       "bom-ref": "fastmcp==3.2.4",
@@ -1911,6 +2037,58 @@
       "purl": "pkg:pypi/ghp-import@2.1.0",
       "type": "library",
       "version": "2.1.0"
+    },
+    {
+      "bom-ref": "google-auth==2.49.2",
+      "description": "Google Authentication Library",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata: Home-page",
+          "type": "website",
+          "url": "https://github.com/googleapis/google-auth-library-python"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "name": "License :: OSI Approved :: Apache Software License"
+          }
+        }
+      ],
+      "name": "google-auth",
+      "properties": [
+        {
+          "name": "cdx:python:package:required-extra",
+          "value": "requests"
+        }
+      ],
+      "purl": "pkg:pypi/google-auth@2.49.2",
+      "type": "library",
+      "version": "2.49.2"
+    },
+    {
+      "bom-ref": "google-genai==1.73.1",
+      "description": "GenAI Python SDK",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://github.com/googleapis/python-genai"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "name": "google-genai",
+      "purl": "pkg:pypi/google-genai@1.73.1",
+      "type": "library",
+      "version": "1.73.1"
     },
     {
       "bom-ref": "griffe==2.0.2",
@@ -2132,7 +2310,7 @@
       "version": "0.4.3"
     },
     {
-      "bom-ref": "idna==3.11",
+      "bom-ref": "idna==3.13",
       "description": "Internationalized Domain Names in Applications (IDNA)",
       "externalReferences": [
         {
@@ -2160,9 +2338,9 @@
         }
       ],
       "name": "idna",
-      "purl": "pkg:pypi/idna@3.11",
+      "purl": "pkg:pypi/idna@3.13",
       "type": "library",
-      "version": "3.11"
+      "version": "3.13"
     },
     {
       "bom-ref": "importlib_metadata==8.7.1",
@@ -2562,6 +2740,103 @@
       "version": "0.14.0"
     },
     {
+      "bom-ref": "joserfc==1.6.4",
+      "description": "The ultimate Python library for JOSE RFCs, including JWS, JWE, JWK, JWA, JWT",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://jose.authlib.org/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Blog",
+          "type": "other",
+          "url": "https://blog.authlib.org/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/authlib/joserfc"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Funding",
+          "type": "other",
+          "url": "https://github.com/sponsors/authlib"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "BSD-3-Clause"
+          }
+        },
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "name": "License :: OSI Approved :: BSD License"
+          }
+        }
+      ],
+      "name": "joserfc",
+      "purl": "pkg:pypi/joserfc@1.6.4",
+      "type": "library",
+      "version": "1.6.4"
+    },
+    {
+      "bom-ref": "jsonpatch==1.33",
+      "description": "Apply JSON-Patches (RFC 6902) ",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://python-json-patch.readthedocs.org/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Test Coverage",
+          "type": "other",
+          "url": "https://coveralls.io/r/stefankoegl/python-json-patch"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Website",
+          "type": "other",
+          "url": "https://github.com/stefankoegl/python-json-patch"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: PyPI",
+          "type": "other",
+          "url": "https://pypi.org/pypi/jsonpatch"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Tests",
+          "type": "other",
+          "url": "https://travis-ci.org/stefankoegl/python-json-patch"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/stefankoegl/python-json-patch.git"
+        },
+        {
+          "comment": "from packaging metadata: Home-page",
+          "type": "website",
+          "url": "https://github.com/stefankoegl/python-json-patch"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "name": "License :: OSI Approved :: BSD License"
+          }
+        }
+      ],
+      "name": "jsonpatch",
+      "purl": "pkg:pypi/jsonpatch@1.33",
+      "type": "library",
+      "version": "1.33"
+    },
+    {
       "bom-ref": "jsonpointer==3.1.1",
       "description": "Identify specific nodes in a JSON document (RFC 6901) ",
       "externalReferences": [
@@ -2866,6 +3141,456 @@
       "version": "25.7.0"
     },
     {
+      "bom-ref": "langchain==1.2.15",
+      "description": "Building applications with LLMs through composability",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://reference.langchain.com/python/langchain/langchain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Issues",
+          "type": "issue-tracker",
+          "url": "https://github.com/langchain-ai/langchain/issues"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Slack",
+          "type": "other",
+          "url": "https://www.langchain.com/join-community"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Reddit",
+          "type": "other",
+          "url": "https://www.reddit.com/r/LangChain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Twitter",
+          "type": "other",
+          "url": "https://x.com/LangChain"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://github.com/langchain-ai/langchain/releases?q=tag%3A%22langchain%3D%3D1%22"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/langchain-ai/langchain"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://docs.langchain.com/"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langchain",
+      "purl": "pkg:pypi/langchain@1.2.15",
+      "type": "library",
+      "version": "1.2.15"
+    },
+    {
+      "bom-ref": "langchain-anthropic==1.4.1",
+      "description": "Integration package connecting Claude (Anthropic) APIs and LangChain",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://reference.langchain.com/python/integrations/langchain_anthropic/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Issues",
+          "type": "issue-tracker",
+          "url": "https://github.com/langchain-ai/langchain/issues"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Slack",
+          "type": "other",
+          "url": "https://www.langchain.com/join-community"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Reddit",
+          "type": "other",
+          "url": "https://www.reddit.com/r/LangChain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Twitter",
+          "type": "other",
+          "url": "https://x.com/LangChain"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://github.com/langchain-ai/langchain/releases?q=%22langchain-anthropic%22"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/langchain-ai/langchain"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://docs.langchain.com/oss/python/integrations/providers/anthropic"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langchain-anthropic",
+      "purl": "pkg:pypi/langchain-anthropic@1.4.1",
+      "type": "library",
+      "version": "1.4.1"
+    },
+    {
+      "bom-ref": "langchain-core==1.3.0",
+      "description": "Building applications with LLMs through composability",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://reference.langchain.com/python/langchain_core/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Issues",
+          "type": "issue-tracker",
+          "url": "https://github.com/langchain-ai/langchain/issues"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Slack",
+          "type": "other",
+          "url": "https://www.langchain.com/join-community"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Reddit",
+          "type": "other",
+          "url": "https://www.reddit.com/r/LangChain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Twitter",
+          "type": "other",
+          "url": "https://x.com/LangChain"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://github.com/langchain-ai/langchain/releases?q=%22langchain-core%3D%3D1%22"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/langchain-ai/langchain"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://docs.langchain.com/"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langchain-core",
+      "purl": "pkg:pypi/langchain-core@1.3.0",
+      "type": "library",
+      "version": "1.3.0"
+    },
+    {
+      "bom-ref": "langchain-google-genai==4.2.2",
+      "description": "An integration package connecting Google's genai package and LangChain",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://reference.langchain.com/python/integrations/langchain_google_genai/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/langchain-ai/langchain-google/tree/master/libs/genai"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Slack",
+          "type": "other",
+          "url": "https://www.langchain.com/join-community"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Reddit",
+          "type": "other",
+          "url": "https://www.reddit.com/r/LangChain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Twitter",
+          "type": "other",
+          "url": "https://x.com/LangChainAI"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://github.com/langchain-ai/langchain-google/releases?q=%22genai%22"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://docs.langchain.com/oss/python/integrations/providers/google"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langchain-google-genai",
+      "purl": "pkg:pypi/langchain-google-genai@4.2.2",
+      "type": "library",
+      "version": "4.2.2"
+    },
+    {
+      "bom-ref": "langchain-mcp-adapters==0.2.2",
+      "description": "Make Anthropic Model Context Protocol (MCP) tools compatible with LangChain and LangGraph agents.",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: repository",
+          "type": "vcs",
+          "url": "https://www.github.com/langchain-ai/langchain-mcp-adapters"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langchain-mcp-adapters",
+      "purl": "pkg:pypi/langchain-mcp-adapters@0.2.2",
+      "type": "library",
+      "version": "0.2.2"
+    },
+    {
+      "bom-ref": "langgraph==1.1.9",
+      "description": "Building stateful, multi-actor applications with LLMs",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://reference.langchain.com/python/langgraph/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/langchain-ai/langgraph/tree/main/libs/langgraph"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Slack",
+          "type": "other",
+          "url": "https://www.langchain.com/join-community"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Reddit",
+          "type": "other",
+          "url": "https://www.reddit.com/r/LangChain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Twitter",
+          "type": "other",
+          "url": "https://x.com/LangChain"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://github.com/langchain-ai/langgraph/releases"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://docs.langchain.com/oss/python/langgraph/overview"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langgraph",
+      "purl": "pkg:pypi/langgraph@1.1.9",
+      "type": "library",
+      "version": "1.1.9"
+    },
+    {
+      "bom-ref": "langgraph-checkpoint==4.0.2",
+      "description": "Library with base interfaces for LangGraph checkpoint savers.",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/langchain-ai/langgraph/tree/main/libs/checkpoint"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Slack",
+          "type": "other",
+          "url": "https://www.langchain.com/join-community"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Reddit",
+          "type": "other",
+          "url": "https://www.reddit.com/r/LangChain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Twitter",
+          "type": "other",
+          "url": "https://x.com/LangChain"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langgraph-checkpoint",
+      "purl": "pkg:pypi/langgraph-checkpoint@4.0.2",
+      "type": "library",
+      "version": "4.0.2"
+    },
+    {
+      "bom-ref": "langgraph-prebuilt==1.0.10",
+      "description": "Library with high-level APIs for creating and executing LangGraph agents and tools.",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/langchain-ai/langgraph/tree/main/libs/prebuilt"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Slack",
+          "type": "other",
+          "url": "https://www.langchain.com/join-community"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Reddit",
+          "type": "other",
+          "url": "https://www.reddit.com/r/LangChain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Twitter",
+          "type": "other",
+          "url": "https://x.com/LangChain"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langgraph-prebuilt",
+      "purl": "pkg:pypi/langgraph-prebuilt@1.0.10",
+      "type": "library",
+      "version": "1.0.10"
+    },
+    {
+      "bom-ref": "langgraph-sdk==0.3.13",
+      "description": "SDK for interacting with LangGraph API",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/langchain-ai/langgraph/tree/main/libs/sdk-py"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Slack",
+          "type": "other",
+          "url": "https://www.langchain.com/join-community"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Reddit",
+          "type": "other",
+          "url": "https://www.reddit.com/r/LangChain/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Twitter",
+          "type": "other",
+          "url": "https://x.com/LangChain"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langgraph-sdk",
+      "purl": "pkg:pypi/langgraph-sdk@0.3.13",
+      "type": "library",
+      "version": "0.3.13"
+    },
+    {
+      "bom-ref": "langsmith==0.7.33",
+      "description": "Client library to connect to the LangSmith Observability and Evaluation Platform.",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://docs.smith.langchain.com/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/langchain-ai/langsmith-sdk"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://smith.langchain.com/"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "langsmith",
+      "purl": "pkg:pypi/langsmith@0.7.33",
+      "type": "library",
+      "version": "0.7.33"
+    },
+    {
       "bom-ref": "lark==1.3.1",
       "description": "a modern parsing library",
       "externalReferences": [
@@ -2945,7 +3670,7 @@
       "version": "30.4.4"
     },
     {
-      "bom-ref": "logfire-api==4.32.0",
+      "bom-ref": "logfire-api==4.32.1",
       "description": "Shim for the Logfire SDK which does nothing unless Logfire is installed",
       "licenses": [
         {
@@ -2956,12 +3681,12 @@
         }
       ],
       "name": "logfire-api",
-      "purl": "pkg:pypi/logfire-api@4.32.0",
+      "purl": "pkg:pypi/logfire-api@4.32.1",
       "type": "library",
-      "version": "4.32.0"
+      "version": "4.32.1"
     },
     {
-      "bom-ref": "lxml==6.0.4",
+      "bom-ref": "lxml==6.1.0",
       "description": "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API.",
       "externalReferences": [
         {
@@ -2989,9 +3714,9 @@
         }
       ],
       "name": "lxml",
-      "purl": "pkg:pypi/lxml@6.0.4",
+      "purl": "pkg:pypi/lxml@6.1.0",
       "type": "library",
-      "version": "6.0.4"
+      "version": "6.1.0"
     },
     {
       "bom-ref": "magentic==0.41.1",
@@ -3414,7 +4139,7 @@
       "version": "1.3.1"
     },
     {
-      "bom-ref": "mkdocs-section-index==0.3.11",
+      "bom-ref": "mkdocs-section-index==0.3.12",
       "description": "MkDocs plugin to allow clickable sections that lead to an index page",
       "externalReferences": [
         {
@@ -3447,12 +4172,12 @@
         }
       ],
       "name": "mkdocs-section-index",
-      "purl": "pkg:pypi/mkdocs-section-index@0.3.11",
+      "purl": "pkg:pypi/mkdocs-section-index@0.3.12",
       "type": "library",
-      "version": "0.3.11"
+      "version": "0.3.12"
     },
     {
-      "bom-ref": "mkdocstrings==1.0.3",
+      "bom-ref": "mkdocstrings==1.0.4",
       "description": "Automatic documentation from sources, for MkDocs.",
       "externalReferences": [
         {
@@ -3511,9 +4236,9 @@
           "value": "python"
         }
       ],
-      "purl": "pkg:pypi/mkdocstrings@1.0.3",
+      "purl": "pkg:pypi/mkdocstrings@1.0.4",
       "type": "library",
-      "version": "1.0.3"
+      "version": "1.0.4"
     },
     {
       "bom-ref": "mkdocstrings-python==2.0.3",
@@ -3602,7 +4327,7 @@
       "version": "11.0.2"
     },
     {
-      "bom-ref": "mypy==1.20.1",
+      "bom-ref": "mypy==1.20.2",
       "description": "Optional static typing for Python",
       "externalReferences": [
         {
@@ -3640,9 +4365,9 @@
         }
       ],
       "name": "mypy",
-      "purl": "pkg:pypi/mypy@1.20.1",
+      "purl": "pkg:pypi/mypy@1.20.2",
       "type": "library",
-      "version": "1.20.1"
+      "version": "1.20.2"
     },
     {
       "bom-ref": "mypy_extensions==1.1.0",
@@ -3668,7 +4393,7 @@
       "version": "1.1.0"
     },
     {
-      "bom-ref": "narwhals==2.19.0",
+      "bom-ref": "narwhals==2.20.0",
       "description": "Extremely lightweight compatibility layer between dataframe libraries",
       "externalReferences": [
         {
@@ -3701,9 +4426,9 @@
         }
       ],
       "name": "narwhals",
-      "purl": "pkg:pypi/narwhals@2.19.0",
+      "purl": "pkg:pypi/narwhals@2.20.0",
       "type": "library",
-      "version": "2.19.0"
+      "version": "2.20.0"
     },
     {
       "bom-ref": "nest-asyncio==1.6.0",
@@ -3775,7 +4500,7 @@
       "version": "2.4.4"
     },
     {
-      "bom-ref": "openai==2.31.0",
+      "bom-ref": "openai==2.32.0",
       "description": "The official Python library for the openai API",
       "externalReferences": [
         {
@@ -3804,9 +4529,9 @@
         }
       ],
       "name": "openai",
-      "purl": "pkg:pypi/openai@2.31.0",
+      "purl": "pkg:pypi/openai@2.32.0",
       "type": "library",
-      "version": "2.31.0"
+      "version": "2.32.0"
     },
     {
       "bom-ref": "openapi-pydantic==0.5.1",
@@ -3870,6 +4595,58 @@
       "version": "1.41.0"
     },
     {
+      "bom-ref": "orjson==3.11.8",
+      "description": "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: documentation",
+          "type": "documentation",
+          "url": "https://github.com/ijl/orjson"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: source",
+          "type": "other",
+          "url": "https://github.com/ijl/orjson"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: changelog",
+          "type": "release-notes",
+          "url": "https://github.com/ijl/orjson/blob/master/CHANGELOG.md"
+        }
+      ],
+      "licenses": [
+        {
+          "acknowledgement": "declared",
+          "expression": "MPL-2.0 AND (Apache-2.0 OR MIT)"
+        }
+      ],
+      "name": "orjson",
+      "purl": "pkg:pypi/orjson@3.11.8",
+      "type": "library",
+      "version": "3.11.8"
+    },
+    {
+      "bom-ref": "ormsgpack==1.12.2",
+      "description": "Fast, correct Python msgpack library supporting dataclasses, datetimes, and numpy",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://github.com/ormsgpack/ormsgpack"
+        }
+      ],
+      "licenses": [
+        {
+          "acknowledgement": "declared",
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "name": "ormsgpack",
+      "purl": "pkg:pypi/ormsgpack@1.12.2",
+      "type": "library",
+      "version": "1.12.2"
+    },
+    {
       "bom-ref": "packageurl-python==0.17.6",
       "description": "A purl aka. Package URL parser and builder",
       "externalReferences": [
@@ -3893,7 +4670,7 @@
       "version": "0.17.6"
     },
     {
-      "bom-ref": "packaging==26.0",
+      "bom-ref": "packaging==26.1",
       "description": "Core utilities for Python packages",
       "externalReferences": [
         {
@@ -3914,9 +4691,9 @@
         }
       ],
       "name": "packaging",
-      "purl": "pkg:pypi/packaging@26.0",
+      "purl": "pkg:pypi/packaging@26.1",
       "type": "library",
-      "version": "26.0"
+      "version": "26.1"
     },
     {
       "bom-ref": "paginate==0.5.7",
@@ -4562,6 +5339,87 @@
       "version": "2.1.0"
     },
     {
+      "bom-ref": "pyasn1==0.6.3",
+      "description": "Pure-Python implementation of ASN.1 types and DER/BER/CER codecs (X.208)",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://pyasn1.readthedocs.io"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Issues",
+          "type": "issue-tracker",
+          "url": "https://github.com/pyasn1/pyasn1/issues"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/pyasn1/pyasn1"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://pyasn1.readthedocs.io/en/latest/changelog.html"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://github.com/pyasn1/pyasn1"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "BSD-2-Clause"
+          }
+        }
+      ],
+      "name": "pyasn1",
+      "purl": "pkg:pypi/pyasn1@0.6.3",
+      "type": "library",
+      "version": "0.6.3"
+    },
+    {
+      "bom-ref": "pyasn1_modules==0.4.2",
+      "description": "A collection of ASN.1-based protocols modules",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Issues",
+          "type": "issue-tracker",
+          "url": "https://github.com/pyasn1/pyasn1-modules/issues"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/pyasn1/pyasn1-modules"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://github.com/pyasn1/pyasn1-modules/blob/master/CHANGES.txt"
+        },
+        {
+          "comment": "from packaging metadata: Home-page",
+          "type": "website",
+          "url": "https://github.com/pyasn1/pyasn1-modules"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "name": "License :: OSI Approved :: BSD License"
+          }
+        }
+      ],
+      "name": "pyasn1_modules",
+      "purl": "pkg:pypi/pyasn1-modules@0.4.2",
+      "type": "library",
+      "version": "0.4.2"
+    },
+    {
       "bom-ref": "pycparser==3.0",
       "description": "C parser in Python",
       "externalReferences": [
@@ -4585,7 +5443,7 @@
       "version": "3.0"
     },
     {
-      "bom-ref": "pydantic==2.13.0",
+      "bom-ref": "pydantic==2.13.3",
       "description": "Data validation using Python type hints",
       "externalReferences": [
         {
@@ -4629,12 +5487,12 @@
           "value": "email"
         }
       ],
-      "purl": "pkg:pypi/pydantic@2.13.0",
+      "purl": "pkg:pypi/pydantic@2.13.3",
       "type": "library",
-      "version": "2.13.0"
+      "version": "2.13.3"
     },
     {
-      "bom-ref": "pydantic-settings==2.13.1",
+      "bom-ref": "pydantic-settings==2.14.0",
       "description": "Settings management using Pydantic",
       "externalReferences": [
         {
@@ -4672,12 +5530,12 @@
         }
       ],
       "name": "pydantic-settings",
-      "purl": "pkg:pypi/pydantic-settings@2.13.1",
+      "purl": "pkg:pypi/pydantic-settings@2.14.0",
       "type": "library",
-      "version": "2.13.1"
+      "version": "2.14.0"
     },
     {
-      "bom-ref": "pydantic_core==2.46.0",
+      "bom-ref": "pydantic_core==2.46.3",
       "description": "Core functionality for Pydantic validation and serialization",
       "externalReferences": [
         {
@@ -4710,12 +5568,12 @@
         }
       ],
       "name": "pydantic_core",
-      "purl": "pkg:pypi/pydantic-core@2.46.0",
+      "purl": "pkg:pypi/pydantic-core@2.46.3",
       "type": "library",
-      "version": "2.46.0"
+      "version": "2.46.3"
     },
     {
-      "bom-ref": "pyinstaller==6.19.0",
+      "bom-ref": "pyinstaller==6.20.0",
       "description": "PyInstaller bundles a Python application and all its dependencies into a single package.",
       "externalReferences": [
         {
@@ -4748,9 +5606,9 @@
         }
       ],
       "name": "pyinstaller",
-      "purl": "pkg:pypi/pyinstaller@6.19.0",
+      "purl": "pkg:pypi/pyinstaller@6.20.0",
       "type": "library",
-      "version": "6.19.0"
+      "version": "6.20.0"
     },
     {
       "bom-ref": "pyinstaller-hooks-contrib==2026.4",
@@ -5396,6 +6254,39 @@
       "version": "2.33.1"
     },
     {
+      "bom-ref": "requests-toolbelt==1.0.0",
+      "description": "A utility belt for advanced users of python-requests",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/requests/toolbelt"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Changelog",
+          "type": "release-notes",
+          "url": "https://github.com/requests/toolbelt/blob/master/HISTORY.rst"
+        },
+        {
+          "comment": "from packaging metadata: Home-page",
+          "type": "website",
+          "url": "https://toolbelt.readthedocs.io/"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "name": "License :: OSI Approved :: Apache Software License"
+          }
+        }
+      ],
+      "name": "requests-toolbelt",
+      "purl": "pkg:pypi/requests-toolbelt@1.0.0",
+      "type": "library",
+      "version": "1.0.0"
+    },
+    {
       "bom-ref": "rfc3339-validator==0.1.4",
       "description": "A pure python RFC3339 validator",
       "externalReferences": [
@@ -5604,7 +6495,7 @@
       "version": "0.30.0"
     },
     {
-      "bom-ref": "ruff==0.15.10",
+      "bom-ref": "ruff==0.15.11",
       "description": "An extremely fast Python linter and code formatter, written in Rust.",
       "externalReferences": [
         {
@@ -5637,9 +6528,9 @@
         }
       ],
       "name": "ruff",
-      "purl": "pkg:pypi/ruff@0.15.10",
+      "purl": "pkg:pypi/ruff@0.15.11",
       "type": "library",
-      "version": "0.15.10"
+      "version": "0.15.11"
     },
     {
       "bom-ref": "setproctitle==1.3.7",
@@ -5802,6 +6693,29 @@
       "version": "2.4.0"
     },
     {
+      "bom-ref": "sqlcipher3==0.6.2",
+      "description": "DB-API 2.0 interface for SQLCipher 4.x",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Repository",
+          "type": "vcs",
+          "url": "https://github.com/coleifer/sqlcipher3"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "sqlcipher3",
+      "purl": "pkg:pypi/sqlcipher3@0.6.2",
+      "type": "library",
+      "version": "0.6.2"
+    },
+    {
       "bom-ref": "sse-starlette==3.3.4",
       "description": "SSE plugin for Starlette",
       "externalReferences": [
@@ -5889,6 +6803,29 @@
       "purl": "pkg:pypi/starlette@1.0.0",
       "type": "library",
       "version": "1.0.0"
+    },
+    {
+      "bom-ref": "tenacity==9.1.4",
+      "description": "Retry code until it succeeds",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata: Home-page",
+          "type": "website",
+          "url": "https://github.com/jd/tenacity"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "name": "License :: OSI Approved :: Apache Software License"
+          }
+        }
+      ],
+      "name": "tenacity",
+      "purl": "pkg:pypi/tenacity@9.1.4",
+      "type": "library",
+      "version": "9.1.4"
     },
     {
       "bom-ref": "testcontainers==4.14.2",
@@ -6278,7 +7215,40 @@
       "version": "2.6.3"
     },
     {
-      "bom-ref": "uvicorn==0.44.0",
+      "bom-ref": "uuid_utils==0.14.1",
+      "description": "Fast, drop-in replacement for Python's uuid module, powered by Rust.",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://github.com/aminalaee/uuid-utils"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Issues",
+          "type": "issue-tracker",
+          "url": "https://github.com/aminalaee/uuid-utils/issues"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Source",
+          "type": "other",
+          "url": "https://github.com/aminalaee/uuid-utils"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "name": "uuid_utils",
+      "purl": "pkg:pypi/uuid-utils@0.14.1",
+      "type": "library",
+      "version": "0.14.1"
+    },
+    {
+      "bom-ref": "uvicorn==0.45.0",
       "description": "The lightning-fast ASGI server.",
       "externalReferences": [
         {
@@ -6317,9 +7287,9 @@
           "value": "standard"
         }
       ],
-      "purl": "pkg:pypi/uvicorn@0.44.0",
+      "purl": "pkg:pypi/uvicorn@0.45.0",
       "type": "library",
-      "version": "0.44.0"
+      "version": "0.45.0"
     },
     {
       "bom-ref": "watchdog==6.0.0",
@@ -6417,6 +7387,29 @@
       "purl": "pkg:pypi/watchfiles@1.1.1",
       "type": "library",
       "version": "1.1.1"
+    },
+    {
+      "bom-ref": "wcmatch==10.1",
+      "description": "Wildcard/glob file name matcher.",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://github.com/facelessuser/wcmatch"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "MIT"
+          }
+        }
+      ],
+      "name": "wcmatch",
+      "purl": "pkg:pypi/wcmatch@10.1",
+      "type": "library",
+      "version": "10.1"
     },
     {
       "bom-ref": "wcwidth==0.6.0",
@@ -6580,6 +7573,29 @@
       "version": "2.1.2"
     },
     {
+      "bom-ref": "xxhash==3.6.0",
+      "description": "Python binding for xxHash",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata: Home-page",
+          "type": "website",
+          "url": "https://github.com/ifduyue/python-xxhash"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "name": "License :: OSI Approved :: BSD License"
+          }
+        }
+      ],
+      "name": "xxhash",
+      "purl": "pkg:pypi/xxhash@3.6.0",
+      "type": "library",
+      "version": "3.6.0"
+    },
+    {
       "bom-ref": "zipp==3.23.1",
       "description": "Backport of pathlib-compatible object wrapper for zip files",
       "externalReferences": [
@@ -6601,14 +7617,64 @@
       "purl": "pkg:pypi/zipp@3.23.1",
       "type": "library",
       "version": "3.23.1"
+    },
+    {
+      "bom-ref": "zstandard==0.25.0",
+      "description": "Zstandard bindings for Python",
+      "externalReferences": [
+        {
+          "comment": "from packaging metadata Project-URL: Documentation",
+          "type": "documentation",
+          "url": "https://python-zstandard.readthedocs.io/en/latest/"
+        },
+        {
+          "comment": "from packaging metadata Project-URL: Homepage",
+          "type": "website",
+          "url": "https://github.com/indygreg/python-zstandard"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "acknowledgement": "declared",
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "name": "zstandard",
+      "purl": "pkg:pypi/zstandard@0.25.0",
+      "type": "library",
+      "version": "0.25.0"
+    },
+    {
+      "type": "library",
+      "name": "plotly.js",
+      "version": "3.3.1",
+      "purl": "pkg:npm/plotly.js@3.3.1",
+      "bom-ref": "pkg:npm/plotly.js@3.3.1"
+    },
+    {
+      "type": "library",
+      "name": "lightweight-charts",
+      "version": "5.1.0",
+      "purl": "pkg:npm/lightweight-charts@5.1.0",
+      "bom-ref": "pkg:npm/lightweight-charts@5.1.0"
+    },
+    {
+      "type": "library",
+      "name": "ag-grid-community",
+      "version": "35.0.0",
+      "purl": "pkg:npm/ag-grid-community@35.0.0",
+      "bom-ref": "pkg:npm/ag-grid-community@35.0.0"
     }
   ],
   "dependencies": [
     {
       "dependsOn": [
-        "cryptography==46.0.7"
+        "cryptography==46.0.7",
+        "joserfc==1.6.4"
       ],
-      "ref": "Authlib==1.6.10"
+      "ref": "Authlib==1.7.0"
     },
     {
       "dependsOn": [
@@ -6622,9 +7688,9 @@
         "PyYAML==6.0.3",
         "mkdocs-gen-files==0.6.1",
         "mkdocs-literate-nav==0.6.3",
-        "mkdocs-section-index==0.3.11",
+        "mkdocs-section-index==0.3.12",
         "mkdocs==1.6.1",
-        "mkdocstrings==1.0.3"
+        "mkdocstrings==1.0.4"
       ],
       "ref": "Markdown==3.10.2"
     },
@@ -6657,6 +7723,12 @@
     },
     {
       "dependsOn": [
+        "pydantic==2.13.3"
+      ],
+      "ref": "agent-client-protocol==0.9.0"
+    },
+    {
+      "dependsOn": [
         "caio==0.9.25"
       ],
       "ref": "aiofile==3.9.0"
@@ -6678,19 +7750,20 @@
         "anyio==4.13.0",
         "distro==1.9.0",
         "docstring_parser==0.18.0",
+        "google-auth==2.49.2",
         "httpx==0.28.1",
         "jiter==0.14.0",
         "mcp==1.27.0",
-        "pydantic==2.13.0",
+        "pydantic==2.13.3",
         "sniffio==1.3.1",
         "typing_extensions==4.15.0"
       ],
-      "ref": "anthropic==0.94.1"
+      "ref": "anthropic==0.96.0"
     },
     {
       "dependsOn": [
         "exceptiongroup==1.3.1",
-        "idna==3.11",
+        "idna==3.13",
         "typing_extensions==4.15.0"
       ],
       "ref": "anyio==4.13.0"
@@ -6743,14 +7816,15 @@
     {
       "dependsOn": [
         "Pygments==2.20.0",
-        "click==8.3.2",
+        "click==8.3.3",
         "docutils==0.22.4",
         "fastmcp==3.2.4",
+        "langchain==1.2.15",
         "mkdocs-material==9.7.6",
         "mkdocstrings-python==2.0.3",
-        "mypy==1.20.1",
+        "mypy==1.20.2",
         "numpy==2.4.4",
-        "pyinstaller==6.19.0",
+        "pyinstaller==6.20.0",
         "pytest==9.0.3",
         "redis==7.4.0",
         "setuptools==82.0.1",
@@ -6766,7 +7840,10 @@
       "ref": "boolean.py==5.0"
     },
     {
-      "ref": "cachetools==7.0.5"
+      "ref": "bracex==2.6"
+    },
+    {
+      "ref": "cachetools==7.0.6"
     },
     {
       "dependsOn": [
@@ -6776,7 +7853,7 @@
       "ref": "caio==0.9.25"
     },
     {
-      "ref": "certifi==2026.2.25"
+      "ref": "certifi==2026.4.22"
     },
     {
       "dependsOn": [
@@ -6794,7 +7871,7 @@
       "dependsOn": [
         "colorama==0.4.6"
       ],
-      "ref": "click==8.3.2"
+      "ref": "click==8.3.3"
     },
     {
       "ref": "colorama==0.4.6"
@@ -6807,12 +7884,12 @@
     },
     {
       "dependsOn": [
-        "certifi==2026.2.25",
+        "certifi==2026.4.22",
         "cffi==2.0.0",
-        "click==8.3.2",
-        "mypy==1.20.1",
+        "click==8.3.3",
+        "mypy==1.20.2",
         "pytest==9.0.3",
-        "ruff==0.15.10",
+        "ruff==0.15.11",
         "typing_extensions==4.15.0"
       ],
       "ref": "cryptography==46.0.7"
@@ -6822,7 +7899,7 @@
         "chardet==5.2.0",
         "cyclonedx-python-lib==11.7.0",
         "packageurl-python==0.17.6",
-        "packaging==26.0",
+        "packaging==26.1",
         "pip-requirements-parser==32.0.1"
       ],
       "ref": "cyclonedx-bom==7.3.0"
@@ -6831,7 +7908,7 @@
       "dependsOn": [
         "jsonschema==4.26.0",
         "license-expression==30.4.4",
-        "lxml==6.0.4",
+        "lxml==6.1.0",
         "packageurl-python==0.17.6",
         "py-serializable==2.1.0",
         "referencing==0.37.0",
@@ -6847,7 +7924,7 @@
         "attrs==26.1.0",
         "docstring_parser==0.18.0",
         "mkdocs==1.6.1",
-        "pydantic==2.13.0",
+        "pydantic==2.13.3",
         "pymdown-extensions==10.21.2",
         "pytest==9.0.3",
         "rich-rst==1.3.2",
@@ -6863,6 +7940,17 @@
       "ref": "decorator==5.2.1"
     },
     {
+      "dependsOn": [
+        "langchain-anthropic==1.4.1",
+        "langchain-core==1.3.0",
+        "langchain-google-genai==4.2.2",
+        "langchain==1.2.15",
+        "langsmith==0.7.33",
+        "wcmatch==10.1"
+      ],
+      "ref": "deepagents==0.5.3"
+    },
+    {
       "ref": "defusedxml==0.7.1"
     },
     {
@@ -6876,8 +7964,8 @@
         "cryptography==46.0.7",
         "httpcore==1.0.9",
         "httpx==0.28.1",
-        "idna==3.11",
-        "mypy==1.20.1",
+        "idna==3.13",
+        "mypy==1.20.2",
         "pylint==4.0.5",
         "pytest==9.0.3"
       ],
@@ -6888,7 +7976,7 @@
         "pytest-timeout==2.4.0",
         "pytest==9.0.3",
         "requests==2.33.1",
-        "ruff==0.15.10",
+        "ruff==0.15.11",
         "urllib3==2.6.3"
       ],
       "ref": "docker==7.1.0"
@@ -6905,7 +7993,7 @@
     {
       "dependsOn": [
         "dnspython==2.8.0",
-        "idna==3.11"
+        "idna==3.13"
       ],
       "ref": "email-validator==2.3.0"
     },
@@ -6941,41 +8029,42 @@
         "annotated-doc==0.0.4",
         "email-validator==2.3.0",
         "httpx==0.28.1",
-        "pydantic-settings==2.13.1",
-        "pydantic==2.13.0",
+        "pydantic-settings==2.14.0",
+        "pydantic==2.13.3",
         "python-multipart==0.0.26",
         "starlette==1.0.0",
         "typing-inspection==0.4.2",
         "typing_extensions==4.15.0",
-        "uvicorn==0.44.0"
+        "uvicorn==0.45.0"
       ],
-      "ref": "fastapi==0.135.3"
+      "ref": "fastapi==0.136.0"
     },
     {
       "dependsOn": [
-        "Authlib==1.6.10",
+        "Authlib==1.7.0",
         "PyJWT==2.12.1",
         "PyYAML==6.0.3",
-        "anthropic==0.94.1",
+        "anthropic==0.96.0",
         "cyclopts==4.10.2",
         "exceptiongroup==1.3.1",
+        "google-genai==1.73.1",
         "griffelib==2.0.2",
         "httpx==0.28.1",
         "jsonref==1.1.0",
         "jsonschema-path==0.4.5",
         "mcp==1.27.0",
-        "openai==2.31.0",
+        "openai==2.32.0",
         "openapi-pydantic==0.5.1",
         "opentelemetry-api==1.41.0",
-        "packaging==26.0",
+        "packaging==26.1",
         "platformdirs==4.9.6",
         "py-key-value-aio==0.4.4",
-        "pydantic==2.13.0",
+        "pydantic==2.13.3",
         "pyperclip==1.11.0",
         "python-dotenv==1.2.2",
         "rich==15.0.0",
         "uncalled-for==0.3.1",
-        "uvicorn==0.44.0",
+        "uvicorn==0.45.0",
         "watchfiles==1.1.1",
         "websockets==16.0"
       ],
@@ -6993,6 +8082,34 @@
         "python-dateutil==2.9.0.post0"
       ],
       "ref": "ghp-import==2.1.0"
+    },
+    {
+      "dependsOn": [
+        "PyJWT==2.12.1",
+        "cryptography==46.0.7",
+        "packaging==26.1",
+        "pyasn1_modules==0.4.2",
+        "pytest-asyncio==1.3.0",
+        "pytest==9.0.3",
+        "requests==2.33.1",
+        "urllib3==2.6.3"
+      ],
+      "ref": "google-auth==2.49.2"
+    },
+    {
+      "dependsOn": [
+        "anyio==4.13.0",
+        "distro==1.9.0",
+        "google-auth==2.49.2",
+        "httpx==0.28.1",
+        "pydantic==2.13.3",
+        "requests==2.33.1",
+        "sniffio==1.3.1",
+        "tenacity==9.1.4",
+        "typing_extensions==4.15.0",
+        "websockets==16.0"
+      ],
+      "ref": "google-genai==1.73.1"
     },
     {
       "dependsOn": [
@@ -7021,7 +8138,7 @@
     {
       "dependsOn": [
         "anyio==4.13.0",
-        "certifi==2026.2.25",
+        "certifi==2026.4.22",
         "h11==0.16.0"
       ],
       "ref": "httpcore==1.0.9"
@@ -7033,27 +8150,28 @@
       "dependsOn": [
         "Pygments==2.20.0",
         "anyio==4.13.0",
-        "certifi==2026.2.25",
-        "click==8.3.2",
+        "certifi==2026.4.22",
+        "click==8.3.3",
         "httpcore==1.0.9",
-        "idna==3.11",
-        "rich==15.0.0"
+        "idna==3.13",
+        "rich==15.0.0",
+        "zstandard==0.25.0"
       ],
       "ref": "httpx==0.28.1"
     },
     {
       "dependsOn": [
-        "mypy==1.20.1",
+        "mypy==1.20.2",
         "pytest==9.0.3",
-        "ruff==0.15.10"
+        "ruff==0.15.11"
       ],
-      "ref": "idna==3.11"
+      "ref": "idna==3.13"
     },
     {
       "dependsOn": [
         "ipython==9.12.0",
-        "mypy==1.20.1",
-        "packaging==26.0",
+        "mypy==1.20.2",
+        "packaging==26.1",
         "pytest==9.0.3",
         "zipp==3.23.1"
       ],
@@ -7071,7 +8189,7 @@
         "jupyter_core==5.9.1",
         "matplotlib-inline==0.2.1",
         "nest-asyncio==1.6.0",
-        "packaging==26.0",
+        "packaging==26.1",
         "psutil==7.2.2",
         "pytest-asyncio==1.3.0",
         "pytest-timeout==2.4.0",
@@ -7093,7 +8211,7 @@
         "jedi==0.19.2",
         "matplotlib-inline==0.2.1",
         "numpy==2.4.4",
-        "packaging==26.0",
+        "packaging==26.1",
         "pandas==3.0.2",
         "pexpect==4.9.0",
         "prompt_toolkit==3.0.52",
@@ -7154,7 +8272,7 @@
       "dependsOn": [
         "jaraco.classes==3.4.0",
         "more-itertools==11.0.2",
-        "mypy==1.20.1",
+        "mypy==1.20.2",
         "pytest==9.0.3"
       ],
       "ref": "jaraco.functools==4.4.0"
@@ -7169,9 +8287,9 @@
         "chardet==5.2.0",
         "colorama==0.4.6",
         "docutils==0.22.4",
-        "idna==3.11",
-        "mypy==1.20.1",
-        "packaging==26.0",
+        "idna==3.13",
+        "mypy==1.20.2",
+        "packaging==26.1",
         "parso==0.8.6",
         "pyparsing==3.3.2",
         "pytest==9.0.3",
@@ -7190,6 +8308,18 @@
     },
     {
       "ref": "jiter==0.14.0"
+    },
+    {
+      "dependsOn": [
+        "cryptography==46.0.7"
+      ],
+      "ref": "joserfc==1.6.4"
+    },
+    {
+      "dependsOn": [
+        "jsonpointer==3.1.1"
+      ],
+      "ref": "jsonpatch==1.33"
     },
     {
       "ref": "jsonpointer==3.1.1"
@@ -7216,7 +8346,7 @@
       "dependsOn": [
         "attrs==26.1.0",
         "fqdn==1.5.1",
-        "idna==3.11",
+        "idna==3.13",
         "isoduration==20.11.0",
         "jsonpointer==3.1.1",
         "jsonschema-specifications==2025.9.1",
@@ -7235,7 +8365,8 @@
         "anyio==4.13.0",
         "ipykernel==7.2.0",
         "jupyter_core==5.9.1",
-        "mypy==1.20.1",
+        "mypy==1.20.2",
+        "orjson==3.11.8",
         "pytest-timeout==2.4.0",
         "pytest==9.0.3",
         "python-dateutil==2.9.0.post0",
@@ -7271,6 +8402,105 @@
       "ref": "keyring==25.7.0"
     },
     {
+      "dependsOn": [
+        "anthropic==0.96.0",
+        "langchain-core==1.3.0",
+        "pydantic==2.13.3"
+      ],
+      "ref": "langchain-anthropic==1.4.1"
+    },
+    {
+      "dependsOn": [
+        "PyYAML==6.0.3",
+        "jsonpatch==1.33",
+        "langsmith==0.7.33",
+        "packaging==26.1",
+        "pydantic==2.13.3",
+        "tenacity==9.1.4",
+        "typing_extensions==4.15.0",
+        "uuid_utils==0.14.1"
+      ],
+      "ref": "langchain-core==1.3.0"
+    },
+    {
+      "dependsOn": [
+        "filetype==1.2.0",
+        "google-genai==1.73.1",
+        "langchain-core==1.3.0",
+        "pydantic==2.13.3"
+      ],
+      "ref": "langchain-google-genai==4.2.2"
+    },
+    {
+      "dependsOn": [
+        "langchain-core==1.3.0",
+        "mcp==1.27.0",
+        "typing_extensions==4.15.0"
+      ],
+      "ref": "langchain-mcp-adapters==0.2.2"
+    },
+    {
+      "dependsOn": [
+        "langchain-anthropic==1.4.1",
+        "langchain-core==1.3.0",
+        "langchain-google-genai==4.2.2",
+        "langgraph==1.1.9",
+        "pydantic==2.13.3"
+      ],
+      "ref": "langchain==1.2.15"
+    },
+    {
+      "dependsOn": [
+        "langchain-core==1.3.0",
+        "ormsgpack==1.12.2"
+      ],
+      "ref": "langgraph-checkpoint==4.0.2"
+    },
+    {
+      "dependsOn": [
+        "langchain-core==1.3.0",
+        "langgraph-checkpoint==4.0.2"
+      ],
+      "ref": "langgraph-prebuilt==1.0.10"
+    },
+    {
+      "dependsOn": [
+        "httpx==0.28.1",
+        "orjson==3.11.8"
+      ],
+      "ref": "langgraph-sdk==0.3.13"
+    },
+    {
+      "dependsOn": [
+        "langchain-core==1.3.0",
+        "langgraph-checkpoint==4.0.2",
+        "langgraph-prebuilt==1.0.10",
+        "langgraph-sdk==0.3.13",
+        "pydantic==2.13.3",
+        "xxhash==3.6.0"
+      ],
+      "ref": "langgraph==1.1.9"
+    },
+    {
+      "dependsOn": [
+        "httpx==0.28.1",
+        "opentelemetry-api==1.41.0",
+        "orjson==3.11.8",
+        "packaging==26.1",
+        "pydantic==2.13.3",
+        "pytest==9.0.3",
+        "requests-toolbelt==1.0.0",
+        "requests==2.33.1",
+        "rich==15.0.0",
+        "uuid_utils==0.14.1",
+        "websockets==16.0",
+        "wrapt==2.1.2",
+        "xxhash==3.6.0",
+        "zstandard==0.25.0"
+      ],
+      "ref": "langsmith==0.7.33"
+    },
+    {
       "ref": "lark==1.3.1"
     },
     {
@@ -7280,24 +8510,24 @@
       "dependsOn": [
         "boolean.py==5.0",
         "pytest==9.0.3",
-        "ruff==0.15.10"
+        "ruff==0.15.11"
       ],
       "ref": "license-expression==30.4.4"
     },
     {
-      "ref": "logfire-api==4.32.0"
+      "ref": "logfire-api==4.32.1"
     },
     {
-      "ref": "lxml==6.0.4"
+      "ref": "lxml==6.1.0"
     },
     {
       "dependsOn": [
-        "anthropic==0.94.1",
+        "anthropic==0.96.0",
         "filetype==1.2.0",
-        "logfire-api==4.32.0",
-        "openai==2.31.0",
-        "pydantic-settings==2.13.1",
-        "pydantic==2.13.0",
+        "logfire-api==4.32.1",
+        "openai==2.32.0",
+        "pydantic-settings==2.14.0",
+        "pydantic==2.13.3",
         "typing_extensions==4.15.0"
       ],
       "ref": "magentic==0.41.1"
@@ -7331,8 +8561,8 @@
         "httpx-sse==0.4.3",
         "httpx==0.28.1",
         "jsonschema==4.26.0",
-        "pydantic-settings==2.13.1",
-        "pydantic==2.13.0",
+        "pydantic-settings==2.14.0",
+        "pydantic==2.13.3",
         "python-dotenv==1.2.2",
         "python-multipart==0.0.26",
         "rich==15.0.0",
@@ -7340,7 +8570,7 @@
         "starlette==1.0.0",
         "typing-inspection==0.4.2",
         "typing_extensions==4.15.0",
-        "uvicorn==0.44.0",
+        "uvicorn==0.45.0",
         "websockets==16.0"
       ],
       "ref": "mcp==1.27.0"
@@ -7407,7 +8637,7 @@
         "mkdocs==1.6.1",
         "properdocs==1.6.7"
       ],
-      "ref": "mkdocs-section-index==0.3.11"
+      "ref": "mkdocs-section-index==0.3.12"
     },
     {
       "dependsOn": [
@@ -7416,13 +8646,13 @@
         "MarkupSafe==3.0.3",
         "PyYAML==6.0.3",
         "babel==2.18.0",
-        "click==8.3.2",
+        "click==8.3.3",
         "colorama==0.4.6",
         "ghp-import==2.1.0",
         "importlib_metadata==8.7.1",
         "mergedeep==1.3.4",
         "mkdocs-get-deps==0.2.2",
-        "packaging==26.0",
+        "packaging==26.1",
         "pathspec==1.0.4",
         "pyyaml_env_tag==1.1",
         "watchdog==6.0.0"
@@ -7433,7 +8663,7 @@
       "dependsOn": [
         "griffelib==2.0.2",
         "mkdocs-autorefs==1.4.4",
-        "mkdocstrings==1.0.3",
+        "mkdocstrings==1.0.4",
         "typing_extensions==4.15.0"
       ],
       "ref": "mkdocstrings-python==2.0.3"
@@ -7448,7 +8678,7 @@
         "mkdocstrings-python==2.0.3",
         "pymdown-extensions==10.21.2"
       ],
-      "ref": "mkdocstrings==1.0.3"
+      "ref": "mkdocstrings==1.0.4"
     },
     {
       "ref": "more-itertools==11.0.2"
@@ -7456,26 +8686,27 @@
     {
       "dependsOn": [
         "librt==0.9.0",
-        "lxml==6.0.4",
+        "lxml==6.1.0",
         "mypy_extensions==1.1.0",
+        "orjson==3.11.8",
         "pathspec==1.0.4",
         "pip==26.0.1",
         "psutil==7.2.2",
         "setuptools==82.0.1",
         "typing_extensions==4.15.0"
       ],
-      "ref": "mypy==1.20.1"
+      "ref": "mypy==1.20.2"
     },
     {
       "ref": "mypy_extensions==1.1.0"
     },
     {
       "dependsOn": [
-        "packaging==26.0",
+        "packaging==26.1",
         "pandas==3.0.2",
         "rich==15.0.0"
       ],
-      "ref": "narwhals==2.19.0"
+      "ref": "narwhals==2.20.0"
     },
     {
       "ref": "nest-asyncio==1.6.0"
@@ -7491,17 +8722,17 @@
         "jiter==0.14.0",
         "numpy==2.4.4",
         "pandas==3.0.2",
-        "pydantic==2.13.0",
+        "pydantic==2.13.3",
         "sniffio==1.3.1",
         "tqdm==4.67.3",
         "typing_extensions==4.15.0",
         "websockets==16.0"
       ],
-      "ref": "openai==2.31.0"
+      "ref": "openai==2.32.0"
     },
     {
       "dependsOn": [
-        "pydantic==2.13.0"
+        "pydantic==2.13.3"
       ],
       "ref": "openapi-pydantic==0.5.1"
     },
@@ -7513,16 +8744,22 @@
       "ref": "opentelemetry-api==1.41.0"
     },
     {
+      "ref": "orjson==3.11.8"
+    },
+    {
+      "ref": "ormsgpack==1.12.2"
+    },
+    {
       "dependsOn": [
         "isort==8.0.1",
-        "mypy==1.20.1",
+        "mypy==1.20.2",
         "pytest==9.0.3",
         "setuptools==82.0.1"
       ],
       "ref": "packageurl-python==0.17.6"
     },
     {
-      "ref": "packaging==26.0"
+      "ref": "packaging==26.1"
     },
     {
       "dependsOn": [
@@ -7533,11 +8770,12 @@
     {
       "dependsOn": [
         "Jinja2==3.1.6",
-        "lxml==6.0.4",
+        "lxml==6.1.0",
         "numpy==2.4.4",
         "pytest==9.0.3",
         "python-dateutil==2.9.0.post0",
-        "tzdata==2026.1"
+        "tzdata==2026.1",
+        "zstandard==0.25.0"
       ],
       "ref": "pandas==3.0.2"
     },
@@ -7566,7 +8804,7 @@
     {
       "dependsOn": [
         "defusedxml==0.7.1",
-        "packaging==26.0",
+        "packaging==26.1",
         "pytest-timeout==2.4.0",
         "pytest==9.0.3"
       ],
@@ -7574,7 +8812,7 @@
     },
     {
       "dependsOn": [
-        "packaging==26.0",
+        "packaging==26.1",
         "pyparsing==3.3.2",
         "pytest==9.0.3"
       ],
@@ -7589,14 +8827,15 @@
     {
       "dependsOn": [
         "anywidget==0.10.0",
-        "narwhals==2.19.0",
+        "narwhals==2.20.0",
         "numpy==2.4.4",
-        "packaging==26.0",
+        "orjson==3.11.8",
+        "packaging==26.1",
         "pandas==3.0.2",
         "pillow==12.2.0",
         "pytest==9.0.3",
         "requests==2.33.1",
-        "ruff==0.15.10"
+        "ruff==0.15.11"
       ],
       "ref": "plotly==6.7.0"
     },
@@ -7619,11 +8858,11 @@
         "MarkupSafe==3.0.3",
         "PyYAML==6.0.3",
         "babel==2.18.0",
-        "click==8.3.2",
+        "click==8.3.3",
         "colorama==0.4.6",
         "ghp-import==2.1.0",
         "importlib_metadata==8.7.1",
-        "packaging==26.0",
+        "packaging==26.1",
         "pathspec==1.0.4",
         "platformdirs==4.9.6",
         "pyyaml_env_tag==1.1",
@@ -7634,18 +8873,18 @@
     {
       "dependsOn": [
         "colorama==0.4.6",
-        "packaging==26.0",
+        "packaging==26.1",
         "pylint==4.0.5",
         "pytest==9.0.3",
         "requests==2.33.1",
-        "ruff==0.15.10",
+        "ruff==0.15.11",
         "setuptools==82.0.1"
       ],
       "ref": "psutil==7.2.2"
     },
     {
       "dependsOn": [
-        "pydantic==2.13.0",
+        "pydantic==2.13.3",
         "wrapt==2.1.2"
       ],
       "ref": "psygnal==0.15.1"
@@ -7664,14 +8903,15 @@
         "aiofile==3.9.0",
         "anyio==4.13.0",
         "beartype==0.22.9",
-        "cachetools==7.0.5",
+        "cachetools==7.0.6",
         "cryptography==46.0.7",
+        "google-auth==2.49.2",
         "keyring==25.7.0",
         "mkdocs-material==9.7.6",
         "mkdocs==1.6.1",
         "mkdocstrings-python==2.0.3",
-        "mkdocstrings==1.0.3",
-        "pydantic==2.13.0",
+        "mkdocstrings==1.0.4",
+        "pydantic==2.13.3",
         "redis==7.4.0",
         "typing_extensions==4.15.0"
       ],
@@ -7684,38 +8924,47 @@
       "ref": "py-serializable==2.1.0"
     },
     {
+      "ref": "pyasn1==0.6.3"
+    },
+    {
+      "dependsOn": [
+        "pyasn1==0.6.3"
+      ],
+      "ref": "pyasn1_modules==0.4.2"
+    },
+    {
       "ref": "pycparser==3.0"
     },
     {
       "dependsOn": [
         "PyYAML==6.0.3",
-        "pydantic==2.13.0",
+        "pydantic==2.13.3",
         "python-dotenv==1.2.2",
         "typing-inspection==0.4.2"
       ],
-      "ref": "pydantic-settings==2.13.1"
+      "ref": "pydantic-settings==2.14.0"
     },
     {
       "dependsOn": [
         "annotated-types==0.7.0",
         "email-validator==2.3.0",
-        "pydantic_core==2.46.0",
+        "pydantic_core==2.46.3",
         "typing-inspection==0.4.2",
         "typing_extensions==4.15.0",
         "tzdata==2026.1"
       ],
-      "ref": "pydantic==2.13.0"
+      "ref": "pydantic==2.13.3"
     },
     {
       "dependsOn": [
         "typing_extensions==4.15.0"
       ],
-      "ref": "pydantic_core==2.46.0"
+      "ref": "pydantic_core==2.46.3"
     },
     {
       "dependsOn": [
         "importlib_metadata==8.7.1",
-        "packaging==26.0",
+        "packaging==26.1",
         "setuptools==82.0.1"
       ],
       "ref": "pyinstaller-hooks-contrib==2026.4"
@@ -7724,13 +8973,13 @@
       "dependsOn": [
         "altgraph==0.17.5",
         "importlib_metadata==8.7.1",
-        "packaging==26.0",
+        "packaging==26.1",
         "psutil==7.2.2",
         "pyinstaller-hooks-contrib==2026.4",
         "pytest==9.0.3",
         "setuptools==82.0.1"
       ],
-      "ref": "pyinstaller==6.19.0"
+      "ref": "pyinstaller==6.20.0"
     },
     {
       "dependsOn": [
@@ -7774,7 +9023,7 @@
         "anyio==4.13.0",
         "importlib_metadata==8.7.1",
         "pillow==12.2.0",
-        "pydantic==2.13.0",
+        "pydantic==2.13.3",
         "typing_extensions==4.15.0"
       ],
       "ref": "pytauri==0.8.0"
@@ -7799,7 +9048,7 @@
         "colorama==0.4.6",
         "exceptiongroup==1.3.1",
         "iniconfig==2.3.0",
-        "packaging==26.0",
+        "packaging==26.1",
         "pluggy==1.6.0",
         "requests==2.33.1",
         "setuptools==82.0.1"
@@ -7814,7 +9063,7 @@
     },
     {
       "dependsOn": [
-        "click==8.3.2"
+        "click==8.3.3"
       ],
       "ref": "python-dotenv==1.2.2"
     },
@@ -7838,7 +9087,8 @@
         "PyJWT==2.12.1",
         "cryptography==46.0.7",
         "opentelemetry-api==1.41.0",
-        "requests==2.33.1"
+        "requests==2.33.1",
+        "xxhash==3.6.0"
       ],
       "ref": "redis==7.4.0"
     },
@@ -7852,10 +9102,16 @@
     },
     {
       "dependsOn": [
-        "certifi==2026.2.25",
+        "requests==2.33.1"
+      ],
+      "ref": "requests-toolbelt==1.0.0"
+    },
+    {
+      "dependsOn": [
+        "certifi==2026.4.22",
         "chardet==5.2.0",
         "charset-normalizer==3.4.7",
-        "idna==3.11",
+        "idna==3.13",
         "urllib3==2.6.3"
       ],
       "ref": "requests==2.33.1"
@@ -7893,33 +9149,36 @@
     },
     {
       "dependsOn": [
-        "Authlib==1.6.10",
-        "anthropic==0.94.1",
+        "Authlib==1.7.0",
+        "agent-client-protocol==0.9.0",
+        "anthropic==0.96.0",
         "anyio==4.13.0",
         "anywidget==0.10.0",
         "cryptography==46.0.7",
+        "deepagents==0.5.3",
         "fakeredis==2.35.1",
-        "fastapi==0.135.3",
+        "fastapi==0.136.0",
         "fastmcp==3.2.4",
         "griffe==2.0.2",
         "httpx==0.28.1",
         "ipykernel==7.2.0",
         "keyring==25.7.0",
+        "langchain-mcp-adapters==0.2.2",
         "magentic==0.41.1",
         "mkdocs-autorefs==1.4.4",
         "mkdocs-gen-files==0.6.1",
         "mkdocs-literate-nav==0.6.3",
         "mkdocs-material==9.7.6",
-        "mkdocs-section-index==0.3.11",
+        "mkdocs-section-index==0.3.12",
         "mkdocs==1.6.1",
-        "mkdocstrings==1.0.3",
-        "mypy==1.20.1",
-        "openai==2.31.0",
+        "mkdocstrings==1.0.4",
+        "mypy==1.20.2",
+        "openai==2.32.0",
         "pandas==3.0.2",
         "plotly==6.7.0",
-        "pydantic-settings==2.13.1",
-        "pydantic==2.13.0",
-        "pyinstaller==6.19.0",
+        "pydantic-settings==2.14.0",
+        "pydantic==2.13.3",
+        "pyinstaller==6.20.0",
         "pylint==4.0.5",
         "pytauri-wheel==0.8.0",
         "pytauri==0.8.0",
@@ -7927,10 +9186,11 @@
         "pytest-timeout==2.4.0",
         "pytest==9.0.3",
         "redis==7.4.0",
-        "ruff==0.15.10",
+        "ruff==0.15.11",
         "setproctitle==1.3.7",
+        "sqlcipher3==0.6.2",
         "testcontainers==4.14.2",
-        "uvicorn==0.44.0",
+        "uvicorn==0.45.0",
         "watchdog==6.0.0",
         "websockets==16.0"
       ],
@@ -7940,7 +9200,7 @@
       "ref": "rpds-py==0.30.0"
     },
     {
-      "ref": "ruff==0.15.10"
+      "ref": "ruff==0.15.11"
     },
     {
       "dependsOn": [
@@ -7953,12 +9213,12 @@
         "importlib_metadata==8.7.1",
         "jaraco.functools==4.4.0",
         "more-itertools==11.0.2",
-        "mypy==1.20.1",
-        "packaging==26.0",
+        "mypy==1.20.2",
+        "packaging==26.1",
         "pip==26.0.1",
         "pytest-timeout==2.4.0",
         "pytest==9.0.3",
-        "ruff==0.15.10"
+        "ruff==0.15.11"
       ],
       "ref": "setuptools==82.0.1"
     },
@@ -7972,11 +9232,14 @@
       "ref": "sortedcontainers==2.4.0"
     },
     {
+      "ref": "sqlcipher3==0.6.2"
+    },
+    {
       "dependsOn": [
         "anyio==4.13.0",
-        "fastapi==0.135.3",
+        "fastapi==0.136.0",
         "starlette==1.0.0",
-        "uvicorn==0.44.0"
+        "uvicorn==0.45.0"
       ],
       "ref": "sse-starlette==3.3.4"
     },
@@ -8000,6 +9263,13 @@
         "typing_extensions==4.15.0"
       ],
       "ref": "starlette==1.0.0"
+    },
+    {
+      "dependsOn": [
+        "pytest==9.0.3",
+        "tornado==6.5.5"
+      ],
+      "ref": "tenacity==9.1.4"
     },
     {
       "dependsOn": [
@@ -8035,7 +9305,7 @@
     },
     {
       "dependsOn": [
-        "mypy==1.20.1",
+        "mypy==1.20.2",
         "pytest==9.0.3"
       ],
       "ref": "traitlets==5.14.3"
@@ -8057,7 +9327,7 @@
     },
     {
       "dependsOn": [
-        "mypy==1.20.1"
+        "mypy==1.20.2"
       ],
       "ref": "uri-template==1.3.0"
     },
@@ -8065,9 +9335,12 @@
       "ref": "urllib3==2.6.3"
     },
     {
+      "ref": "uuid_utils==0.14.1"
+    },
+    {
       "dependsOn": [
         "PyYAML==6.0.3",
-        "click==8.3.2",
+        "click==8.3.3",
         "colorama==0.4.6",
         "h11==0.16.0",
         "python-dotenv==1.2.2",
@@ -8075,7 +9348,7 @@
         "watchfiles==1.1.1",
         "websockets==16.0"
       ],
-      "ref": "uvicorn==0.44.0"
+      "ref": "uvicorn==0.45.0"
     },
     {
       "dependsOn": [
@@ -8088,6 +9361,12 @@
         "anyio==4.13.0"
       ],
       "ref": "watchfiles==1.1.1"
+    },
+    {
+      "dependsOn": [
+        "bracex==2.6"
+      ],
+      "ref": "wcmatch==10.1"
     },
     {
       "ref": "wcwidth==0.6.0"
@@ -8109,12 +9388,21 @@
       "ref": "wrapt==2.1.2"
     },
     {
+      "ref": "xxhash==3.6.0"
+    },
+    {
       "dependsOn": [
         "jaraco.functools==4.4.0",
         "more-itertools==11.0.2",
         "pytest==9.0.3"
       ],
       "ref": "zipp==3.23.1"
+    },
+    {
+      "dependsOn": [
+        "cffi==2.0.0"
+      ],
+      "ref": "zstandard==0.25.0"
     }
   ],
   "metadata": {
@@ -8148,9 +9436,9 @@
       ],
       "name": "pywry",
       "type": "application",
-      "version": "2.0.0rc6"
+      "version": "2.0.0rc7"
     },
-    "timestamp": "2026-04-14T04:26:17.073310+00:00",
+    "timestamp": "2026-04-22T22:02:58.151987+00:00",
     "tools": {
       "components": [
         {
@@ -8254,7 +9542,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:d5810d6f-a8ec-44dd-b322-063791e3c560",
+  "serialNumber": "urn:uuid:026bec18-a401-4bab-bb31-826a086d1dbd",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
