@@ -23,6 +23,7 @@ from .app import PyWry
 from .asset_loader import AssetLoader, get_asset_loader
 from .callbacks import CallbackFunc, WidgetType, get_registry
 from .chat import (
+    AppArtifact,
     ChatProvider,
     CodeArtifact,
     HtmlArtifact,
@@ -196,6 +197,7 @@ __all__ = [
     "ACPCommand",
     "ACPToolCall",
     "AgentMessageUpdate",
+    "AppArtifact",
     "ArtifactUpdate",
     "AssetLoader",
     "AssetSettings",

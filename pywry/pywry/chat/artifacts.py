@@ -212,6 +212,47 @@ class TradingViewSeries(BaseModel):
     markers: list[dict[str, Any]] | None = None
 
 
+class AppArtifact(_ArtifactBase):
+    """Full PyWry widget rendered inline as a sandboxed iframe.
+
+    Unlike :class:`HtmlArtifact` which carries only raw HTML, an
+    ``AppArtifact`` represents a complete PyWry app snapshot — inlined
+    CSS / JS / data — and optionally carries a live ``widget_id`` +
+    ``revision`` pair so the iframe can open a WebSocket bridge back to
+    the Python runtime for event traffic. When a new revision of the
+    same ``widget_id`` is emitted, older revisions close their bridge
+    server-side and the iframe stays frozen at its last known state
+    while remaining readable in chat history.
+
+    Attributes
+    ----------
+    artifact_type : str
+        Fixed to ``"app"``.
+    html : str
+        Self-contained HTML document (CSS / JS / data inlined).
+    widget_id : str | None
+        Optional backend identifier for live event wiring. When set,
+        the iframe opens a WebSocket carrying ``revision`` so the
+        server can reject stale renders.
+    revision : int
+        Monotonic render counter, incremented each time the widget is
+        re-rendered via the MCP layer. ``0`` means "no live bridge —
+        treat as a static snapshot".
+    height : str
+        CSS height for the iframe container.
+    sandbox : bool
+        If ``True`` (default), the iframe is loaded with
+        ``sandbox="allow-scripts allow-same-origin"``.
+    """
+
+    artifact_type: Literal["app"] = "app"
+    html: str = ""
+    widget_id: str | None = None
+    revision: int = 0
+    height: str = "600px"
+    sandbox: bool = True
+
+
 class TradingViewArtifact(_ArtifactBase):
     """Interactive financial chart via TradingView lightweight-charts.
 
@@ -267,5 +308,6 @@ Artifact = (
     | ImageArtifact
     | JsonArtifact
     | TradingViewArtifact
+    | AppArtifact
 )
 """Union of all concrete artifact types."""

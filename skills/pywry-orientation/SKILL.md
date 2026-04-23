@@ -61,6 +61,17 @@ PyWry's MCP bundles **17 domain skills** served via one tool call. Before genera
 
 Run `/pywry:doctor` to verify the install.
 
+## `AppArtifact` — rich inline previews
+
+When you call a widget‑creating tool in headless mode (`create_widget`, `show_plotly`, `show_dataframe`, `show_tvchart`, `create_chat_widget`), the MCP response includes an **`AppArtifact`** alongside the usual JSON: a self‑contained HTML snapshot of the widget carried as an `EmbeddedResource` with `mimeType: "text/html"` and a `pywry-app://<widget_id>/<revision>` URI. MCP clients that render HTML resources (Claude Desktop artifact pane, mcp‑ui‑aware clients, PyWry's own chat widget) show the app inline.
+
+Revision behaviour:
+- Each render bumps a per‑widget revision counter.
+- Only the **latest** revision keeps a live WebSocket bridge back to Python — the iframe can still fire events, run callbacks, stream updates.
+- **Older** revisions in chat history freeze at their last known state: their WebSocket reconnect is rejected server‑side with close code `4002 Older revision superseded`, so the iframe just displays what it last had.
+
+To re‑snapshot an existing widget after mutating it (e.g. after a series of `send_event` / `tvchart_add_markers` calls), call `get_widget_app(widget_id)` — it renders a fresh `AppArtifact` with a bumped revision.
+
 ## Headless mode for iteration
 
 When iterating on PyWry code with Claude, set `PYWRY_HEADLESS=1` before launching scripts. This skips native window creation so stdout/stderr come back cleanly and you can inspect results without a blocking window.

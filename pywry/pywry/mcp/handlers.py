@@ -260,16 +260,20 @@ def _handle_create_widget(ctx: HandlerContext) -> HandlerResult:
 
     if ctx.headless:
         from ..inline import _state as inline_state
+        from .app_artifact import attach_app_artifact
 
         if widget_id in inline_state.widgets:
             inline_state.widgets[widget_id]["persistent"] = True
 
-        return {
+        result: HandlerResult = {
             "widget_id": widget_id,
             "path": f"/widget/{widget_id}",
             "created": True,
             "export_uri": f"pywry://export/{widget_id}",
         }
+        return attach_app_artifact(
+            result, widget_id, title=args.get("title", "PyWry Widget")
+        )
 
     return {
         "widget_id": widget_id,
@@ -324,17 +328,23 @@ def _handle_show_plotly(ctx: HandlerContext) -> HandlerResult:
     widget_id = getattr(widget, "widget_id", None) or uuid.uuid4().hex
     register_widget(widget_id, widget)
 
-    if ctx.headless:
-        from ..inline import _state as inline_state
-
-        if widget_id in inline_state.widgets:
-            inline_state.widgets[widget_id]["persistent"] = True
-
-    return {
+    result: HandlerResult = {
         "widget_id": widget_id,
         "path": f"/widget/{widget_id}",
         "created": True,
     }
+
+    if ctx.headless:
+        from ..inline import _state as inline_state
+        from .app_artifact import attach_app_artifact
+
+        if widget_id in inline_state.widgets:
+            inline_state.widgets[widget_id]["persistent"] = True
+        result = attach_app_artifact(
+            result, widget_id, title=ctx.args.get("title", "Plotly Chart")
+        )
+
+    return result
 
 
 def _handle_show_dataframe(ctx: HandlerContext) -> HandlerResult:
@@ -350,17 +360,23 @@ def _handle_show_dataframe(ctx: HandlerContext) -> HandlerResult:
     widget_id = getattr(widget, "widget_id", None) or uuid.uuid4().hex
     register_widget(widget_id, widget)
 
-    if ctx.headless:
-        from ..inline import _state as inline_state
-
-        if widget_id in inline_state.widgets:
-            inline_state.widgets[widget_id]["persistent"] = True
-
-    return {
+    result: HandlerResult = {
         "widget_id": widget_id,
         "path": f"/widget/{widget_id}",
         "created": True,
     }
+
+    if ctx.headless:
+        from ..inline import _state as inline_state
+        from .app_artifact import attach_app_artifact
+
+        if widget_id in inline_state.widgets:
+            inline_state.widgets[widget_id]["persistent"] = True
+        result = attach_app_artifact(
+            result, widget_id, title=ctx.args.get("title", "Data Table")
+        )
+
+    return result
 
 
 def _handle_show_tvchart(ctx: HandlerContext) -> HandlerResult:
@@ -379,17 +395,23 @@ def _handle_show_tvchart(ctx: HandlerContext) -> HandlerResult:
     register_widget(widget_id, widget)
     capture_widget_events(widget, widget_id, ctx.events, _TVCHART_CAPTURE_EVENTS)
 
-    if ctx.headless:
-        from ..inline import _state as inline_state
-
-        if widget_id in inline_state.widgets:
-            inline_state.widgets[widget_id]["persistent"] = True
-
-    return {
+    result: HandlerResult = {
         "widget_id": widget_id,
         "path": f"/widget/{widget_id}",
         "created": True,
     }
+
+    if ctx.headless:
+        from ..inline import _state as inline_state
+        from .app_artifact import attach_app_artifact
+
+        if widget_id in inline_state.widgets:
+            inline_state.widgets[widget_id]["persistent"] = True
+        result = attach_app_artifact(
+            result, widget_id, title=ctx.args.get("title", "Chart")
+        )
+
+    return result
 
 
 # =============================================================================
@@ -1501,6 +1523,33 @@ def _handle_export_widget(ctx: HandlerContext) -> HandlerResult:
     }
 
 
+def _handle_get_widget_app(ctx: HandlerContext) -> HandlerResult:
+    from .app_artifact import attach_app_artifact
+
+    resolved_id, error = _resolve_widget_id(ctx.args.get("widget_id"))
+    if error is not None or resolved_id is None:
+        return error or {"error": "widget_id could not be resolved."}
+    widget_id = resolved_id
+
+    result: HandlerResult = {"widget_id": widget_id}
+    result = attach_app_artifact(
+        result,
+        widget_id,
+        title=ctx.args.get("title", "") or "",
+        height=ctx.args.get("height", "600px") or "600px",
+    )
+    if "_app_artifact" not in result:
+        return {
+            "error": (
+                f"Widget HTML not available for {widget_id} — "
+                "is the widget running in a mode (headless/browser) that "
+                "stores its HTML?"
+            )
+        }
+    result["revision"] = result["_app_artifact"]["revision"]
+    return result
+
+
 def _handle_list_resources(_ctx: HandlerContext) -> HandlerResult:
     resources = get_resources()
     return {
@@ -1623,16 +1672,20 @@ def _handle_create_chat_widget(ctx: HandlerContext) -> HandlerResult:
 
     if ctx.headless:
         from ..inline import _state as inline_state
+        from .app_artifact import attach_app_artifact
 
         if widget_id in inline_state.widgets:
             inline_state.widgets[widget_id]["persistent"] = True
 
-        return {
+        result: HandlerResult = {
             "widget_id": widget_id,
             "thread_id": thread_id,
             "path": f"/widget/{widget_id}",
             "created": True,
         }
+        return attach_app_artifact(
+            result, widget_id, title=widget_config.title
+        )
 
     return {
         "widget_id": widget_id,
@@ -1974,6 +2027,7 @@ _HANDLERS: dict[str, Callable[[HandlerContext], HandlerResult]] = {
     "get_component_docs": _handle_get_component_docs,
     "get_component_source": _handle_get_component_source,
     "export_widget": _handle_export_widget,
+    "get_widget_app": _handle_get_widget_app,
     "list_resources": _handle_list_resources,
     # Chat
     "create_chat_widget": _handle_create_chat_widget,
