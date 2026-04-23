@@ -536,3 +536,4 @@ function _computeParabolicSAR(data, step, maxStep) {
         out.push({ time: data[i].time, value: sar });
     }
     return out;
+}

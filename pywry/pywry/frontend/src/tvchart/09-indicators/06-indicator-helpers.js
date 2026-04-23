@@ -1,5 +1,3 @@
-}
-
 function _tvIndicatorValue(point, source) {
     var src = source || 'close';
     if (src === 'hl2') {
