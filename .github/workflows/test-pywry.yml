@@ -9,6 +9,7 @@ on:
       - '!pywry/**/*.md'
       - '.github/workflows/test-pywry.yml'
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [main, master, develop]
     paths:
       - 'pywry/**'
@@ -59,44 +60,88 @@ jobs:
       - name: Run Pylint
         run: pylint pywry/ --exit-zero --output-format=colorized
 
+  gen-matrix:
+    name: Resolve test matrix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      pytest-targets: ${{ steps.targets.outputs.targets }}
+    steps:
+      - id: matrix
+        shell: bash
+        env:
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+          HAS_FULL_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'full-test') }}
+        run: |
+          if [[ "$IS_PR" == "true" && "$HAS_FULL_LABEL" != "true" ]]; then
+            MATRIX='{"include":[{"os":"ubuntu-24.04","python-version":"3.14"},{"os":"windows-2025","python-version":"3.14"},{"os":"macos-15-intel","python-version":"3.14"},{"os":"ubuntu-24.04-arm","python-version":"3.14"},{"os":"windows-11-arm","python-version":"3.14"},{"os":"macos-latest","python-version":"3.14"}]}'
+          else
+            MATRIX='{"include":[{"os":"ubuntu-24.04","python-version":"3.11"},{"os":"ubuntu-24.04","python-version":"3.14"},{"os":"windows-2025","python-version":"3.11"},{"os":"windows-2025","python-version":"3.14"},{"os":"macos-15-intel","python-version":"3.11"},{"os":"macos-15-intel","python-version":"3.14"},{"os":"ubuntu-24.04-arm","python-version":"3.11"},{"os":"ubuntu-24.04-arm","python-version":"3.14"},{"os":"windows-11-arm","python-version":"3.12"},{"os":"windows-11-arm","python-version":"3.14"},{"os":"macos-latest","python-version":"3.11"},{"os":"macos-latest","python-version":"3.14"}]}'
+          fi
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout for diff
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-test')
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - id: targets
+        shell: bash
+        env:
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+          HAS_FULL_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'full-test') }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          if [[ "$IS_PR" != "true" || "$HAS_FULL_LABEL" == "true" ]]; then
+            echo "Full suite (push, dispatch, or full-test label)"
+            echo "targets=tests/" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch --no-tags --prune origin "$BASE_REF" 2>&1 || true
+          CHANGED=$(git diff --name-only "origin/$BASE_REF"...HEAD)
+          echo "Changed files in PR:"
+          echo "$CHANGED" | sed 's/^/  /'
+
+          # Source / workflow / shared-test-infra changes force the full suite.
+          SOURCE_NON_TEST=$(echo "$CHANGED" | grep -E '^pywry/' | grep -vE '^pywry/(tests|docs)/' | grep -vE '^pywry/.*\.md$' || true)
+          WORKFLOW_SELF=$(echo "$CHANGED" | grep -E '^\.github/workflows/test-pywry\.yml$' || true)
+          INFRA_TEST=$(echo "$CHANGED" | grep -E '^pywry/tests/(conftest|constants|__init__)\.py$' || true)
+          TEST_FILES=$(echo "$CHANGED" | grep -E '^pywry/tests/test_.*\.py$' || true)
+
+          if [[ -n "$SOURCE_NON_TEST" || -n "$WORKFLOW_SELF" || -n "$INFRA_TEST" ]]; then
+            echo "Full suite (source/workflow/test-infra changes)"
+            echo "targets=tests/" >> "$GITHUB_OUTPUT"
+          elif [[ -n "$TEST_FILES" ]]; then
+            T=$(echo "$TEST_FILES" | sed 's|^pywry/||' | tr '\n' ' ' | sed 's/ *$//')
+            echo "Scoped to changed test files: $T"
+            echo "targets=$T" >> "$GITHUB_OUTPUT"
+          else
+            echo "No recognized changes; defaulting to full suite"
+            echo "targets=tests/" >> "$GITHUB_OUTPUT"
+          fi
+
   test:
     name: Test - ${{ matrix.os }} - Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    needs: gen-matrix
     permissions:
       contents: read
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-test') }}
       # ``deepagents`` (pulled in by ``.[dev]`` → ``features``) hard-
       # requires Python >=3.11 — 3.10 can't resolve the dev extra.
       # ``sqlcipher3`` is a source build against the SQLCipher C
       # library installed in the ``Build SQLCipher`` step below, so
       # any Python ABI works (no binary-wheel coverage gaps).
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            python-version: '3.11'
-          - os: ubuntu-24.04
-            python-version: '3.14'
-          - os: windows-2025
-            python-version: '3.11'
-          - os: windows-2025
-            python-version: '3.14'
-          - os: macos-15-intel
-            python-version: '3.11'
-          - os: macos-15-intel
-            python-version: '3.14'
-          - os: ubuntu-24.04-arm
-            python-version: '3.11'
-          - os: ubuntu-24.04-arm
-            python-version: '3.14'
-          - os: windows-11-arm
-            python-version: '3.12'
-          - os: windows-11-arm
-            python-version: '3.14'
-          - os: macos-latest
-            python-version: '3.11'
-          - os: macos-latest
-            python-version: '3.14'
+      matrix: ${{ fromJSON(needs.gen-matrix.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v5
@@ -291,8 +336,13 @@ jobs:
         env:
           PYWRY_HEADLESS: "1"
           NO_AT_BRIDGE: "1"
+          PYTEST_TARGETS: ${{ needs.gen-matrix.outputs.pytest-targets }}
         run: |
-          dbus-run-session -- xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python -m pytest -c pytest.ini tests/ -v --tb=short
+          dbus-run-session -- xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python -m pytest -c pytest.ini $PYTEST_TARGETS -v --tb=short
+          rc=$?
+          # Exit 5 = no tests collected after platform filtering on a scoped run; treat as success.
+          if [[ $rc -eq 5 && "$PYTEST_TARGETS" != "tests/" ]]; then rc=0; fi
+          exit $rc
 
       - name: Run tests (Windows x64)
         if: runner.os == 'Windows' && runner.arch == 'X64'
@@ -300,8 +350,12 @@ jobs:
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
           PYTHONUTF8: "1"
+          PYTEST_TARGETS: ${{ needs.gen-matrix.outputs.pytest-targets }}
+        shell: pwsh
         run: |
-          python -m pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+          python -m pytest -c pytest.ini $env:PYTEST_TARGETS.Split(' ') -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+          if ($LASTEXITCODE -eq 5 -and $env:PYTEST_TARGETS -ne 'tests/') { exit 0 }
+          exit $LASTEXITCODE
 
       - name: Run tests (Windows ARM)
         if: runner.os == 'Windows' && runner.arch == 'ARM64'
@@ -309,21 +363,33 @@ jobs:
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
           PYTHONUTF8: "1"
+          PYTEST_TARGETS: ${{ needs.gen-matrix.outputs.pytest-targets }}
+        shell: pwsh
         run: |
-          python -m pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py --ignore=tests/test_inline_ssl.py -m "not redis and not container"
+          python -m pytest -c pytest.ini $env:PYTEST_TARGETS.Split(' ') -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py --ignore=tests/test_inline_ssl.py -m "not redis and not container"
+          if ($LASTEXITCODE -eq 5 -and $env:PYTEST_TARGETS -ne 'tests/') { exit 0 }
+          exit $LASTEXITCODE
 
       - name: Run tests (macOS Intel)
         if: runner.os == 'macOS' && runner.arch == 'X64'
         env:
           PYWRY_HEADLESS: "1"
+          PYTEST_TARGETS: ${{ needs.gen-matrix.outputs.pytest-targets }}
         run: |
-          python -m pytest -c pytest.ini tests/ -v --tb=short
+          python -m pytest -c pytest.ini $PYTEST_TARGETS -v --tb=short
+          rc=$?
+          if [[ $rc -eq 5 && "$PYTEST_TARGETS" != "tests/" ]]; then rc=0; fi
+          exit $rc
 
       - name: Run tests (macOS ARM)
         if: runner.os == 'macOS' && runner.arch == 'ARM64'
         env:
           PYWRY_HEADLESS: "1"
           PYWRY_DEPLOY__STATE_BACKEND: "memory"
+          PYTEST_TARGETS: ${{ needs.gen-matrix.outputs.pytest-targets }}
         run: |
-          python -m pytest -c pytest.ini tests/ -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+          python -m pytest -c pytest.ini $PYTEST_TARGETS -v --tb=short --ignore=tests/test_state_redis_integration.py --ignore=tests/test_auth_rbac_integration.py --ignore=tests/test_deploy_mode_integration.py --ignore=tests/test_e2e_deploy_mode.py --ignore=tests/test_e2e_rbac_widgets.py -m "not redis and not container"
+          rc=$?
+          if [[ $rc -eq 5 && "$PYTEST_TARGETS" != "tests/" ]]; then rc=0; fi
+          exit $rc
 
