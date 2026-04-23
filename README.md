@@ -130,6 +130,17 @@ pywry mcp --transport stdio
 
 See the [MCP docs](https://deeleeramone.github.io/PyWry/mcp/) for Claude Desktop setup and tool reference.
 
+## Claude Code Plugin
+
+PyWry ships as a Claude Code plugin that bundles the MCP server, an orientation skill, slash commands (`/pywry:doctor`, `/pywry:scaffold`, `/pywry:examples`), a `pywry-builder` subagent, and a post‑edit `ruff format` hook.
+
+```
+/plugin marketplace add deeleeramone/PyWry
+/plugin install pywry@pywry
+```
+
+Prerequisite: `pip install 'pywry[dev]'` (or `pywry[all]`) in the Python interpreter that `python` resolves to — `[dev]` pulls in `fastmcp` plus `ruff` for the post‑edit format hook; `[all]` covers every runtime extra. Run `/pywry:doctor` after install to verify everything is wired correctly.
+
 ## Standalone Executables
 
 ```bash

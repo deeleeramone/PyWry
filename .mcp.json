@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "pywry": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "pywry.mcp", "serve", "--transport", "stdio"]
+    }
+  }
+}

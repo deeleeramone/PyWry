@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import json,sys,subprocess,shutil; d=json.load(sys.stdin); p=d.get('tool_input',{}).get('file_path',''); ruff=shutil.which('ruff'); sys.exit(0) if not (p.endswith('.py') and ruff) else subprocess.call([ruff,'format','--quiet',p])\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
