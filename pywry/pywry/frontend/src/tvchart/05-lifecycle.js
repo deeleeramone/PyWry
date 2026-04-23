@@ -782,6 +782,19 @@ window.PYWRY_TVCHART_DESTROY = function(chartId) {
     try { entry.chart.remove(); } catch (e) { /* already removed */ }
     delete window.__PYWRY_TVCHARTS__[chartId];
     delete window.__PYWRY_COMPONENTS__[chartId];
+
+    // Drop the drawing-overlay state so the next `_tvEnsureDrawingLayer`
+    // rebuilds canvas + uiLayer from scratch.  In the destroy-recreate
+    // flow (e.g. interval-change) the caller wipes `container.innerHTML`,
+    // which detaches the overlay nodes from the DOM, but the cached
+    // entry on `__PYWRY_DRAWINGS__` still references those orphaned
+    // nodes.  Without this cleanup, `_tvEnsureDrawingLayer` short-
+    // circuits and any feature that appends to `ds.uiLayer` (Symbol
+    // Search panel, Compare panel, drawing-tool flyouts) renders into
+    // the detached layer and is invisible / unreachable.
+    if (window.__PYWRY_DRAWINGS__ && window.__PYWRY_DRAWINGS__[chartId]) {
+        delete window.__PYWRY_DRAWINGS__[chartId];
+    }
 };
 
 // ---------------------------------------------------------------------------
