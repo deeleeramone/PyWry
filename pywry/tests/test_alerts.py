@@ -13,6 +13,7 @@ Tests cover:
 
 from __future__ import annotations
 
+import contextlib
 import time
 
 from typing import Any
@@ -605,21 +606,17 @@ class TestNativeWindowAlertE2E:
     @pytest.mark.e2e
     def test_pywry_toast_is_available(self) -> None:
         """E2E: Verify PYWRY_TOAST is available in window."""
-        label = show_and_wait_ready(
-            self.app,
-            "<div>Test</div>",
-            title="Alert E2E Test",
-        )
-
-        # Poll for PYWRY_TOAST availability — on ARM/slow CI the head-script
-        # IIFE may not have finished by the time content:ready fires.
+        # Wrapped in a retry loop because Windows + WebView2 occasionally
+        # delivers ``content:ready`` before the head-script IIFE has
+        # actually evaluated, leaving ``PYWRY_TOAST`` undefined for the
+        # first poll burst.  A fresh window on a re-attempt clears it.
         script = """
         (function() {
             var attempts = 0;
             function check() {
                 attempts++;
                 var available = typeof PYWRY_TOAST !== 'undefined';
-                if (available || attempts >= 20) {
+                if (available || attempts >= 40) {
                     pywry.result({
                         toastAvailable: available,
                         hasShow: available && typeof PYWRY_TOAST.show === 'function',
@@ -634,7 +631,22 @@ class TestNativeWindowAlertE2E:
         })();
         """
 
-        result = wait_for_result(label, script, timeout=5.0)
+        result: dict[str, Any] | None = None
+        for attempt in range(3):
+            label = show_and_wait_ready(
+                self.app,
+                "<div>Test</div>",
+                title="Alert E2E Test",
+            )
+            result = wait_for_result(label, script, timeout=8.0)
+            if result is not None and result.get("toastAvailable") is True:
+                break
+            # Close the bad window before re-attempting so the subprocess
+            # doesn't accumulate orphaned WebView2 instances.
+            with contextlib.suppress(Exception):
+                self.app.close(label)
+            time.sleep(0.5 * (attempt + 1))
+
         assert result is not None
         assert result["toastAvailable"] is True
         assert result["hasShow"] is True
