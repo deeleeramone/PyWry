@@ -336,9 +336,14 @@ class TestModalHtmlMode:
             "document.querySelector('#e2e-closeable .pywry-modal-close').click();",
             label=label,
         )
-        time.sleep(0.3)
 
+        # Poll instead of fixed sleep — 0.3s was sometimes too short under CI load.
+        deadline = time.monotonic() + 3.0
         result = verify_modal_rendered(label, "e2e-closeable")
+        while result.get("isOpen") and time.monotonic() < deadline:
+            time.sleep(0.1)
+            result = verify_modal_rendered(label, "e2e-closeable")
+
         assert not result["isOpen"], "Should be closed after clicking close button"
         app.close()
 

@@ -6,18 +6,22 @@ on:
       - main
     paths:
       - 'pywry/docs/**'
+      - 'pywry/**/*.py'
       - '.github/workflows/docs.yml'
-  workflow_dispatch:  # Allow manual trigger
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - 'pywry/docs/**'
+      - 'pywry/**/*.py'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -49,11 +53,19 @@ jobs:
           path: pywry/docs/site
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
