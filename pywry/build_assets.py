@@ -49,10 +49,10 @@ def download_file(url: str, dest: Path, description: str) -> bool:
         with urlopen(url, timeout=60) as response:  # noqa: S310
             content = response.read()
     except URLError as e:
-        print(f"  ✗ Failed to download {description}: {e}")
+        print(f"  [FAIL] Failed to download {description}: {e}")
         return False
     except OSError as e:
-        print(f"  ✗ Failed to write {description}: {e}")
+        print(f"  [FAIL] Failed to write {description}: {e}")
         return False
 
     # Compress with gzip and save with .gz extension
@@ -62,8 +62,8 @@ def download_file(url: str, dest: Path, description: str) -> bool:
     compressed_size_kb = gz_dest.stat().st_size / 1024
     ratio = (1 - compressed_size_kb / original_size_kb) * 100
     print(
-        f"  ✓ Downloaded {description} "
-        f"({original_size_kb:.0f} KB → {compressed_size_kb:.0f} KB, {ratio:.0f}% smaller)"
+        f"  [OK] Downloaded {description} "
+        f"({original_size_kb:.0f} KB -> {compressed_size_kb:.0f} KB, {ratio:.0f}% smaller)"
     )
     return True
 
@@ -208,7 +208,7 @@ def main() -> None:
     print("\nAsset verification:")
     status = verify_assets()
     for asset, exists in status.items():
-        marker = "✓" if exists else "✗"
+        marker = "[OK]" if exists else "[FAIL]"
         print(f"  {marker} {asset}")
 
     if all(status.values()):
