@@ -146,6 +146,12 @@ ACP-native chat system for PyWry — models, session primitives, update types, a
       heading_level: 2
       members: true
 
+::: pywry.chat.artifacts.AppArtifact
+    options:
+      show_root_heading: true
+      heading_level: 2
+      members: true
+
 ---
 
 ## ACP Session Primitives

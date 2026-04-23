@@ -128,6 +128,8 @@ pip install 'pywry[mcp]'
 pywry mcp --transport stdio
 ```
 
+Widget-creating MCP tools (`create_widget`, `show_plotly`, `show_dataframe`, `show_tvchart`, `create_chat_widget`) auto-return an **`AppArtifact`** in headless mode — a self-contained HTML snapshot delivered as an MCP `EmbeddedResource` (`mimeType: text/html`, `uri: pywry-app://<widget_id>/<revision>`). MCP clients that render HTML resources — Claude Desktop's artifact pane, mcp-ui-aware clients, PyWry's own chat widget — show the app inline. Each render bumps a per-widget revision counter; the latest revision keeps a live WebSocket bridge back to Python while older ones freeze at their last known state. Call `get_widget_app(widget_id)` to re-snapshot a widget after mutating it.
+
 See the [MCP docs](https://deeleeramone.github.io/PyWry/mcp/) for Claude Desktop setup and tool reference.
 
 ## Claude Code Plugin
