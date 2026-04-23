@@ -9,6 +9,7 @@ on:
       - '!pywry/**/*.md'
       - '.github/workflows/test-pywry.yml'
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [main, master, develop]
     paths:
       - 'pywry/**'
@@ -59,44 +60,44 @@ jobs:
       - name: Run Pylint
         run: pylint pywry/ --exit-zero --output-format=colorized
 
+  gen-matrix:
+    name: Resolve test matrix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        shell: bash
+        env:
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+          HAS_FULL_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'full-test') }}
+        run: |
+          if [[ "$IS_PR" == "true" && "$HAS_FULL_LABEL" != "true" ]]; then
+            MATRIX='{"include":[{"os":"ubuntu-24.04","python-version":"3.14"},{"os":"windows-2025","python-version":"3.14"},{"os":"macos-15-intel","python-version":"3.14"},{"os":"ubuntu-24.04-arm","python-version":"3.14"},{"os":"windows-11-arm","python-version":"3.14"},{"os":"macos-latest","python-version":"3.14"}]}'
+          else
+            MATRIX='{"include":[{"os":"ubuntu-24.04","python-version":"3.11"},{"os":"ubuntu-24.04","python-version":"3.14"},{"os":"windows-2025","python-version":"3.11"},{"os":"windows-2025","python-version":"3.14"},{"os":"macos-15-intel","python-version":"3.11"},{"os":"macos-15-intel","python-version":"3.14"},{"os":"ubuntu-24.04-arm","python-version":"3.11"},{"os":"ubuntu-24.04-arm","python-version":"3.14"},{"os":"windows-11-arm","python-version":"3.12"},{"os":"windows-11-arm","python-version":"3.14"},{"os":"macos-latest","python-version":"3.11"},{"os":"macos-latest","python-version":"3.14"}]}'
+          fi
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
   test:
     name: Test - ${{ matrix.os }} - Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    needs: gen-matrix
     permissions:
       contents: read
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-test') }}
       # ``deepagents`` (pulled in by ``.[dev]`` → ``features``) hard-
       # requires Python >=3.11 — 3.10 can't resolve the dev extra.
       # ``sqlcipher3`` is a source build against the SQLCipher C
       # library installed in the ``Build SQLCipher`` step below, so
       # any Python ABI works (no binary-wheel coverage gaps).
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            python-version: '3.11'
-          - os: ubuntu-24.04
-            python-version: '3.14'
-          - os: windows-2025
-            python-version: '3.11'
-          - os: windows-2025
-            python-version: '3.14'
-          - os: macos-15-intel
-            python-version: '3.11'
-          - os: macos-15-intel
-            python-version: '3.14'
-          - os: ubuntu-24.04-arm
-            python-version: '3.11'
-          - os: ubuntu-24.04-arm
-            python-version: '3.14'
-          - os: windows-11-arm
-            python-version: '3.12'
-          - os: windows-11-arm
-            python-version: '3.14'
-          - os: macos-latest
-            python-version: '3.11'
-          - os: macos-latest
-            python-version: '3.14'
+      matrix: ${{ fromJSON(needs.gen-matrix.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v5
