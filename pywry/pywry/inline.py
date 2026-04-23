@@ -951,9 +951,7 @@ def _get_app() -> FastAPI:  # noqa: C901, PLR0915  # pylint: disable=too-many-st
                         f"[SERVER] WS rejected: widget={widget_id} "
                         f"rev={requested_rev} < current={current_rev}"
                     )
-                await websocket.close(
-                    code=4002, reason="Older revision superseded"
-                )
+                await websocket.close(code=4002, reason="Older revision superseded")
                 return
 
         # Security checks passed, accept connection with subprotocol if provided

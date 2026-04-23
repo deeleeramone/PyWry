@@ -70,9 +70,7 @@ def attach_app_artifact(
     block. Returns *result* unchanged when no snapshot can be built
     (e.g. native-window mode).
     """
-    artifact = build_app_artifact(
-        widget_id, title=title, height=height, sandbox=sandbox
-    )
+    artifact = build_app_artifact(widget_id, title=title, height=height, sandbox=sandbox)
     if artifact is None:
         return result
 

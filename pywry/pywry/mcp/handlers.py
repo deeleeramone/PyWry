@@ -271,9 +271,7 @@ def _handle_create_widget(ctx: HandlerContext) -> HandlerResult:
             "created": True,
             "export_uri": f"pywry://export/{widget_id}",
         }
-        return attach_app_artifact(
-            result, widget_id, title=args.get("title", "PyWry Widget")
-        )
+        return attach_app_artifact(result, widget_id, title=args.get("title", "PyWry Widget"))
 
     return {
         "widget_id": widget_id,
@@ -340,9 +338,7 @@ def _handle_show_plotly(ctx: HandlerContext) -> HandlerResult:
 
         if widget_id in inline_state.widgets:
             inline_state.widgets[widget_id]["persistent"] = True
-        result = attach_app_artifact(
-            result, widget_id, title=ctx.args.get("title", "Plotly Chart")
-        )
+        result = attach_app_artifact(result, widget_id, title=ctx.args.get("title", "Plotly Chart"))
 
     return result
 
@@ -372,9 +368,7 @@ def _handle_show_dataframe(ctx: HandlerContext) -> HandlerResult:
 
         if widget_id in inline_state.widgets:
             inline_state.widgets[widget_id]["persistent"] = True
-        result = attach_app_artifact(
-            result, widget_id, title=ctx.args.get("title", "Data Table")
-        )
+        result = attach_app_artifact(result, widget_id, title=ctx.args.get("title", "Data Table"))
 
     return result
 
@@ -407,9 +401,7 @@ def _handle_show_tvchart(ctx: HandlerContext) -> HandlerResult:
 
         if widget_id in inline_state.widgets:
             inline_state.widgets[widget_id]["persistent"] = True
-        result = attach_app_artifact(
-            result, widget_id, title=ctx.args.get("title", "Chart")
-        )
+        result = attach_app_artifact(result, widget_id, title=ctx.args.get("title", "Chart"))
 
     return result
 
@@ -1683,9 +1675,7 @@ def _handle_create_chat_widget(ctx: HandlerContext) -> HandlerResult:
             "path": f"/widget/{widget_id}",
             "created": True,
         }
-        return attach_app_artifact(
-            result, widget_id, title=widget_config.title
-        )
+        return attach_app_artifact(result, widget_id, title=widget_config.title)
 
     return {
         "widget_id": widget_id,

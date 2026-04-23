@@ -117,7 +117,7 @@ class TestGetWidgetAppHandler:
             ctx = HandlerContext(
                 args={"widget_id": "w-handler", "title": "T", "height": "400px"},
                 events={},
-                make_callback=lambda _wid: (lambda *a, **kw: None),
+                make_callback=lambda _wid: lambda *a, **kw: None,
                 headless=True,
             )
             handler = _HANDLERS["get_widget_app"]
@@ -138,7 +138,7 @@ class TestGetWidgetAppHandler:
         ctx = HandlerContext(
             args={"widget_id": "ghost"},
             events={},
-            make_callback=lambda _wid: (lambda *a, **kw: None),
+            make_callback=lambda _wid: lambda *a, **kw: None,
             headless=True,
         )
         result = _HANDLERS["get_widget_app"](ctx)
