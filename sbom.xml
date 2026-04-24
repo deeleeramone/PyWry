@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:1c4732e8-0f82-4a86-ba5a-5b66f0379b79" version="1">
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:31cd4694-5e4d-4929-b39d-cef1974541b6" version="1">
   <metadata>
-    <timestamp>2026-04-23T00:56:27.957103+00:00</timestamp>
+    <timestamp>2026-04-24T04:00:43.519668+00:00</timestamp>
     <tools>
       <components>
         <component type="application">
@@ -82,8 +82,8 @@
     </tools>
     <component type="application" bom-ref="root-component">
       <name>pywry</name>
-      <version>2.0.0rc7</version>
-      <description>A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python.</description>
+      <version>2.0.0</version>
+      <description>A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python. Batteries included.</description>
       <licenses>
         <license acknowledgement="declared">
           <name>License :: OSI Approved :: Apache Software License</name>
@@ -495,16 +495,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="anthropic==0.96.0">
+    <component type="library" bom-ref="anthropic==0.97.0">
       <name>anthropic</name>
-      <version>0.96.0</version>
+      <version>0.97.0</version>
       <description>The official Python library for the anthropic API</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/anthropic@0.96.0</purl>
+      <purl>pkg:pypi/anthropic@0.97.0</purl>
       <externalReferences>
         <reference type="vcs">
           <url>https://github.com/anthropics/anthropic-sdk-python</url>
@@ -1524,16 +1524,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="fastapi==0.136.0">
+    <component type="library" bom-ref="fastapi==0.136.1">
       <name>fastapi</name>
-      <version>0.136.0</version>
+      <version>0.136.1</version>
       <description>FastAPI framework, high performance, easy to learn, fast to code, ready for production</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/fastapi@0.136.0</purl>
+      <purl>pkg:pypi/fastapi@0.136.1</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://fastapi.tiangolo.com/</url>
@@ -2548,16 +2548,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="langchain-core==1.3.0">
+    <component type="library" bom-ref="langchain-core==1.3.1">
       <name>langchain-core</name>
-      <version>1.3.0</version>
+      <version>1.3.1</version>
       <description>Building applications with LLMs through composability</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/langchain-core@1.3.0</purl>
+      <purl>pkg:pypi/langchain-core@1.3.1</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://reference.langchain.com/python/langchain_core/</url>
@@ -2779,16 +2779,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="langsmith==0.7.33">
+    <component type="library" bom-ref="langsmith==0.7.35">
       <name>langsmith</name>
-      <version>0.7.33</version>
+      <version>0.7.35</version>
       <description>Client library to connect to the LangSmith Observability and Evaluation Platform.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>MIT</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/langsmith@0.7.33</purl>
+      <purl>pkg:pypi/langsmith@0.7.35</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://docs.smith.langchain.com/</url>
@@ -3713,16 +3713,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="pathspec==1.0.4">
+    <component type="library" bom-ref="pathspec==1.1.0">
       <name>pathspec</name>
-      <version>1.0.4</version>
+      <version>1.1.0</version>
       <description>Utility library for gitignore style pattern matching of file paths.</description>
       <licenses>
         <license acknowledgement="declared">
           <name>License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)</name>
         </license>
       </licenses>
-      <purl>pkg:pypi/pathspec@1.0.4</purl>
+      <purl>pkg:pypi/pathspec@1.1.0</purl>
       <externalReferences>
         <reference type="documentation">
           <url>https://python-path-specification.readthedocs.io/en/latest/index.html</url>
@@ -3735,6 +3735,10 @@
         <reference type="other">
           <url>https://github.com/cpburnz/python-pathspec</url>
           <comment>from packaging metadata Project-URL: Source Code</comment>
+        </reference>
+        <reference type="release-notes">
+          <url>https://python-path-specification.readthedocs.io/en/latest/changes.html</url>
+          <comment>from packaging metadata Project-URL: Change Log</comment>
         </reference>
       </externalReferences>
     </component>
@@ -5542,16 +5546,16 @@
         </reference>
       </externalReferences>
     </component>
-    <component type="library" bom-ref="uvicorn==0.45.0">
+    <component type="library" bom-ref="uvicorn==0.46.0">
       <name>uvicorn</name>
-      <version>0.45.0</version>
+      <version>0.46.0</version>
       <description>The lightning-fast ASGI server.</description>
       <licenses>
         <license acknowledgement="declared">
           <id>BSD-3-Clause</id>
         </license>
       </licenses>
-      <purl>pkg:pypi/uvicorn@0.45.0</purl>
+      <purl>pkg:pypi/uvicorn@0.46.0</purl>
       <externalReferences>
         <reference type="other">
           <url>https://github.com/Kludex/uvicorn</url>
@@ -5882,7 +5886,7 @@
     <dependency ref="annotated-types==0.7.0">
       <dependency ref="typing_extensions==4.15.0" />
     </dependency>
-    <dependency ref="anthropic==0.96.0">
+    <dependency ref="anthropic==0.97.0">
       <dependency ref="anyio==4.13.0" />
       <dependency ref="distro==1.9.0" />
       <dependency ref="docstring_parser==0.18.0" />
@@ -6007,10 +6011,10 @@
     <dependency ref="decorator==5.2.1" />
     <dependency ref="deepagents==0.5.3">
       <dependency ref="langchain-anthropic==1.4.1" />
-      <dependency ref="langchain-core==1.3.0" />
+      <dependency ref="langchain-core==1.3.1" />
       <dependency ref="langchain-google-genai==4.2.2" />
       <dependency ref="langchain==1.2.15" />
-      <dependency ref="langsmith==0.7.33" />
+      <dependency ref="langsmith==0.7.35" />
       <dependency ref="wcmatch==10.1" />
     </dependency>
     <dependency ref="defusedxml==0.7.1" />
@@ -6056,7 +6060,7 @@
       <dependency ref="sortedcontainers==2.4.0" />
       <dependency ref="typing_extensions==4.15.0" />
     </dependency>
-    <dependency ref="fastapi==0.136.0">
+    <dependency ref="fastapi==0.136.1">
       <dependency ref="Jinja2==3.1.6" />
       <dependency ref="PyYAML==6.0.3" />
       <dependency ref="annotated-doc==0.0.4" />
@@ -6068,13 +6072,13 @@
       <dependency ref="starlette==1.0.0" />
       <dependency ref="typing-inspection==0.4.2" />
       <dependency ref="typing_extensions==4.15.0" />
-      <dependency ref="uvicorn==0.45.0" />
+      <dependency ref="uvicorn==0.46.0" />
     </dependency>
     <dependency ref="fastmcp==3.2.4">
       <dependency ref="Authlib==1.7.0" />
       <dependency ref="PyJWT==2.12.1" />
       <dependency ref="PyYAML==6.0.3" />
-      <dependency ref="anthropic==0.96.0" />
+      <dependency ref="anthropic==0.97.0" />
       <dependency ref="cyclopts==4.11.0" />
       <dependency ref="exceptiongroup==1.3.1" />
       <dependency ref="google-genai==1.73.1" />
@@ -6094,7 +6098,7 @@
       <dependency ref="python-dotenv==1.2.2" />
       <dependency ref="rich==15.0.0" />
       <dependency ref="uncalled-for==0.3.1" />
-      <dependency ref="uvicorn==0.45.0" />
+      <dependency ref="uvicorn==0.46.0" />
       <dependency ref="watchfiles==1.1.1" />
       <dependency ref="websockets==16.0" />
     </dependency>
@@ -6325,14 +6329,14 @@
       <dependency ref="pytest==9.0.3" />
     </dependency>
     <dependency ref="langchain-anthropic==1.4.1">
-      <dependency ref="anthropic==0.96.0" />
-      <dependency ref="langchain-core==1.3.0" />
+      <dependency ref="anthropic==0.97.0" />
+      <dependency ref="langchain-core==1.3.1" />
       <dependency ref="pydantic==2.13.3" />
     </dependency>
-    <dependency ref="langchain-core==1.3.0">
+    <dependency ref="langchain-core==1.3.1">
       <dependency ref="PyYAML==6.0.3" />
       <dependency ref="jsonpatch==1.33" />
-      <dependency ref="langsmith==0.7.33" />
+      <dependency ref="langsmith==0.7.35" />
       <dependency ref="packaging==26.1" />
       <dependency ref="pydantic==2.13.3" />
       <dependency ref="tenacity==9.1.4" />
@@ -6342,27 +6346,27 @@
     <dependency ref="langchain-google-genai==4.2.2">
       <dependency ref="filetype==1.2.0" />
       <dependency ref="google-genai==1.73.1" />
-      <dependency ref="langchain-core==1.3.0" />
+      <dependency ref="langchain-core==1.3.1" />
       <dependency ref="pydantic==2.13.3" />
     </dependency>
     <dependency ref="langchain-mcp-adapters==0.2.2">
-      <dependency ref="langchain-core==1.3.0" />
+      <dependency ref="langchain-core==1.3.1" />
       <dependency ref="mcp==1.27.0" />
       <dependency ref="typing_extensions==4.15.0" />
     </dependency>
     <dependency ref="langchain==1.2.15">
       <dependency ref="langchain-anthropic==1.4.1" />
-      <dependency ref="langchain-core==1.3.0" />
+      <dependency ref="langchain-core==1.3.1" />
       <dependency ref="langchain-google-genai==4.2.2" />
       <dependency ref="langgraph==1.1.9" />
       <dependency ref="pydantic==2.13.3" />
     </dependency>
     <dependency ref="langgraph-checkpoint==4.0.2">
-      <dependency ref="langchain-core==1.3.0" />
+      <dependency ref="langchain-core==1.3.1" />
       <dependency ref="ormsgpack==1.12.2" />
     </dependency>
     <dependency ref="langgraph-prebuilt==1.0.10">
-      <dependency ref="langchain-core==1.3.0" />
+      <dependency ref="langchain-core==1.3.1" />
       <dependency ref="langgraph-checkpoint==4.0.2" />
     </dependency>
     <dependency ref="langgraph-sdk==0.3.13">
@@ -6370,14 +6374,14 @@
       <dependency ref="orjson==3.11.8" />
     </dependency>
     <dependency ref="langgraph==1.1.9">
-      <dependency ref="langchain-core==1.3.0" />
+      <dependency ref="langchain-core==1.3.1" />
       <dependency ref="langgraph-checkpoint==4.0.2" />
       <dependency ref="langgraph-prebuilt==1.0.10" />
       <dependency ref="langgraph-sdk==0.3.13" />
       <dependency ref="pydantic==2.13.3" />
       <dependency ref="xxhash==3.6.0" />
     </dependency>
-    <dependency ref="langsmith==0.7.33">
+    <dependency ref="langsmith==0.7.35">
       <dependency ref="httpx==0.28.1" />
       <dependency ref="opentelemetry-api==1.41.0" />
       <dependency ref="orjson==3.11.8" />
@@ -6403,7 +6407,7 @@
     <dependency ref="logfire-api==4.32.1" />
     <dependency ref="lxml==6.1.0" />
     <dependency ref="magentic==0.41.1">
-      <dependency ref="anthropic==0.96.0" />
+      <dependency ref="anthropic==0.97.0" />
       <dependency ref="filetype==1.2.0" />
       <dependency ref="logfire-api==4.32.1" />
       <dependency ref="openai==2.32.0" />
@@ -6440,7 +6444,7 @@
       <dependency ref="starlette==1.0.0" />
       <dependency ref="typing-inspection==0.4.2" />
       <dependency ref="typing_extensions==4.15.0" />
-      <dependency ref="uvicorn==0.45.0" />
+      <dependency ref="uvicorn==0.46.0" />
       <dependency ref="websockets==16.0" />
     </dependency>
     <dependency ref="mdurl==0.1.2" />
@@ -6496,7 +6500,7 @@
       <dependency ref="mergedeep==1.3.4" />
       <dependency ref="mkdocs-get-deps==0.2.2" />
       <dependency ref="packaging==26.1" />
-      <dependency ref="pathspec==1.0.4" />
+      <dependency ref="pathspec==1.1.0" />
       <dependency ref="pyyaml_env_tag==1.1" />
       <dependency ref="watchdog==6.0.0" />
     </dependency>
@@ -6521,7 +6525,7 @@
       <dependency ref="lxml==6.1.0" />
       <dependency ref="mypy_extensions==1.1.0" />
       <dependency ref="orjson==3.11.8" />
-      <dependency ref="pathspec==1.0.4" />
+      <dependency ref="pathspec==1.1.0" />
       <dependency ref="pip==26.0.1" />
       <dependency ref="psutil==7.2.2" />
       <dependency ref="setuptools==82.0.1" />
@@ -6580,8 +6584,7 @@
       <dependency ref="pytest==9.0.3" />
     </dependency>
     <dependency ref="pathable==0.5.0" />
-    <dependency ref="pathspec==1.0.4">
-      <dependency ref="pytest==9.0.3" />
+    <dependency ref="pathspec==1.1.0">
       <dependency ref="typing_extensions==4.15.0" />
     </dependency>
     <dependency ref="pexpect==4.9.0">
@@ -6629,7 +6632,7 @@
       <dependency ref="ghp-import==2.1.0" />
       <dependency ref="importlib_metadata==8.7.1" />
       <dependency ref="packaging==26.1" />
-      <dependency ref="pathspec==1.0.4" />
+      <dependency ref="pathspec==1.1.0" />
       <dependency ref="platformdirs==4.9.6" />
       <dependency ref="pyyaml_env_tag==1.1" />
       <dependency ref="watchdog==6.0.0" />
@@ -6809,13 +6812,13 @@
     <dependency ref="root-component">
       <dependency ref="Authlib==1.7.0" />
       <dependency ref="agent-client-protocol==0.9.0" />
-      <dependency ref="anthropic==0.96.0" />
+      <dependency ref="anthropic==0.97.0" />
       <dependency ref="anyio==4.13.0" />
       <dependency ref="anywidget==0.10.0" />
       <dependency ref="cryptography==46.0.7" />
       <dependency ref="deepagents==0.5.3" />
       <dependency ref="fakeredis==2.35.1" />
-      <dependency ref="fastapi==0.136.0" />
+      <dependency ref="fastapi==0.136.1" />
       <dependency ref="fastmcp==3.2.4" />
       <dependency ref="griffe==2.0.2" />
       <dependency ref="httpx==0.28.1" />
@@ -6848,7 +6851,7 @@
       <dependency ref="setproctitle==1.3.7" />
       <dependency ref="sqlcipher3==0.6.2" />
       <dependency ref="testcontainers==4.14.2" />
-      <dependency ref="uvicorn==0.45.0" />
+      <dependency ref="uvicorn==0.46.0" />
       <dependency ref="watchdog==6.0.0" />
       <dependency ref="websockets==16.0" />
     </dependency>
@@ -6874,9 +6877,9 @@
     <dependency ref="sqlcipher3==0.6.2" />
     <dependency ref="sse-starlette==3.3.4">
       <dependency ref="anyio==4.13.0" />
-      <dependency ref="fastapi==0.136.0" />
+      <dependency ref="fastapi==0.136.1" />
       <dependency ref="starlette==1.0.0" />
-      <dependency ref="uvicorn==0.45.0" />
+      <dependency ref="uvicorn==0.46.0" />
     </dependency>
     <dependency ref="stack-data==0.6.3">
       <dependency ref="Pygments==2.20.0" />
@@ -6934,7 +6937,7 @@
     </dependency>
     <dependency ref="urllib3==2.6.3" />
     <dependency ref="uuid_utils==0.14.1" />
-    <dependency ref="uvicorn==0.45.0">
+    <dependency ref="uvicorn==0.46.0">
       <dependency ref="PyYAML==6.0.3" />
       <dependency ref="click==8.3.3" />
       <dependency ref="colorama==0.4.6" />
