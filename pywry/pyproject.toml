@@ -1,7 +1,7 @@
 [project]
 name = "pywry"
-version = "2.0.0rc7"
-description = "A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python."
+version = "2.0.0"
+description = "A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python. Batteries included."
 authors = [{ name = "PyWry", email = "pywry2@gmail.com" }]
 license = { text = "Apache 2.0" }
 readme = "README.md"
