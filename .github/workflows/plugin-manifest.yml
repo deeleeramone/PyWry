@@ -1,0 +1,120 @@
+name: Claude plugin manifests
+
+on:
+  pull_request:
+    paths:
+      - 'claude/**'
+      - '.github/workflows/plugin-manifest.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'claude/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate plugin manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check manifests parse and versions match
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json, sys, pathlib
+
+          repo = pathlib.Path(".")
+          marketplace = repo / "claude" / ".claude-plugin" / "marketplace.json"
+          if not marketplace.exists():
+              sys.exit(f"::error::{marketplace} missing")
+          try:
+              mk = json.loads(marketplace.read_text(encoding="utf-8"))
+          except json.JSONDecodeError as e:
+              sys.exit(f"::error file={marketplace}::invalid JSON: {e}")
+
+          plugins = mk.get("plugins") or []
+          if not plugins:
+              sys.exit(f"::error file={marketplace}::no plugins listed")
+
+          failures = []
+          for entry in plugins:
+              name = entry.get("name")
+              source = entry.get("source", "")
+              entry_version = entry.get("version")
+              if not name or not source or not entry_version:
+                  failures.append(f"{entry}: missing name/source/version")
+                  continue
+              if not isinstance(source, str) or not source.startswith("./"):
+                  failures.append(f"{name}: source must be a './plugins/...' relative path")
+                  continue
+              plugin_root = (repo / "claude" / source[2:]).resolve()
+              if not plugin_root.exists():
+                  failures.append(f"{name}: source path does not exist: {plugin_root}")
+                  continue
+              pj = plugin_root / ".claude-plugin" / "plugin.json"
+              if not pj.exists():
+                  failures.append(f"{name}: missing {pj}")
+                  continue
+              try:
+                  pm = json.loads(pj.read_text(encoding="utf-8"))
+              except json.JSONDecodeError as e:
+                  failures.append(f"{name}: {pj} invalid JSON: {e}")
+                  continue
+              if pm.get("version") != entry_version:
+                  failures.append(
+                      f"{name}: version mismatch — plugin.json={pm.get('version')!r}, "
+                      f"marketplace.json={entry_version!r}"
+                  )
+              if pm.get("name") != name:
+                  failures.append(
+                      f"{name}: plugin.json name={pm.get('name')!r} != "
+                      f"marketplace entry name={name!r}"
+                  )
+              # .mcp.json must parse if present
+              mcp = plugin_root / ".mcp.json"
+              if mcp.exists():
+                  try:
+                      json.loads(mcp.read_text(encoding="utf-8"))
+                  except json.JSONDecodeError as e:
+                      failures.append(f"{name}: {mcp} invalid JSON: {e}")
+              # hooks.json must parse if present
+              hooks = plugin_root / "hooks" / "hooks.json"
+              if hooks.exists():
+                  try:
+                      json.loads(hooks.read_text(encoding="utf-8"))
+                  except json.JSONDecodeError as e:
+                      failures.append(f"{name}: {hooks} invalid JSON: {e}")
+
+          if failures:
+              for f in failures:
+                  print(f"::error::{f}")
+              sys.exit(1)
+          print(f"ok — {len(plugins)} plugin(s) validated")
+          PY
+
+      - name: Check CHANGELOG was updated when plugin.json version changes
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          git fetch --no-tags --depth=1 origin "$base_sha"
+          changed=$(git diff --name-only "$base_sha"...HEAD -- 'claude/plugins/*/.claude-plugin/plugin.json')
+          if [[ -z "$changed" ]]; then
+            echo "No plugin.json changes — nothing to check."
+            exit 0
+          fi
+          missing=0
+          for pj in $changed; do
+            plugin_dir=$(dirname "$(dirname "$pj")")
+            changelog="$plugin_dir/CHANGELOG.md"
+            if ! git diff --name-only "$base_sha"...HEAD -- "$changelog" | grep -q .; then
+              echo "::error file=$changelog::CHANGELOG.md not updated alongside $pj"
+              missing=1
+            fi
+          done
+          exit $missing

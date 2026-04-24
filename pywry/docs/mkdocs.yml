@@ -313,6 +313,7 @@ nav:
 
   - MCP:
     - mcp/index.md
+    - Claude Code Plugin: mcp/plugin.md
     - Examples: mcp/examples.md
     - Setup: mcp/setup.md
     - Skills & Resources: mcp/skills.md

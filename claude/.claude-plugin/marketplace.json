@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "pywry",
-      "source": "./",
+      "source": "./plugins/pywry/",
       "description": "Native Claude Code integration for PyWry — 66 MCP tools for rendering widgets, charts, dataframes, and chat UIs in webviews, Jupyter, or browsers.",
       "version": "0.1.0",
       "license": "Apache-2.0",
