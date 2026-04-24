@@ -43,21 +43,21 @@ Without a version, the install tracks `main`.
 
 ### From PyPI (bundled in the wheel)
 
-`pip install 'pywry[dev]'` also ships the complete plugin tree inside
-the Python package at `site-packages/pywry/_claude_plugin/`. This lets
-a user who has already installed PyWry register the plugin from local
-disk without a network round-trip:
+`pip install 'pywry[dev]'` ships the complete plugin tree inside the
+Python package at `site-packages/pywry/_claude_plugin/`. A user who
+already has PyWry installed for Python can register the plugin from
+local disk without a network round-trip:
 
-```python
-import pathlib, pywry
-print(pathlib.Path(pywry.__file__).parent / "_claude_plugin")
-# → e.g. .../site-packages/pywry/_claude_plugin
+```
+pywry plugin-path                 # prints the plugin root directory
+pywry plugin-path --marketplace   # prints the marketplace.json path
+pywry plugin-path --check         # non-zero exit if the bundle is missing
 ```
 
 Then in Claude Code:
 
 ```
-/plugin marketplace add <that-path>
+/plugin marketplace add $(pywry plugin-path)
 /plugin install pywry@pywry
 ```
 

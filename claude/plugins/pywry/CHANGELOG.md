@@ -77,8 +77,13 @@ Short-circuits to a no-op when `ruff` is not on `PATH`.
   claude/.claude-plugin/marketplace.json` then `/plugin install
   pywry@pywry`.
 - `pip install 'pywry[dev]'` (or `pywry[all]`) also ships the full
-  plugin tree inside the wheel at `pywry/_claude_plugin/` — enables
-  offline / PyPI-based registration.
+  plugin tree inside the wheel at `pywry/_claude_plugin/` — the bundle
+  includes both `plugin.json` and a single-plugin `marketplace.json`
+  so the installed location is a valid marketplace root as-is.
+- New `pywry plugin-path` CLI subcommand prints the bundled plugin
+  location for use with `/plugin marketplace add $(pywry plugin-path)`;
+  `--marketplace` prints the `marketplace.json` path, `--check` exits
+  non-zero with a clear error when the bundle is missing.
 - `.mcp.json` launches the `pywry` console script (installed by pip)
   rather than `python -m pywry.mcp`, sidestepping the Microsoft Store
   `python` shim on Windows hosts where bare `python` isn't aliased to

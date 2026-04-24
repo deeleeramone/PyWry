@@ -204,8 +204,8 @@ strict-naming = false
 
 # Ship the Claude Code plugin (see repo-root ../claude/plugins/pywry/)
 # inside the wheel at pywry/_claude_plugin/ so `pip install pywry[dev]`
-# leaves the plugin files on disk next to the Python code. A future
-# `pywry plugin-path` helper will print this location so users can
+# leaves the plugin files on disk next to the Python code. The
+# `pywry plugin-path` subcommand prints this location so users can
 # register the plugin locally without a GitHub round-trip.
 [tool.hatch.build.targets.wheel.force-include]
 "../claude/plugins/pywry" = "pywry/_claude_plugin"

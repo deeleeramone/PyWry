@@ -43,20 +43,26 @@ the `pywry` console script installed by pip.
 
 ### From PyPI (bundled in the wheel)
 
-`pip install 'pywry[dev]'` also ships the full plugin tree inside the
-Python package at `site-packages/pywry/_claude_plugin/`. This means a
-user who has already installed PyWry for Python usage can register the
-plugin from their local filesystem without a network round-trip:
+`pip install 'pywry[dev]'` ships the full plugin tree inside the
+Python package at `site-packages/pywry/_claude_plugin/`. A user who
+already has PyWry installed for Python can register the plugin from
+local disk without a network round-trip:
 
 ```
-python -c "import pywry, pathlib; print(pathlib.Path(pywry.__file__).parent / '_claude_plugin' / '.claude-plugin' / 'marketplace.json')"
-# copy the printed path, then:
-/plugin marketplace add file:///<path-from-above>
+pywry plugin-path                 # → .../site-packages/pywry/_claude_plugin
+pywry plugin-path --marketplace   # → .../_claude_plugin/.claude-plugin/marketplace.json
+```
+
+Then in Claude Code:
+
+```
+/plugin marketplace add $(pywry plugin-path)
 /plugin install pywry@pywry
 ```
 
-A future PyWry release will add a `pywry plugin-path` CLI helper that
-prints this path directly.
+`pywry plugin-path --check` exits non-zero with an actionable error
+message if the plugin tree is missing (e.g. an old wheel or a partial
+install), so the same command slots into CI / install scripts.
 
 ### From a local worktree (plugin development)
 
