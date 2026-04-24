@@ -1907,6 +1907,46 @@ function initChatHandlers(container, pywry) {
       }
     }
     window.addEventListener('message', onMessage);
+
+    // Host → iframe theme bridge. The AppArtifact HTML is baked with a
+    // specific theme at render time; when the outer page's theme
+    // changes, push the new value into the iframe so Plotly / AG Grid /
+    // TVChart / layout all swap together. theme-manager.js inside the
+    // iframe listens for {source: 'pywry-host', type: 'pywry:set-theme',
+    // theme}.
+    function detectHostTheme() {
+      var root = document.documentElement;
+      if (root.classList.contains('dark')) return 'dark';
+      if (root.classList.contains('light')) return 'light';
+      if (root.dataset && root.dataset.theme === 'dark') return 'dark';
+      if (root.dataset && root.dataset.theme === 'light') return 'light';
+      if (window.pywry && (window.pywry.theme === 'dark' || window.pywry.theme === 'light')) {
+        return window.pywry.theme;
+      }
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+      return 'light';
+    }
+    function pushTheme() {
+      if (!frame.contentWindow) return;
+      frame.contentWindow.postMessage(
+        { source: 'pywry-host', type: 'pywry:set-theme', theme: detectHostTheme() },
+        '*'
+      );
+    }
+    frame.addEventListener('load', pushTheme);
+    var mediaQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    function onMediaChange() { pushTheme(); }
+    if (mediaQuery && mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', onMediaChange);
+    }
+    var themeObserver = new MutationObserver(pushTheme);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme'],
+    });
+
     // Stop listening when the iframe is removed from the DOM.
     var observer = new MutationObserver(function (mutations) {
       for (var i = 0; i < mutations.length; i++) {
@@ -1914,6 +1954,10 @@ function initChatHandlers(container, pywry) {
         for (var j = 0; j < removed.length; j++) {
           if (removed[j] === frame || (removed[j].contains && removed[j].contains(frame))) {
             window.removeEventListener('message', onMessage);
+            if (mediaQuery && mediaQuery.removeEventListener) {
+              mediaQuery.removeEventListener('change', onMediaChange);
+            }
+            themeObserver.disconnect();
             observer.disconnect();
             return;
           }
