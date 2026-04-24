@@ -131,22 +131,43 @@ pip install 'pywry[mcp]'
 pywry mcp --transport stdio
 ```
 
-Widget-creating MCP tools (`create_widget`, `show_plotly`, `show_dataframe`, `show_tvchart`, `create_chat_widget`) auto-return an **`AppArtifact`** in headless mode — a self-contained HTML snapshot delivered as an MCP `EmbeddedResource` (`mimeType: text/html`, `uri: pywry-app://<widget_id>/<revision>`). MCP clients that render HTML resources — Claude Desktop's artifact pane, mcp-ui-aware clients, PyWry's own chat widget — show the app inline. Each render bumps a per-widget revision counter; the latest revision keeps a live WebSocket bridge back to Python while older ones freeze at their last known state. Call `get_widget_app(widget_id)` to re-snapshot a widget after mutating it.
+Widget-creating tools — `create_widget`, `show_plotly`, `show_dataframe`, `show_tvchart`, `create_chat_widget` — return an **`AppArtifact`**: a self-contained HTML snapshot delivered as an MCP `EmbeddedResource` with `mimeType: text/html` and URI `pywry-app://<widget_id>/<revision>`. Clients that render HTML resources (Claude Desktop's artifact pane, mcp-ui clients, PyWry's own chat widget) show the app inline.
 
-See the [MCP docs](https://deeleeramone.github.io/PyWry/mcp/) for Claude Desktop setup and tool reference.
+Each render bumps a per-widget revision. The latest revision keeps a live WebSocket bridge to Python; older revisions freeze at their last known state. Call `get_widget_app(widget_id)` to re-snapshot after a mutation.
+
+See the [MCP docs](https://deeleeramone.github.io/PyWry/mcp/) for tool reference and client setup.
 
 ## Claude Code Plugin
 
-PyWry ships as a Claude Code plugin under [claude/plugins/pywry/](claude/plugins/pywry/) that bundles the MCP server, an orientation skill, slash commands (`/pywry:doctor`, `/pywry:scaffold`, `/pywry:examples`), a `pywry-builder` subagent, and a post‑edit `ruff format` hook.
+Installable under [`claude/plugins/pywry/`](claude/plugins/pywry/) as one `/plugin install` unit. Ships:
+
+- **MCP server** — same 66 tools as above, auto-connected
+- **`pywry-orientation` skill** — teaches the agent when to reach for PyWry tools
+- **Slash commands** — `/pywry:doctor`, `/pywry:scaffold`, `/pywry:examples`
+- **`pywry-builder` subagent** — for multi-step widget construction
+- **Post-edit hook** — runs `ruff format` on touched `.py` files
+
+**Install:**
 
 ```
 /plugin marketplace add deeleeramone/PyWry --path claude/.claude-plugin/marketplace.json
 /plugin install pywry@pywry
 ```
 
-Prerequisite: `pip install 'pywry[dev]'` (or `pywry[all]`) in the Python interpreter that `python` resolves to — `[dev]` pulls in `fastmcp` plus `ruff` for the post‑edit format hook; `[all]` covers every runtime extra. Run `/pywry:doctor` after install to verify everything is wired correctly.
+**Prerequisite:** `pip install 'pywry[dev]'` (or `pywry[all]`). Then `/pywry:doctor` to verify.
 
-The plugin is also bundled into the `pywry` pip wheel (at `pywry/_claude_plugin/`) — see [claude/README.md](claude/README.md) for the PyPI-based install path and the mono-repo layout.
+**PyPI-bundled install** (skips the GitHub round-trip once pywry is already installed):
+
+```bash
+pywry plugin-path          # prints the bundled plugin root
+```
+
+```
+/plugin marketplace add $(pywry plugin-path)
+/plugin install pywry@pywry
+```
+
+See [claude/README.md](claude/README.md) for the full install-path matrix, mono-repo layout, and versioning policy.
 
 ## Standalone Executables
 
