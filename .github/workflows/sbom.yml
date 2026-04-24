@@ -177,4 +177,4 @@ jobs:
         with:
           path: pywry
           format: cyclonedx-json
-          artifact-name: sbom
+          artifact-name: sbom-syft.cyclonedx.json
