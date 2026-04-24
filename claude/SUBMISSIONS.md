@@ -21,9 +21,10 @@ Update this file as submissions land.
 
 > **PyWry** — native Claude Code integration for the
 > [PyWry](https://github.com/deeleeramone/PyWry) Python rendering
-> engine. 66 MCP tools for creating widgets, Plotly / TradingView /
-> AG Grid charts, and chat UIs that render in native webviews, Jupyter
-> notebooks, or browser tabs. Widget-creating tools auto-return
+> engine. MCP tools for generating and rendering HTML components,
+> chat artifacts, and building native, web, or Jupyter applications
+> with live preview. Built-in support for AgGrid, Plotly,
+> TradingView, and more. Widget-creating tools auto-return
 > self-contained HTML `AppArtifact`s that MCP-UI-aware clients render
 > inline.
 >
@@ -44,11 +45,12 @@ Update this file as submissions land.
 Drop this under the appropriate category (Plugins / Data / Charting).
 
 ```markdown
-- **[pywry](https://github.com/deeleeramone/PyWry)** — 66 MCP tools for
-  rendering widgets, Plotly / TradingView / AG Grid charts, and chat
-  UIs in native webviews, Jupyter, or browsers. Widget-creating tools
-  auto-return `AppArtifact` snapshots for inline display in MCP-UI
-  clients. Install:
+- **[pywry](https://github.com/deeleeramone/PyWry)** — MCP tools for
+  generating and rendering HTML components, chat artifacts, and
+  building native, web, or Jupyter applications with live preview.
+  Built-in support for AgGrid, Plotly, TradingView, and more.
+  Widget-creating tools auto-return `AppArtifact` snapshots for inline
+  display in MCP-UI clients. Install:
   `/plugin marketplace add deeleeramone/PyWry --path claude/.claude-plugin/marketplace.json && /plugin install pywry@pywry`
   (Apache-2.0)
 ```
@@ -69,7 +71,7 @@ for a GitHub-hosted plugin:
     "repo": "deeleeramone/PyWry",
     "path": "claude/plugins/pywry"
   },
-  "description": "Native Claude Code integration for PyWry — 66 MCP tools for rendering widgets, Plotly / TradingView / AG Grid charts, and chat UIs in webviews, Jupyter, or browsers. AppArtifact auto-return for rich inline display.",
+  "description": "Native Claude Code integration for PyWry — MCP tools for generating and rendering HTML components, chat artifacts, and building native, web, or Jupyter applications with live preview. Built-in support for AgGrid, Plotly, TradingView, and more. AppArtifact auto-return for rich inline display.",
   "version": "0.1.0",
   "author": {
     "name": "PyWry",
