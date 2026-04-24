@@ -100,22 +100,51 @@ flowchart LR
 
 In headless mode, `list_widgets` returns URLs like `http://127.0.0.1:PORT/widget/{id}` that can be opened in any browser.
 
+## AppArtifact — rich inline previews
+
+In **headless** mode every widget-creating tool (`create_widget`,
+`show_plotly`, `show_dataframe`, `show_tvchart`, `create_chat_widget`)
+returns an `AppArtifact` alongside the usual JSON: a self-contained
+HTML snapshot of the widget (CSS + JS + data inlined) carried as an
+MCP [`EmbeddedResource`](https://modelcontextprotocol.io/docs/concepts/resources)
+with `mimeType: text/html` and a `pywry-app://<widget_id>/<revision>`
+URI. Clients that render HTML embedded resources show the app inline:
+
+- **Claude Desktop** — renders in the artifact pane
+- **mcp-ui-aware clients** — render in their UI surface
+- **PyWry's own chat widget** — renders as a sandboxed iframe (see
+  [AppArtifact reference](../reference/chat-manager.md#pywry.chat.artifacts.AppArtifact))
+
+### Revision behaviour
+
+Each render bumps a per-widget revision counter. Only the **latest**
+revision keeps a live WebSocket bridge back to Python — the iframe
+still fires events, runs callbacks, streams updates. **Older** revisions
+in chat history freeze at their last known state: their WebSocket
+reconnect is rejected with close code `4002 Older revision superseded`,
+so the iframe shows what it last had.
+
+To re-snapshot an existing widget after mutating it (e.g. after a
+series of `send_event` or `tvchart_add_markers` calls), call
+[`get_widget_app`](tools.md#get_widget_app) — it renders a fresh
+`AppArtifact` with a bumped revision.
+
 ## Server Capabilities
 
 The MCP server exposes three types of capabilities:
 
-### Tools (38)
+### Tools (39)
 
 Operations the agent can call — creating widgets, updating content, managing state. Organized into eight groups:
 
 | Group | Tools | Purpose |
 |:---|:---|:---|
 | **Discovery** | `get_skills` | Retrieve guidance and component reference |
-| **Widget creation** | `create_widget`, `show_plotly`, `show_dataframe`, `show_tvchart`, `build_div`, `build_ticker_item` | Build new widgets |
+| **Widget creation** | `create_widget`, `show_plotly`, `show_dataframe`, `show_tvchart`, `build_div`, `build_ticker_item` | Build new widgets (auto-return an [AppArtifact](#appartifact-rich-inline-previews) in headless mode) |
 | **Widget manipulation** | `set_content`, `set_style`, `show_toast`, `update_theme`, `inject_css`, `remove_css`, `navigate`, `download`, `update_plotly`, `update_marquee`, `update_ticker_item`, `send_event` | Modify existing widgets |
 | **Widget management** | `list_widgets`, `get_events`, `destroy_widget` | Track and clean up widgets |
 | **Chat** | `create_chat_widget`, `chat_send_message`, `chat_stop_generation`, `chat_manage_thread`, `chat_register_command`, `chat_get_history`, `chat_update_settings`, `chat_set_typing` | Conversational chat widgets |
-| **Resources & export** | `get_component_docs`, `get_component_source`, `export_widget`, `list_resources` | Documentation and code generation |
+| **Resources & export** | `get_component_docs`, `get_component_source`, `export_widget`, `get_widget_app`, `list_resources` | Documentation, code generation, and rich HTML snapshots |
 | **Autonomous building** | `plan_widget`, `build_app`, `export_project`, `scaffold_app` | LLM-powered end-to-end app creation |
 
 ### Resources
@@ -131,6 +160,14 @@ Read-only data the agent can access via `pywry://` URIs:
 | `pywry://source/components` | All component sources combined |
 | `pywry://skill/{id}` | Skill guidance text |
 | `pywry://export/{widget_id}` | Export active widget as Python code |
+
+Rich HTML snapshots returned by widget-creating tools and `get_widget_app`
+use a separate URI scheme served inline as `EmbeddedResource` content
+rather than as fetchable resources:
+
+| URI | Content |
+|:---|:---|
+| `pywry-app://{widget_id}/{revision}` | Self-contained HTML rendering of the widget at the given revision (`mimeType: text/html`) |
 
 ### Prompts (Skills)
 

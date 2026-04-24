@@ -189,6 +189,32 @@ def main() -> int:
         help="Print per-skill status in results",
     )
 
+    # plugin-path command
+    plugin_path_parser = subparsers.add_parser(
+        "plugin-path",
+        help=(
+            "Print the absolute path to the bundled Claude Code plugin "
+            "(ships inside the pywry wheel at pywry/_claude_plugin/). "
+            "Use the output to register the plugin locally with "
+            "`/plugin marketplace add <path>`."
+        ),
+    )
+    plugin_path_parser.add_argument(
+        "--marketplace",
+        action="store_true",
+        default=False,
+        help=("Print the path to marketplace.json instead of the plugin root directory."),
+    )
+    plugin_path_parser.add_argument(
+        "--check",
+        action="store_true",
+        default=False,
+        help=(
+            "Exit with code 1 and an error message if the plugin tree "
+            "is not bundled (e.g. an old wheel or a partial install)."
+        ),
+    )
+
     args = parser.parse_args()
 
     if args.command == "config":
@@ -199,7 +225,49 @@ def main() -> int:
         return handle_mcp(args)
     if args.command == "install-skills":
         return handle_install_skills(args)
+    if args.command == "plugin-path":
+        return handle_plugin_path(args)
     parser.print_help()
+    return 0
+
+
+def handle_plugin_path(args: argparse.Namespace) -> int:
+    """Handle the plugin-path command.
+
+    Prints the absolute filesystem path to the Claude Code plugin tree
+    that pip ships alongside the pywry package. Copy the output into
+    ``/plugin marketplace add <path>`` in Claude Code to register the
+    plugin from local disk (no GitHub round-trip).
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments.
+
+    Returns
+    -------
+    int
+        Exit code — ``0`` on success, ``1`` with ``--check`` when the
+        plugin tree is missing.
+    """
+    import pywry
+
+    plugin_root = Path(pywry.__file__).resolve().parent / "_claude_plugin"
+    marketplace_file = plugin_root / ".claude-plugin" / "marketplace.json"
+    plugin_manifest = plugin_root / ".claude-plugin" / "plugin.json"
+
+    exists = plugin_manifest.exists() and marketplace_file.exists()
+
+    if args.check and not exists:
+        print(
+            f"pywry plugin tree not found at {plugin_root}. "
+            "Reinstall with `pip install 'pywry[dev]'` (or `pywry[all]`) "
+            "— the plugin ships inside the wheel.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(marketplace_file if args.marketplace else plugin_root)
     return 0
 
 

@@ -1,6 +1,9 @@
 <div align="center">
 
-![PyWry](https://github.com/deeleeramone/PyWry/blob/82db0c977a8ec812bf8652c0be14bf62b66b66a1/pywry/pywry/frontend/assets/PyWry.png?raw=true)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="pywry/frontend/assets/PyWry-dark.svg">
+  <img src="pywry/frontend/assets/PyWry-light.svg" alt="PyWry" width="640">
+</picture>
 
 </div>
 
@@ -11,6 +14,12 @@ PyWry is a cross-platform rendering engine and desktop UI toolkit for Python. On
 - **Browser tab** — FastAPI server with Redis state backend for horizontal scaling.
 
 **Build Once, Render Anywhere:** Prototype interactive data apps in a Jupyter Notebook, easily deploy them as web apps, and seamlessly compile them into secure, lightweight standalone desktop executables via `pywry[freeze]`.
+
+<div align="center">
+
+![PyWry — live TradingView chart driving a streaming chat widget](https://raw.githubusercontent.com/deeleeramone/PyWry/main/pywry_tv_chat_screencap_lg.gif)
+
+</div>
 
 ## Installation
 

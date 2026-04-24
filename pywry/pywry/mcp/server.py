@@ -80,6 +80,46 @@ def _make_event_callback(widget_id: str) -> EventCallback:
     return callback
 
 
+def _format_tool_result(result: Any) -> Any:
+    """Serialize a handler result for FastMCP.
+
+    Plain results are JSON-dumped (preserving the existing contract).
+    When the dict carries an ``_app_artifact`` key, the artifact is
+    stripped out and emitted as a second ``EmbeddedResource`` content
+    block alongside the remaining JSON so MCP clients that render
+    ``text/html`` resources (Claude Desktop artifact pane, mcp-ui
+    clients, PyWry's own chat widget) show the app inline.
+    """
+    import json  # pylint: disable=C0415
+
+    if isinstance(result, dict) and "_app_artifact" in result:
+        app = result.pop("_app_artifact")
+        try:
+            from mcp.types import (  # pylint: disable=C0415
+                EmbeddedResource,
+                TextContent,
+                TextResourceContents,
+            )
+        except ImportError:
+            # mcp.types not importable — put the artifact back and
+            # return plain JSON so the client at least sees the data.
+            result["_app_artifact"] = app
+            return json.dumps(result, indent=2)
+
+        text_payload = json.dumps(result, indent=2)
+        resource = TextResourceContents(
+            uri=app.get("uri", f"pywry-app://{app.get('widget_id', '')}/{app.get('revision', 0)}"),
+            mimeType=app.get("mime_type", "text/html"),
+            text=app.get("html", ""),
+        )
+        return [
+            TextContent(type="text", text=text_payload),
+            EmbeddedResource(type="resource", resource=resource),
+        ]
+
+    return json.dumps(result, indent=2)
+
+
 def _create_tool_function(
     tool_name: str, schema: dict[str, Any], handle_tool: Any, events: EventsDict
 ) -> Callable[..., Any]:
@@ -110,7 +150,7 @@ async def {tool_name.replace("-", "_")}({params_str}):
     kwargs = {{k: v for k, v in locals().items() if v is not None and k != "json"}}
     try:
         result = await _handle_tool("{tool_name}", kwargs, _events, _make_callback)
-        return json.dumps(result, indent=2)
+        return _format_tool_result(result)
     except Exception:
         import traceback
         return json.dumps({{"error": traceback.format_exc()}})
@@ -121,6 +161,7 @@ async def {tool_name.replace("-", "_")}({params_str}):
         "_handle_tool": handle_tool,
         "_events": events,
         "_make_callback": _make_event_callback,
+        "_format_tool_result": _format_tool_result,
     }
     exec(func_code, local_vars)  # noqa: S102  # pylint: disable=W0122
     return local_vars[tool_name.replace("-", "_")]  # type: ignore

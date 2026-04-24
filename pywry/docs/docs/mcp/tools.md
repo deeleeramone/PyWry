@@ -6,6 +6,9 @@ The MCP server groups tools by purpose: discovery, widget creation, widget manip
     Call `get_skills` with `skill="component_reference"` **before** creating any widget.
     The component reference is the authoritative source for every toolbar component's event signature, system events, and JSON schema.
 
+!!! info "`AppArtifact` auto-return (headless mode)"
+    Every widget-creating tool (`create_widget`, `show_plotly`, `show_dataframe`, `show_tvchart`, `create_chat_widget`) attaches an **`AppArtifact`** to its response in headless mode — a self-contained HTML snapshot of the widget served as an MCP `EmbeddedResource` (`mimeType: text/html`, `uri: pywry-app://<widget_id>/<revision>`). MCP clients that render HTML resources (Claude Desktop artifact pane, mcp-ui-aware clients, PyWry's own chat widget) display the app inline. Older revisions of the same `widget_id` in chat history freeze at their last known state — their WebSocket reconnect is rejected with close code `4002`. Call [`get_widget_app`](#get_widget_app) to re-snapshot a widget after mutating it.
+
 ---
 
 ## Discovery
@@ -56,7 +59,7 @@ Create an interactive native window with HTML content and Pydantic toolbar compo
 | `callbacks` | `object` | No | — | Map of event names → callback actions that run on the Python backend |
 
 **Returns (native):** `{"widget_id": "...", "mode": "native", "created": true}`
-**Returns (headless):** `{"widget_id": "...", "path": "/widget/...", "export_uri": "pywry://export/...", "created": true}`
+**Returns (headless):** `{"widget_id": "...", "path": "/widget/...", "export_uri": "pywry://export/...", "created": true}` plus a sibling `EmbeddedResource` content block carrying the `AppArtifact` snapshot (see the [auto-return note](#tools-reference) above).
 
 #### How events work
 
@@ -152,9 +155,9 @@ Create a Plotly chart widget. Pass figure JSON from `fig.to_json()`.
 | `title` | `string` | No | `"Plotly Chart"` | Window title |
 | `height` | `integer` | No | `500` | Window height |
 
-**Returns:** `{"widget_id": "...", "path": "...", "created": true}`
+**Returns:** `{"widget_id": "...", "path": "...", "created": true}` — in headless mode the response also carries an `AppArtifact` `EmbeddedResource` (see the [auto-return note](#tools-reference) above).
 
-To update later, use `update_plotly` or `send_event` with event `plotly:update-figure` and data `{"data": [...], "layout": {...}}`.
+To update later, use `update_plotly` or `send_event` with event `plotly:update-figure` and data `{"data": [...], "layout": {...}}`. Then call `get_widget_app(widget_id)` to get a fresh snapshot.
 
 ---
 
@@ -168,9 +171,9 @@ Create an AG Grid table widget from JSON data.
 | `title` | `string` | No | `"Data Table"` | Window title |
 | `height` | `integer` | No | `500` | Window height |
 
-**Returns:** `{"widget_id": "...", "path": "...", "created": true}`
+**Returns:** `{"widget_id": "...", "path": "...", "created": true}` — in headless mode the response also carries an `AppArtifact` `EmbeddedResource` (see the [auto-return note](#tools-reference) above).
 
-To update later, use `send_event` with event `grid:update-data` and data `{"data": [...], "strategy": "set"}`. Strategies: `set` (replace all rows), `append` (add rows), `update` (merge by row ID).
+To update later, use `send_event` with event `grid:update-data` and data `{"data": [...], "strategy": "set"}`. Strategies: `set` (replace all rows), `append` (add rows), `update` (merge by row ID). Then call `get_widget_app(widget_id)` to get a fresh snapshot.
 
 ---
 
@@ -186,7 +189,7 @@ Create a TradingView Lightweight Charts widget from JSON data.
 | `chart_options` | `string` | No | `null` | Chart-level options as JSON string |
 | `series_options` | `string` | No | `null` | Series-level options as JSON string |
 
-**Returns:** `{"widget_id": "...", "path": "...", "created": true}`
+**Returns:** `{"widget_id": "...", "path": "...", "created": true}` — in headless mode the response also carries an `AppArtifact` `EmbeddedResource` (see the [auto-return note](#tools-reference) above).
 
 On creation the widget is wired to capture `tvchart:click`,
 `tvchart:crosshair-move`, `tvchart:visible-range-change`,
@@ -960,7 +963,7 @@ Create a chat widget with LLM-powered conversation capabilities.
 | `slash_commands` | `array` | No | `null` | Slash command definitions |
 | `toolbars` | `array` | No | `null` | Toolbar component definitions |
 
-**Returns:** `{"widget_id": "...", "path": "...", "created": true}`
+**Returns:** `{"widget_id": "...", "thread_id": "...", "path": "...", "created": true}` — in headless mode the response also carries an `AppArtifact` `EmbeddedResource` (see the [auto-return note](#tools-reference) above).
 
 ---
 
@@ -1088,6 +1091,24 @@ Export an active widget as standalone Python code that recreates it without MCP.
 
 ---
 
+### get_widget_app
+
+Return the widget as a full `AppArtifact` snapshot — a self-contained HTML document (CSS + JS + data inlined) carried as an `EmbeddedResource` with `mimeType: text/html` and a `pywry-app://<widget_id>/<revision>` URI. Bumps the widget's revision counter on every call.
+
+Widget-creating tools auto-return an `AppArtifact` already; call this explicitly only to **re-snapshot** an existing widget after mutating it (e.g. after `send_event`, `tvchart_add_markers`, `update_plotly`, `inject_css`, etc.).
+
+| Parameter | Type | Required | Default | Description |
+|:---|:---|:---|:---|:---|
+| `widget_id` | `string` | **Yes** | — | ID of the widget to snapshot |
+| `title` | `string` | No | `""` | Optional artifact title |
+| `height` | `string` | No | `"600px"` | CSS height for the iframe |
+
+**Returns:** `{"widget_id": "...", "revision": N}` plus a sibling `EmbeddedResource` content block (`mimeType: text/html`, `uri: pywry-app://<widget_id>/<N>`) carrying the full rendered HTML.
+
+**Revision behaviour:** Each call increments the widget's revision counter. Only the **latest** revision's iframe keeps a live WebSocket bridge back to Python — older revisions freeze server-side (their reconnect is rejected with close code `4002 Older revision superseded`). Returns an error when the widget is running in a mode that doesn't store HTML (e.g. pure native-window mode).
+
+---
+
 ### list_resources
 
 List all available MCP resources with their URIs.
@@ -1101,6 +1122,8 @@ List all available MCP resources with their URIs.
 - `pywry://export/{widget_id}` — Widget export
 - `pywry://docs/events` — Built-in events reference
 - `pywry://docs/quickstart` — Quick start guide
+
+Rich HTML snapshots from `get_widget_app` and the auto-return of widget-creating tools use `pywry-app://{widget_id}/{revision}` URIs served inline as `EmbeddedResource` content rather than through `list_resources`.
 
 ---
 

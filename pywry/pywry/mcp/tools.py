@@ -1459,6 +1459,43 @@ Returns URIs for:
 - Quick start guide (pywry://docs/quickstart)""",
             inputSchema={"type": "object", "properties": {}},
         ),
+        Tool(
+            name="get_widget_app",
+            description="""Return the widget as a full AppArtifact snapshot.
+
+Renders *widget_id* as self-contained HTML (CSS + JS + data inlined)
+and returns it as an ``AppArtifact`` with a bumped revision counter.
+MCP clients that render ``text/html`` embedded resources (Claude
+Desktop artifact pane, mcp-ui clients, PyWry's own chat widget) show
+the app inline. Older revisions of the same widget in chat history
+freeze at their last known state because their WebSocket bridge is
+rejected server-side on revision mismatch.
+
+Widget-creating tools (``create_widget``, ``show_plotly``,
+``show_dataframe``, ``show_tvchart``, ``create_chat_widget``)
+auto-return an ``AppArtifact`` already; call this explicitly only to
+re-snapshot an existing widget after it has been mutated.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "widget_id": {
+                        "type": "string",
+                        "description": "ID of the widget to snapshot",
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Optional artifact title",
+                        "default": "",
+                    },
+                    "height": {
+                        "type": "string",
+                        "description": "CSS height for the iframe (e.g. '600px')",
+                        "default": "600px",
+                    },
+                },
+                "required": ["widget_id"],
+            },
+        ),
         # =====================================================================
         # Chat
         # =====================================================================

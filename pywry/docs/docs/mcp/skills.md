@@ -112,6 +112,16 @@ Available `{name}` values: `button`, `select`, `multiselect`, `toggle`, `checkbo
 |:---|:---|:---|
 | `pywry://export/{widget_id}` | Active widget exported as a complete Python script | `text/x-python` |
 
+### Inline App Snapshots
+
+Widget-creating tools (`create_widget`, `show_plotly`, `show_dataframe`, `show_tvchart`, `create_chat_widget`) and the explicit `get_widget_app` tool return a self-contained HTML rendering of the widget as an `EmbeddedResource` content block rather than a fetchable resource. These use a separate URI scheme:
+
+| URI Pattern | Content | MIME |
+|:---|:---|:---|
+| `pywry-app://{widget_id}/{revision}` | Self-contained HTML snapshot (CSS + JS + data inlined) served inline with the tool response | `text/html` |
+
+Each render bumps the widget's revision. Only the latest revision keeps a live WebSocket back to Python; older revisions in chat history freeze at their last known state. See [MCP Server → AppArtifact](index.md#appartifact-rich-inline-previews) for full semantics.
+
 ### Resource Templates
 
 The server also registers MCP resource templates for parameterized URIs:
@@ -152,14 +162,15 @@ Most of these have dedicated tools (e.g., `set_content`, `inject_css`). The `sen
 
 A typical interaction pattern:
 
-1. **Agent list tools** → sees 38 available tools
+1. **Agent list tools** → sees 39 available tools
 2. **Agent calls `get_skills()`** → receives the skill list with descriptions
 3. **Agent calls `get_skills(skill="component_reference")`** → loads the mandatory component docs
-4. **Agent calls `create_widget`** → builds widget JSON using component reference as guide
+4. **Agent calls `create_widget`** → builds widget JSON using component reference as guide — the tool response includes an `AppArtifact` `EmbeddedResource` that renders the widget inline in MCP-UI-aware clients
 5. **Agent calls `get_events`** → reads user interactions
 6. **Agent calls `set_content` / `set_style`** → updates the widget in response
-7. **Agent calls `export_widget`** → generates Python code the user can save
-8. **Agent calls `build_app`** *(optional)* → fully autonomous end-to-end build from a description
+7. **Agent calls `get_widget_app(widget_id)`** *(optional)* → re-snapshots the mutated widget with a bumped revision so the user sees the latest state
+8. **Agent calls `export_widget`** → generates Python code the user can save
+9. **Agent calls `build_app`** *(optional)* → fully autonomous end-to-end build from a description
 
 The skills ensure the agent knows the exact JSON structure, event naming conventions, and available properties before making tool calls.
 

@@ -139,4 +139,61 @@
         var currentTheme = html.classList.contains('dark') ? 'dark' : 'light';
         window.pywry.theme = currentTheme;
     });
+
+    // Host bridge: when the widget is embedded as an AppArtifact in a chat
+    // widget, MCP client, or Claude renderer, the outer page may expose a
+    // light / dark toggle that is independent of this iframe. The host
+    // should postMessage {source: 'pywry-host', type: 'pywry:set-theme',
+    // theme: 'dark' | 'light' | 'system'} to signal theme changes. We
+    // translate that into an internal pywry:update-theme event so every
+    // subsystem (main layout, Plotly, AG Grid, TVChart) switches together.
+    window.addEventListener('message', function (evt) {
+        var data = evt.data;
+        if (!data || typeof data !== 'object') return;
+        if (data.source !== 'pywry-host') return;
+        if (data.type !== 'pywry:set-theme') return;
+        var theme = data.theme;
+        if (theme !== 'dark' && theme !== 'light' && theme !== 'system') return;
+        if (window.pywry && typeof window.pywry._fire === 'function') {
+            window.pywry._fire('pywry:update-theme', { theme: theme });
+        }
+    });
+
+    // Browser-native theme tracking: Claude Preview's light/dark toggle,
+    // the OS-level appearance setting, and any browser devtools "Emulate
+    // CSS prefers-color-scheme" override all flip prefers-color-scheme.
+    // Subscribe so standalone AppArtifact renders (no parent postMessage
+    // bridge) react to whatever the viewer clicked. The baked-in theme
+    // from build_html wins until the media query actually fires.
+    if (window.matchMedia) {
+        var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        var onSchemeChange = function (e) {
+            var resolved = e.matches ? 'dark' : 'light';
+            if (window.pywry && typeof window.pywry._fire === 'function') {
+                window.pywry._fire('pywry:update-theme', { theme: resolved });
+            }
+        };
+        if (darkQuery.addEventListener) {
+            darkQuery.addEventListener('change', onSchemeChange);
+        } else if (darkQuery.addListener) {
+            darkQuery.addListener(onSchemeChange);
+        }
+
+        // Also sync on initial mount: the HTML ships with whatever theme
+        // show_* was invoked with, but the viewer's preference may
+        // disagree — honour the viewer if so.
+        var initialSync = function () {
+            var html = document.documentElement;
+            var baked = html.classList.contains('dark') ? 'dark' : 'light';
+            var preferred = darkQuery.matches ? 'dark' : 'light';
+            if (baked !== preferred && window.pywry && typeof window.pywry._fire === 'function') {
+                window.pywry._fire('pywry:update-theme', { theme: preferred });
+            }
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialSync, { once: true });
+        } else {
+            initialSync();
+        }
+    }
 })();

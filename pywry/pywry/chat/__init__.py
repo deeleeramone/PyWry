@@ -14,6 +14,7 @@ All public symbols are re-exported here for convenience::
 from __future__ import annotations
 
 from .artifacts import (
+    AppArtifact,
     Artifact,
     CodeArtifact,
     HtmlArtifact,
@@ -122,6 +123,7 @@ __all__ = [
     "ChatWidgetConfig",
     "CitationUpdate",
     "ClientCapabilities",
+    "AppArtifact",
     "CodeArtifact",
     "CommandsUpdate",
     "ConfigOptionChoice",

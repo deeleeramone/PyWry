@@ -168,7 +168,7 @@ pywry/
 │   └── window_commands.py
 ├── frontend/            # Frontend HTML and bundled assets
 │   ├── index.html
-│   ├── assets/          # Compressed libraries (plotly, ag-grid, tvchart, icons, PyWry.png)
+│   ├── assets/          # Compressed libraries (plotly, ag-grid, tvchart, icons, PyWry-{light,dark}.svg)
 │   ├── src/             # JS modules (main.js, aggrid-defaults.js, plotly-defaults.js, tvchart/*.js, chat/*.js)
 │   └── style/           # CSS files (pywry.css, chat.css, tvchart.css, …)
 ├── tvchart/             # TradingView Lightweight Charts integration

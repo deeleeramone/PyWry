@@ -1,0 +1,37 @@
+{
+  "name": "pywry",
+  "version": "0.1.0",
+  "description": "Native Claude Code integration for PyWry — MCP tools for generating and rendering HTML components, chat artifacts, and building native, web, or Jupyter applications with live preview. Built-in support for AgGrid, Plotly, TradingView, and more.",
+  "author": {
+    "name": "PyWry",
+    "email": "pywry2@gmail.com",
+    "url": "https://github.com/deeleeramone/PyWry"
+  },
+  "homepage": "https://github.com/deeleeramone/PyWry",
+  "repository": "https://github.com/deeleeramone/PyWry",
+  "license": "Apache-2.0",
+  "category": "data-visualization",
+  "keywords": [
+    "pywry",
+    "webview",
+    "tauri",
+    "plotly",
+    "tradingview",
+    "aggrid",
+    "dashboard",
+    "charting",
+    "visualization",
+    "data-science",
+    "finance",
+    "interactive",
+    "real-time",
+    "chat",
+    "llm",
+    "agent",
+    "artifact",
+    "jupyter",
+    "notebook",
+    "python",
+    "mcp"
+  ]
+}

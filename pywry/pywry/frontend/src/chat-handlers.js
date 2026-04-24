@@ -1856,6 +1856,121 @@ function initChatHandlers(container, pywry) {
     el.appendChild(frame);
   }
 
+  function renderAppArtifact(el, data) {
+    // Full PyWry widget rendered inline. Latest revision per widget_id
+    // gets a live WS bridge; older revisions freeze server-side (their
+    // WS is rejected with close code 4002) so the iframe just displays
+    // its last known state.
+    var frame = document.createElement('iframe');
+    frame.className = 'pywry-chat-artifact-iframe pywry-chat-app-artifact';
+    var allowSameOrigin = data.sandbox !== false;
+    frame.sandbox = allowSameOrigin
+      ? 'allow-scripts allow-same-origin allow-forms allow-popups'
+      : 'allow-scripts';
+    frame.style.width = '100%';
+    frame.style.height = data.height || '600px';
+    frame.style.border = 'none';
+
+    // The HTML is self-contained; the embedded WS bridge reads the
+    // revision from its own query string when it reconnects after a
+    // freeze, so we bake it in here. Older iframes keep their stale
+    // revision in their own copy of the HTML and get rejected when
+    // they try to reconnect, which is the intended behaviour.
+    var html = data.html || data.content || '';
+    if (data.widgetId && data.revision) {
+      var meta = '<meta name="pywry-app-revision" content="' + data.revision + '">';
+      // Insert meta tag into <head> if present, else as first element.
+      if (html.indexOf('<head>') !== -1) {
+        html = html.replace('<head>', '<head>' + meta);
+      } else if (html.indexOf('<html>') !== -1) {
+        html = html.replace('<html>', '<html><head>' + meta + '</head>');
+      } else {
+        html = meta + html;
+      }
+    }
+    frame.srcdoc = html;
+
+    // postMessage bridge: forward events from iframe to parent chat so
+    // the live (latest-revision) widget can fire chat-side callbacks.
+    // Messages from stale revisions are ignored because their WS is
+    // already closed by the server.
+    function onMessage(evt) {
+      if (!evt.data || typeof evt.data !== 'object') return;
+      if (evt.data.source !== 'pywry-app') return;
+      if (evt.data.widgetId !== data.widgetId) return;
+      if (window.pywry && typeof window.pywry._fire === 'function') {
+        window.pywry._fire(evt.data.type, {
+          widgetId: data.widgetId,
+          revision: data.revision,
+          payload: evt.data.payload,
+        });
+      }
+    }
+    window.addEventListener('message', onMessage);
+
+    // Host → iframe theme bridge. The AppArtifact HTML is baked with a
+    // specific theme at render time; when the outer page's theme
+    // changes, push the new value into the iframe so Plotly / AG Grid /
+    // TVChart / layout all swap together. theme-manager.js inside the
+    // iframe listens for {source: 'pywry-host', type: 'pywry:set-theme',
+    // theme}.
+    function detectHostTheme() {
+      var root = document.documentElement;
+      if (root.classList.contains('dark')) return 'dark';
+      if (root.classList.contains('light')) return 'light';
+      if (root.dataset && root.dataset.theme === 'dark') return 'dark';
+      if (root.dataset && root.dataset.theme === 'light') return 'light';
+      if (window.pywry && (window.pywry.theme === 'dark' || window.pywry.theme === 'light')) {
+        return window.pywry.theme;
+      }
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+      return 'light';
+    }
+    function pushTheme() {
+      if (!frame.contentWindow) return;
+      frame.contentWindow.postMessage(
+        { source: 'pywry-host', type: 'pywry:set-theme', theme: detectHostTheme() },
+        '*'
+      );
+    }
+    frame.addEventListener('load', pushTheme);
+    var mediaQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    function onMediaChange() { pushTheme(); }
+    if (mediaQuery && mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', onMediaChange);
+    }
+    var themeObserver = new MutationObserver(pushTheme);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme'],
+    });
+
+    // Stop listening when the iframe is removed from the DOM.
+    var observer = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var removed = mutations[i].removedNodes;
+        for (var j = 0; j < removed.length; j++) {
+          if (removed[j] === frame || (removed[j].contains && removed[j].contains(frame))) {
+            window.removeEventListener('message', onMessage);
+            if (mediaQuery && mediaQuery.removeEventListener) {
+              mediaQuery.removeEventListener('change', onMediaChange);
+            }
+            themeObserver.disconnect();
+            observer.disconnect();
+            return;
+          }
+        }
+      }
+    });
+    if (el.parentNode) {
+      observer.observe(el.parentNode, { childList: true, subtree: true });
+    }
+
+    el.appendChild(frame);
+  }
+
   function renderTableArtifact(el, data) {
     var gridId = 'pywry-chat-grid-' + (++__artifactCounter);
     var gridDiv = document.createElement('div');
@@ -2035,6 +2150,7 @@ function initChatHandlers(container, pywry) {
     if (type === 'code') renderCodeArtifact(bodyWrap, data);
     else if (type === 'markdown') renderMarkdownArtifact(bodyWrap, data);
     else if (type === 'html') renderHtmlArtifact(bodyWrap, data);
+    else if (type === 'app') renderAppArtifact(bodyWrap, data);
     else if (type === 'table') renderTableArtifact(bodyWrap, data);
     else if (type === 'plotly') renderPlotlyArtifact(bodyWrap, data);
     else if (type === 'image') renderImageArtifact(bodyWrap, data);

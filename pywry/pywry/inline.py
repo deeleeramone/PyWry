@@ -132,6 +132,13 @@ class _ServerState:  # pylint: disable=too-many-instance-attributes
         # Internal API token for protecting HTTP endpoints
         self.internal_api_token: str | None = None
 
+        # Monotonic render counter per widget — incremented every time
+        # the widget is emitted as an AppArtifact by the MCP layer. The
+        # WS endpoint rejects connections carrying a revision older than
+        # the current one so older renders in chat history freeze at
+        # their last known state.
+        self.widget_revisions: dict[str, int] = {}
+
         # === Pluggable backends (lazily initialized) ===
         self._widget_store: Any | None = None
         self._callback_registry: Any | None = None
@@ -256,6 +263,16 @@ class _ServerState:  # pylint: disable=too-many-instance-attributes
             store = self.get_widget_store()
             return run_async(store.get_token(widget_id))
         return self.widget_tokens.get(widget_id)
+
+    def bump_widget_revision(self, widget_id: str) -> int:
+        """Increment and return the current render revision for *widget_id*."""
+        rev = self.widget_revisions.get(widget_id, 0) + 1
+        self.widget_revisions[widget_id] = rev
+        return rev
+
+    def get_widget_revision(self, widget_id: str) -> int:
+        """Return the current render revision for *widget_id*, or ``0`` if unknown."""
+        return self.widget_revisions.get(widget_id, 0)
 
     def set_widget_token(self, widget_id: str, token: str) -> None:
         """Set widget authentication token."""
@@ -914,6 +931,27 @@ def _get_app() -> FastAPI:  # noqa: C901, PLR0915  # pylint: disable=too-many-st
                     )
                     log_debug("[SERVER] Client should refresh page to get new token")
                 await websocket.close(code=4001, reason="Invalid token - refresh page")
+                return
+
+        # 3. Revision check — if the client identifies a render revision
+        # (via ?revision=N query param) and it is older than the current
+        # server-side revision, reject so the iframe freezes at its last
+        # known state. Connections without a revision param bypass this
+        # (backward compat with existing clients).
+        rev_param = websocket.query_params.get("revision")
+        if rev_param:
+            try:
+                requested_rev = int(rev_param)
+            except ValueError:
+                requested_rev = 0
+            current_rev = _state.get_widget_revision(widget_id)
+            if current_rev and requested_rev and requested_rev < current_rev:
+                if PYWRY_DEBUG:
+                    log_debug(
+                        f"[SERVER] WS rejected: widget={widget_id} "
+                        f"rev={requested_rev} < current={current_rev}"
+                    )
+                await websocket.close(code=4002, reason="Older revision superseded")
                 return
 
         # Security checks passed, accept connection with subprotocol if provided

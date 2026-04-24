@@ -285,6 +285,53 @@
                 console.log('[PyWry] Updated grid theme class to:', data.theme);
             }
         }
+
+        // Relayout every Plotly chart to match the new theme. Templates
+        // are bundled into window.PYWRY_PLOTLY_TEMPLATES; the helpers
+        // window.__pywryStripThemeColors and __pywryMergeThemeTemplate
+        // are defined by plotly-defaults.js (also inlined into the
+        // widget HTML). Plotly's CDN/standalone build doesn't register
+        // plotly_dark / plotly_white by name, so we resolve the template
+        // object manually. Plotly's explicit layout colour properties
+        // always beat template defaults, so the strip pass is mandatory
+        // before relayout — otherwise baked-in paper_bgcolor / font
+        // colours win and the template swap looks like a no-op.
+        if (window.Plotly && window.PYWRY_PLOTLY_TEMPLATES) {
+            var plotlyTemplateName = isDark ? 'plotly_dark' : 'plotly_white';
+            var plotlyTemplate = window.PYWRY_PLOTLY_TEMPLATES[plotlyTemplateName];
+            if (plotlyTemplate) {
+                document.querySelectorAll('.js-plotly-plot, [data-pywry-plotly]').forEach(function (plotDiv) {
+                    try {
+                        // Nuke the stored "user template" overrides. When the
+                        // figure is first rendered without an explicit
+                        // template, Plotly.js's default (plotly_white) gets
+                        // shovelled into __pywry_user_template__ by the
+                        // init-time call to __pywryMergeThemeTemplate —
+                        // which means every subsequent theme switch merges
+                        // plotly_dark under those stored white colours and
+                        // the chart keeps looking light. Clearing these
+                        // makes the merge fall through to the clean base
+                        // template.
+                        delete plotDiv.__pywry_user_template__;
+                        delete plotDiv.__pywry_user_template_dark__;
+                        delete plotDiv.__pywry_user_template_light__;
+                        if (typeof window.__pywryStripThemeColors === 'function') {
+                            window.__pywryStripThemeColors(plotDiv);
+                        }
+                        // Deep-clone so future relayouts don't share mutable
+                        // state with the cached base template.
+                        var tpl = JSON.parse(JSON.stringify(plotlyTemplate));
+                        window.Plotly.relayout(plotDiv, { template: tpl });
+                    } catch (err) {
+                        if (PYWRY_DEBUG) {
+                            console.warn('[PyWry] Plotly relayout failed:', err);
+                        }
+                    }
+                });
+            } else if (PYWRY_DEBUG) {
+                console.warn('[PyWry] Plotly template not found:', plotlyTemplateName);
+            }
+        }
     });
 
     // HTML content update handler
@@ -506,6 +553,94 @@
             PlotlyLib.relayout(chartEl, layout);
         }
     });
+
+    // Theme triggers: translate viewer-side theme signals into the
+    // internal pywry:update-theme event that the handler above listens
+    // for. Covers three cases:
+    //
+    //   1. Browser prefers-color-scheme changes — fires when the OS
+    //      appearance flips, when a DevTools "emulate CSS
+    //      prefers-color-scheme" override is toggled, or when a host
+    //      webview (Claude Preview, Claude Desktop, etc.) swaps its
+    //      own light/dark state by flipping the media query for its
+    //      embedded browser.
+    //
+    //   2. Parent-page postMessage — when the widget is embedded in
+    //      a chat widget (AppArtifact iframe) or an MCP-UI client
+    //      whose host UI has its own theme toggle, the host sends
+    //      {source: 'pywry-host', type: 'pywry:set-theme',
+    //       theme: 'dark' | 'light'}.
+    //
+    //   3. Initial mount — honour the viewer's preference over the
+    //      theme baked into the HTML at build time, so a widget
+    //      rendered with theme='dark' still shows light if the
+    //      viewer's preference is light.
+    if (typeof window !== 'undefined' && window.pywry && typeof window.pywry._fire === 'function') {
+        window.addEventListener('message', function (evt) {
+            var data = evt && evt.data;
+            if (!data || typeof data !== 'object') return;
+            if (data.source !== 'pywry-host') return;
+            if (data.type !== 'pywry:set-theme') return;
+            var theme = data.theme;
+            if (theme !== 'dark' && theme !== 'light' && theme !== 'system') return;
+            window.pywry._fire('pywry:update-theme', { theme: theme });
+        });
+
+        if (window.matchMedia) {
+            var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            var lastPrefers = darkQuery.matches ? 'dark' : 'light';
+            var onSchemeChange = function (e) {
+                lastPrefers = (e && e.matches !== undefined ? e.matches : darkQuery.matches) ? 'dark' : 'light';
+                window.pywry._fire('pywry:update-theme', { theme: lastPrefers });
+            };
+            if (darkQuery.addEventListener) {
+                darkQuery.addEventListener('change', onSchemeChange);
+            } else if (darkQuery.addListener) {
+                darkQuery.addListener(onSchemeChange);
+            }
+            // Electron (Claude Preview, Claude Desktop) doesn't reliably
+            // fire the matchMedia 'change' event when the host flips
+            // prefers-color-scheme underneath the webContents, but the
+            // query's own .matches value DOES update. Poll it.
+            setInterval(function () {
+                var nowPrefers = darkQuery.matches ? 'dark' : 'light';
+                if (nowPrefers !== lastPrefers) {
+                    lastPrefers = nowPrefers;
+                    window.pywry._fire('pywry:update-theme', { theme: nowPrefers });
+                }
+            }, 500);
+
+            // Initial sync: always fire pywry:update-theme once after the
+            // chart renders so Plotly's template matches the current
+            // PyWry theme. Without this, a figure rendered without an
+            // explicit template defaults to plotly_white even when the
+            // surrounding PyWry layer ships as class="dark" — that
+            // mismatch is the "chart in light mode while preview is
+            // dark" case. Resolved theme priority: explicit html class
+            // (dark/light) wins, then prefers-color-scheme, then dark
+            // as a safe default.
+            var resolveCurrentTheme = function () {
+                var html = document.documentElement;
+                if (html.classList.contains('light')) return 'light';
+                if (html.classList.contains('dark')) return 'dark';
+                return darkQuery.matches ? 'dark' : 'light';
+            };
+            var initialSync = function () {
+                var resolved = resolveCurrentTheme();
+                // Delay one frame so Plotly has finished its initial
+                // layout pass — relaying out before Plotly has created
+                // the SVG is a no-op.
+                window.requestAnimationFrame(function () {
+                    window.pywry._fire('pywry:update-theme', { theme: resolved });
+                });
+            };
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initialSync, { once: true });
+            } else {
+                initialSync();
+            }
+        }
+    }
 
     window.pywry._fire('pywry:ready', {});
 

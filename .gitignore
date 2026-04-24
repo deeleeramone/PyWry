@@ -213,3 +213,4 @@ docs/site/*
 # Generated frontend assets (downloaded by pywry/build_assets.py at build/install time)
 pywry/pywry/frontend/assets/*.js.gz
 pywry/pywry/frontend/assets/*.css.gz
+.hatch_build/

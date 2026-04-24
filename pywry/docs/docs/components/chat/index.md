@@ -362,7 +362,9 @@ yield TradingViewArtifact(
 )
 ```
 
-Available artifact types: `CodeArtifact`, `MarkdownArtifact`, `HtmlArtifact`, `TableArtifact`, `PlotlyArtifact`, `ImageArtifact`, `JsonArtifact`, `TradingViewArtifact`.
+Available artifact types: `CodeArtifact`, `MarkdownArtifact`, `HtmlArtifact`, `TableArtifact`, `PlotlyArtifact`, `ImageArtifact`, `JsonArtifact`, `TradingViewArtifact`, `AppArtifact`.
+
+`AppArtifact` renders a full PyWry widget inline as a sandboxed iframe with a live WebSocket bridge back to Python — primarily emitted by the [MCP server](../../mcp/index.md#appartifact-rich-inline-previews) when a tool creates or re-snapshots a widget. Older revisions of the same `widget_id` in the chat history freeze at their last known state when the current revision is superseded.
 
 The frontend libraries for `TableArtifact` (AG Grid), `PlotlyArtifact` (Plotly.js), and `TradingViewArtifact` (lightweight-charts) are loaded automatically the first time an artifact of that type is emitted. You can also preload them by passing `include_plotly=True` or `include_aggrid=True` to the `ChatManager` constructor.
 
