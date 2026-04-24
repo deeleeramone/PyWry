@@ -10,6 +10,7 @@
   "homepage": "https://github.com/deeleeramone/PyWry",
   "repository": "https://github.com/deeleeramone/PyWry",
   "license": "Apache-2.0",
+  "category": "data-visualization",
   "keywords": [
     "pywry",
     "webview",
@@ -18,8 +19,19 @@
     "tradingview",
     "aggrid",
     "dashboard",
+    "charting",
+    "visualization",
+    "data-science",
+    "finance",
+    "interactive",
+    "real-time",
     "chat",
-    "mcp",
-    "jupyter"
+    "llm",
+    "agent",
+    "artifact",
+    "jupyter",
+    "notebook",
+    "python",
+    "mcp"
   ]
 }

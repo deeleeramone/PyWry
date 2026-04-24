@@ -15,6 +15,12 @@ PyWry is a cross-platform rendering engine and desktop UI toolkit for Python. On
 
 **Build Once, Render Anywhere:** Prototype interactive data apps in a Jupyter Notebook, easily deploy them as web apps, and seamlessly compile them into secure, lightweight standalone desktop executables via `pywry[freeze]`.
 
+<div align="center">
+
+![PyWry — live TradingView chart driving a streaming chat widget](https://raw.githubusercontent.com/deeleeramone/PyWry/main/pywry_tv_chat_screencap_lg.gif)
+
+</div>
+
 ## Installation
 
 Python 3.10–3.14, virtual environment recommended.

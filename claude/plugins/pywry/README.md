@@ -6,6 +6,8 @@ artifacts, and building native, web, or Jupyter applications with
 live preview. Built-in support for AgGrid, Plotly, TradingView, and
 more.
 
+![PyWry — live TradingView chart driving a streaming chat widget](https://raw.githubusercontent.com/deeleeramone/PyWry/main/pywry_tv_chat_screencap_lg.gif)
+
 ## What it ships
 
 | Surface | Detail |
