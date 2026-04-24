@@ -1,6 +1,9 @@
 <div align="center">
 
-![PyWry](https://github.com/deeleeramone/PyWry/blob/82db0c977a8ec812bf8652c0be14bf62b66b66a1/pywry/pywry/frontend/assets/PyWry.png?raw=true)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="pywry/frontend/assets/PyWry-dark.svg">
+  <img src="pywry/frontend/assets/PyWry-light.svg" alt="PyWry" width="640">
+</picture>
 
 </div>
 
