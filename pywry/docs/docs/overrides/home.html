@@ -4,12 +4,18 @@
 {% block hero %}
   <section class="pywry-docs-hero">
     <div class="pywry-docs-hero__inner">
-      <img src="{{ config.theme.logo | url }}"
-           class="pywry-docs-hero__logo"
+      {#- Theme-aware wordmark. Both images ship in the page; CSS in
+         stylesheets/extra.css hides whichever doesn't match the active
+         Material colour scheme (data-md-color-scheme="default" | "slate"). -#}
+      <img src="{{ 'assets/PyWry-light.svg' | url }}"
+           class="pywry-docs-hero__banner pywry-docs-hero__banner--light"
            alt="PyWry" draggable="false">
-      <h1 class="pywry-docs-hero__title">
+      <img src="{{ 'assets/PyWry-dark.svg' | url }}"
+           class="pywry-docs-hero__banner pywry-docs-hero__banner--dark"
+           alt="PyWry" draggable="false">
+      <h2 class="pywry-docs-hero__title">
         Build Once, Render Anywhere<br>Desktop&nbsp;-&nbsp;Notebook&nbsp;-&nbsp;Web
-      </h1>
+      </h2>
       <p class="pywry-docs-hero__subtitle">
         PyWry&nbsp;apps are Pythonic, lightweight, and fast to start.
         <br> They run on&nbsp;Windows, macOS, and Linux.

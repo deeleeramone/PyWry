@@ -650,6 +650,20 @@
   filter: drop-shadow(0 0 20px rgba(71,200,219,.2));
 }
 
+/* Full-wordmark hero banner (PyWry-light.svg / PyWry-dark.svg). Aspect
+   is ~3.27:1 so we size by width. Only the variant matching the active
+   Material colour scheme is shown. */
+.pywry-docs-hero__banner {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  margin: 0 auto 1.5rem;
+  filter: drop-shadow(0 0 24px rgba(71,200,219,.18));
+}
+[data-md-color-scheme="default"] .pywry-docs-hero__banner--dark  { display: none; }
+[data-md-color-scheme="slate"]   .pywry-docs-hero__banner--light { display: none; }
+
 .pywry-docs-hero__title {
   font-size: 1.5rem;
   font-weight: 400;
