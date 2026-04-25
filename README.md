@@ -194,6 +194,13 @@ The output in `dist/MyApp/` is fully self-contained. Target machines need no Pyt
 - [API Reference](https://deeleeramone.github.io/PyWry/reference/) — auto-generated docs for every class and function
 - [MCP Server](https://deeleeramone.github.io/PyWry/mcp/) — AI agent integration
 
+## CI and Release Policy
+
+- Protected branches: `main` and `develop`.
+- Required PR checks: `CI Required` and `Docs Required`.
+- Docs deployment: GitHub Pages redeploys only on post-merge pushes to `main`.
+- SBOM policy: `sbom.xml` and `sbom.json` are produced during release workflows and bundled with release artifacts, not tracked at repository root.
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).

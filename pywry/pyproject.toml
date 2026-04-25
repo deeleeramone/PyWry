@@ -80,7 +80,7 @@ features = [
     "anywidget>=0.9.0",
     "authlib>=1.3.0",
     "cryptography>=46.0.0",
-    "deepagents>=0.1.0",
+    "deepagents>=0.1.0; python_version >= '3.11'",
     "fastmcp>=3.2.2",
     "ipykernel>=7.2.0",
     "keyring>=24.0",
@@ -135,7 +135,7 @@ dev = [
     "pandas>=1.5.3",
     "sqlcipher3>=0.5.4",
     "agent-client-protocol>=0.1.0",
-    "deepagents>=0.1.0",
+    "deepagents>=0.1.0; python_version >= '3.11'",
     "langchain-mcp-adapters>=0.1.0",
 ]
 openai = [
@@ -158,7 +158,7 @@ acp = [
     "agent-client-protocol>=0.1.0",
 ]
 deepagent = [
-    "deepagents>=0.1.0",
+    "deepagents>=0.1.0; python_version >= '3.11'",
     "fastmcp>=3.2.2",
     "langchain-mcp-adapters>=0.1.0",
     "agent-client-protocol>=0.1.0",
@@ -175,7 +175,7 @@ all = [
     "anthropic>=0.34.0",
     "anywidget>=0.9.0",
     "authlib>=1.3.0",
-    "deepagents>=0.1.0",
+    "deepagents>=0.1.0; python_version >= '3.11'",
     "fastmcp>=3.2.2",
     "ipykernel>=7.2.0",
     "keyring>=24.0",

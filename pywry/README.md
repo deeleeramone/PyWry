@@ -158,6 +158,11 @@ The output in `dist/MyApp/` is fully self-contained. Target machines need no Pyt
 - [API Reference](https://deeleeramone.github.io/PyWry/reference/) — auto-generated docs for every class and function
 - [MCP Server](https://deeleeramone.github.io/PyWry/mcp/) — AI agent integration
 
+## Release Artifacts
+
+Release bundles include CycloneDX SBOM files as `sbom.xml` and `sbom.json`.
+These SBOM files are published with release artifacts rather than committed to repository root.
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
