@@ -58,16 +58,8 @@ jobs:
               "pywry/hatch_build.py",
               "pywry/build_assets.py",
           )
-          release_impact_files = {
-              ".github/workflows/publish-pywry.yml",
-              ".github/workflows/sbom.yml",
-              ".github/workflows/update-lockfiles.yml",
-              ".github/workflows/version-bump-check.yml",
-          }
 
-          release_impacting = any(
-              f.startswith(release_impact_prefixes) or f in release_impact_files for f in changed_files
-          )
+            release_impacting = any(f.startswith(release_impact_prefixes) for f in changed_files)
 
           if not release_impacting:
               print("No release-impacting changes detected; version bump not required.")
