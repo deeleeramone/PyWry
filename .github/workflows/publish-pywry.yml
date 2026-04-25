@@ -439,13 +439,21 @@ jobs:
           path: pywry/dist/*.whl
           retention-days: 30
 
+  generate-sbom:
+    name: Generate release SBOM
+    needs: [test]
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/sbom.yml
+
   # =============================================================================
   # Step 3: Merge all artifacts into single dist
   # =============================================================================
   merge-artifacts:
     name: Merge artifacts
-    needs: [build-linux-x86_64, build-linux-aarch64, build-macos-x86_64, build-macos-arm64, build-windows-amd64, build-windows-arm64]
-    if: ${{ !cancelled() && needs.build-linux-x86_64.result == 'success' }}
+    needs: [build-linux-x86_64, build-linux-aarch64, build-macos-x86_64, build-macos-arm64, build-windows-amd64, build-windows-arm64, generate-sbom]
+    if: ${{ !cancelled() && needs.build-linux-x86_64.result == 'success' && needs.generate-sbom.result == 'success' }}
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -468,6 +476,15 @@ jobs:
         with:
           name: sdist
           path: artifacts/sdist/
+
+      - name: Download SBOM artifacts
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: sbom
+          path: artifacts/sbom/
+
+      - name: Ensure output directories exist
+        run: mkdir -p dist
 
       - name: Consolidate artifacts and fail on duplicate wheel names
         shell: bash
@@ -521,6 +538,34 @@ jobs:
           if skipped_identical:
             print(f"Skipped {skipped_identical} identical duplicate wheel artifact(s)")
           PY
+
+      - name: Add distributed artifacts to merged SBOM
+        shell: bash
+        run: |
+          test -f artifacts/sbom/sbom.cdx.json
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            cyclonedx/cyclonedx-cli:latest \
+            add files \
+            --input-file artifacts/sbom/sbom.cdx.json \
+            --input-format json \
+            --output-format json \
+            --output-file dist/sbom.cdx.json \
+            --base-path dist \
+            --include "**/*.whl" "**/*.tar.gz"
+
+      - name: Validate release SBOM
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            cyclonedx/cyclonedx-cli:latest \
+            validate \
+            --input-file dist/sbom.cdx.json \
+            --input-format json \
+            --fail-on-errors
 
       - name: Validate wheel archives for duplicate ZIP members
         shell: bash
@@ -834,6 +879,12 @@ jobs:
       contents: write
 
     steps:
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: dist
+          path: dist/
+
       - name: Create draft release
         uses: softprops/action-gh-release@v2
         with:
@@ -866,8 +917,14 @@ jobs:
 
             - Python 3.10, 3.11, 3.12, 3.13, 3.14
 
+            ### SBOM
+
+            - CycloneDX SBOM is included in this release as `sbom.cdx.json`.
+
             ---
             *This is a draft release. Wheels are published to PyPI separately.*
+          files: |
+            dist/*
 
   # =============================================================================
   # Step 6: Publish to PyPI - Trusted Publisher (workflow_dispatch only)

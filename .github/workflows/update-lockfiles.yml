@@ -1,0 +1,58 @@
+name: Update lockfiles on develop
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-lockfiles-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  refresh-lockfiles:
+    name: Refresh uv.lock + package-lock.json
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Regenerate uv.lock
+        working-directory: pywry
+        run: uv lock
+
+      - name: Regenerate package-lock.json
+        working-directory: pywry
+        run: npm install --package-lock-only
+
+      - name: Commit lockfile updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pywry/uv.lock pywry/package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(lockfiles): refresh uv.lock and package-lock.json"
+          git push

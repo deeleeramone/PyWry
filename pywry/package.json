@@ -1,0 +1,10 @@
+{
+  "name": "pywry-frontend-assets",
+  "private": true,
+  "description": "Dependency manifest for vendored frontend assets downloaded by build_assets.py",
+  "dependencies": {
+    "plotly.js-dist": "3.3.1",
+    "ag-grid-community": "35.0.0",
+    "lightweight-charts": "5.1.0"
+  }
+}

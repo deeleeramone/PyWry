@@ -4,16 +4,8 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'pywry/docs/**'
-      - 'pywry/**/*.py'
-      - '.github/workflows/docs.yml'
   pull_request:
-    branches: [main, master, develop]
-    paths:
-      - 'pywry/docs/**'
-      - 'pywry/**/*.py'
-      - '.github/workflows/docs.yml'
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -24,7 +16,47 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  detect-doc-impact:
+    name: Detect docs impact
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      should-build: ${{ steps.detect.outputs.should-build }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether docs build is required
+        id: detect
+        shell: bash
+        env:
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$IS_PR" != "true" ]]; then
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch --depth=1 origin "$BASE_SHA"
+
+          CHANGED=$(git diff --name-only "$BASE_SHA" HEAD)
+          DOC_RELATED=$(echo "$CHANGED" | grep -E '^(pywry/docs/|pywry/.*\.py$|\.github/workflows/docs\.yml$)' || true)
+
+          if [[ -n "$DOC_RELATED" ]]; then
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should-build=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    if: github.event_name != 'pull_request' || needs.detect-doc-impact.outputs.should-build == 'true'
+    needs: detect-doc-impact
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -70,3 +102,33 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  docs-required:
+    name: Docs Required
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && always()
+    needs:
+      - detect-doc-impact
+      - build
+    permissions:
+      contents: read
+    steps:
+      - name: Enforce required docs outcomes
+        shell: bash
+        env:
+          SHOULD_BUILD: ${{ needs.detect-doc-impact.outputs.should-build }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$SHOULD_BUILD" == "false" ]]; then
+            echo "No docs-impacting changes detected; docs build intentionally skipped."
+            exit 0
+          fi
+
+          if [[ "$BUILD_RESULT" != "success" ]]; then
+            echo "Docs build did not succeed (result: $BUILD_RESULT)"
+            exit 1
+          fi
+
+          echo "Docs validation passed."

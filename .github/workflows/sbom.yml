@@ -1,28 +1,18 @@
 name: Generate SBOM
 
 on:
-  # Manual trigger
-  workflow_dispatch:
-  
-  # Trigger on changes to pyproject.toml
-  push:
-    paths:
-      - 'pywry/pyproject.toml'
-      - 'pywry/build_assets.py'
-    branches:
-      - main
-      - master
-      - develop
-  
   # Allow being called from other workflows (e.g., publish workflow)
   workflow_call:
     outputs:
-      sbom-path:
-        description: 'Path to the generated SBOM XML file'
-        value: ${{ jobs.generate-sbom.outputs.sbom-path }}
+      sbom-json-path:
+        description: 'Path to the generated SBOM JSON file'
+        value: ${{ jobs.generate-sbom.outputs.sbom-json-path }}
+
+  # Optional manual trigger for release artifact generation/debugging.
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   
 defaults:
   run:
@@ -30,10 +20,10 @@ defaults:
 
 jobs:
   generate-sbom:
-    name: Generate SBOM XML
+    name: Generate merged CycloneDX SBOM (JSON)
     runs-on: ubuntu-latest
     outputs:
-      sbom-path: ${{ steps.generate.outputs.sbom-path }}
+      sbom-json-path: ${{ steps.paths.outputs.sbom-json-path }}
     
     steps:
       - name: Checkout repository
@@ -43,138 +33,76 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
           
       - name: Install project dependencies
         run: pip install ".[all,dev,freeze]"
-          
-      - name: Install CycloneDX BOM generator
-        run: pip install cyclonedx-bom
-          
-      - name: Generate SBOM XML
-        id: generate
+
+      - name: Install CycloneDX tools
         run: |
-          cyclonedx-py environment --pyproject pyproject.toml --output-format XML --output-file ../sbom.xml
-          echo "sbom-path=sbom.xml" >> $GITHUB_OUTPUT
-          
-      - name: Generate SBOM JSON (additional format)
-        run: cyclonedx-py environment --pyproject pyproject.toml --output-format JSON --output-file ../sbom.json
+          pip install cyclonedx-bom
+          npm ci --ignore-scripts
 
-      - name: Inject bundled JS libraries into SBOM
+      - name: Generate Python dependency SBOM
         run: |
-          python -c "
-          import json, re, uuid
-          from pathlib import Path
-          from xml.etree import ElementTree as ET
+          cyclonedx-py environment --pyproject pyproject.toml --output-format JSON --output-file sbom-python.cdx.json
 
-          # Parse JS library versions from build_assets.py
-          src = Path('build_assets.py').read_text()
-          url_pattern = re.compile(r'(?:plotly|ag-grid-community|lightweight-charts)[@/\-](\d+\.\d+\.\d+)')
-          npm_map = {
-              'PLOTLY_JS_URL': 'plotly.js',
-              'AGGRID_JS_URL': 'ag-grid-community',
-              'TVCHART_JS_URL': 'lightweight-charts',
-          }
-          JS_LIBS = []
-          for line in src.splitlines():
-              for const, npm_name in npm_map.items():
-                  if line.strip().startswith(const):
-                      m = url_pattern.search(line)
-                      if m:
-                          JS_LIBS.append({'name': npm_name, 'version': m.group(1), 'purl': f'pkg:npm/{npm_name}@{m.group(1)}'})
-          # AGGRID_JS_URL spans two lines - check the next line too
-          lines = src.splitlines()
-          for i, line in enumerate(lines):
-              for const, npm_name in npm_map.items():
-                  if line.strip().startswith(const) and not url_pattern.search(line) and i + 1 < len(lines):
-                      m = url_pattern.search(lines[i + 1])
-                      if m and not any(l['name'] == npm_name for l in JS_LIBS):
-                          JS_LIBS.append({'name': npm_name, 'version': m.group(1), 'purl': f'pkg:npm/{npm_name}@{m.group(1)}'})
+      - name: Generate npm dependency SBOM
+        run: |
+          npx @cyclonedx/cyclonedx-npm --package-lock-only --output-format JSON --output-file sbom-node.cdx.json
 
-          assert JS_LIBS, 'Failed to parse any JS libraries from build_assets.py'
+      - name: Merge Python + npm SBOMs
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            cyclonedx/cyclonedx-cli:latest \
+            merge \
+            --input-files sbom-python.cdx.json sbom-node.cdx.json \
+            --output-format json \
+            --output-file sbom.cdx.json
 
-          # --- JSON ---
-          sbom_json = Path('../sbom.json')
-          data = json.loads(sbom_json.read_text())
-          existing = {(c['name'], c['version']) for c in data.get('components', [])}
-          for lib in JS_LIBS:
-              if (lib['name'], lib['version']) not in existing:
-                  data.setdefault('components', []).append({
-                      'type': 'library',
-                      'name': lib['name'],
-                      'version': lib['version'],
-                      'purl': lib['purl'],
-                      'bom-ref': lib['purl'],
-                  })
-          data['serialNumber'] = f'urn:uuid:{uuid.uuid4()}'
-          sbom_json.write_text(json.dumps(data, indent=2) + '\n')
+      - name: Validate merged SBOM
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            cyclonedx/cyclonedx-cli:latest \
+            validate \
+            --input-file sbom.cdx.json \
+            --input-format json \
+            --fail-on-errors
 
-          # --- XML ---
-          sbom_xml = Path('../sbom.xml')
-          tree = ET.parse(sbom_xml)
-          root = tree.getroot()
-          ns_match = re.match(r'\{(.+?)\}', root.tag)
-          ns = ns_match.group(1) if ns_match else 'http://cyclonedx.org/schema/bom/1.6'
-          ET.register_namespace('', ns)
-          components = root.find(f'{{{ns}}}components')
-          if components is None:
-              components = ET.SubElement(root, f'{{{ns}}}components')
-          existing_xml = set()
-          for c in components.findall(f'{{{ns}}}component'):
-              n = c.findtext(f'{{{ns}}}name')
-              v = c.findtext(f'{{{ns}}}version')
-              if n and v:
-                  existing_xml.add((n, v))
-          for lib in JS_LIBS:
-              if (lib['name'], lib['version']) not in existing_xml:
-                  comp = ET.SubElement(components, f'{{{ns}}}component', type='library')
-                  comp.set('bom-ref', lib['purl'])
-                  ET.SubElement(comp, f'{{{ns}}}name').text = lib['name']
-                  ET.SubElement(comp, f'{{{ns}}}version').text = lib['version']
-                  ET.SubElement(comp, f'{{{ns}}}purl').text = lib['purl']
-          if root.get('serialNumber'):
-              root.set('serialNumber', f'urn:uuid:{uuid.uuid4()}')
-          tree.write(sbom_xml, xml_declaration=True, encoding='unicode')
-          print('Injected JS libraries: ' + ', '.join(l['name'] + '@' + l['version'] for l in JS_LIBS))
-          "
+      - name: Record SBOM output paths
+        id: paths
+        run: |
+          echo "sbom-json-path=sbom.cdx.json" >> $GITHUB_OUTPUT
 
       - name: Display SBOM summary
         run: |
           echo "## SBOM Generated Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Format:** CycloneDX XML & JSON" >> $GITHUB_STEP_SUMMARY
+          echo "**Format:** CycloneDX JSON" >> $GITHUB_STEP_SUMMARY
+          echo "**Scope:** Python + npm dependency chains" >> $GITHUB_STEP_SUMMARY
           echo "**Generated:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if command -v xmllint &> /dev/null; then
-            COMPONENT_COUNT=$(xmllint --xpath "count(//bom:component)" ../sbom.xml --nsmap bom=http://cyclonedx.org/schema/bom 2>/dev/null || echo "N/A")
-            echo "**Components:** $COMPONENT_COUNT" >> $GITHUB_STEP_SUMMARY
-          fi
+          COMPONENT_COUNT=$(python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('sbom.cdx.json').read_text())
+          print(len(data.get('components', [])))
+          PY
+          )
+          echo "**Components:** $COMPONENT_COUNT" >> $GITHUB_STEP_SUMMARY
           
       - name: Upload SBOM as artifact
         uses: actions/upload-artifact@v5
         with:
           name: sbom
-          path: |
-            sbom.xml
-            sbom.json
+          path: sbom.cdx.json
           retention-days: 90
-          
-      - name: Commit SBOM to repository
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        run: |
-          cd ..
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add sbom.xml sbom.json || true
-          if git diff --staged --quiet; then
-            echo "No changes to SBOM files"
-          else
-            git commit -m "chore: update SBOM [skip ci]"
-            git push
-          fi
-
-      - name: Submit SBOM to Dependency Graph
-        uses: anchore/sbom-action@v0
-        with:
-          path: pywry
-          format: cyclonedx-json
-          artifact-name: sbom-syft.cyclonedx.json
