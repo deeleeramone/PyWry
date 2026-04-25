@@ -54,9 +54,7 @@ jobs:
 
           release_impact_prefixes = (
               "pywry/pywry/",
-              "pywry/pyproject.toml",
               "pywry/hatch_build.py",
-              "pywry/build_assets.py",
           )
 
           release_impacting = any(f.startswith(release_impact_prefixes) for f in changed_files)
