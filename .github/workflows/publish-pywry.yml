@@ -443,6 +443,8 @@ jobs:
     name: Generate release SBOM
     needs: [test]
     if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
+    permissions:
+      contents: read
     uses: ./.github/workflows/sbom.yml
 
   # =============================================================================
