@@ -208,9 +208,14 @@ marimo/_lsp/
 __marimo__/
 
 docs/site/*
+pywry/docs/site/**
 .claude/settings.local.json
 
 # Generated frontend assets (downloaded by pywry/build_assets.py at build/install time)
 pywry/pywry/frontend/assets/*.js.gz
 pywry/pywry/frontend/assets/*.css.gz
 .hatch_build/
+
+# Release-only SBOM outputs (do not track in repository root)
+/sbom.xml
+/sbom.json

@@ -1,21 +1,9 @@
 name: Test pywry
 
 on:
-  push:
-    branches: [main, master, develop]
-    paths:
-      - 'pywry/**'
-      - '!pywry/docs/**'
-      - '!pywry/**/*.md'
-      - '.github/workflows/test-pywry.yml'
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
-    branches: [main, master, develop]
-    paths:
-      - 'pywry/**'
-      - '!pywry/docs/**'
-      - '!pywry/**/*.md'
-      - '.github/workflows/test-pywry.yml'
+    branches: [main, develop]
   workflow_dispatch:
 
 concurrency:
@@ -100,7 +88,7 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           if [[ "$IS_PR" != "true" || "$HAS_FULL_LABEL" == "true" ]]; then
-            echo "Full suite (push, dispatch, or full-test label)"
+            echo "Full suite (dispatch or full-test label)"
             echo "targets=tests/" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -124,14 +112,15 @@ jobs:
             echo "Scoped to changed test files: $T"
             echo "targets=$T" >> "$GITHUB_OUTPUT"
           else
-            echo "No recognized changes; defaulting to full suite"
-            echo "targets=tests/" >> "$GITHUB_OUTPUT"
+            echo "No pywry source/test changes; skipping pytest selection"
+            echo "targets=__skip__" >> "$GITHUB_OUTPUT"
           fi
 
   test:
     name: Test - ${{ matrix.os }} - Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     needs: gen-matrix
+    if: needs.gen-matrix.outputs.pytest-targets != '__skip__'
     permissions:
       contents: read
     strategy:
@@ -392,4 +381,41 @@ jobs:
           rc=$?
           if [[ $rc -eq 5 && "$PYTEST_TARGETS" != "tests/" ]]; then rc=0; fi
           exit $rc
+
+  ci-required:
+    name: CI Required
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - lint
+      - gen-matrix
+      - test
+    permissions:
+      contents: read
+    steps:
+      - name: Enforce required CI outcomes
+        shell: bash
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          PYTEST_TARGETS: ${{ needs.gen-matrix.outputs.pytest-targets }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$LINT_RESULT" != "success" ]]; then
+            echo "Lint job failed with result: $LINT_RESULT"
+            exit 1
+          fi
+
+          if [[ "$PYTEST_TARGETS" == "__skip__" ]]; then
+            echo "No pywry source/test changes detected; test matrix intentionally skipped."
+            exit 0
+          fi
+
+          if [[ "$TEST_RESULT" != "success" ]]; then
+            echo "Test matrix did not succeed (result: $TEST_RESULT)"
+            exit 1
+          fi
+
+          echo "All required CI checks passed."
 

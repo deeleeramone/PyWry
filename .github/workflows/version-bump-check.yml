@@ -1,0 +1,91 @@
+name: Version Bump Check
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version-bump-required:
+    name: Version Bump Required
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate version bump for release-impacting changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import re
+          import subprocess
+          import sys
+          from pathlib import Path
+
+
+          def run(args: list[str]) -> str:
+              return subprocess.check_output(args, text=True).strip()
+
+
+          def parse_version(pyproject_text: str) -> str:
+              match = re.search(r'^version\s*=\s*"([^"]+)"\s*$', pyproject_text, flags=re.MULTILINE)
+              if not match:
+                  raise ValueError("Could not parse version from pyproject.toml")
+              return match.group(1)
+
+
+          def semver_key(version: str) -> tuple[int, ...]:
+              core = version.split("+", 1)[0].split("-", 1)[0]
+              parts = core.split(".")
+              if len(parts) != 3 or not all(p.isdigit() for p in parts):
+                  raise ValueError(f"Version is not simple SemVer major.minor.patch: {version}")
+              return tuple(int(p) for p in parts)
+
+
+          base_sha = run(["git", "rev-parse", "origin/main"])
+          changed_files = run(["git", "diff", "--name-only", f"{base_sha}...HEAD"]).splitlines()
+
+          release_impact_prefixes = (
+              "pywry/pywry/",
+              "pywry/pyproject.toml",
+              "pywry/hatch_build.py",
+              "pywry/build_assets.py",
+          )
+          release_impact_files = {
+              ".github/workflows/publish-pywry.yml",
+              ".github/workflows/sbom.yml",
+              ".github/workflows/update-lockfiles.yml",
+              ".github/workflows/version-bump-check.yml",
+          }
+
+          release_impacting = any(
+              f.startswith(release_impact_prefixes) or f in release_impact_files for f in changed_files
+          )
+
+          if not release_impacting:
+              print("No release-impacting changes detected; version bump not required.")
+              sys.exit(0)
+
+          base_pyproject = run(["git", "show", f"{base_sha}:pywry/pyproject.toml"])
+          head_pyproject_path = Path("pywry/pyproject.toml")
+          if not head_pyproject_path.exists():
+              raise FileNotFoundError("Head pyproject.toml not found at pywry/pyproject.toml")
+          head_pyproject = head_pyproject_path.read_text(encoding="utf-8")
+
+          base_version = parse_version(base_pyproject)
+          head_version = parse_version(head_pyproject)
+
+          if semver_key(head_version) <= semver_key(base_version):
+              print("::error::Release-impacting changes require a pywry version increment.")
+              print(f"::error::Current branch version: {head_version}; main version: {base_version}")
+              sys.exit(1)
+
+          print(f"Version bump check passed: {base_version} -> {head_version}")
+          PY
