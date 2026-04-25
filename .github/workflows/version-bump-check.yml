@@ -59,7 +59,7 @@ jobs:
               "pywry/build_assets.py",
           )
 
-            release_impacting = any(f.startswith(release_impact_prefixes) for f in changed_files)
+          release_impacting = any(f.startswith(release_impact_prefixes) for f in changed_files)
 
           if not release_impacting:
               print("No release-impacting changes detected; version bump not required.")
