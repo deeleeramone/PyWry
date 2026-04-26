@@ -36,7 +36,7 @@ launches the `pywry` console script installed by pip.
 Pin to a specific release:
 
 ```
-/plugin install pywry@pywry --version plugin-pywry-v0.1.0
+/plugin install pywry@pywry --version claude-pywry-v0.1.0
 ```
 
 Without a version, the install tracks `main`.

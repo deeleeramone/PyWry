@@ -93,11 +93,34 @@ jobs:
                   except json.JSONDecodeError as e:
                       failures.append(f"{name}: {hooks} invalid JSON: {e}")
 
+          # Desktop extension (.mcpb) is keyed to the pywry plugin specifically
+          desktop_manifest = repo / "claude" / "desktop-extension" / "manifest.json"
+          pywry_entry = next((p for p in plugins if p.get("name") == "pywry"), None)
+          if pywry_entry is not None and desktop_manifest.exists():
+              try:
+                  dm = json.loads(desktop_manifest.read_text(encoding="utf-8"))
+              except json.JSONDecodeError as e:
+                  failures.append(f"{desktop_manifest}: invalid JSON: {e}")
+              else:
+                  if dm.get("version") != pywry_entry.get("version"):
+                      failures.append(
+                          f"desktop-extension/manifest.json version "
+                          f"{dm.get('version')!r} != pywry plugin "
+                          f"{pywry_entry.get('version')!r}"
+                      )
+                  if dm.get("name") != "pywry":
+                      failures.append(
+                          f"desktop-extension/manifest.json name "
+                          f"{dm.get('name')!r} != 'pywry'"
+                      )
+          elif pywry_entry is not None and not desktop_manifest.exists():
+              failures.append(f"missing {desktop_manifest}")
+
           if failures:
               for f in failures:
                   print(f"::error::{f}")
               sys.exit(1)
-          print(f"ok — {len(plugins)} plugin(s) validated")
+          print(f"ok — {len(plugins)} plugin(s) validated, .mcpb manifest in sync")
           PY
 
       - name: Check CHANGELOG was updated when plugin.json version changes
