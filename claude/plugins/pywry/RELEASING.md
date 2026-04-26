@@ -12,15 +12,18 @@ Summary:
 - Minor: new command / skill / agent / hook / MCP tool.
 - Major: rename, remove, breaking contract change.
 
-## 2. Update the version in both manifests
+## 2. Update the version in all three manifests
 
 Edit:
 
 1. [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) → `"version": "…"`
 2. [`claude/.claude-plugin/marketplace.json`](../../.claude-plugin/marketplace.json)
    → `plugins[name=pywry].version`
+3. [`claude/desktop-extension/manifest.json`](../../desktop-extension/manifest.json)
+   → `"version": "…"`
 
-Both must match. CI enforces this.
+All three must match. `claude/scripts/build_distributions.py` fails fast
+on drift, and CI enforces it.
 
 ## 3. Update the changelog
 
@@ -32,44 +35,56 @@ Edit [CHANGELOG.md](CHANGELOG.md):
 - Keep sub-headers (`### Added`, `### Changed`, `### Fixed`,
   `### Removed`, `### Documentation`).
 
-## 4. Commit
+## 4. Commit and merge to main
 
 ```bash
 git add claude/plugins/pywry/.claude-plugin/plugin.json \
         claude/.claude-plugin/marketplace.json \
+        claude/desktop-extension/manifest.json \
         claude/plugins/pywry/CHANGELOG.md
 git commit -m "Release claude/plugins/pywry v<version>"
 ```
 
-## 5. Tag
+Open a PR, get it merged to `main`. That's the last manual step.
 
-```bash
-git tag -a plugin-pywry-v<version> -m "pywry plugin v<version>"
-git push origin main plugin-pywry-v<version>
-```
+## 5. Automatic: tag, build, and release
 
-Tag prefix `plugin-pywry-v` keeps these distinct from PyWry Python
+Once the version-bump commit lands on `main`,
+[`.github/workflows/release-claude-artifacts.yml`](../../../.github/workflows/release-claude-artifacts.yml)
+runs and:
+
+1. Reads the new version from `plugin.json`.
+2. Skips if `claude-pywry-v<version>` already exists (idempotent).
+3. Runs `claude/scripts/build_distributions.py` (which re-verifies
+   that all three manifests are in sync — fails the workflow if not).
+4. Tags the merge commit `claude-pywry-v<version>`.
+5. Creates the GitHub release with the changelog section as notes
+   and `pywry-cowork.plugin` + `pywry.mcpb` attached.
+
+Tag prefix `claude-pywry-v` keeps these distinct from PyWry Python
 package tags (`v2.0.0` etc.), so releases in the two trees don't
 collide.
 
-## 6. (Optional) Draft a GitHub release
+To run the build locally before opening the PR:
 
 ```bash
-gh release create plugin-pywry-v<version> \
-  --title "pywry plugin v<version>" \
-  --notes-file <(sed -n "/## \[<version>\]/,/## \[/p" claude/plugins/pywry/CHANGELOG.md | head -n -1)
+python claude/scripts/build_distributions.py
 ```
 
-## 7. Announce
+To re-run the release (e.g. after a transient failure), trigger
+`Release Claude artifacts` via `workflow_dispatch` from the Actions
+tab — the tag-existence check makes it safe to repeat.
+
+## 6. Announce
 
 Post the install command to the relevant channels:
 
 ```
 /plugin marketplace add deeleeramone/PyWry --path claude/.claude-plugin/marketplace.json
-/plugin install pywry@pywry --version plugin-pywry-v<version>
+/plugin install pywry@pywry --version claude-pywry-v<version>
 ```
 
-## 8. Verify
+## 7. Verify
 
 In a fresh Claude Code session:
 
