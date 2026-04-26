@@ -9,7 +9,7 @@ griffe>=1.0.0
 
 # For cross-references
 mkdocs-gen-files>=0.5.0
-mkdocs-literate-nav>=0.6.0
+mkdocs-literate-nav>=0.6.3
 mkdocs-section-index>=0.3.0
 
 # Needed for building docs (dependencies of pywry)
