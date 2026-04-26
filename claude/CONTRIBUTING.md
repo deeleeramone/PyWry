@@ -48,10 +48,10 @@ summary below:
    `Release claude/plugins/pywry v0.2.0`.
 5. Tag:
    ```bash
-   git tag -a plugin-pywry-v0.2.0 -m "pywry plugin v0.2.0"
-   git push origin plugin-pywry-v0.2.0
+   git tag -a claude-pywry-v0.2.0 -m "pywry plugin v0.2.0"
+   git push origin claude-pywry-v0.2.0
    ```
-6. Users pin with `/plugin install pywry@pywry --version plugin-pywry-v0.2.0`
+6. Users pin with `/plugin install pywry@pywry --version claude-pywry-v0.2.0`
    to avoid tracking `main`.
 
 ## Adding a new plugin

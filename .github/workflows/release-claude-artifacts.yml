@@ -1,0 +1,108 @@
+name: Release Claude artifacts
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-claude-artifacts
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag and release on version bump
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Read plugin version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(jq -r .version claude/plugins/pywry/.claude-plugin/plugin.json)
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=claude-pywry-v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Plugin version: $VERSION"
+
+      - name: Skip if tag already exists
+        id: tag_check
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "refs/tags/$TAG"; then
+            echo "Tag $TAG already published — nothing to release."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag $TAG missing — will build and release."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Build distributions (enforces version sync across all three manifests)
+        if: steps.tag_check.outputs.exists == 'false'
+        run: python claude/scripts/build_distributions.py
+
+      - name: Extract changelog section
+        id: notes
+        if: steps.tag_check.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          python3 - "$VERSION" > "$NOTES_FILE" <<'PY'
+          import re
+          import sys
+
+          version = sys.argv[1]
+          text = open("claude/plugins/pywry/CHANGELOG.md", encoding="utf-8").read()
+          # Match either "## 1.2.3" or "## [1.2.3]" headings
+          pattern = re.compile(
+              rf"^## \[?{re.escape(version)}\]?[^\n]*\n(.*?)(?=^## |\Z)",
+              re.MULTILINE | re.DOTALL,
+          )
+          m = pattern.search(text)
+          if m:
+              print(m.group(1).strip())
+          else:
+              print("See [CHANGELOG.md](claude/plugins/pywry/CHANGELOG.md) for details.")
+          PY
+          echo "file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git identity
+        if: steps.tag_check.outputs.exists == 'false'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Tag and create GitHub release
+        if: steps.tag_check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
+          NOTES_FILE: ${{ steps.notes.outputs.file }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git tag -a "$TAG" -m "pywry plugin v$VERSION" "$GITHUB_SHA"
+          git push origin "$TAG"
+          gh release create "$TAG" \
+            --title "pywry plugin v$VERSION" \
+            --notes-file "$NOTES_FILE" \
+            claude/dist/pywry-cowork.plugin \
+            claude/dist/pywry.mcpb
