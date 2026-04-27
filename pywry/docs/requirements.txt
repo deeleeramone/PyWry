@@ -14,4 +14,4 @@ mkdocs-section-index>=0.3.12
 
 # Needed for building docs (dependencies of pywry)
 pydantic>=2.0
-pydantic-settings>=2.0
+pydantic-settings>=2.14.0
