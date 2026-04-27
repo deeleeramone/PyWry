@@ -1,6 +1,6 @@
 # PyWry Documentation Requirements
 mkdocs>=1.5.0
-mkdocs-material>=9.5.0
+mkdocs-material>=9.7.6
 mkdocs-autorefs>=1.0.0
 
 # Auto-generated API documentation from source
