@@ -671,9 +671,9 @@ class MemorySessionStore(SessionStore):
         ----------
         session_id : str
             Session identifier.
-        _resource_type : str
+        resource_type : str
             Resource type placeholder for interface compatibility.
-        _resource_id : str
+        resource_id : str
             Resource identifier placeholder for interface compatibility.
         permission : str
             Permission to test.
