@@ -220,143 +220,139 @@
 
 /* =================================================================
    4. LEFT SIDEBAR – cleaner, Electron-style
+   -----------------------------------------------------------------
+   Desktop-only. On mobile/tablet (< 76.25em) Material renders a
+   sliding-panel drawer with its own absolute-positioning,
+   chevron orientation, and title chrome — overriding those rules
+   makes nav text invisible inside the drawer (issue #30).
    ================================================================= */
 
-.md-sidebar--primary {
-  background: var(--pywry-sidebar-bg);
-  border-right: 1px solid var(--pywry-sidebar-border);
-}
-
-/* Sidebar inner padding */
-.md-sidebar__inner { padding: .8rem 0; }
-
-/* Sidebar nav title (mobile only usually) */
-.md-nav--primary > .md-nav__title {
-  font-size: .7rem;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--pywry-text-muted);
-  padding: .4rem .8rem;
-}
-/* Hide the "Navigation" title text on desktop */
 @media (min-width: 76.25em) {
+
+  .md-sidebar--primary {
+    background: var(--pywry-sidebar-bg);
+    border-right: 1px solid var(--pywry-sidebar-border);
+  }
+
+  /* Sidebar inner padding */
+  .md-sidebar__inner { padding: .8rem 0; }
+
+  /* Hide the "Navigation" title text on desktop */
   .md-nav--primary > .md-nav__title { display: none; }
-}
 
-/* ── Regular nav links ── */
-.md-nav__link {
-  font-size: .82rem;
-  padding: .35rem .8rem .35rem 1rem;
-  color: var(--pywry-sidebar-text);
-  border-radius: 0;
-  transition: color .12s, background .12s;
-  border-left: 2px solid transparent;
-  margin: 0;
-}
+  /* ── Regular nav links ── */
+  .md-nav__link {
+    font-size: .82rem;
+    padding: .35rem .8rem .35rem 1rem;
+    color: var(--pywry-sidebar-text);
+    border-radius: 0;
+    transition: color .12s, background .12s;
+    border-left: 2px solid transparent;
+    margin: 0;
+  }
 
-/* Prevent truncation/wrapping – sidebar is wide enough for all labels */
-.md-sidebar--primary .md-ellipsis {
-  white-space: nowrap !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
+  /* Prevent truncation/wrapping – sidebar is wide enough for all labels */
+  .md-sidebar--primary .md-ellipsis {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
 
-.md-nav__link:hover {
-  color: var(--pywry-sidebar-active);
-  background: var(--pywry-sidebar-hover);
-}
+  .md-nav__link:hover {
+    color: var(--pywry-sidebar-active);
+    background: var(--pywry-sidebar-hover);
+  }
 
-/* Active page link – teal left border + teal text (Electron style) */
-.md-nav__link--active,
-.md-nav__item .md-nav__link--active {
-  color: var(--pywry-sidebar-active) !important;
-  border-left-color: var(--pywry-sidebar-active);
-  font-weight: 600;
-  background: var(--pywry-sidebar-hover);
-}
+  /* Active page link – teal left border + teal text (Electron style) */
+  .md-nav__link--active,
+  .md-nav__item .md-nav__link--active {
+    color: var(--pywry-sidebar-active) !important;
+    border-left-color: var(--pywry-sidebar-active);
+    font-weight: 600;
+    background: var(--pywry-sidebar-hover);
+  }
 
-/* ── Collapsible section headers – Electron-style ── */
-/* Section parent links: bolder, full-width, with chevron toggle */
-.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
-.md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link {
-  font-size: .84rem;
-  font-weight: 600;
-  color: var(--pywry-sidebar-text);
-  padding: .45rem .8rem;
-  cursor: pointer;
-}
+  /* ── Collapsible section headers – Electron-style ── */
+  /* Section parent links: bolder, full-width, with chevron toggle */
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+  .md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link {
+    font-size: .84rem;
+    font-weight: 600;
+    color: var(--pywry-sidebar-text);
+    padding: .45rem .8rem;
+    cursor: pointer;
+  }
 
-.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link:hover,
-.md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link:hover {
-  color: var(--pywry-sidebar-active);
-  background: var(--pywry-sidebar-hover);
-}
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link:hover,
+  .md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link:hover {
+    color: var(--pywry-sidebar-active);
+    background: var(--pywry-sidebar-hover);
+  }
 
-/* Expand/collapse chevron – right-aligned like Electron */
-.md-nav__icon {
-  order: 1;
-  margin-left: auto;
-  color: var(--pywry-text-muted);
-  transition: transform .2s;
-}
+  /* Expand/collapse chevron – right-aligned like Electron */
+  .md-nav__icon {
+    order: 1;
+    margin-left: auto;
+    color: var(--pywry-text-muted);
+    transition: transform .2s;
+  }
 
-/* The active section chevron points down (expanded) */
-.md-nav__item--active > .md-nav__link .md-nav__icon,
-.md-nav__item--active > label .md-nav__icon {
-  transform: rotate(90deg);
-}
+  /* The active section chevron points down (expanded) */
+  .md-nav__item--active > .md-nav__link .md-nav__icon,
+  .md-nav__item--active > label .md-nav__icon {
+    transform: rotate(90deg);
+  }
 
-/* Nested list indentation */
-.md-nav--primary .md-nav .md-nav__link {
-  padding-left: 1.5rem;
-}
-/* Prevent double-padding on nested sections with navigation.indexes container */
-.md-nav--primary .md-nav .md-nav__link.md-nav__container {
-  padding-left: 0;
-}
-.md-nav--primary .md-nav .md-nav .md-nav__link {
-  padding-left: 2rem;
-}
-.md-nav--primary .md-nav .md-nav .md-nav .md-nav__link {
-  padding-left: 2.5rem;
-}
+  /* Nested list indentation */
+  .md-nav--primary .md-nav .md-nav__link {
+    padding-left: 1.5rem;
+  }
+  /* Prevent double-padding on nested sections with navigation.indexes container */
+  .md-nav--primary .md-nav .md-nav__link.md-nav__container {
+    padding-left: 0;
+  }
+  .md-nav--primary .md-nav .md-nav .md-nav__link {
+    padding-left: 2rem;
+  }
+  .md-nav--primary .md-nav .md-nav .md-nav .md-nav__link {
+    padding-left: 2.5rem;
+  }
 
+  /* =================================================================
+     5. RIGHT SIDEBAR – table-of-contents (On this page)
+     ================================================================= */
 
+  .md-sidebar--secondary {
+    width: 13rem;
+    border-left: 1px solid var(--pywry-sidebar-border);
+    background: var(--pywry-sidebar-bg);
+  }
 
-/* =================================================================
-   5. RIGHT SIDEBAR – table-of-contents (On this page)
-   ================================================================= */
+  /* "Table of contents" label */
+  .md-nav--secondary > .md-nav__title {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--pywry-text-muted);
+    padding: .8rem .8rem .4rem;
+  }
 
-.md-sidebar--secondary {
-  width: 13rem;
-  border-left: 1px solid var(--pywry-sidebar-border);
-  background: var(--pywry-sidebar-bg);
-}
+  .md-nav--secondary .md-nav__link {
+    font-size: .75rem;
+    padding: .22rem .8rem;
+    color: var(--pywry-sidebar-text);
+    border-left: 2px solid transparent;
+  }
+  .md-nav--secondary .md-nav__link:hover {
+    color: var(--pywry-sidebar-active);
+  }
+  .md-nav--secondary .md-nav__link--active {
+    color: var(--pywry-sidebar-active);
+    border-left-color: var(--pywry-sidebar-active);
+  }
 
-/* "Table of contents" label */
-.md-nav--secondary > .md-nav__title {
-  font-size: .68rem;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--pywry-text-muted);
-  padding: .8rem .8rem .4rem;
-}
-
-.md-nav--secondary .md-nav__link {
-  font-size: .75rem;
-  padding: .22rem .8rem;
-  color: var(--pywry-sidebar-text);
-  border-left: 2px solid transparent;
-}
-.md-nav--secondary .md-nav__link:hover {
-  color: var(--pywry-sidebar-active);
-}
-.md-nav--secondary .md-nav__link--active {
-  color: var(--pywry-sidebar-active);
-  border-left-color: var(--pywry-sidebar-active);
-}
+}  /* end @media (min-width: 76.25em) */
 
 /* =================================================================
    6. CONTENT AREA
@@ -843,9 +839,8 @@ svg.feature-card__icon {
    ================================================================= */
 
 @media (max-width: 76.25em) {
-  /* Tablet: hide inline nav, rely on sidebar drawer */
-  .md-header-nav     { display: none; }
-  .md-sidebar--primary { width: 100%; border-right: none; }
+  /* Tablet: hide inline nav, rely on Material's stock sidebar drawer */
+  .md-header-nav { display: none; }
 }
 
 @media (max-width: 60em) {
