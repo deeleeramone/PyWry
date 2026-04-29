@@ -60,7 +60,7 @@ html = """
 <div style="padding: 20px; text-align: center;">
     <h1 id="greeting">Welcome to PyWry</h1>
     <p>This is rendered HTML with styling.</p>
-    <button onclick="window.pywry.emit('app:button-click', {clicked: true})">
+    <button onclick="document.getElementById('greeting').textContent = 'You clicked the button!'">
         Click me!
     </button>
 </div>
@@ -74,7 +74,7 @@ app.block()
 
 - Pass any valid HTML string to `app.show()`
 - Use `title`, `width`, `height` to customize the window
-- JavaScript can call `window.pywry.emit()` to send events to Python
+- The rendered HTML is fully interactive — see the next section to send events back to Python
 
 ---
 
