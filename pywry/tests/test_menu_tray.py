@@ -4,8 +4,6 @@ These tests mock the IPC layer and verify correct command serialization
 without requiring a running pytauri subprocess.
 """
 
-# pylint: disable=missing-function-docstring
-
 from __future__ import annotations
 
 from typing import Any
@@ -540,7 +538,7 @@ class TestBuilderOptionsFlow:
         from pywry.models import WindowConfig
 
         config = WindowConfig()
-        assert config.builder_kwargs() == {}  # pylint: disable=use-implicit-booleaness-not-comparison
+        assert config.builder_kwargs() == {}
 
     def test_builder_fields_list(self) -> None:
         from pywry.models import WindowConfig
@@ -630,7 +628,7 @@ class TestCollectHandlers:
 
     def test_empty_menu(self) -> None:
         config = MenuConfig(id="m", items=[])
-        assert config.collect_handlers() == {}  # pylint: disable=use-implicit-booleaness-not-comparison
+        assert config.collect_handlers() == {}
 
 
 class TestMenuProxyHandlers:
@@ -770,7 +768,7 @@ class TestTrayProxyAutoRegister:
 # ── Helpers ───────────────────────────────────────────────────────────
 
 
-def _make_proxy(cls_path: str, menu_id: str, mock_runtime: MagicMock) -> Any:  # pylint: disable=unused-argument
+def _make_proxy(cls_path: str, menu_id: str, mock_runtime: MagicMock) -> Any:
     """Create a MenuProxy without going through IPC."""
     from pywry.menu_proxy import MenuProxy
 

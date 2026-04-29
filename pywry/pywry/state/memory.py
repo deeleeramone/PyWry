@@ -658,8 +658,8 @@ class MemorySessionStore(SessionStore):
     async def check_permission(
         self,
         session_id: str,
-        _resource_type: str,
-        _resource_id: str,
+        resource_type: str,
+        resource_id: str,
         permission: str,
     ) -> bool:
         """Check if a session has permission to access a resource.

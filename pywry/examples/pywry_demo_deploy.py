@@ -14,7 +14,6 @@ Run with:
 Or with Redis backend:
     PYWRY_DEPLOY__STATE_BACKEND=redis PYWRY_DEPLOY__REDIS_URL=redis://localhost:6379/0 python pywry_demo_deploy.py
 """
-# pylint: disable=wrong-import-position,redefined-outer-name,ungrouped-imports
 
 from __future__ import annotations
 
@@ -27,7 +26,7 @@ from typing import TYPE_CHECKING, Any, cast
 os.environ.setdefault("PYWRY_SERVER__HOST", "0.0.0.0")  # noqa: S104
 os.environ.setdefault("PYWRY_SERVER__PORT", "8080")
 
-import pandas as pd  # type: ignore[import-untyped]
+import pandas as pd
 import plotly.express as px
 
 from fastapi.responses import HTMLResponse

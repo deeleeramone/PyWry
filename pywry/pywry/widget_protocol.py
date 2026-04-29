@@ -56,7 +56,7 @@ class BaseWidget(Protocol):
         >>> widget.on("plotly:click", lambda d, t, l: print(f"Clicked: {d}"))
         >>> widget.on("custom-event", my_handler).on("another", other_handler)
         """
-        ...  # pylint: disable=unnecessary-ellipsis
+        ...
 
     def emit(self, event_type: str, data: dict[str, Any]) -> None:
         """Send an event from Python to JavaScript.
@@ -96,7 +96,6 @@ class BaseWidget(Protocol):
         """
 
 
-# pylint: disable=too-many-public-methods
 # NativeWindowHandle implements BaseWidget protocol and provides comprehensive
 # window control methods. The large number of methods is intentional for full API coverage.
 class NativeWindowHandle:

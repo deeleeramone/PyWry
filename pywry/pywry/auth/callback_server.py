@@ -8,10 +8,6 @@ Uses only stdlib (http.server, threading, urllib.parse) — zero
 additional dependencies.
 """
 
-# pylint: disable=logging-too-many-args
-
-# pylint: disable=C0103,W0212
-
 from __future__ import annotations
 
 import html
@@ -176,10 +172,9 @@ class OAuthCallbackServer:
                 if server_ref._server:
                     server_ref._server.shutdown()
 
-            def log_message(self, *args: Any) -> None:
+            def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
                 """Redirect HTTP server logging to the pywry logger."""
-                if args:
-                    logger.debug("OAuth callback server: %s", args[0] % args[1:])
+                logger.debug("OAuth callback server: %s", format % args)
 
         self._server = HTTPServer((self._host, self._port), _CallbackHandler)
         self._actual_port = self._server.server_address[1]

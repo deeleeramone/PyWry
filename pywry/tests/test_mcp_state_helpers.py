@@ -7,8 +7,6 @@ Covers:
   creation to bucket JS-side events into the MCP events dict.
 """
 
-# pylint: disable=protected-access
-
 from __future__ import annotations
 
 import threading
@@ -50,7 +48,7 @@ def test_request_response_round_trip_returns_matching_payload() -> None:
         for handler in widget.handlers.get("widget:state-response", []):
             handler({"context": payload["context"], "value": 42}, "", "")
 
-    widget.emit = emit  # type: ignore[assignment]
+    widget.emit = emit  # type: ignore
     out = request_response(
         widget,
         "widget:state-request",
@@ -86,7 +84,7 @@ def test_request_response_ignores_mismatched_correlation_tokens() -> None:
         for handler in widget.handlers.get("widget:state-response", []):
             handler({"context": "wrong-token", "value": 99}, "", "")
 
-    widget.emit = emit  # type: ignore[assignment]
+    widget.emit = emit  # type: ignore
     out = request_response(
         widget,
         "widget:state-request",
@@ -105,7 +103,7 @@ def test_request_response_supports_custom_correlation_keys() -> None:
         for handler in widget.handlers.get("widget:state-response", []):
             handler({"requestId": payload["requestId"], "ok": True}, "", "")
 
-    widget.emit = emit  # type: ignore[assignment]
+    widget.emit = emit  # type: ignore
     out = request_response(
         widget,
         "widget:state-request",
@@ -139,7 +137,7 @@ def test_request_response_concurrent_requests_isolated() -> None:
         # Release the deliverer immediately
         evt.set()
 
-    widget.emit = emit  # type: ignore[assignment]
+    widget.emit = emit  # type: ignore
     a = request_response(widget, "req", "widget:state-response", {}, timeout=1.0)
     b = request_response(widget, "req", "widget:state-response", {}, timeout=1.0)
     assert a is not None and b is not None
@@ -158,7 +156,7 @@ def test_request_response_ignores_non_dict_responses() -> None:
         for handler in widget.handlers.get("widget:state-response", []):
             handler({"context": payload["context"], "ok": True}, "", "")
 
-    widget.emit = emit  # type: ignore[assignment]
+    widget.emit = emit  # type: ignore
     out = request_response(widget, "req", "widget:state-response", {}, timeout=1.0)
     assert out == {"context": out["context"], "ok": True}
 

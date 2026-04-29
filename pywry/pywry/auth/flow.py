@@ -6,8 +6,6 @@ mode (server-side routes). Uses threading.Event for blocking
 synchronization between the main thread and auth callbacks.
 """
 
-# pylint: disable=logging-too-many-args,too-many-branches,too-many-statements
-
 from __future__ import annotations
 
 import contextlib

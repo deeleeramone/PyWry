@@ -11,9 +11,6 @@ Tests cover:
 - ACPCommand model
 """
 
-# pylint: disable=missing-function-docstring,redefined-outer-name,unused-argument
-# pylint: disable=unsubscriptable-object
-
 from __future__ import annotations
 
 import time

@@ -1,4 +1,3 @@
-# pylint: disable=too-many-lines
 """Unit tests for the Modal component.
 
 Tests cover:
@@ -252,7 +251,7 @@ class TestModalSizing:
     def test_invalid_size(self) -> None:
         """Invalid size is rejected."""
         with pytest.raises(ValidationError):
-            Modal(size="tiny")  # type: ignore[arg-type]
+            Modal(size="tiny")  # type: ignore
 
     def test_overlay_opacity_min(self) -> None:
         """Overlay opacity at minimum (0.0) is accepted."""
@@ -281,7 +280,7 @@ class TestModalExtraFields:
     def test_extra_field_rejected(self) -> None:
         """Unknown field raises ValidationError."""
         with pytest.raises(ValidationError):
-            Modal(unknown_field="value")  # type: ignore[call-arg]
+            Modal(unknown_field="value")  # type: ignore
 
 
 class TestModalItemNormalization:
@@ -371,7 +370,7 @@ class TestModalItemNormalization:
     def test_invalid_item_type_rejected(self) -> None:
         """Non-dict, non-ToolbarItem raises TypeError."""
         with pytest.raises((ValidationError, TypeError), match="Invalid modal item type"):
-            Modal(items=[42])  # type: ignore[list-item]
+            Modal(items=[42])  # type: ignore
 
     def test_empty_items_allowed(self) -> None:
         """Empty items list is allowed."""
@@ -380,7 +379,7 @@ class TestModalItemNormalization:
 
     def test_none_items_normalized_to_empty(self) -> None:
         """None items are normalized to empty list."""
-        m = Modal(items=None)  # type: ignore[arg-type]
+        m = Modal(items=None)  # type: ignore
         assert not list(m.items)
 
 
@@ -814,7 +813,7 @@ class TestWrapContentWithModals:
     def test_invalid_modal_type_rejected(self) -> None:
         """Non-Modal, non-dict raises TypeError."""
         with pytest.raises(TypeError, match="Invalid modal type"):
-            wrap_content_with_modals("<div>Content</div>", [42])  # type: ignore[list-item]
+            wrap_content_with_modals("<div>Content</div>", [42])  # type: ignore
 
     def test_scripts_include_modal_handlers(self) -> None:
         """Returned scripts include core modal handlers."""

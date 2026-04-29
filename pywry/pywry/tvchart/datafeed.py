@@ -148,7 +148,7 @@ class DatafeedProvider(ABC):
     # Optional — override when the server supports these
     # ------------------------------------------------------------------
 
-    async def get_marks(  # pylint: disable=unused-argument
+    async def get_marks(
         self,
         symbol: str,
         from_ts: int,
@@ -158,7 +158,7 @@ class DatafeedProvider(ABC):
         """Return chart marks (default: empty)."""
         return []
 
-    async def get_timescale_marks(  # pylint: disable=unused-argument
+    async def get_timescale_marks(
         self,
         symbol: str,
         from_ts: int,

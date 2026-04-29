@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from .callbacks import CallbackRegistry
 
 
-class ServerStateManager:  # pylint: disable=too-many-instance-attributes
+class ServerStateManager:
     """Unified state manager for PyWry server.
 
     Automatically selects the appropriate storage backend based on
@@ -192,7 +192,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
 
         if self.deploy_mode:
             # Store in distributed state
-            await self._widget_store.register(  # type: ignore[union-attr]
+            await self._widget_store.register(  # type: ignore
                 widget_id=widget_id,
                 html=html,
                 token=token,
@@ -224,7 +224,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         self._ensure_initialized()
 
         if self.deploy_mode:
-            return await self._widget_store.get(widget_id)  # type: ignore[union-attr]
+            return await self._widget_store.get(widget_id)  # type: ignore
 
         # Local mode - convert dict to WidgetData
         if widget_id not in self._local_widgets:
@@ -255,8 +255,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         self._ensure_initialized()
 
         if self.deploy_mode:
-            result = await self._widget_store.get_html(widget_id)  # type: ignore[union-attr]
-            return cast("str | None", result)
+            return await self._widget_store.get_html(widget_id)  # type: ignore
 
         # Local mode
         if widget_id in self._local_widgets:
@@ -281,7 +280,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         self._ensure_initialized()
 
         if self.deploy_mode:
-            return await self._widget_store.update_html(widget_id, html)  # type: ignore[union-attr]
+            return await self._widget_store.update_html(widget_id, html)  # type: ignore
 
         # Local mode
         if widget_id in self._local_widgets:
@@ -305,7 +304,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         self._ensure_initialized()
 
         if self.deploy_mode:
-            return await self._widget_store.exists(widget_id)  # type: ignore[union-attr]
+            return await self._widget_store.exists(widget_id)  # type: ignore
 
         return widget_id in self._local_widgets
 
@@ -329,7 +328,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
             await self._callback_registry.unregister_widget(widget_id)
 
         if self.deploy_mode:
-            return await self._widget_store.delete(widget_id)  # type: ignore[union-attr]
+            return await self._widget_store.delete(widget_id)  # type: ignore
 
         # Local mode
         if widget_id in self._local_widgets:
@@ -350,7 +349,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         self._ensure_initialized()
 
         if self.deploy_mode:
-            return await self._widget_store.list_active()  # type: ignore[union-attr]
+            return await self._widget_store.list_active()  # type: ignore
 
         return list(self._local_widgets.keys())
 
@@ -432,7 +431,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
 
         if self.deploy_mode:
             # Register in distributed router
-            await self._connection_router.register_connection(  # type: ignore[union-attr]
+            await self._connection_router.register_connection(  # type: ignore
                 widget_id=widget_id,
                 worker_id=self.worker_id,
             )
@@ -461,7 +460,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
             del self._local_event_queues[widget_id]
 
         if self.deploy_mode:
-            await self._connection_router.unregister_connection(widget_id)  # type: ignore[union-attr]
+            await self._connection_router.unregister_connection(widget_id)  # type: ignore
 
     async def get_connection(self, widget_id: str) -> WebSocket | None:
         """Get the WebSocket connection for a widget (local only).
@@ -520,7 +519,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         self._ensure_initialized()
 
         # Register in local callback registry
-        await self._callback_registry.register(widget_id, event_type, callback)  # type: ignore[union-attr]
+        await self._callback_registry.register(widget_id, event_type, callback)  # type: ignore
 
         if widget_id in self._local_widgets:
             if "callbacks" not in self._local_widgets[widget_id]:
@@ -544,7 +543,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         """
         self._ensure_initialized()
 
-        registration = await self._callback_registry.get(widget_id, event_type)  # type: ignore[union-attr]
+        registration = await self._callback_registry.get(widget_id, event_type)  # type: ignore
         if registration:
             return registration.callback
         return None
@@ -572,7 +571,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
             (success, result) tuple.
         """
         self._ensure_initialized()
-        return await self._callback_registry.invoke(widget_id, event_type, data)  # type: ignore[union-attr]
+        return await self._callback_registry.invoke(widget_id, event_type, data)  # type: ignore
 
     # --- Event Broadcasting ---
 
@@ -611,7 +610,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
                 data=data,
                 source_worker_id=self.worker_id,
             )
-            await self._event_bus.publish(  # type: ignore[union-attr]
+            await self._event_bus.publish(  # type: ignore
                 channel=f"widget:{widget_id}",
                 event=event_msg,
             )
@@ -658,7 +657,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
                 data=event.get("data", {}),
                 source_worker_id=self.worker_id,
             )
-            await self._event_bus.publish(  # type: ignore[union-attr]
+            await self._event_bus.publish(  # type: ignore
                 channel=f"widget:{widget_id}",
                 event=event_msg,
             )
@@ -692,7 +691,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
         """
         self._ensure_initialized()
         session_id = str(uuid.uuid4())
-        session = await self._session_store.create_session(  # type: ignore[union-attr]
+        session = await self._session_store.create_session(  # type: ignore
             session_id=session_id,
             user_id=user_id,
             roles=roles or ["viewer"],
@@ -714,7 +713,7 @@ class ServerStateManager:  # pylint: disable=too-many-instance-attributes
             The session if found.
         """
         self._ensure_initialized()
-        return await self._session_store.get_session(session_id)  # type: ignore[union-attr]
+        return await self._session_store.get_session(session_id)  # type: ignore
 
     # --- Cleanup ---
 

@@ -392,7 +392,7 @@ class TVChartDatafeedBarUpdate(BaseModel):
     """Real-time bar update pushed from backend to frontend."""
 
     listener_guid: str
-    bar: dict[str, Any]  # pylint: disable=disallowed-name
+    bar: dict[str, Any]
     chart_id: str | None = None
 
 

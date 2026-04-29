@@ -1,4 +1,3 @@
-# pylint: disable=too-many-lines,unused-argument,line-too-long
 # flake8: noqa: PLR0912
 """Pydantic models for PyWry toolbar components.
 
@@ -1160,7 +1159,7 @@ class SecretInput(ToolbarItem):
             The secret value, or None if not available.
         """
         if self.handler is not None:
-            return self.handler(  # pylint: disable=not-callable
+            return self.handler(
                 None,  # Get mode
                 component_id=self.component_id,
                 event=self.event,
@@ -1193,7 +1192,7 @@ class SecretInput(ToolbarItem):
 
         # If custom handler, call it with the value (set mode) and metadata
         if self.handler is not None:
-            self.handler(  # pylint: disable=not-callable
+            self.handler(
                 plain_value,
                 component_id=self.component_id,
                 event=self.event,
@@ -1233,7 +1232,7 @@ class SecretInput(ToolbarItem):
             The secret value, or None if not set.
         """
         if self.handler is not None:
-            return self.handler(  # pylint: disable=not-callable
+            return self.handler(
                 None,  # Get mode
                 component_id=self.component_id,
                 event=self.event,
@@ -1320,7 +1319,7 @@ class TextArea(ToolbarItem):
         title_attr = self._build_title_attr()
 
         # Build inline style for resize constraints
-        style_parts = [f"resize: {self.resize}"]
+        style_parts: list[str] = [f"resize: {self.resize}"]
         if self.min_height:
             style_parts.append(f"min-height: {self.min_height}")
         if self.max_height:
@@ -2223,7 +2222,7 @@ class Div(ToolbarItem):
         # Build children HTML
         children_html = ""
         if self.children:
-            for child in self.children:  # pylint: disable=E1133
+            for child in self.children:
                 if hasattr(child, "build_html"):
                     # Pass this div's component_id as parent context
                     if isinstance(child, Div):
@@ -2256,7 +2255,7 @@ class Div(ToolbarItem):
 
         # Children's scripts (depth-first)
         if self.children:
-            for child in self.children:  # pylint: disable=E1133
+            for child in self.children:
                 if isinstance(child, Div):
                     scripts.extend(child.collect_scripts())
 
@@ -2666,7 +2665,7 @@ class Marquee(ToolbarItem):
         """
         scripts: list[str] = []
         if self.children:
-            for child in self.children:  # pylint: disable=E1133
+            for child in self.children:
                 if isinstance(child, (Div, Marquee)):
                     scripts.extend(child.collect_scripts())
         return scripts
@@ -2844,7 +2843,7 @@ class Toolbar(BaseModel):
                 raise TypeError(f"Invalid toolbar item type: {type(item)}")
         return result
 
-    def build_html(self) -> str:  # pylint: disable=too-many-branches
+    def build_html(self) -> str:
         """Build complete toolbar HTML with collapsible/resizable support."""
         if not self.items:
             return ""
@@ -3050,7 +3049,6 @@ def create_default_secret_handlers(
     ) -> Callable[[dict[str, Any], str, str], None]:
         """Create handler for secret reveal events."""
 
-        #  pylint: disable=unused-argument
         def handler(data: dict[str, Any], event_type: str, label: str) -> None:
             component_id = data.get("componentId", "")
             reveal_event = f"{event_base}:reveal"
@@ -3072,7 +3070,6 @@ def create_default_secret_handlers(
     def make_copy_handler(
         event_base: str,
     ) -> Callable[[dict[str, Any], str, str], None]:
-        # pylint: disable=unused-argument
         def handler(
             data: dict[str, Any],
             event_type: str,
@@ -3101,7 +3098,6 @@ def create_default_secret_handlers(
     ) -> Callable[[dict[str, Any], str, str], None]:
         """Create handler that updates the secret registry when user edits value."""
 
-        # pylint: disable=unused-argument
         def handler(data: dict[str, Any], event_type: str, label: str) -> None:
             # Only handle if this is a value update from frontend
             if "value" not in data:
@@ -3394,9 +3390,9 @@ def wrap_content_with_toolbars(
         # Extract position and html from toolbar config
         if isinstance(toolbar_cfg, Toolbar):
             pos, html_str = toolbar_cfg.position, toolbar_cfg.build_html()
-        elif hasattr(toolbar_cfg, "build_html"):
+        elif callable(build_html := getattr(toolbar_cfg, "build_html", None)):
             pos = getattr(toolbar_cfg, "position", "top")
-            html_str = toolbar_cfg.build_html()
+            html_str = build_html()
         else:
             pos = toolbar_cfg.get("position", "top")
             items = toolbar_cfg.get("items", [])

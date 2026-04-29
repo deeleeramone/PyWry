@@ -344,11 +344,11 @@ class CallbackRegistry:
         async def run_async() -> None:
             try:
                 if num_params >= 3:
-                    await handler(data, event_type, label)  # type: ignore[misc]
+                    await handler(data, event_type, label)  # type: ignore
                 elif num_params == 2:
-                    await handler(data, event_type)  # type: ignore[misc]
+                    await handler(data, event_type)  # type: ignore
                 else:
-                    await handler(data)  # type: ignore[misc]
+                    await handler(data)  # type: ignore
             except Exception as e:
                 log_callback_error(event_type, label, e)
 

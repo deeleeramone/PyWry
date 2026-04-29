@@ -7,8 +7,6 @@ These tests verify:
 4. The Quick Start example in README works correctly
 """
 
-# pylint: disable=redefined-outer-name,unused-argument,unsubscriptable-object,cyclic-import
-
 import sys
 import threading
 import time
@@ -62,9 +60,9 @@ def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Ca
                         if sys.platform == "win32":
                             sleep_time *= 1.5  # Extra time for Windows
                         time.sleep(sleep_time)
-            raise last_error  # type: ignore[misc]
+            raise last_error  # type: ignore
 
-        return wrapper  # type: ignore[return-value]
+        return wrapper  # type: ignore
 
     return decorator
 

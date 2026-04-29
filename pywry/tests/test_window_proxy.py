@@ -56,9 +56,9 @@ def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Ca
                         runtime.stop()
                         # Progressive backoff for CI stability
                         time.sleep(delay * (attempt + 1))
-            raise last_error  # type: ignore[misc]
+            raise last_error  # type: ignore
 
-        return wrapper  # type: ignore[return-value]
+        return wrapper  # type: ignore
 
     return decorator
 

@@ -414,7 +414,7 @@ def _parse_udf_history(data: dict[str, Any]) -> dict[str, Any]:
 
     bars: list[dict[str, Any]] = []
     for i, ts in enumerate(timestamps):
-        bar: dict[str, Any] = {  # pylint: disable=disallowed-name
+        bar: dict[str, Any] = {
             "time": ts,
             "close": closes[i] if i < len(closes) else 0,
         }
@@ -531,7 +531,7 @@ class UDFAdapter(DatafeedProvider):
             },
         )
         resp.raise_for_status()
-        return resp.json()  # type: ignore[no-any-return]
+        return resp.json()
 
     async def resolve_symbol(self, symbol: str) -> dict[str, Any]:
         """Resolve symbol metadata from the UDF server."""
@@ -896,6 +896,7 @@ class UDFAdapter(DatafeedProvider):
     def _start_bar_poll(self, listener_guid: str) -> None:
         if self._closed or self._poll_interval is None:
             return
+        poll_interval: float = self._poll_interval
 
         def _poll() -> None:
             if self._closed or listener_guid not in self._subscriptions:
@@ -929,12 +930,12 @@ class UDFAdapter(DatafeedProvider):
 
             # Schedule next poll
             if listener_guid in self._subscriptions and not self._closed:
-                timer = threading.Timer(self._poll_interval, _poll)  # type: ignore[arg-type]
+                timer = threading.Timer(poll_interval, _poll)
                 timer.daemon = True
                 timer.start()
                 self._poll_timers[listener_guid] = timer
 
-        timer = threading.Timer(self._poll_interval, _poll)
+        timer = threading.Timer(poll_interval, _poll)
         timer.daemon = True
         timer.start()
         self._poll_timers[listener_guid] = timer
@@ -951,6 +952,7 @@ class UDFAdapter(DatafeedProvider):
     def _start_quote_polling(self) -> None:
         if self._closed or not self._quote_interval or not self._quote_symbols:
             return
+        quote_interval: float = self._quote_interval
 
         def _poll_quotes() -> None:
             if self._closed or not self._quote_symbols:
@@ -969,11 +971,11 @@ class UDFAdapter(DatafeedProvider):
 
             # Schedule next poll
             if not self._closed and self._quote_symbols:
-                self._quote_timer = threading.Timer(self._quote_interval, _poll_quotes)  # type: ignore[arg-type]
+                self._quote_timer = threading.Timer(quote_interval, _poll_quotes)
                 self._quote_timer.daemon = True
                 self._quote_timer.start()
 
-        self._quote_timer = threading.Timer(self._quote_interval, _poll_quotes)
+        self._quote_timer = threading.Timer(quote_interval, _poll_quotes)
         self._quote_timer.daemon = True
         self._quote_timer.start()
 

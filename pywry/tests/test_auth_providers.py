@@ -70,7 +70,7 @@ class TestPKCEChallenge:
         """PKCEChallenge is immutable."""
         pkce = PKCEChallenge.generate()
         with pytest.raises(AttributeError):
-            pkce.verifier = "new"  # type: ignore[misc]
+            pkce.verifier = "new"  # type: ignore
 
 
 # ── Provider URL Building ───────────────────────────────────────────

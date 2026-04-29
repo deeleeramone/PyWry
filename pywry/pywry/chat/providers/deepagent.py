@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import uuid
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from . import ChatProvider
 
@@ -521,7 +521,7 @@ def _try_parse_call_args(payload: str) -> dict[str, Any] | None:
     return args
 
 
-_plan_middleware_singleton: Any = None  # pylint: disable=invalid-name
+_plan_middleware_singleton: Any = None
 
 
 def _next_pending_plan_step(state: dict[str, Any]) -> str | None:
@@ -615,7 +615,7 @@ def _build_plan_continuation_middleware() -> Any:
     return _plan_middleware_singleton
 
 
-_inline_tool_call_middleware_singleton: Any = None  # pylint: disable=invalid-name
+_inline_tool_call_middleware_singleton: Any = None
 
 
 def _flatten_message_content(content: Any) -> str | None:
@@ -948,7 +948,7 @@ class DeepagentProvider(ChatProvider):
 
             backend = get_state_backend()
             if backend == StateBackend.REDIS:
-                from langgraph.checkpoint.redis import (  # pylint: disable=import-error,no-name-in-module
+                from langgraph.checkpoint.redis import (
                     RedisSaver,
                 )
 
@@ -1017,7 +1017,7 @@ class DeepagentProvider(ChatProvider):
             # ``transport`` key.  We keep ``_mcp_servers`` as
             # ``dict[str, dict[str, Any]]`` so the ACP surface isn't
             # coupled to the adapter's exported typed-dicts.
-            client = MultiServerMCPClient(self._mcp_servers)  # type: ignore[arg-type]
+            client = MultiServerMCPClient(cast("Any", self._mcp_servers))
 
             def _get_tools() -> list[Any]:
                 # langchain-mcp-adapters <= 0.2.2 imports the deprecated
@@ -1233,6 +1233,9 @@ class DeepagentProvider(ChatProvider):
         # stateful across the whole stream.
         text_filter = _ToolCallTextFilter()
 
+        if self._agent is None:
+            self._agent = self._build_agent()
+
         event_iter = self._agent.astream_events(
             {"messages": [{"role": "user", "content": user_text}]},
             config=config,
@@ -1406,9 +1409,7 @@ class DeepagentProvider(ChatProvider):
             Session to cancel.
         """
 
-    def truncate_session(  # pylint: disable=unused-argument
-        self, session_id: str, kept_messages: list[Any]
-    ) -> None:
+    def truncate_session(self, session_id: str, kept_messages: list[Any]) -> None:
         """Discard the LangGraph checkpointer state for a session.
 
         Called by ``ChatManager`` when the user edits or resends a message
@@ -1435,7 +1436,7 @@ class DeepagentProvider(ChatProvider):
         try:
             delete_thread = getattr(checkpointer, "delete_thread", None)
             if callable(delete_thread):
-                delete_thread(thread_id)  # pylint: disable=not-callable
+                delete_thread(thread_id)
                 return
         except Exception:
             logger.debug("checkpointer.delete_thread failed", exc_info=True)
@@ -1447,16 +1448,14 @@ class DeepagentProvider(ChatProvider):
                 try:
                     _asyncio.get_running_loop()
                 except RuntimeError:
-                    _asyncio.run(adelete(thread_id))  # pylint: disable=not-callable
+                    _asyncio.run(adelete(thread_id))
                 else:
                     # A loop is already running — schedule the coroutine
                     # on a dedicated thread to avoid reentrancy.
                     import concurrent.futures
 
                     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                        pool.submit(
-                            lambda: _asyncio.run(adelete(thread_id))  # pylint: disable=not-callable
-                        ).result()
+                        pool.submit(lambda: _asyncio.run(adelete(thread_id))).result()
                 return
         except Exception:
             logger.debug("checkpointer.adelete_thread failed", exc_info=True)

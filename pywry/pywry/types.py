@@ -512,7 +512,7 @@ class MenuItemConfig:
 
     id: str
     text: str
-    handler: Callable[..., Any] = field(repr=False, default=None)  # type: ignore[assignment]
+    handler: Callable[..., Any] = field(repr=False, default=None)  # type: ignore
     enabled: bool = True
     accelerator: str | None = None
 
@@ -561,7 +561,7 @@ class CheckMenuItemConfig:
 
     id: str
     text: str
-    handler: Callable[..., Any] = field(repr=False, default=None)  # type: ignore[assignment]
+    handler: Callable[..., Any] = field(repr=False, default=None)  # type: ignore
     enabled: bool = True
     checked: bool = False
     accelerator: str | None = None
@@ -618,7 +618,7 @@ class IconMenuItemConfig:
 
     id: str
     text: str
-    handler: Callable[..., Any] = field(repr=False, default=None)  # type: ignore[assignment]
+    handler: Callable[..., Any] = field(repr=False, default=None)  # type: ignore
     enabled: bool = True
     icon: bytes | None = None
     icon_width: int = 16
@@ -834,8 +834,10 @@ def _collect_handlers_from_items(
     """Recursively collect ``{item_id: handler}`` from a list of menu items."""
     handlers: dict[str, Callable[..., Any]] = {}
     for item in items:
-        if hasattr(item, "handler") and hasattr(item, "id") and item.handler is not None:
-            handlers[item.id] = item.handler
+        item_id = getattr(item, "id", None)
+        item_handler = getattr(item, "handler", None)
+        if isinstance(item_id, str) and callable(item_handler):
+            handlers[item_id] = item_handler
         if isinstance(item, SubmenuConfig) and item.items:
             handlers.update(_collect_handlers_from_items(item.items))
     return handlers

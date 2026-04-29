@@ -4,7 +4,6 @@ These interfaces define the contract for state backends, enabling
 horizontal scaling via Redis or other external stores.
 """
 
-# pylint: disable=unnecessary-ellipsis,unused-argument
 # Ellipsis (...) is the standard Python idiom for abstract method bodies;
 # ABC defaults accept the full interface signature even when the no-op
 # body doesn't reference every parameter.
@@ -226,7 +225,7 @@ class EventBus(ABC):
         ...
 
     @abstractmethod
-    async def subscribe(self, channel: str) -> AsyncIterator[EventMessage]:
+    def subscribe(self, channel: str) -> AsyncIterator[EventMessage]:
         """Subscribe to events on a channel.
 
         Parameters
@@ -239,8 +238,7 @@ class EventBus(ABC):
         EventMessage
             Events received on the channel.
         """
-        ...
-        yield  # type: ignore[misc]  # pragma: no cover
+        raise NotImplementedError
 
     @abstractmethod
     async def unsubscribe(self, channel: str) -> None:
@@ -875,7 +873,7 @@ class ChartStore(ABC):
         """
         ...
 
-    async def update_layout_meta(  # pylint: disable=unused-argument
+    async def update_layout_meta(
         self,
         user_id: str,
         layout_id: str,

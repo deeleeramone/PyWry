@@ -37,7 +37,7 @@ def run_async(func: F) -> F:
         loop.close()
         return result
 
-    return wrapper  # type: ignore[return-value]
+    return wrapper  # type: ignore
 
 
 def async_task(func: F) -> F:
@@ -59,7 +59,7 @@ def async_task(func: F) -> F:
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         return await func(*args, **kwargs)
 
-    return wrapper  # type: ignore[return-value]
+    return wrapper  # type: ignore
 
 
 def run_in_thread(func: F) -> Callable[..., Any]:

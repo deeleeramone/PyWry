@@ -494,9 +494,11 @@ async def scaffold_app(ctx: Context) -> str:
     After gathering requirements, calls plan_widget internally to generate the
     full specification and returns the resulting WidgetPlan JSON plus next steps.
     """
+    from mcp.server.elicitation import AcceptedElicitation
+
     # Step 1 — basic identity
     title_result = await ctx.elicit("What is the title of your app?", response_type=None)
-    if title_result.action != "accept":
+    if not isinstance(title_result, AcceptedElicitation):
         return json.dumps({"status": "cancelled", "reason": "No title provided"})
     title = str(title_result.data)
 
@@ -505,7 +507,7 @@ async def scaffold_app(ctx: Context) -> str:
         f"Describe what '{title}' should do (one or two sentences):",
         response_type=None,
     )
-    if desc_result.action != "accept":
+    if not isinstance(desc_result, AcceptedElicitation):
         return json.dumps({"status": "cancelled", "reason": "No description provided"})
     description = str(desc_result.data)
 
@@ -514,14 +516,16 @@ async def scaffold_app(ctx: Context) -> str:
         "How will the app be displayed? (native window / inline)",
         response_type=None,
     )
-    display_mode = str(mode_result.data) if mode_result.action == "accept" else "native window"
+    display_mode = (
+        str(mode_result.data) if isinstance(mode_result, AcceptedElicitation) else "native window"
+    )
 
     # Step 4 — libraries
     lib_result = await ctx.elicit(
         "Which optional JavaScript libraries do you need? (Plotly, AG-Grid, or Neither)",
         response_type=None,
     )
-    raw_libs: Any = lib_result.data if lib_result.action == "accept" else ["Neither"]
+    raw_libs: Any = lib_result.data if isinstance(lib_result, AcceptedElicitation) else ["Neither"]
     selected_libs: list[str] = (
         list(raw_libs) if isinstance(raw_libs, (list, tuple)) else [str(raw_libs)]
     )
@@ -533,7 +537,9 @@ async def scaffold_app(ctx: Context) -> str:
         "Where should the main toolbar be placed? (top / left / bottom / right / none)",
         response_type=None,
     )
-    toolbar_pos = str(toolbar_result.data) if toolbar_result.action == "accept" else "top"
+    toolbar_pos = (
+        str(toolbar_result.data) if isinstance(toolbar_result, AcceptedElicitation) else "top"
+    )
 
     # Build an enriched description for planning
     enriched = (

@@ -156,7 +156,6 @@ class WindowMonitors:
     available: list[StubMonitor]
 
 
-# pylint: disable=too-many-public-methods
 class StubWindow:
     """Stub window that implements pytauri WebviewWindow interface.
 

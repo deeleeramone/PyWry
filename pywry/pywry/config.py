@@ -11,8 +11,6 @@ Environment variables use PYWRY_ prefix with nested delimiter __.
 Example: PYWRY_CSP__CONNECT_SRC, PYWRY_TIMEOUT__STARTUP
 """
 
-# pylint: disable=too-many-lines
-
 from __future__ import annotations
 
 import os
@@ -31,7 +29,7 @@ if sys.version_info >= (3, 11):
     import tomllib
 else:
     try:
-        import tomli as tomllib  # type: ignore[import-not-found]
+        import tomli as tomllib
     except ImportError:
         tomllib = None
 
@@ -837,7 +835,7 @@ class OAuth2Settings(BaseSettings):
 
     @field_validator("client_id")
     @classmethod
-    def validate_custom_provider(cls, v: str, info: Any) -> str:  # pylint: disable=unused-argument
+    def validate_custom_provider(cls, v: str, info: Any) -> str:
         """Validate that required fields are set for custom providers."""
         # Validation happens at usage time rather than init time
         # to allow partial configuration via env vars

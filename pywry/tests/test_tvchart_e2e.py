@@ -1,4 +1,3 @@
-# pylint: disable=missing-function-docstring,redefined-outer-name,unsubscriptable-object
 """E2E tests for TradingView charts with real UDF datafeed.
 
 Uses a real UDFAdapter connected to the BitMEX public UDF server to test

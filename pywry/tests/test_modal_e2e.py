@@ -1,4 +1,3 @@
-# pylint: disable=too-many-lines,redefined-outer-name,unused-argument,unsubscriptable-object
 """End-to-end tests for PyWry modal component across all rendering paths.
 
 Tests cover:
@@ -43,10 +42,7 @@ from tests.conftest import (
 
 
 def _require_result(label: str, script: str, **kwargs) -> dict:
-    """Call wait_for_result and assert the result is a dict.
-
-    Wraps wait_for_result so pylint can narrow the return type.
-    """
+    """Call wait_for_result and assert the result is a dict."""
     result = wait_for_result(label, script, **kwargs)
     assert isinstance(result, dict), f"wait_for_result returned {result!r}"
     return result
@@ -225,7 +221,7 @@ class TestModalHtmlMode:
             modal = Modal(
                 title=f"Size {size}",
                 component_id=f"e2e-size-{size}",
-                size=size,  # type: ignore[arg-type]
+                size=size,
             )
             try:
                 label = show_and_wait_ready(

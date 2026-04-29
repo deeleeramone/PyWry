@@ -1,7 +1,5 @@
 """Tests for SSL/TLS support in PyWry inline widgets."""
 
-# pylint: disable=unused-argument,too-many-statements
-
 import asyncio
 import json
 import os
@@ -42,9 +40,6 @@ def _build_test_html(content: str, widget_id: str) -> str:
     {content}
 </body>
 </html>"""
-
-
-# pylint: disable=redefined-outer-name
 
 
 # Generate self-signed certs for testing
@@ -210,7 +205,7 @@ def test_client_verification_settings_localhost_default(ssl_certs):
 
 
 @pytest.mark.asyncio
-async def test_e2e_wss_callback_flow(  # noqa: PLR0915  # pylint: disable=too-many-statements
+async def test_e2e_wss_callback_flow(  # noqa: PLR0915
     ssl_certs,
 ):
     """Test true E2E flow: HTTPS init -> WSS connect -> Client logic triggers callback."""
@@ -699,7 +694,7 @@ def test_encode_decode_roundtrip_ssl():
 
 
 @pytest.mark.asyncio
-async def test_e2e_wss_custom_secret_handler_reveal(  # noqa: PLR0915  # pylint: disable=too-many-statements
+async def test_e2e_wss_custom_secret_handler_reveal(  # noqa: PLR0915
     ssl_certs,
 ):
     """Custom secret handler should work correctly over WSS."""

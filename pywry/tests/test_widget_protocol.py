@@ -6,7 +6,6 @@ Tests cover:
 - All handle operations with mocked runtime/lifecycle/callbacks
 """
 
-# pylint: disable=redefined-outer-name
 # Pytest fixtures are designed to be used as function parameters with the same name.
 # This is the standard pytest pattern and is not a code smell.
 

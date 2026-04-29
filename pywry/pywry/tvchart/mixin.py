@@ -110,7 +110,7 @@ def _chart_store_sync_index(
             )
 
 
-class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
+class TVChartStateMixin(EmittingWidget):
     """Mixin for TradingView Lightweight Charts state management."""
 
     def update_series(
@@ -146,7 +146,7 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
 
     def update_bar(
         self,
-        bar: dict[str, Any],  # pylint: disable=disallowed-name
+        bar: dict[str, Any],
         chart_id: str | None = None,
         series_id: str | None = None,
     ) -> None:
@@ -839,7 +839,7 @@ class TVChartStateMixin(EmittingWidget):  # pylint: disable=abstract-method
     def respond_tvchart_bar_update(
         self,
         listener_guid: str,
-        bar: dict[str, Any],  # pylint: disable=disallowed-name
+        bar: dict[str, Any],
         chart_id: str | None = None,
     ) -> None:
         """Push a real-time bar update to a subscribed listener.

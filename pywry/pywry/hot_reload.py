@@ -309,7 +309,7 @@ class HotReloadManager:
 
 
 # Global hot reload manager instance (mutable singleton, not a constant)
-_hot_reload_manager: HotReloadManager | None = None  # pylint: disable=invalid-name
+_hot_reload_manager: HotReloadManager | None = None
 
 
 def get_hot_reload_manager(
