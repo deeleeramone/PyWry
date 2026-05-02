@@ -4,8 +4,6 @@ Detects whether PyWry is running in a Jupyter notebook environment
 and provides utilities for inline rendering.
 """
 
-# mypy: disable-error-code="no-untyped-call,attr-defined,arg-type,type-arg"
-
 from __future__ import annotations
 
 import os
@@ -14,7 +12,7 @@ from datetime import datetime
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 
 class NotebookEnvironment(Enum):
@@ -50,7 +48,7 @@ _ENV_CHECKS: list[tuple[str, NotebookEnvironment]] = [
 
 def _check_colab() -> bool:
     try:
-        import google.colab as _colab  # type: ignore
+        import google.colab as _colab
 
         del _colab
     except ImportError:
@@ -285,11 +283,11 @@ def _wrap_content_with_toolbars(content: str, toolbars: list[Any] | None) -> str
     return wrap_content_with_toolbars(content, toolbars)
 
 
-def create_plotly_widget(  # pylint: disable=too-many-branches
+def create_plotly_widget(
     figure_json: str,
     widget_id: str,
     title: str = "PyWry",
-    theme: str = "dark",
+    theme: Literal["dark", "light", "system"] = "dark",
     width: str = "100%",
     height: int = 500,
     port: int | None = None,
@@ -458,12 +456,12 @@ def _make_grid_export_handler(widget: Any) -> Any:
     return handle_export
 
 
-def create_dataframe_widget(  # pylint: disable=too-many-branches,too-many-arguments
+def create_dataframe_widget(
     config: Any,  # GridConfig from grid.py
     widget_id: str,
     title: str = "PyWry",
-    theme: str = "dark",
-    aggrid_theme: str = "alpine",
+    theme: Literal["dark", "light", "system"] = "dark",
+    aggrid_theme: Literal["quartz", "alpine", "balham", "material"] = "alpine",
     width: str = "100%",
     height: int = 500,
     header_html: str = "",

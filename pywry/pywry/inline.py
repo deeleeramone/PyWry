@@ -1,7 +1,5 @@
 """IFrame Rendering Path and WebSocket Bridge for PyWry Widgets."""
 
-# pylint: disable=too-many-lines,wrong-import-position
-# mypy: disable-error-code="import-untyped,no-untyped-call,no-any-return"
 # flake8: noqa S608
 
 from __future__ import annotations
@@ -46,7 +44,6 @@ from .state_mixins import (
 from .toolbar import Toolbar, get_toolbar_script, wrap_content_with_toolbars
 from .widget_protocol import BaseWidget  # noqa: TC001
 
-# Explicitly export BaseWidget to satisfy mypy explicit re-export check
 __all__ = ["BaseWidget", "InlineWidget"]
 
 
@@ -100,11 +97,11 @@ try:
 except ImportError:
     HAS_IPYTHON = False
     # Stub for type hints when IPython not available
-    Output = None
+    Output: Any = None
 
 
 # Global server state
-class _ServerState:  # pylint: disable=too-many-instance-attributes
+class _ServerState:
     def __init__(self) -> None:
         self.server: Any = None
         self.server_thread: threading.Thread | None = None
@@ -491,7 +488,7 @@ def _get_pywry_bridge_js(widget_id: str, widget_token: str | None = None) -> str
 
 @asynccontextmanager
 async def _lifespan(
-    app: FastAPI,  # pylint: disable=unused-argument
+    app: FastAPI,
 ) -> AsyncIterator[None]:
     # Capture the running event loop for emit() to use
     _state.server_loop = asyncio.get_running_loop()
@@ -554,9 +551,7 @@ def _route_ws_message(widget_id: str, msg: dict[str, Any]) -> None:
         )
 
 
-def _handle_widget_disconnect(  # pylint: disable=too-many-branches
-    widget_id: str, reason: str = "unknown"
-) -> None:
+def _handle_widget_disconnect(widget_id: str, reason: str = "unknown") -> None:
     """Handle widget disconnection: cleanup state and fire callback.
 
     Parameters
@@ -701,7 +696,7 @@ def _validate_websocket_origin(headers: dict[str, str], expected_host: str) -> b
     return False
 
 
-def _get_app() -> FastAPI:  # noqa: C901, PLR0915  # pylint: disable=too-many-statements
+def _get_app() -> FastAPI:  # noqa: C901, PLR0915
     """Get or create the FastAPI app."""
     if _state.app is not None:
         return _state.app
@@ -791,13 +786,13 @@ def _get_app() -> FastAPI:  # noqa: C901, PLR0915  # pylint: disable=too-many-st
 
             import logging
 
-            logging.getLogger("pywry.auth").info(  # pylint: disable=logging-too-many-args
+            logging.getLogger("pywry.auth").info(
                 "OAuth2 auth enabled with %s provider", pywry_settings.oauth2.provider
             )
         except Exception as exc:
             import logging
 
-            logging.getLogger("pywry.auth").critical(  # pylint: disable=logging-too-many-args
+            logging.getLogger("pywry.auth").critical(
                 "FATAL: Failed to set up OAuth2 auth routes: %s. "
                 "Refusing to start in partially secured mode.",
                 exc,
@@ -840,7 +835,7 @@ def _get_app() -> FastAPI:  # noqa: C901, PLR0915  # pylint: disable=too-many-st
 
         Deploy mode: Fetches HTML from Redis store instead of local dict.
         """
-        import time  # pylint: disable=redefined-outer-name,reimported
+        import time
 
         # In strict mode (browser), require header auth
         if require_widget_header_auth and not _check_internal_auth(request):
@@ -868,9 +863,7 @@ def _get_app() -> FastAPI:  # noqa: C901, PLR0915  # pylint: disable=too-many-st
         )
 
     @app.websocket("/ws/{widget_id}")
-    async def websocket_endpoint(  # pylint: disable=too-many-branches,too-many-statements
-        websocket: WebSocket, widget_id: str
-    ) -> None:
+    async def websocket_endpoint(websocket: WebSocket, widget_id: str) -> None:
         """WebSocket endpoint with security hardening.
 
         Security features:
@@ -1070,7 +1063,7 @@ def _invoke_callback(
         callback(data, event_type, widget_id)
 
 
-def _process_callbacks() -> None:  # pylint: disable=too-many-branches
+def _process_callbacks() -> None:
     """Background thread to process callbacks."""
     while True:
         try:
@@ -1185,7 +1178,6 @@ def _make_server_request(
     )
 
 
-#  pylint: disable=R0915
 def _start_server(port: int | None = None, host: str | None = None) -> None:  # noqa: C901, PLR0915
     """Start the FastAPI server in a background thread.
 
@@ -1458,7 +1450,7 @@ def deploy() -> None:
     >>> # port = 8080
     >>> # log_level = "info"
     """
-    from pywry.config import get_settings  # pylint: disable=redefined-outer-name
+    from pywry.config import get_settings
 
     settings = get_settings()
     server = settings.server
@@ -1561,7 +1553,7 @@ def get_server_app() -> FastAPI:
     >>> if __name__ == "__main__":
     ...     deploy()
     """
-    from pywry.config import get_settings  # pylint: disable=redefined-outer-name
+    from pywry.config import get_settings
 
     settings = get_settings()
     server = settings.server
@@ -1681,7 +1673,7 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
     Implements BaseWidget protocol for unified API across rendering backends.
     """
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         html: str,
         callbacks: dict[str, Callable[..., Any]] | None = None,
@@ -1966,7 +1958,6 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
 
         return IFrame(url, width=self._width, height=self._height)._repr_html_()
 
-    # pylint: disable=unused-argument
     def _repr_mimebundle_(self, **kwargs: Any) -> dict[str, str]:
         """Return mimebundle for rich display with Output widget."""
         # This is used when the object is returned by a cell
@@ -2028,9 +2019,10 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
         final_config: dict[str, Any] = {}
         cfg = config or stored_config
         if cfg is not None:
-            if hasattr(cfg, "model_dump"):
+            model_dump = getattr(cfg, "model_dump", None)
+            if callable(model_dump):
                 # Pydantic model - convert to dict with camelCase aliases
-                final_config = cfg.model_dump(by_alias=True, exclude_none=True)
+                final_config = model_dump(by_alias=True, exclude_none=True)
             elif isinstance(cfg, dict):
                 final_config = cfg
             else:
@@ -2106,8 +2098,9 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
         """Update grid with new data, columns, and/or restore saved state."""
         payload: dict[str, Any] = {}
         if data is not None:
-            if hasattr(data, "to_dict") and hasattr(data, "columns"):
-                payload["data"] = data.to_dict(orient="records")
+            to_dict = getattr(data, "to_dict", None)
+            if callable(to_dict) and hasattr(data, "columns"):
+                payload["data"] = to_dict(orient="records")
             else:
                 payload["data"] = data
         if columns is not None:
@@ -2310,14 +2303,14 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
             return data
         # Handle dict of lists
         if isinstance(data, dict):
-            cols = list(data.keys())
+            cols = [str(k) for k in data]
             if cols:
                 length = len(data[cols[0]])
                 return [{col: data[col][i] for col in cols} for i in range(length)]
         return []
 
 
-def show(  # pylint: disable=too-many-arguments,too-many-branches,too-many-statements
+def show(
     content: str,
     title: str = "PyWry",
     width: str = "100%",
@@ -3057,7 +3050,7 @@ def generate_plotly_html(
 </html>"""
 
 
-def show_plotly(  # pylint: disable=too-many-arguments
+def show_plotly(
     figure: Figure,
     callbacks: dict[str, Callable[..., Any]] | None = None,
     title: str = "PyWry",
@@ -3138,9 +3131,10 @@ def show_plotly(  # pylint: disable=too-many-arguments
     final_config: dict[str, Any] | PlotlyConfig = config if config is not None else PlotlyConfig()
 
     # Handle PlotlyConfig Pydantic model or dict
-    if hasattr(final_config, "model_dump"):
+    model_dump = getattr(final_config, "model_dump", None)
+    if callable(model_dump):
         # Pydantic model - convert to dict with camelCase aliases
-        config_dict = final_config.model_dump(by_alias=True, exclude_none=True)
+        config_dict = model_dump(by_alias=True, exclude_none=True)
     elif isinstance(final_config, dict):
         config_dict = final_config
     else:
@@ -3165,8 +3159,8 @@ def show_plotly(  # pylint: disable=too-many-arguments
     )
 
     # Store config and toolbars for updates
-    widget._plotly_config = config  # pylint: disable=attribute-defined-outside-init
-    widget._toolbars = toolbars  # pylint: disable=attribute-defined-outside-init
+    widget._plotly_config = config
+    widget._toolbars = toolbars
 
     # Auto-register callbacks
     if callbacks:
@@ -3616,7 +3610,7 @@ def generate_dataframe_html_from_config(
 </html>"""
 
 
-def show_dataframe(  # pylint: disable=too-many-arguments
+def show_dataframe(
     df: Any,
     callbacks: dict[str, Callable[..., Any]] | None = None,
     title: str = "PyWry",
@@ -3779,7 +3773,7 @@ def _preload_chart_data(user_id: str = "default") -> dict[str, str]:
     return preload
 
 
-def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
+def show_tvchart(
     data: Any = None,
     callbacks: dict[str, Callable[..., Any]] | None = None,
     title: str = "Chart",
@@ -3853,7 +3847,7 @@ def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
 
     from .modal import wrap_content_with_modals
     from .notebook import _wrap_content_with_toolbars
-    from .runtime import is_headless  # pylint: disable=redefined-outer-name
+    from .runtime import is_headless
     from .widget import HAS_ANYWIDGET, PyWryTVChartWidget
 
     if theme is None:
@@ -3889,7 +3883,7 @@ def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
                 }
             )
 
-    from .config import get_settings  # pylint: disable=redefined-outer-name
+    from .config import get_settings
     from .state import is_deploy_mode
 
     settings = get_settings()
@@ -3960,16 +3954,20 @@ def show_tvchart(  # pylint: disable=too-many-branches,unused-argument
         for event_type, callback in callbacks.items():
             widget.on(event_type, callback)
 
-    if _use_server_backend and hasattr(widget, "_wire_chart_storage"):
-        widget._wire_chart_storage(user_id="default")
+    if _use_server_backend:
+        wire_storage = getattr(widget, "_wire_chart_storage", None)
+        if callable(wire_storage):
+            wire_storage(user_id="default")
 
     if provider is not None:
         widget._wire_datafeed_provider(provider)
 
     if is_headless():
         pass
-    elif open_browser and hasattr(widget, "open_in_browser"):
-        widget.open_in_browser()
     else:
-        widget.display()
+        open_in_browser = getattr(widget, "open_in_browser", None)
+        if open_browser and callable(open_in_browser):
+            open_in_browser()
+        else:
+            widget.display()
     return widget

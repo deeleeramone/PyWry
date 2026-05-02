@@ -13,8 +13,6 @@ Tests:
 - Public API imports from pywry.__init__
 """
 
-# pylint: disable=missing-function-docstring,redefined-outer-name,disallowed-name
-
 from __future__ import annotations
 
 import json
@@ -2950,7 +2948,7 @@ class TestTVChartChartKindConfig:
         from pywry.tvchart.config import TVChartConfig
 
         with pytest.raises(pydantic.ValidationError):
-            TVChartConfig(chart_kind="candlestick")  # type: ignore[arg-type]
+            TVChartConfig(chart_kind="candlestick")  # type: ignore
 
     def test_to_payload_exposes_chart_kind_alongside_options(self):
         from pywry.tvchart.config import TVChartConfig

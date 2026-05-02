@@ -1,7 +1,5 @@
 """Unit tests for OAuth2 ephemeral callback server."""
 
-# pylint: disable=consider-using-with
-
 from __future__ import annotations
 
 import contextlib

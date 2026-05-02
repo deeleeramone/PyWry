@@ -4,7 +4,6 @@ This module runs as a subprocess, handling the pytauri event loop on the main th
 and receiving commands via stdin JSON IPC.
 """
 
-# pylint: disable=C0301,C0413,C0415,C0103,W0718
 # flake8: noqa: N806, PLR0915
 
 import sys
@@ -61,7 +60,7 @@ def _set_macos_dock_icon() -> None:
         return
 
     try:
-        from ctypes import cdll  # pylint: disable=redefined-outer-name
+        from ctypes import cdll
 
         # Load the icon file - prefer .icns
         assets_dir = Path(__file__).parent / "frontend" / "assets"
@@ -145,36 +144,36 @@ from pywry._freeze import _setup_pytauri_standalone  # noqa: E402
 
 _setup_pytauri_standalone()
 
-import pytauri_plugins  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+import pytauri_plugins  # noqa: E402
 
-from anyio import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+from anyio import (  # noqa: E402
     create_task_group,
 )
-from anyio.from_thread import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+from anyio.from_thread import (  # noqa: E402
     start_blocking_portal,
 )
-from pydantic import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+from pydantic import (  # noqa: E402
     BaseModel,
 )
-from pytauri import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+from pytauri import (  # noqa: E402
     Commands,
     Manager,
     RunEvent,
     WebviewUrl,
     WindowEvent,
 )
-from pytauri.webview import (  # noqa: E402  # pylint: disable=wrong-import-order,wrong-import-position
+from pytauri.webview import (  # noqa: E402
     WebviewWindowBuilder,
 )
 
-from pywry.config import (  # noqa: E402  # pylint: disable=wrong-import-order,ungrouped-imports
+from pywry.config import (  # noqa: E402
     TAURI_PLUGIN_REGISTRY as _PLUGIN_REGISTRY,
 )
 
 
 # Try vendored pytauri_wheel first, fall back to installed package
 try:
-    from pywry._vendor.pytauri_wheel.lib import (  # type: ignore
+    from pywry._vendor.pytauri_wheel.lib import (
         builder_factory,
         context_factory,
     )
@@ -184,8 +183,8 @@ except ImportError:
 
 def _default_single_instance_callback(
     app_handle: Any,
-    argv: list[str],  # pylint: disable=unused-argument
-    cwd: str,  # pylint: disable=unused-argument
+    argv: list[str],
+    cwd: str,
 ) -> None:
     """Default single-instance callback - focus the existing main window."""
     try:
@@ -328,7 +327,7 @@ def log_error(msg: str) -> None:
     sys.stderr.flush()
 
 
-class JsonIPC:  # pylint: disable=too-many-public-methods
+class JsonIPC:
     """Handle JSON IPC communication via stdin/stdout."""
 
     def __init__(self) -> None:
@@ -448,7 +447,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
             event.set()
         return True
 
-    def handle_command(self, cmd: dict[str, Any]) -> None:  # noqa: C901, PLR0912  # pylint: disable=too-many-branches
+    def handle_command(self, cmd: dict[str, Any]) -> None:  # noqa: C901, PLR0912
         """Handle an incoming command."""
         action = cmd.get("action")
         log(f"Received command: {action}")
@@ -530,7 +529,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
                 pass
         # Force exit the process since prevent_exit() may have been called
         log("Forcing process exit...")
-        import os  # pylint: disable=redefined-outer-name,reimported
+        import os
 
         os._exit(0)
 
@@ -1089,7 +1088,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
             if factory is None:
                 factory = PredefinedMenuItem.separator
             text = data.get("text")
-            item = factory(self.app_handle, text) if text is not None else factory(self.app_handle)  # type: ignore[call-arg]
+            item = factory(self.app_handle, text) if text is not None else factory(self.app_handle)  # type: ignore
             return item
 
         if kind == "check":
@@ -1240,7 +1239,7 @@ class JsonIPC:  # pylint: disable=too-many-public-methods
         except Exception as e:
             self.send_error(f"menu_popup failed: {e}")
 
-    def menu_update(self, cmd: dict[str, Any]) -> None:  # noqa: C901, PLR0912  # pylint: disable=too-many-branches,too-many-statements
+    def menu_update(self, cmd: dict[str, Any]) -> None:  # noqa: C901, PLR0912
         """Mutate an existing menu or menu item."""
         menu_id = cmd.get("menu_id", "")
         operation = cmd.get("operation", "")
@@ -1718,7 +1717,7 @@ def _register_custom_commands(
         log(f"Registered custom command forwarder: {name}")
 
 
-def main() -> int:  # noqa: C901  # pylint: disable=too-many-statements
+def main() -> int:  # noqa: C901
     """Run the PyWry subprocess."""
     # Ignore SIGINT in the subprocess.  The parent process handles Ctrl-C
     # and sends a "quit" IPC command for a clean shutdown.  Without this,

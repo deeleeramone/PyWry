@@ -9,8 +9,6 @@ These tests:
 6. Test WebSocket authentication with real connections
 """
 
-# pylint: disable=redefined-outer-name,unused-argument
-
 from __future__ import annotations
 
 import asyncio

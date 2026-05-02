@@ -16,8 +16,6 @@ Tests are designed for CI/headless environments - they do NOT actually open
 a browser, but verify the server-side behavior that BROWSER mode relies on.
 """
 
-# pylint: disable=redefined-outer-name
-
 import asyncio
 import json
 import os

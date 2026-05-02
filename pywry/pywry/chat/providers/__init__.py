@@ -5,7 +5,6 @@ ACP session lifecycle: ``initialize`` → ``new_session`` → ``prompt``
 loop → ``cancel``.
 """
 
-# pylint: disable=unused-argument
 # ABC defaults keep the full interface signature so subclasses see it.
 
 from __future__ import annotations
@@ -76,7 +75,7 @@ class ChatProvider(ABC):
         """
 
     @abstractmethod
-    async def prompt(
+    def prompt(
         self,
         session_id: str,
         content: list[ContentBlock],
@@ -98,7 +97,7 @@ class ChatProvider(ABC):
         SessionUpdate
             Typed update notifications.
         """
-        yield  # type: ignore[misc]  # pragma: no cover
+        raise NotImplementedError
 
     @abstractmethod
     async def cancel(self, session_id: str) -> None:

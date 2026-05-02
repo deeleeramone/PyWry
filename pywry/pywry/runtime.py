@@ -42,7 +42,6 @@ def is_headless() -> bool:
 
 
 # Module state (mutable singletons, not constants)
-# pylint: disable=invalid-name
 _process: subprocess.Popen[str] | None = None
 _reader_thread: threading.Thread | None = None
 _writer_thread: threading.Thread | None = None
@@ -64,7 +63,6 @@ _custom_command_lock = threading.Lock()
 # Portal state for async callback support
 _exit_stack: ExitStack | None = None
 _portal: BlockingPortal | None = None
-# pylint: enable=invalid-name
 _portal_lock = threading.Lock()
 
 # Request/response correlation for blocking calls
@@ -1001,7 +999,7 @@ def start() -> bool:
         creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
 
     try:
-        _process = subprocess.Popen(  # pylint: disable=R1732
+        _process = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -1054,7 +1052,7 @@ def start() -> bool:
 
 def stop() -> None:  # noqa: C901
     """Stop the pytauri subprocess."""
-    global _process, _running  # pylint: disable=W0603
+    global _process, _running
 
     _running = False
     _ready_event.clear()

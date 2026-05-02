@@ -1,7 +1,5 @@
 """Integration tests for OAuth2 flow manager."""
 
-# pylint: disable=consider-using-with
-
 from __future__ import annotations
 
 import asyncio
@@ -118,7 +116,7 @@ class TestAuthFlowManagerNative:
         # We need to intercept the callback server to send the response
         original_start = OAuthCallbackServer.start
 
-        def patched_start(self_server: OAuthCallbackServer) -> str:  # pylint: disable=unused-variable
+        def patched_start(self_server: OAuthCallbackServer) -> str:
             uri = original_start(self_server)
             # Now we know the port — send callback with correct state
             # The state is generated inside run_native, so we need to
@@ -130,10 +128,10 @@ class TestAuthFlowManagerNative:
         captured_state: list[str] = []
 
         def capture_authorize_url(
-            redirect_uri: str,  # pylint: disable=unused-argument
+            redirect_uri: str,
             state: str,
-            pkce: Any = None,  # pylint: disable=unused-argument
-            extra_params: Any = None,  # pylint: disable=unused-argument
+            pkce: Any = None,
+            extra_params: Any = None,
         ) -> str:
             captured_state.append(state)
             return f"https://mock.idp/authorize?state={state}&redirect_uri={redirect_uri}"
@@ -173,9 +171,9 @@ class TestAuthFlowManagerNative:
         captured_state: list[str] = []
 
         def capture_authorize_url(
-            redirect_uri: str,  # pylint: disable=unused-argument
+            redirect_uri: str,
             state: str,
-            **kwargs: Any,  # pylint: disable=unused-argument
+            **kwargs: Any,
         ) -> str:
             captured_state.append(state)
             return f"https://mock.idp/authorize?state={state}"

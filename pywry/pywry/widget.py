@@ -1,8 +1,5 @@
 """PyWry widget for inline notebook rendering using anywidget."""
 
-# mypy: disable-error-code="import-untyped,no-untyped-call,no-untyped-def,arg-type,type-arg"
-# pylint: disable=too-many-lines
-
 from __future__ import annotations
 
 import contextlib
@@ -1459,7 +1456,7 @@ def _get_pywry_base_css() -> str:
 
 if HAS_ANYWIDGET:
 
-    class PyWryWidget(anywidget.AnyWidget, EmittingWidget):  # pylint: disable=abstract-method
+    class PyWryWidget(anywidget.AnyWidget, EmittingWidget):
         """Widget for inline notebook rendering using anywidget (no Plotly).
 
         Implements BaseWidget protocol for unified API.
@@ -1557,7 +1554,7 @@ if HAS_ANYWIDGET:
 
                 traceback.print_exc()
 
-        def on(  # pylint: disable=unused-argument
+        def on(
             self,
             event_type: str,
             callback: Callable[[dict[str, Any], str, str], Any],
@@ -1719,7 +1716,7 @@ if HAS_ANYWIDGET:
 
             return widget
 
-    class PyWryPlotlyWidget(PyWryWidget, PlotlyStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
+    class PyWryPlotlyWidget(PyWryWidget, PlotlyStateMixin):
         """Widget for inline notebook rendering with Plotly.js bundled.
 
         Dynamically loads Plotly.js from bundled assets and combines it
@@ -1802,7 +1799,7 @@ if HAS_ANYWIDGET:
             payload.setdefault("chartId", self.chart_id)
             super().emit(event_type, payload)
 
-    class PyWryAgGridWidget(PyWryWidget, GridStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
+    class PyWryAgGridWidget(PyWryWidget, GridStateMixin):
         """Widget for inline notebook rendering with AG Grid bundled.
 
         Implements BaseWidget protocol for unified API.
@@ -1953,7 +1950,7 @@ if HAS_ANYWIDGET:
                 return data
             # Handle dict of lists
             if isinstance(data, dict):
-                columns = list(data.keys())
+                columns = [str(k) for k in data]
                 if columns:
                     length = len(data[columns[0]])
                     return [{col: data[col][i] for col in columns} for i in range(length)]
@@ -1965,7 +1962,7 @@ if HAS_ANYWIDGET:
 
             ipy_display(self)
 
-    class PyWryChatWidget(PyWryWidget, ChatStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
+    class PyWryChatWidget(PyWryWidget, ChatStateMixin):
         """Widget for inline notebook rendering with chat UI.
 
         This class extends :class:`PyWryWidget` with chat-specific state
@@ -1983,7 +1980,7 @@ if HAS_ANYWIDGET:
         _asset_js = traitlets.Unicode("").tag(sync=True)
         _asset_css = traitlets.Unicode("").tag(sync=True)
 
-    class PyWryTVChartWidget(PyWryWidget, TVChartStateMixin):  # pylint: disable=abstract-method,too-many-ancestors
+    class PyWryTVChartWidget(PyWryWidget, TVChartStateMixin):
         """Widget for inline notebook rendering with TradingView Lightweight Charts."""
 
         _esm = _get_tvchart_widget_esm()
@@ -2031,7 +2028,7 @@ if HAS_ANYWIDGET:
 
 else:
 
-    class PyWryWidget(EmittingWidget):  # type: ignore[no-redef]
+    class PyWryWidget(EmittingWidget):
         """Fallback widget used when ``anywidget`` is not installed.
 
         The fallback preserves the public API shape of the notebook widgets so
@@ -2054,7 +2051,7 @@ else:
             event_type: str,
             callback: Callable[..., Any],
             label: str | None = None,
-        ) -> None:
+        ) -> PyWryWidget:
             """Register an event handler.
 
             Parameters
@@ -2066,10 +2063,17 @@ else:
             label : str or None, optional
                 Ignored (accepted for API compatibility with ``PyWry.on()``).
 
+            Returns
+            -------
+            PyWryWidget
+                Self for method chaining.
+
             Notes
             -----
             This is a no-op in fallback mode.
             """
+            self._handlers.setdefault(event_type, []).append(callback)
+            return self
 
         def emit(self, event_type: str, data: dict[str, Any] | None = None) -> None:
             """Send an event.
@@ -2090,6 +2094,10 @@ else:
             """Set content."""
             self.content = content
 
+        def update(self, html: str) -> None:
+            """Update the widget's HTML content."""
+            self.content = html
+
         def _repr_html_(self) -> str:
             """HTML representation."""
             return (
@@ -2098,10 +2106,28 @@ else:
                 "Run: pip install anywidget</b></div>"
             )
 
-    class PyWryPlotlyWidget(PyWryWidget):  # type: ignore[no-redef]
+        def display(self) -> None:
+            """Display the widget (no-op in fallback)."""
+
+        @classmethod
+        def from_html(
+            cls,
+            content: str,
+            callbacks: (dict[str, Callable[[dict[str, Any], str, str], Any]] | None) = None,
+            theme: str = "dark",
+            width: str = "100%",
+            height: str = "500px",
+            toolbars: list | None = None,
+            modals: list | None = None,
+        ) -> PyWryWidget:
+            """Build a fallback widget; ignores callbacks/toolbars/modals."""
+            del callbacks, theme, width, height, toolbars, modals
+            return cls(content=content)
+
+    class PyWryPlotlyWidget(PyWryWidget):
         """Fallback Plotly widget when anywidget is not available."""
 
-    class PyWryAgGridWidget(PyWryWidget):  # type: ignore[no-redef]
+    class PyWryAgGridWidget(PyWryWidget):
         """Fallback AG Grid widget when anywidget is not available."""
 
         def update_data(self, data: Any) -> None:
@@ -2115,8 +2141,11 @@ else:
         ) -> None:
             """Update grid (no-op in fallback)."""
 
-    class PyWryChatWidget(PyWryWidget):  # type: ignore[no-redef]
+    class PyWryChatWidget(PyWryWidget):
         """Fallback Chat widget when anywidget is not available."""
 
-    class PyWryTVChartWidget(PyWryWidget):  # type: ignore[no-redef]
+    class PyWryTVChartWidget(PyWryWidget):
         """Fallback TVChart widget when anywidget is not available."""
+
+        def _wire_datafeed_provider(self, provider: Any) -> None:
+            """No-op datafeed wiring for the fallback widget."""

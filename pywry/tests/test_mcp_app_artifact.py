@@ -11,8 +11,6 @@ Covers:
 - The WebSocket revision guard (revision query param < current → reject).
 """
 
-# pylint: disable=protected-access
-
 from __future__ import annotations
 
 
@@ -30,10 +28,10 @@ class TestAppArtifactModel:
         assert art.sandbox is True
 
     def test_artifact_union_includes_app(self) -> None:
-        from pywry.chat.artifacts import AppArtifact, Artifact
-
         # typing.get_args on a PEP 604 union returns the constituent types
         from typing import get_args
+
+        from pywry.chat.artifacts import AppArtifact, Artifact
 
         assert AppArtifact in get_args(Artifact)
 
@@ -175,7 +173,7 @@ class TestFormatToolResult:
             assert getattr(text, "type", None) == "text"
             assert "widget_id" in getattr(text, "text", "")
             assert getattr(embedded, "type", None) == "resource"
-            resource = getattr(embedded, "resource")
+            resource = embedded.resource
             # pydantic wraps the uri in AnyUrl — coerce both sides to str
             assert str(getattr(resource, "uri", "")).rstrip("/") == "pywry-app://w/3"
             assert getattr(resource, "mimeType", "") == "text/html"
@@ -196,8 +194,8 @@ class TestWebSocketRevisionGuard:
         try:
             assert _state.get_widget_revision("guard") == 5
             # A request bearing revision 3 is "older" than current 5
-            assert 3 < _state.get_widget_revision("guard")
+            assert _state.get_widget_revision("guard") > 3
             # A request bearing revision 5 is current
-            assert not (5 < _state.get_widget_revision("guard"))
+            assert not (_state.get_widget_revision("guard") > 5)
         finally:
             _state.widget_revisions.pop("guard", None)

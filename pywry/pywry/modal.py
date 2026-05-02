@@ -1,4 +1,3 @@
-# pylint: disable=too-many-lines
 """Pydantic models for PyWry modal components.
 
 This module provides strongly-typed models for modal configurations:
@@ -430,8 +429,10 @@ class Modal(BaseModel):
         for item in self.items:
             if isinstance(item, SecretInput):
                 secrets.append(item)
-            elif isinstance(item, Div) and hasattr(item, "get_secret_inputs"):
-                secrets.extend(item.get_secret_inputs())
+            elif isinstance(item, Div):
+                get_secret_inputs = getattr(item, "get_secret_inputs", None)
+                if callable(get_secret_inputs):
+                    secrets.extend(get_secret_inputs())
         return secrets
 
 

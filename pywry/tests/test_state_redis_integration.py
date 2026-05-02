@@ -9,7 +9,6 @@ Environment variables:
     PYWRY_DEPLOY__REDIS_URL: Optional Redis connection URL (overrides testcontainers)
     PYWRY_DEPLOY__REDIS_PREFIX: Key prefix (default: pywry-test:)
 """
-# pylint: disable=redefined-outer-name
 
 from __future__ import annotations
 

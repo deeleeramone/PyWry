@@ -16,7 +16,6 @@ from ._freeze import freeze_support, setup_pytauri_runtime
 freeze_support()
 setup_pytauri_runtime()
 
-# pylint: disable=wrong-import-position
 # Inline notebook module - import functions directly
 from . import inline
 from .app import PyWry

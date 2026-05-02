@@ -566,8 +566,8 @@ def read_resource(uri: str) -> str | None:
 
     for pattern, (match_type, handler) in handlers.items():
         if match_type == "exact" and uri == pattern:
-            return handler()  # type: ignore[no-any-return]
+            return handler()
         if match_type == "prefix" and uri.startswith(pattern):
-            return handler(uri.replace(pattern, ""))  # type: ignore[no-any-return]
+            return handler(uri.replace(pattern, ""))
 
     return None

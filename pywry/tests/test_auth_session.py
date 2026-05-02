@@ -1,7 +1,5 @@
 """Tests for OAuth2 session manager."""
 
-# pylint: disable=redefined-outer-name
-
 from __future__ import annotations
 
 import asyncio

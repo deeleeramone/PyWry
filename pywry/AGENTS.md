@@ -9,7 +9,7 @@
 | Aspect | Details |
 |--------|---------|
 | **Language** | Python 3.10–3.14 (base); dev tooling requires 3.11+ |
-| **Type System** | Strict mypy, Pydantic v2 models |
+| **Type System** | ty type checker, Pydantic v2 models |
 | **Style** | Ruff (line length 100), NumPy docstrings |
 | **Testing** | pytest with fixtures, `PYWRY_HEADLESS=1` for CI |
 | **Architecture** | Subprocess IPC (native) + FastAPI inline server (notebook / browser) |
@@ -2000,7 +2000,7 @@ pytest tests/ --cov=pywry --cov-report=html
 ```bash
 ruff check pywry/ tests/
 ruff format pywry/ tests/
-mypy pywry/
+ty check pywry/
 ```
 
 ### Environment Variables for Testing

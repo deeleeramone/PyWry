@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     )
 
 
-# pylint: disable=too-many-public-methods
 # WindowProxy mirrors the complete pytauri.webview.WebviewWindow API.
 # The large number of methods is intentional to provide full API coverage.
 class WindowProxy:

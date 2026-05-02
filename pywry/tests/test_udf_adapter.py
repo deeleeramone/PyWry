@@ -558,5 +558,5 @@ class _MockResponse:
             raise httpx.HTTPStatusError(
                 f"HTTP {self.status_code}",
                 request=httpx.Request("GET", "https://example.com"),
-                response=self,  # type: ignore[arg-type]
+                response=self,  # type: ignore
             )

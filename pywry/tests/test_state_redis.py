@@ -2,7 +2,6 @@
 
 These tests use fakeredis to simulate Redis without requiring a real server.
 """
-# pylint: disable=redefined-outer-name
 
 from __future__ import annotations
 

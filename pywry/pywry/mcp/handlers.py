@@ -146,9 +146,9 @@ def _make_action_callback(
     target = action_config.get("target")
 
     def callback(
-        data: Any,  # pylint: disable=unused-argument
-        event_type: str,  # pylint: disable=unused-argument
-        label: str,  # pylint: disable=unused-argument
+        data: Any,
+        event_type: str,
+        label: str,
     ) -> None:
         widget = holder.get("widget")
         if widget:

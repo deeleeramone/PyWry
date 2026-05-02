@@ -590,7 +590,7 @@ class TestEmittingWidgetContract:
     def test_subclass_without_override_raises(self) -> None:
         """Test that subclasses without emit override still raise."""
 
-        class IncompleteWidget(EmittingWidget):  # pylint: disable=abstract-method
+        class IncompleteWidget(EmittingWidget):
             """Test class that doesn't override emit."""
 
         widget = IncompleteWidget()
@@ -623,7 +623,7 @@ class TestEdgeCases:
 
         result = widget.get_last_event()
         assert result is not None
-        event, data = result  # pylint: disable=unpacking-non-sequence
+        event, data = result
         assert event == "grid:restore-state"
         assert data["state"] == {}
 
@@ -635,7 +635,7 @@ class TestEdgeCases:
 
         result = widget.get_last_event()
         assert result is not None
-        event, data = result  # pylint: disable=unpacking-non-sequence
+        event, data = result
         assert event == "grid:update-data"
         assert data["data"] == []
 
@@ -647,7 +647,7 @@ class TestEdgeCases:
 
         result = widget.get_last_event()
         assert result is not None
-        event, data = result  # pylint: disable=unpacking-non-sequence
+        event, data = result
         assert event == "plotly:update-layout"
         assert data["layout"] == {}
 
@@ -659,7 +659,7 @@ class TestEdgeCases:
 
         result = widget.get_last_event()
         assert result is not None
-        event, data = result  # pylint: disable=unpacking-non-sequence
+        event, data = result
         assert event == "toolbar:set-value"
         assert data["value"] is None
 
@@ -672,6 +672,6 @@ class TestEdgeCases:
 
         result = widget.get_last_event()
         assert result is not None
-        event, data = result  # pylint: disable=unpacking-non-sequence
+        event, data = result
         assert event == "grid:update-data"
         assert len(data["data"]) == 10000

@@ -289,7 +289,7 @@ class RedisTokenStore(TokenStore):
         return [key[prefix_len:] async for key in self._redis.scan_iter(match=pattern)]
 
 
-_token_store_instance: TokenStore | None = None  # pylint: disable=invalid-name
+_token_store_instance: TokenStore | None = None
 _token_store_lock = threading.Lock()
 
 

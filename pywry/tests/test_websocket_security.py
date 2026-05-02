@@ -1,6 +1,5 @@
 """Tests for WebSocket security hardening."""
 
-# pylint: disable=redefined-outer-name,protected-access,unused-argument
 import os
 
 from unittest.mock import AsyncMock, MagicMock, patch

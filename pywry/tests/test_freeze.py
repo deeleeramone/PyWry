@@ -27,7 +27,7 @@ def _make_fake_main_module(return_code: int = 0) -> types.ModuleType:
     pytest's capture system.
     """
     mod = types.ModuleType("pywry.__main__")
-    mod.main = lambda: return_code  # type: ignore[attr-defined]
+    mod.main = lambda: return_code  # type: ignore
     return mod
 
 
@@ -175,7 +175,7 @@ class TestPytauriStandaloneSetup:
         finally:
             # Restore original state
             if old_standalone is not None:
-                sys._pytauri_standalone = old_standalone  # type: ignore[attr-defined]
+                sys._pytauri_standalone = old_standalone  # type: ignore
             elif hasattr(sys, "_pytauri_standalone"):
                 del sys._pytauri_standalone
             if old_mod is not None:
@@ -195,7 +195,7 @@ class TestPytauriStandaloneSetup:
             assert getattr(sys, "_pytauri_standalone", False) is True
         finally:
             if old_standalone is not None:
-                sys._pytauri_standalone = old_standalone  # type: ignore[attr-defined]
+                sys._pytauri_standalone = old_standalone  # type: ignore
             elif hasattr(sys, "_pytauri_standalone"):
                 del sys._pytauri_standalone
             if old_mod is not None:

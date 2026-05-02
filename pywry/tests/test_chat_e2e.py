@@ -27,8 +27,6 @@ These tests verify real properties that matter in production:
    other widgets intact.
 """
 
-# pylint: disable=missing-function-docstring,redefined-outer-name,unused-argument
-
 from __future__ import annotations
 
 import asyncio
@@ -54,7 +52,7 @@ def _make_thread(title: str = "Test Thread") -> ChatThread:
 
 
 def _make_message(role: str = "user", content: str = "hello") -> ChatMessage:
-    return ChatMessage(role=role, content=content)  # type: ignore[arg-type]
+    return ChatMessage(role=role, content=content)  # type: ignore
 
 
 def _make_widget_id() -> str:
@@ -721,7 +719,7 @@ class TestMessageLimitEnforcement:
 
         original_limit = chat_module.MAX_MESSAGES_PER_THREAD
         chat_module.MAX_MESSAGES_PER_THREAD = 5
-        mem_module.MAX_MESSAGES_PER_THREAD = 5  # type: ignore[attr-defined]
+        mem_module.MAX_MESSAGES_PER_THREAD = 5  # type: ignore
         try:
             for i in range(8):
                 await memory_store.append_message(
@@ -735,7 +733,7 @@ class TestMessageLimitEnforcement:
             assert "msg-0" not in texts, "Oldest message must have been evicted"
         finally:
             chat_module.MAX_MESSAGES_PER_THREAD = original_limit
-            mem_module.MAX_MESSAGES_PER_THREAD = original_limit  # type: ignore[attr-defined]
+            mem_module.MAX_MESSAGES_PER_THREAD = original_limit  # type: ignore
 
     @pytest.mark.redis
     @pytest.mark.container
@@ -1287,14 +1285,14 @@ class TestChatMessageValidation:
 
     @pytest.mark.parametrize("role", ["user", "assistant", "system", "tool"])
     def test_valid_roles(self, role: str) -> None:
-        msg = ChatMessage(role=role, content="hello")  # type: ignore[arg-type]
+        msg = ChatMessage(role=role, content="hello")  # type: ignore
         assert msg.role == role
 
     def test_invalid_role_rejected(self) -> None:
         import pydantic
 
         with pytest.raises(pydantic.ValidationError):
-            ChatMessage(role="admin", content="escalate")  # type: ignore[arg-type]
+            ChatMessage(role="admin", content="escalate")  # type: ignore
 
     def test_empty_content_is_valid(self) -> None:
         msg = ChatMessage(role="user", content="")

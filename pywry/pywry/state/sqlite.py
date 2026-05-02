@@ -36,9 +36,9 @@ def _load_sqlcipher() -> Any:
     Both packages expose the same DB-API 2.0 surface as stdlib
     ``sqlite3``.  ``sqlcipher3`` is the actively-maintained fork; the
     legacy ``pysqlcipher3`` is checked as a fallback for environments
-    that still pin it.  ``importlib`` is used so mypy doesn't complain
-    about the alternative import paths missing stubs at runtime —
-    neither package ships a ``py.typed`` marker.
+    that still pin it.  ``importlib`` is used so the type checker
+    doesn't complain about the alternative import paths missing stubs
+    at runtime — neither package ships a ``py.typed`` marker.
     """
     import importlib
 

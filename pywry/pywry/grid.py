@@ -20,8 +20,6 @@ Usage:
 AG Grid API Reference: https://www.ag-grid.com/javascript-data-grid/grid-options/
 """
 
-# pylint: disable=too-many-lines
-
 from __future__ import annotations
 
 import json
@@ -41,7 +39,6 @@ SERVER_SIDE_THRESHOLD = 10_000  # Recommend infinite row model above this
 # --- DateTime Serialization Helpers ---
 
 
-# pylint: disable=R0911,R0915
 def _serialize_value(  # noqa: PLR0911
     value: Any,
 ) -> Any:
@@ -71,7 +68,7 @@ def _serialize_value(  # noqa: PLR0911
 
     # Check for pandas NaT and numpy NaN
     try:
-        import pandas as pd  # type: ignore[import-untyped]
+        import pandas as pd
 
         if pd.isna(value):
             return None
@@ -707,7 +704,7 @@ def _flatten_multiindex_columns(data: Any) -> tuple[Any, list[dict[str, Any]] | 
     tuple[Any, list[dict[str, Any]] | None]
         Flattened tabular object and optional AG Grid column-group structure.
     """
-    from collections import defaultdict  # pylint: disable=import-outside-toplevel
+    from collections import defaultdict
 
     # Check if columns are MultiIndex
     if not hasattr(data, "columns") or not hasattr(data.columns, "nlevels"):
@@ -857,11 +854,11 @@ def normalize_data(data: Any) -> GridData:
         elif isinstance(data, dict):
             first_value = next(iter(data.values()), None)
             if isinstance(first_value, (list, tuple)):
-                columns = list(data.keys())
+                columns = [str(k) for k in data]
                 num_rows = len(first_value) if first_value else 0
                 row_data = [{col: data[col][i] for col in columns} for i in range(num_rows)]
             else:
-                columns = list(data.keys())
+                columns = [str(k) for k in data]
                 row_data = [data]
         # list - assume list of dicts
         elif isinstance(data, list):
@@ -989,7 +986,7 @@ def _build_number_col_def(col_def: dict[str, Any], col_type: str) -> None:
         col_def["cellDataType"] = False
 
 
-def build_column_defs(  # noqa: C901, PLR0912  # pylint: disable=too-many-branches
+def build_column_defs(  # noqa: C901, PLR0912
     columns: list[str],
     column_defs: list[dict[str, Any] | ColDef] | None = None,
     column_groups: list[dict[str, Any]] | None = None,
@@ -1031,7 +1028,8 @@ def build_column_defs(  # noqa: C901, PLR0912  # pylint: disable=too-many-branch
         for c in column_defs:
             # Use duck typing - check for to_dict method instead of isinstance
             # (isinstance fails after module reload due to class identity mismatch)
-            col_dict = c.to_dict() if hasattr(c, "to_dict") else dict(c)
+            to_dict = getattr(c, "to_dict", None)
+            col_dict = to_dict() if callable(to_dict) else dict(c)
             # Auto-add spanRows to index columns when cell spanning is enabled
             if enable_cell_span and col_dict.get("field") in index_set:
                 col_dict.setdefault("spanRows", True)
@@ -1108,7 +1106,7 @@ def build_column_defs(  # noqa: C901, PLR0912  # pylint: disable=too-many-branch
 # --- Main Entry Point ---
 
 
-def build_grid_config(  # pylint: disable=too-many-arguments
+def build_grid_config(
     data: Any,
     *,
     column_defs: list[dict[str, Any] | ColDef] | None = None,

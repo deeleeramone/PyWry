@@ -11,9 +11,6 @@ These are REAL tests that actually:
 Run with: pytest tests/test_mcp_e2e.py -v
 """
 
-# pylint: disable=too-many-lines,redefined-outer-name, unused-argument
-# pylint: disable=E1121
-
 from __future__ import annotations
 
 import json
@@ -26,9 +23,9 @@ import pytest
 
 # Check if MCP + fastmcp are available
 try:
-    import mcp  # noqa: F401  # pylint: disable=unused-import
+    import mcp  # noqa: F401
 
-    from fastmcp import Client  # noqa: F401  # pylint: disable=unused-import
+    from fastmcp import Client  # noqa: F401
 
     HAS_MCP = True
 except ImportError:

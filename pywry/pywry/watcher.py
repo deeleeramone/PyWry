@@ -272,7 +272,7 @@ class FileWatcher:
         self,
         label: str,
         path: Path,
-        watches: list[WatchedFile],  # pylint: disable=unused-argument
+        watches: list[WatchedFile],
     ) -> None:
         """Schedule a debounced callback for a window.
 
@@ -333,7 +333,7 @@ class _WatchHandler(FileSystemEventHandler):
 
 
 # Global file watcher instance (mutable singleton, not a constant)
-_file_watcher: FileWatcher | None = None  # pylint: disable=invalid-name
+_file_watcher: FileWatcher | None = None
 
 
 def get_file_watcher(debounce_ms: int = 100) -> FileWatcher:

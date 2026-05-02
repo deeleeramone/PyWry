@@ -1,7 +1,5 @@
 """End-to-end tests for PyWry theme-coordinated rendering."""
 
-# pylint: disable=too-many-lines,redefined-outer-name,reimported,unused-argument
-
 import time
 
 from pywry.app import PyWry
@@ -22,7 +20,6 @@ from tests.conftest import (
 # Class-scoped fixtures (dark_app, light_app) prevent subprocess race conditions
 
 
-# pylint: disable=unsubscriptable-object
 def verify_theme_and_rendering(label: str, expect_dark: bool) -> dict:
     """Verify window theme, AG Grid theme, and Plotly rendering all match.
 
@@ -115,7 +112,6 @@ def verify_theme_and_rendering(label: str, expect_dark: bool) -> dict:
     if not result:
         return {"error": "No response from window"}
 
-    # Type narrowing - pylint doesn't recognize the guard above
     assert isinstance(result, dict)
 
     # Validate background color matches theme
@@ -238,7 +234,6 @@ class TestLightThemeCoordination:
 class TestContentRendering:
     """Verify that content actually renders in windows."""
 
-    # pylint: disable=unsubscriptable-object
     def test_html_content_renders(self):
         """HTML content appears in window with json_data and init_script."""
         app = PyWry(theme=ThemeMode.DARK)
@@ -384,7 +379,7 @@ class TestToolbarIntegration:
         # Event tracking
         events = {"clicked": False}
 
-        def on_click(data: dict, event_type: str, widget_id: str) -> None:  # pylint: disable=unused-argument
+        def on_click(data: dict, event_type: str, widget_id: str) -> None:
             events["clicked"] = True
             events["data"] = data
 
@@ -420,7 +415,7 @@ class TestToolbarIntegration:
 
         events = {"clicked": False}
 
-        def on_click(data: dict, event_type: str, widget_id: str) -> None:  # pylint: disable=unused-argument
+        def on_click(data: dict, event_type: str, widget_id: str) -> None:
             events["clicked"] = True
 
         toolbars = [
@@ -462,7 +457,7 @@ class TestToolbarIntegration:
 
         events = {"clicked": False}
 
-        def on_click(data: dict, event_type: str, widget_id: str) -> None:  # pylint: disable=unused-argument
+        def on_click(data: dict, event_type: str, widget_id: str) -> None:
             events["clicked"] = True
 
         toolbars = [

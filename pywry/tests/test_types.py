@@ -45,7 +45,7 @@ class TestPhysicalSize:
         """PhysicalSize is frozen (immutable)."""
         size = PhysicalSize(width=800, height=600)
         with pytest.raises(AttributeError):
-            size.width = 1024  # type: ignore[misc]
+            size.width = 1024  # type: ignore
 
     def test_to_dict(self) -> None:
         """to_dict produces correct dictionary."""
@@ -70,7 +70,7 @@ class TestPhysicalSize:
     def test_from_dict_converts_types(self) -> None:
         """from_dict converts string numbers to int."""
         data = {"width": "1920", "height": "1080"}  # JSON might have strings
-        size = PhysicalSize.from_dict(data)  # type: ignore[arg-type]
+        size = PhysicalSize.from_dict(data)
         assert size.width == 1920
         assert isinstance(size.width, int)
 

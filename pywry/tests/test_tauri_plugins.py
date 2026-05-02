@@ -8,10 +8,6 @@ Tests verify:
 - Plugin capabilities are correctly configured
 """
 
-# pylint: disable=unused-argument
-
-# pylint: disable=unsubscriptable-object
-
 import time
 
 from collections.abc import Callable
@@ -34,7 +30,7 @@ from pywry.models import ThemeMode, WindowMode
 PYWRY_PKG_DIR = Path(pywry.__file__).parent
 
 # Import shared test utilities from tests.conftest
-from tests.conftest import (  # noqa: E402  # pylint: disable=wrong-import-position
+from tests.conftest import (  # noqa: E402
     ReadyWaiter,
     show_and_wait_ready,
     wait_for_result,
@@ -59,9 +55,9 @@ def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Ca
                     if attempt < max_attempts - 1:
                         runtime.stop()
                         time.sleep(delay * (attempt + 1))
-            raise last_error  # type: ignore[misc]
+            raise last_error  # type: ignore
 
-        return wrapper  # type: ignore[return-value]
+        return wrapper  # type: ignore
 
     return decorator
 
@@ -349,7 +345,7 @@ class TestAppCommandDecorator:
             _app = PyWry(mode=mode, theme=ThemeMode.DARK)
             cmd_name = f"test_{mode.value}"
 
-            @_app.command(cmd_name)  # pylint: disable=cell-var-from-loop
+            @_app.command(cmd_name)
             def handler(data):
                 return {}
 

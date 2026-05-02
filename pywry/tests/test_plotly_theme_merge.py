@@ -9,8 +9,6 @@ Proves that:
 These are NEW tests for the deep-merge / dual-template feature.
 """
 
-# pylint: disable=missing-function-docstring
-
 from __future__ import annotations
 
 import json

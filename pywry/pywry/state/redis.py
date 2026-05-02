@@ -36,7 +36,7 @@ try:
     HAS_REDIS = True
 except ImportError:
     HAS_REDIS = False
-    RedisClient = None  # type: ignore[assignment,misc]
+    RedisClient = None  # type: ignore
 
 
 def _check_redis() -> None:

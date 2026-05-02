@@ -9,8 +9,6 @@ Tests cover:
 - E2E tests for inline notebook alerts
 """
 
-# pylint: disable=too-many-lines,unsubscriptable-object,too-many-lines
-
 from __future__ import annotations
 
 import contextlib
@@ -472,7 +470,7 @@ class TestEmittingWidgetAlertMethod:
             def __init__(self) -> None:
                 self.last_event: tuple[str, dict] | None = None
 
-            def emit(self, event_type: str, data: dict) -> None:  # type: ignore[override]
+            def emit(self, event_type: str, data: dict) -> None:
                 self.last_event = (event_type, data)
 
         widget = MockWidget()
@@ -492,7 +490,7 @@ class TestEmittingWidgetAlertMethod:
             def __init__(self) -> None:
                 self.last_event: tuple[str, dict] | None = None
 
-            def emit(self, event_type: str, data: dict) -> None:  # type: ignore[override]
+            def emit(self, event_type: str, data: dict) -> None:
                 self.last_event = (event_type, data)
 
         widget = MockWidget()
@@ -511,7 +509,7 @@ class TestEmittingWidgetAlertMethod:
             def __init__(self) -> None:
                 self.last_event: tuple[str, dict] | None = None
 
-            def emit(self, event_type: str, data: dict) -> None:  # type: ignore[override]
+            def emit(self, event_type: str, data: dict) -> None:
                 self.last_event = (event_type, data)
 
         widget = MockWidget()
@@ -530,7 +528,7 @@ class TestEmittingWidgetAlertMethod:
             def __init__(self) -> None:
                 self.last_event: tuple[str, dict] | None = None
 
-            def emit(self, event_type: str, data: dict) -> None:  # type: ignore[override]
+            def emit(self, event_type: str, data: dict) -> None:
                 self.last_event = (event_type, data)
 
         widget = MockWidget()

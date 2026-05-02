@@ -8,8 +8,6 @@ These tests:
 5. Verify that RBAC is enforced at every level
 """
 
-# pylint: disable=too-many-lines,redefined-outer-name
-
 from __future__ import annotations
 
 import asyncio
@@ -1308,8 +1306,8 @@ try:
     HAS_WEBSOCKETS = True
 except ImportError:
     HAS_WEBSOCKETS = False
-    websockets = None  # type: ignore[assignment]
-    InvalidStatus = Exception  # type: ignore[assignment,misc]
+    websockets = None  # type: ignore
+    InvalidStatus = Exception  # type: ignore
 
 
 @pytest.mark.skipif(not HAS_WEBSOCKETS, reason="websockets not installed")

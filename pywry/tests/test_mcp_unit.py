@@ -11,9 +11,6 @@ Tests cover all MCP submodules:
 - tools: Tool definitions and schemas
 """
 
-# pylint: disable=protected-access,redefined-outer-name,too-many-lines
-# pylint: disable=E1121,
-
 from __future__ import annotations
 
 from typing import Any
