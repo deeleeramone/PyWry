@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from pywry import PyWry
 
 # Global PyWry app instance for MCP server (mutable singleton, not a constant)
-_app: PyWry | None = None  # pylint: disable=invalid-name
+_app: PyWry | None = None
 
 # Active widgets by ID
 _widgets: dict[str, Any] = {}

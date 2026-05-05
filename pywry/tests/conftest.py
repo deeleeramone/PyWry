@@ -46,7 +46,7 @@ else:
     if blocked:
         filtered: list[str] = []
         for entry in sys.path:
-            resolved = str(Path(entry).absolute()) if entry else str(Path.cwd().absolute())  # pylint: disable=invalid-name
+            resolved = str(Path(entry).absolute()) if entry else str(Path.cwd().absolute())
 
             if resolved in blocked:
                 continue
@@ -139,7 +139,7 @@ def dark_app(request):
     _stop_runtime_sync()
     _clear_registries()
 
-    # Mark the class as using class-scoped app (pylint: disable=protected-access)
+    # Mark the class as using class-scoped app
     if request.cls is not None:
         request.cls._pywry_class_scoped = True
 
@@ -164,7 +164,7 @@ def light_app(request):
     _stop_runtime_sync()
     _clear_registries()
 
-    # Mark the class as using class-scoped app (pylint: disable=protected-access)
+    # Mark the class as using class-scoped app
     if request.cls is not None:
         request.cls._pywry_class_scoped = True
 
@@ -263,7 +263,7 @@ def show_and_wait_ready(
         if attempt < retries - 1:
             time.sleep(RETRY_DELAY * (attempt + 1))
 
-    raise last_error  # type: ignore[misc]
+    raise last_error  # type: ignore
 
 
 def show_plotly_and_wait_ready(
@@ -302,7 +302,7 @@ def show_plotly_and_wait_ready(
         if attempt < retries - 1:
             time.sleep(RETRY_DELAY * (attempt + 1))
 
-    raise last_error  # type: ignore[misc]
+    raise last_error  # type: ignore
 
 
 def show_dataframe_and_wait_ready(
@@ -341,7 +341,7 @@ def show_dataframe_and_wait_ready(
         if attempt < retries - 1:
             time.sleep(RETRY_DELAY * (attempt + 1))
 
-    raise last_error  # type: ignore[misc]
+    raise last_error  # type: ignore
 
 
 def show_tvchart_and_wait_ready(
@@ -380,7 +380,7 @@ def show_tvchart_and_wait_ready(
         if attempt < retries - 1:
             time.sleep(RETRY_DELAY * (attempt + 1))
 
-    raise last_error  # type: ignore[misc]
+    raise last_error  # type: ignore
 
 
 def wait_for_result(
@@ -609,7 +609,7 @@ def _start_redis_container_with_fallback():
             container = RedisContainer(image)
             try:
                 container.start()
-            except Exception as e:  # pylint: disable=broad-except
+            except Exception as e:
                 errors.append(f"{image} (attempt {attempt}/{attempts_per_image}): {e}")
                 with contextlib.suppress(Exception):
                     container.stop()
@@ -645,7 +645,7 @@ def redis_container() -> Generator[str, None, None]:
         return
 
     try:
-        import testcontainers.redis  # noqa: F401  # pylint: disable=unused-import
+        import testcontainers.redis  # noqa: F401
     except ImportError:
         pytest.skip("testcontainers not installed (pip install testcontainers[redis])")
         return
@@ -683,7 +683,7 @@ def redis_container_with_acl() -> Generator[dict, None, None]:
     - users: Dict of user info (username, password, role)
     """
     try:
-        import testcontainers.redis  # noqa: F401  # pylint: disable=unused-import
+        import testcontainers.redis  # noqa: F401
     except ImportError:
         pytest.skip("testcontainers not installed")
         return
@@ -746,7 +746,7 @@ def redis_container_with_acl() -> Generator[dict, None, None]:
             "blocked_url": make_url("blocked", "blocked123"),
             "users": users,
         }
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:
         pytest.skip(f"Docker not available or container failed to start: {e}")
     finally:
         if container is not None:
@@ -795,7 +795,7 @@ def session_store_with_fallback(unique_prefix: str = "test:"):
                 default_ttl=REDIS_TEST_TTL,
             )
             yield store, "redis"
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         # Fall back to memory
         store = MemorySessionStore()
         yield store, "memory"
@@ -859,7 +859,7 @@ def memory_token_store():
 
 
 @pytest.fixture
-def auth_session_manager(mock_oauth_provider, memory_token_store):  # pylint: disable=redefined-outer-name
+def auth_session_manager(mock_oauth_provider, memory_token_store):
     """Create a SessionManager wired to mock provider and memory store."""
     from pywry.auth.session import SessionManager
 

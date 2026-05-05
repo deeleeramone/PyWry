@@ -8,8 +8,6 @@ It also sets the wheel tags to make this a platform-specific wheel,
 which is required since we bundle native binaries.
 """
 
-# pylint: disable=too-many-locals
-
 from __future__ import annotations
 
 import os

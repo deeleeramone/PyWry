@@ -5,8 +5,6 @@ a derived payload, and returns a uniform result dict.  These tests
 verify the schema → handler → emit chain for every tool.
 """
 
-# pylint: disable=protected-access
-
 from __future__ import annotations
 
 from typing import Any

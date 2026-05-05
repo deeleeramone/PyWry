@@ -1,7 +1,5 @@
 """End-to-end tests for inline notebook rendering."""
 
-# pylint: disable=too-many-lines,redefined-outer-name
-
 import asyncio
 import contextlib
 import json
@@ -402,7 +400,7 @@ class TestInlineWidgetClass:
     def test_widget_callbacks_registered(self, server_port):
         """Widget callbacks should be registered."""
 
-        def my_callback(data):  # pylint: disable=unused-argument
+        def my_callback(data):
             return {"ok": True}
 
         widget = InlineWidget(
@@ -460,7 +458,7 @@ class TestShowFunction:
     @patch("pywry.inline.Output", MockOutput)
     @patch("pywry.inline.HAS_IPYTHON", True)
     @patch("IPython.display.display")
-    def test_show_creates_widget(self, mock_ipy_display, server_port):  # pylint: disable=unused-argument
+    def test_show_creates_widget(self, mock_ipy_display, server_port):
         """E2E: show() should create widget accessible via HTTP."""
         widget = show(
             "<p>Hello World</p>",
@@ -481,7 +479,7 @@ class TestShowFunction:
     @patch("pywry.inline.Output", MockOutput)
     @patch("pywry.inline.HAS_IPYTHON", True)
     @patch("IPython.display.display")
-    def test_show_with_callbacks(self, mock_ipy_display, server_port):  # pylint: disable=unused-argument
+    def test_show_with_callbacks(self, mock_ipy_display, server_port):
         """E2E: show() with callbacks should be accessible via HTTP."""
 
         def my_handler(data):
@@ -1064,7 +1062,7 @@ class TestSecretInputE2E:
     @pytest.fixture
     def server_port(self):
         """Return the shared class-level port (same for all tests in this class)."""
-        return self._class_port  # type: ignore[attr-defined]
+        return self._class_port  # type: ignore
 
     def test_secret_never_in_html(self, server_port):
         """Secret values should never appear in rendered HTML."""
@@ -1692,7 +1690,7 @@ class TestSecretInputMaskAndEditE2E:
     @pytest.fixture
     def server_port(self):
         """Return the shared class-level port (same for all tests in this class)."""
-        return self._class_port  # type: ignore[attr-defined]
+        return self._class_port  # type: ignore
 
     def test_mask_displayed_in_html_when_value_exists(self, server_port):
         """HTML should show mask when a value is configured."""

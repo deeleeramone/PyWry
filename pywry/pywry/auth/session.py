@@ -5,8 +5,6 @@ validation, and background refresh scheduling. Uses threading.Timer
 for refresh scheduling to match the thread-based auth flow pattern.
 """
 
-# pylint: disable=logging-too-many-args
-
 from __future__ import annotations
 
 import contextlib

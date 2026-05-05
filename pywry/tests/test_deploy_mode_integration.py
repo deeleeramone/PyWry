@@ -14,8 +14,6 @@ Tests cover real deployment scenarios:
 - Real HTTP/WebSocket authentication scenarios
 """
 
-# pylint: disable=too-many-lines,redefined-outer-name,unused-argument
-
 from __future__ import annotations
 
 import asyncio

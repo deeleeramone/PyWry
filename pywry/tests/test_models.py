@@ -349,7 +349,7 @@ class TestPlotlySelectEvent:
         )
         assert len(event.points) == 2
         assert event.range is not None
-        assert event.range["x"] == [0, 10]  # pylint: disable=unsubscriptable-object
+        assert event.range["x"] == [0, 10]
 
 
 class TestPlotlyHoverEvent:

@@ -24,7 +24,6 @@ if TYPE_CHECKING:
         WidgetStore,
     )
 
-# pylint: disable=wrong-import-position
 from .memory import (
     MemoryChartStore,
     MemoryChatStore,
@@ -34,9 +33,6 @@ from .memory import (
     MemoryWidgetStore,
 )
 from .types import StateBackend
-
-
-# pylint: enable=wrong-import-position
 
 
 class _WorkerIdHolder:

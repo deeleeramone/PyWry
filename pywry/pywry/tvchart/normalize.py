@@ -82,7 +82,7 @@ _SYMBOL_ALIASES: set[str] = {
 }
 
 
-def _serialize_timestamp(value: Any) -> int | None:  # noqa: C901, PLR0911, PLR0912  # pylint: disable=too-many-return-statements,too-many-branches
+def _serialize_timestamp(value: Any) -> int | None:  # noqa: C901, PLR0911, PLR0912
     """Convert a timestamp to Unix epoch seconds.
 
     Parameters
@@ -137,7 +137,7 @@ def _serialize_timestamp(value: Any) -> int | None:  # noqa: C901, PLR0911, PLR0
     return None
 
 
-def _serialize_ohlcv_value(value: Any) -> float | None:  # noqa: PLR0911  # pylint: disable=too-many-return-statements
+def _serialize_ohlcv_value(value: Any) -> float | None:  # noqa: PLR0911
     """Convert a price or volume value to float.
 
     Parameters
@@ -161,7 +161,7 @@ def _serialize_ohlcv_value(value: Any) -> float | None:  # noqa: PLR0911  # pyli
         return float(value)
 
     try:
-        import pandas as pd  # type: ignore[import-untyped]
+        import pandas as pd
 
         if pd.isna(value):
             return None
@@ -225,7 +225,7 @@ def _detect_ohlcv_column_types(data: Any) -> dict[str, str]:
     return {str(col): str(dtype) for col, dtype in data.dtypes.items()}
 
 
-def _detect_symbol_column(  # noqa: C901  # pylint: disable=too-many-nested-blocks
+def _detect_symbol_column(  # noqa: C901
     columns: list[str],
     data: Any,
     symbol_col: str | None = None,
@@ -435,7 +435,7 @@ def _df_to_records(data: Any) -> tuple[list[dict[str, Any]], list[str]]:
     return records, columns
 
 
-def _handle_multiindex_columns(data: Any) -> tuple[Any, str]:  # noqa: PLR0912  # pylint: disable=too-many-branches
+def _handle_multiindex_columns(data: Any) -> tuple[Any, str]:  # noqa: PLR0912
     """Flatten MultiIndex columns for multi-series detection.
 
     For yfinance-style MultiIndex like ('Close', 'AAPL'):
@@ -491,7 +491,7 @@ def _handle_multiindex_columns(data: Any) -> tuple[Any, str]:  # noqa: PLR0912  
     return data_copy, "single"
 
 
-def normalize_ohlcv(  # noqa: C901, PLR0912, PLR0915  # pylint: disable=too-many-branches,too-many-statements
+def normalize_ohlcv(  # noqa: C901, PLR0912, PLR0915
     data: Any,
     *,
     symbol_col: str | None = None,
@@ -543,11 +543,11 @@ def normalize_ohlcv(  # noqa: C901, PLR0912, PLR0915  # pylint: disable=too-many
     elif isinstance(data, dict):
         first_value = next(iter(data.values()), None)
         if isinstance(first_value, (list, tuple)):
-            columns = list(data.keys())
+            columns = [str(k) for k in data]
             num_rows = len(first_value) if first_value else 0
             records = [{col: data[col][i] for col in columns} for i in range(num_rows)]
         else:
-            columns = list(data.keys())
+            columns = [str(k) for k in data]
             records = [data]
 
     elif isinstance(data, list):

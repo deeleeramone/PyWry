@@ -10,8 +10,6 @@ Tests cover:
 - Helper functions
 """
 
-# pylint: disable=C0302,unused-argument
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -1699,7 +1697,7 @@ class TestToolbarContentWrapper:
         """Test style goes on content wrapper for top/bottom/left/right positions."""
         for position in ["top", "bottom"]:
             toolbar = Toolbar(
-                position=position,  # type: ignore[arg-type]
+                position=position,  # type: ignore
                 style="justify-content: center;",
                 items=[Button(label="Test", event="toolbar:click")],
             )
@@ -1714,7 +1712,7 @@ class TestToolbarContentWrapper:
         """Test style goes on outer div for left/right (width must be on outer for resize)."""
         for position in ["left", "right"]:
             toolbar = Toolbar(
-                position=position,  # type: ignore[arg-type]
+                position=position,  # type: ignore
                 style="width: 380px;",
                 items=[Button(label="Test", event="toolbar:click")],
             )
@@ -2590,7 +2588,7 @@ class TestToolbarHtmlStructure:
             "inside",
         ]:
             toolbar = Toolbar(
-                position=position,  # type: ignore[arg-type]
+                position=position,  # type: ignore
                 items=[Button(label="Click", event="app:click")],
             )
             html = toolbar.build_html()
@@ -3447,7 +3445,7 @@ class TestToolbarPositionSpecificBehavior:
         positions = ["top", "bottom", "left", "right", "header", "footer", "inside"]
         for pos in positions:
             toolbar = Toolbar(
-                position=pos,  # type: ignore[arg-type]
+                position=pos,  # type: ignore
                 items=[Button(label="X", event="app:x")],
             )
             html = toolbar.build_html()
@@ -3457,7 +3455,7 @@ class TestToolbarPositionSpecificBehavior:
         """Collapsible attribute works at all positions."""
         for pos in ["top", "left", "right"]:
             toolbar = Toolbar(
-                position=pos,  # type: ignore[arg-type]
+                position=pos,  # type: ignore
                 items=[Button(label="X", event="app:x")],
                 collapsible=True,
             )
@@ -3469,7 +3467,7 @@ class TestToolbarPositionSpecificBehavior:
         """Resizable attribute works at all positions."""
         for pos in ["left", "right", "bottom"]:
             toolbar = Toolbar(
-                position=pos,  # type: ignore[arg-type]
+                position=pos,  # type: ignore
                 items=[Button(label="X", event="app:x")],
                 resizable=True,
             )
@@ -3578,7 +3576,7 @@ class TestTextArea:
     def test_resize_options(self) -> None:
         """Test resize attribute options."""
         for resize in ["both", "horizontal", "vertical", "none"]:
-            ta = TextArea(event="notes:update", resize=resize)  # type: ignore[arg-type]
+            ta = TextArea(event="notes:update", resize=resize)  # type: ignore
             assert ta.resize == resize
 
     def test_min_max_height(self) -> None:
@@ -3687,7 +3685,7 @@ class TestTextArea:
 # =============================================================================
 
 
-class TestSecretInput:  # pylint: disable=too-many-public-methods
+class TestSecretInput:
     """Test the SecretInput model (password/API key input)."""
 
     def test_type_is_secret(self) -> None:
@@ -4965,7 +4963,7 @@ class TestSearchInput:
 # =============================================================================
 
 
-class TestMarquee:  # pylint: disable=too-many-public-methods
+class TestMarquee:
     """Test the Marquee model (scrolling ticker)."""
 
     def test_type_is_marquee(self) -> None:
@@ -5008,13 +5006,13 @@ class TestMarquee:  # pylint: disable=too-many-public-methods
     def test_direction_options(self) -> None:
         """Test all direction options."""
         for direction in ["left", "right", "up", "down"]:
-            m = Marquee(event="ticker:click", text="Test", direction=direction)  # type: ignore[arg-type]
+            m = Marquee(event="ticker:click", text="Test", direction=direction)  # type: ignore
             assert m.direction == direction
 
     def test_behavior_options(self) -> None:
         """Test all behavior options."""
         for behavior in ["scroll", "alternate", "slide"]:
-            m = Marquee(event="ticker:click", text="Test", behavior=behavior)  # type: ignore[arg-type]
+            m = Marquee(event="ticker:click", text="Test", behavior=behavior)  # type: ignore
             assert m.behavior == behavior
 
     def test_speed_validation_min(self) -> None:
@@ -5198,7 +5196,7 @@ class TestTickerItem:
     def test_ticker_required(self) -> None:
         """Test ticker is a required field."""
         with pytest.raises(ValidationError):
-            TickerItem()  # type: ignore[call-arg]
+            TickerItem()
 
     def test_creates_with_ticker(self) -> None:
         """Test creates with just ticker."""

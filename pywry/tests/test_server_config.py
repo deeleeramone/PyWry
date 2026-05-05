@@ -1,5 +1,4 @@
 """Tests for ServerSettings and notebook mode configuration."""
-# pylint: disable=redefined-outer-name,unused-argument
 
 from __future__ import annotations
 

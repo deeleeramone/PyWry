@@ -7,8 +7,6 @@ Tests cover:
 - Dynamic updates via toolbar:marquee-set-content and toolbar:marquee-set-item events
 """
 
-# pylint: disable=too-many-lines,unsubscriptable-object,redefined-outer-name,reimported,unused-argument
-
 import time
 
 from unittest.mock import patch
@@ -325,7 +323,7 @@ def server_port():
 
 
 @pytest.fixture(autouse=True)
-def clean_inline_state(server_port):  # pylint: disable=redefined-outer-name
+def clean_inline_state(server_port):
     """Clean up inline server state."""
     stop_server()
     _state.widgets.clear()

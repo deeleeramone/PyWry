@@ -67,7 +67,7 @@ class BrowserMode(WindowModeBase):
             title=config.title,
             width="100%",
             height=config.height,
-            theme=theme,  # type: ignore[arg-type]
+            theme=theme,
             callbacks=callbacks,
         )
 

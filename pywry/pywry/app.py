@@ -1,7 +1,5 @@
 """Main PyWry application class."""
 
-# pylint: disable=too-many-lines
-
 from __future__ import annotations
 
 import contextlib
@@ -30,7 +28,7 @@ from .models import (
     WindowConfig,
     WindowMode,
 )
-from .notebook import should_use_inline_rendering
+from .notebook import is_headless_environment, should_use_inline_rendering
 from .runtime import refresh_window as runtime_refresh_window
 from .state_mixins import GridStateMixin, PlotlyStateMixin, ToolbarStateMixin
 from .templates import build_html, build_plotly_init_script
@@ -56,7 +54,7 @@ if TYPE_CHECKING:
     from .window_manager import WindowLifecycle
 
 
-class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMixin):  # pylint: disable=too-many-public-methods
+class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMixin):
     """Main PyWry application for displaying content in native windows.
 
     Supports three window modes:
@@ -129,6 +127,24 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # Initialize the appropriate window mode
         self._mode: WindowModeBase = self._create_mode(mode)
 
+        # Auto-fallback for environments that can't show a native window:
+        # if the user requested NEW/SINGLE/MULTI_WINDOW, no notebook UI is
+        # available to render anywidgets into (Jupyter/Colab/etc.), and the
+        # host has no display (e.g. a Linux VM, container, or SSH session
+        # without X11), promote silently to BROWSER mode. The user gets a
+        # FastAPI server + URL instead of a crashing pytauri subprocess.
+        if (
+            mode in (WindowMode.NEW_WINDOW, WindowMode.SINGLE_WINDOW, WindowMode.MULTI_WINDOW)
+            and not should_use_inline_rendering()
+            and is_headless_environment()
+        ):
+            info(
+                f"No display detected and not in a notebook — falling back from "
+                f"{mode.value} to BROWSER mode (server + URL)."
+            )
+            self._mode_enum = WindowMode.BROWSER
+            self._mode = BrowserMode()
+
         # Asset loader for CSS/JS files
         self._asset_loader = AssetLoader()
 
@@ -179,8 +195,27 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             return SingleWindowMode()
         if mode == WindowMode.BROWSER:
             return BrowserMode()
+        # NOTEBOOK is handled by _use_inline() upstream — show*() short-circuits
+        # to an inline widget before this WindowModeBase is consulted.
         # MULTI_WINDOW
         return MultiWindowMode()
+
+    def _use_inline(self) -> bool:
+        """Return True if ``show*()`` should produce an inline widget.
+
+        Inline rendering is selected when:
+
+        * the user explicitly chose ``WindowMode.NOTEBOOK`` (overrides
+          environment auto-detection — useful in environments PyWry can't
+          recognise on its own);
+        * the user chose ``WindowMode.BROWSER`` (FastAPI server + system browser);
+        * the environment is auto-detected as a notebook (Colab, Jupyter, etc.).
+        """
+        return (
+            self._mode_enum == WindowMode.NOTEBOOK
+            or isinstance(self._mode, BrowserMode)
+            or should_use_inline_rendering()
+        )
 
     def _register_inline_widget(self, widget: Any) -> None:
         """Register an inline widget so app.emit() can route events to it.
@@ -448,7 +483,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
 
         click_event = threading.Event()
 
-        def _on_click(data: Any) -> None:  # pylint: disable=unused-argument
+        def _on_click(data: Any) -> None:
             click_event.set()
 
         self.show(
@@ -478,7 +513,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         """
         registry = get_registry()
 
-        def _handle_logout(data: Any, event_type: str, label: str) -> None:  # pylint: disable=unused-argument
+        def _handle_logout(data: Any, event_type: str, label: str) -> None:
             # Call developer's on_logout middleware
             if on_logout is not None:
                 on_logout()
@@ -655,7 +690,6 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         if tray is not None:
             tray.remove()
 
-    # pylint: disable=too-many-arguments,too-many-branches,too-many-statements
     def show(  # noqa: C901, PLR0912, PLR0915
         self,
         content: str | HtmlContent,
@@ -727,8 +761,9 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # Check if we're in BROWSER mode - use inline server but open in system browser
         is_browser_mode = isinstance(self._mode, BrowserMode)
 
-        # Check if we're in a notebook environment OR explicit BROWSER mode
-        if should_use_inline_rendering() or is_browser_mode:
+        # Inline rendering covers: explicit NOTEBOOK mode, BROWSER mode, and
+        # auto-detected notebook environments (Colab, Jupyter, VSCode, etc.).
+        if self._use_inline():
             # Convert HtmlContent to string if needed, preserving inline_css
             if isinstance(content, HtmlContent):
                 html_str = content.html
@@ -897,9 +932,10 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
 
         # Get window label - for SINGLE_WINDOW mode, use the mode's fixed label
         # For other modes, let the mode's show() generate unique label if not provided
-        target_label = (
-            self._mode.label
-            if hasattr(self._mode, "label")
+        mode_label = getattr(self._mode, "label", None)
+        target_label: str = (
+            mode_label
+            if isinstance(mode_label, str)
             else (label or f"pywry-{uuid.uuid4().hex[:8]}")
         )
 
@@ -965,7 +1001,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # Return a NativeWindowHandle for native windows (provides widget-like API)
         return NativeWindowHandle(label_result, self)
 
-    def show_plotly(  # noqa: C901, PLR0912  # pylint: disable=too-many-branches
+    def show_plotly(  # noqa: C901, PLR0912
         self,
         figure: Any,
         title: str | None = None,
@@ -1024,8 +1060,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # Check if we're in BROWSER mode - use inline server but open in system browser
         is_browser_mode = isinstance(self._mode, BrowserMode)
 
-        # Check if we're in a notebook environment OR explicit BROWSER mode
-        if should_use_inline_rendering() or is_browser_mode:
+        # Inline path covers explicit NOTEBOOK / BROWSER mode and auto-detected notebooks.
+        if self._use_inline():
             from . import inline as pywry_inline
 
             # Map specific callbacks to generic dict for inline
@@ -1111,7 +1147,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             modals=modals,
         )
 
-    def show_dataframe(  # pylint: disable=too-many-branches
+    def show_dataframe(
         self,
         data: Any,
         title: str | None = None,
@@ -1181,8 +1217,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # Check if we're in BROWSER mode - use inline server but open in system browser
         is_browser_mode = isinstance(self._mode, BrowserMode)
 
-        # Check if we're in a notebook environment OR explicit BROWSER mode
-        if should_use_inline_rendering() or is_browser_mode:
+        # Inline path covers explicit NOTEBOOK / BROWSER mode and auto-detected notebooks.
+        if self._use_inline():
             from . import inline as pywry_inline
 
             # Map specific callbacks to generic dict for inline
@@ -1228,7 +1264,10 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             )
         else:
             # Convert ColDef objects to dicts for JSON serialization
-            column_defs = [c.to_dict() if hasattr(c, "to_dict") else c for c in column_defs]
+            column_defs = [
+                to_dict() if callable(to_dict := getattr(c, "to_dict", None)) else c
+                for c in column_defs
+            ]
 
         # Build the AG Grid HTML
         # Theme class automatically includes -dark suffix for dark mode
@@ -1476,8 +1515,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         toolbars: list[dict[str, Any] | Toolbar] | None = None,
         modals: list[dict[str, Any] | Modal] | None = None,
         inline_css: str | None = None,
-        on_click: Any = None,  # pylint: disable=unused-argument
-        on_crosshair: Any = None,  # pylint: disable=unused-argument
+        on_click: Any = None,
+        on_crosshair: Any = None,
         storage: dict[str, Any] | None = None,
         use_datafeed: bool = False,
         symbol: str | None = None,
@@ -1571,7 +1610,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # bundled in the ESM.  The generic inline.show() path does not include
         # tvchart assets, so the chart would never initialise.
         is_browser_mode = isinstance(self._mode, BrowserMode)
-        if should_use_inline_rendering() or is_browser_mode:
+        if self._use_inline():
             from . import inline as pywry_inline
 
             plain_callbacks: dict[str, Any] | None = None
@@ -1610,7 +1649,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
                 chart_kind=chart_kind,
             )
             self._register_inline_widget(widget)
-            return widget  # type: ignore[no-any-return]
+            return widget
         series_payload = self._build_tvchart_series_payload(
             data,
             use_datafeed=use_datafeed,
@@ -1697,8 +1736,10 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             wire_label: str | None = None
             if isinstance(handle, str):
                 wire_label = handle
-            elif hasattr(handle, "label"):
-                wire_label = handle.label
+            else:
+                handle_label = getattr(handle, "label", None)
+                if isinstance(handle_label, str):
+                    wire_label = handle_label
             self._wire_datafeed_provider(provider, label=wire_label)
 
         if storage_config.get("backend") == "server":
@@ -2547,7 +2588,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
 
         return True
 
-    def _text_filter_match(  # noqa: PLR0911  # pylint: disable=too-many-return-statements
+    def _text_filter_match(  # noqa: PLR0911
         self, val: Any, filter_op: str, filter_value: Any
     ) -> bool:
         """Check if value matches text filter."""
@@ -2568,7 +2609,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             return val_str != filter_str
         return filter_str in val_str
 
-    def _number_filter_match(  # noqa: PLR0911  # pylint: disable=too-many-return-statements
+    def _number_filter_match(  # noqa: PLR0911
         self, val: Any, filter_op: str, filter_value: Any
     ) -> bool:
         """Check if value matches number filter."""
@@ -2625,7 +2666,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
 
             # Use functools.partial or lambda with default arg to capture col_id
             result.sort(
-                key=lambda row, c=col_id: self._get_sort_key(row, c),  # type: ignore[misc]
+                key=lambda row, c=col_id: self._get_sort_key(row, c),
                 reverse=(sort_dir == "desc"),
             )
 

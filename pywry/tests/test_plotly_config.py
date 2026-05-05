@@ -204,7 +204,6 @@ class TestModeBarButton:
         )
         assert button.click is not None
         assert isinstance(button.click, str)
-        # pylint: disable-next=unsupported-membership-test
         assert "console.log" in button.click
 
     def test_button_with_pywry_event(self) -> None:
@@ -301,17 +300,14 @@ class TestModeBarConfig:
         config = ModeBarConfig(buttons_to_remove=[StandardButton.TO_IMAGE, StandardButton.LASSO_2D])
         assert config.buttons_to_remove is not None
         assert len(config.buttons_to_remove) == 2
-        # pylint: disable-next=unsupported-membership-test
         assert StandardButton.TO_IMAGE in config.buttons_to_remove
 
     def test_buttons_to_remove_by_string(self) -> None:
         """Test removing buttons by string name."""
         config = ModeBarConfig(buttons_to_remove=["toImage", "lasso2d"])
         assert config.buttons_to_remove is not None
-        # pylint: disable=unsupported-membership-test
         assert "toImage" in config.buttons_to_remove
         assert "lasso2d" in config.buttons_to_remove
-        # pylint: enable=unsupported-membership-test
 
     def test_buttons_to_add(self) -> None:
         """Test adding custom buttons."""
@@ -323,7 +319,6 @@ class TestModeBarConfig:
         config = ModeBarConfig(buttons_to_add=[button])
         assert config.buttons_to_add is not None
         assert len(config.buttons_to_add) == 1
-        # pylint: disable-next=unsubscriptable-object
         assert config.buttons_to_add[0].name == "custom"
 
     def test_buttons_to_add_as_dict(self) -> None:
@@ -332,7 +327,6 @@ class TestModeBarConfig:
             buttons_to_add=[{"name": "custom", "title": "Custom", "icon": "home"}]
         )
         assert config.buttons_to_add is not None
-        # pylint: disable-next=unsubscriptable-object
         assert len(config.buttons_to_add) == 1
 
     def test_custom_colors(self) -> None:

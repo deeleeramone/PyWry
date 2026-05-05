@@ -72,14 +72,14 @@ class TestInvalidWindowConfig:
         from pywry.models import WindowConfig
 
         with pytest.raises(ValidationError):
-            WindowConfig(theme="invalid_theme")  # type: ignore[arg-type]
+            WindowConfig(theme="invalid_theme")  # type: ignore
 
     def test_invalid_plotly_theme_string_raises(self) -> None:
         """Invalid plotly_theme string raises validation error."""
         from pywry.models import WindowConfig
 
         with pytest.raises(ValidationError):
-            WindowConfig(plotly_theme="invalid_plotly_theme")  # type: ignore[arg-type]
+            WindowConfig(plotly_theme="invalid_plotly_theme")  # type: ignore
 
     def test_min_width_greater_than_width_raises(self) -> None:
         """min_width > width raises validation error."""
@@ -147,14 +147,14 @@ class TestInvalidHtmlContent:
         from pywry.models import HtmlContent
 
         with pytest.raises(ValidationError):
-            HtmlContent(html=None)  # type: ignore[arg-type]
+            HtmlContent(html=None)  # type: ignore
 
     def test_invalid_json_data_type_raises(self) -> None:
         """Non-dict json_data raises validation error."""
         from pywry.models import HtmlContent
 
         with pytest.raises(ValidationError):
-            HtmlContent(html="<div></div>", json_data="not a dict")  # type: ignore[arg-type]
+            HtmlContent(html="<div></div>", json_data="not a dict")  # type: ignore
 
 
 class TestInvalidGridModels:
@@ -247,7 +247,7 @@ class TestInvalidToolbarModels:
         from pywry.toolbar import Toolbar
 
         with pytest.raises(ValidationError):
-            Toolbar(position="invalid", items=[])  # type: ignore[arg-type]
+            Toolbar(position="invalid", items=[])  # type: ignore
 
     def test_text_input_negative_debounce_raises(self) -> None:
         """Negative debounce raises validation error."""
@@ -462,7 +462,7 @@ class TestBoundaryConditions:
         )
         json_data = content.json_data
         assert json_data is not None
-        assert "<script>" in json_data["message"]  # pylint: disable=unsubscriptable-object
+        assert "<script>" in json_data["message"]
 
     def test_empty_toolbar_items_list(self) -> None:
         """Empty toolbar items list is valid."""
@@ -481,7 +481,6 @@ class TestBoundaryConditions:
         content = HtmlContent(html="<div></div>", json_data=nested)
         json_data = content.json_data
         assert json_data is not None
-        # pylint: disable=unsubscriptable-object
         assert json_data["level1"]["level2"]["level3"]["level4"]["value"] == "deep"
 
 
@@ -551,7 +550,7 @@ class TestTypeCoercionErrors:
         """String width is coerced to int."""
         from pywry.models import WindowConfig
 
-        config = WindowConfig(width="800")  # type: ignore[arg-type]
+        config = WindowConfig(width="800")  # type: ignore
         assert config.width == 800
 
     def test_window_width_float_not_coerced(self) -> None:
@@ -560,13 +559,13 @@ class TestTypeCoercionErrors:
 
         # Pydantic v2 strict mode doesn't auto-coerce floats with decimals
         with pytest.raises(ValidationError):
-            WindowConfig(width=800.5)  # type: ignore[arg-type]
+            WindowConfig(width=800.5)  # type: ignore
 
     def test_window_width_float_whole_number_coerced(self) -> None:
         """Float width without fractional part is coerced to int."""
         from pywry.models import WindowConfig
 
-        config = WindowConfig(width=800.0)  # type: ignore[arg-type]
+        config = WindowConfig(width=800.0)  # type: ignore
         assert config.width == 800
 
     def test_invalid_type_raises_validation_error(self) -> None:
@@ -574,11 +573,11 @@ class TestTypeCoercionErrors:
         from pywry.models import WindowConfig
 
         with pytest.raises(ValidationError):
-            WindowConfig(width="not-a-number")  # type: ignore[arg-type]
+            WindowConfig(width="not-a-number")  # type: ignore
 
     def test_list_to_string_raises(self) -> None:
         """List where string expected raises validation error."""
         from pywry.models import WindowConfig
 
         with pytest.raises(ValidationError):
-            WindowConfig(title=["not", "a", "string"])  # type: ignore[arg-type]
+            WindowConfig(title=["not", "a", "string"])  # type: ignore

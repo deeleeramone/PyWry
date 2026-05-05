@@ -50,3 +50,7 @@ re-snapshot after mutating a widget.
 
 See [CHANGELOG.md](CHANGELOG.md) for the release history and
 [RELEASING.md](RELEASING.md) for the step-by-step cut.
+
+## Privacy
+
+No telemetry, no data collection, no beacons. See [PRIVACY.md](PRIVACY.md).

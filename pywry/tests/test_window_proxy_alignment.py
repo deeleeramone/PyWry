@@ -147,7 +147,7 @@ class TestProxyDispatchAlignment:
 
     def test_new_menu_tray_types_exist(self) -> None:
         """Menu and tray types are importable."""
-        from pywry.types import (  # noqa: F401  # pylint: disable=unused-import
+        from pywry.types import (  # noqa: F401
             CheckMenuItemConfig,
             IconMenuItemConfig,
             MenuConfig,

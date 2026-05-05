@@ -84,19 +84,19 @@ def _normalize_figure(figure: Any) -> dict[str, Any]:
     """
     if hasattr(figure, "to_json"):
         # Use to_json for proper numpy array handling, then parse back
-        return json.loads(figure.to_json())  # type: ignore[no-any-return]
+        return json.loads(figure.to_json())
     if hasattr(figure, "to_dict"):
-        return figure.to_dict()  # type: ignore[no-any-return]
+        return figure.to_dict()
     if isinstance(figure, dict):
         return figure
     try:
         # Fallback for JSON strings
-        return json.loads(str(figure))  # type: ignore[no-any-return]
+        return json.loads(str(figure))
     except (ValueError, TypeError) as e:
         raise ValueError("Invalid figure format. Expected Plotly Figure, dict, or JSON.") from e
 
 
-class GridStateMixin(EmittingWidget):  # pylint: disable=abstract-method
+class GridStateMixin(EmittingWidget):
     """Mixin for AG Grid state management."""
 
     def request_grid_state(
@@ -219,9 +219,10 @@ class GridStateMixin(EmittingWidget):  # pylint: disable=abstract-method
 
         # Normalize data if it's a DataFrame
         if data is not None:
-            if hasattr(data, "to_dict") and hasattr(data, "columns"):
+            to_dict = getattr(data, "to_dict", None)
+            if callable(to_dict) and hasattr(data, "columns"):
                 # It's a DataFrame
-                payload["data"] = data.to_dict(orient="records")
+                payload["data"] = to_dict(orient="records")
             else:
                 payload["data"] = data
 
@@ -238,7 +239,7 @@ class GridStateMixin(EmittingWidget):  # pylint: disable=abstract-method
         self.emit("grid:update-grid", payload)
 
 
-class PlotlyStateMixin(EmittingWidget):  # pylint: disable=abstract-method
+class PlotlyStateMixin(EmittingWidget):
     """Mixin for Plotly chart state management."""
 
     def update_figure(
@@ -322,7 +323,7 @@ class PlotlyStateMixin(EmittingWidget):  # pylint: disable=abstract-method
         self.update_traces({"visible": visible}, indices, chart_id)
 
 
-class ChatStateMixin(EmittingWidget):  # pylint: disable=abstract-method
+class ChatStateMixin(EmittingWidget):
     """Mixin for Chat widget state management."""
 
     def send_chat_message(
@@ -429,7 +430,7 @@ class ChatStateMixin(EmittingWidget):  # pylint: disable=abstract-method
         self.emit("chat:request-state", {})
 
 
-class ToolbarStateMixin(EmittingWidget):  # pylint: disable=abstract-method
+class ToolbarStateMixin(EmittingWidget):
     """Mixin for Toolbar state interactions."""
 
     def request_toolbar_state(self, toolbar_id: str | None = None) -> None:

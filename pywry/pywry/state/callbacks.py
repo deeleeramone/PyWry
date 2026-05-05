@@ -115,9 +115,7 @@ class CallbackRegistry:
                 callback=callback,
                 is_async=is_async,
             )
-            logger.debug(  # pylint: disable=logging-too-many-args
-                "Registered callback for %s:%s", widget_id, event_type
-            )
+            logger.debug("Registered callback for %s:%s", widget_id, event_type)
 
     async def get(self, widget_id: str, event_type: str) -> CallbackRegistration | None:
         """Get a callback registration.
@@ -219,12 +217,10 @@ class CallbackRegistry:
                 )
 
         except Exception:
-            logger.exception(  # pylint: disable=logging-too-many-args
-                "Error invoking callback %s:%s", widget_id, event_type
-            )
+            logger.exception("Error invoking callback %s:%s", widget_id, event_type)
             return (False, None)
 
-        logger.debug(  # pylint: disable=logging-too-many-args
+        logger.debug(
             "Invoked callback %s:%s (count: %d)",
             widget_id,
             event_type,
@@ -275,9 +271,7 @@ class CallbackRegistry:
                 return 0
             count = len(self._callbacks[widget_id])
             del self._callbacks[widget_id]
-            logger.debug(  # pylint: disable=logging-too-many-args
-                "Unregistered %d callbacks for %s", count, widget_id
-            )
+            logger.debug("Unregistered %d callbacks for %s", count, widget_id)
             return count
 
     async def list_widget_events(self, widget_id: str) -> list[str]:

@@ -3,8 +3,6 @@
 Tests build_html and related template functions.
 """
 
-# pylint: disable=too-many-lines
-
 import pytest
 
 from pywry.config import AssetSettings, PyWrySettings, SecuritySettings, ThemeSettings

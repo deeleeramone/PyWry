@@ -36,7 +36,6 @@ def _build_serve_parser(parser: argparse.ArgumentParser) -> None:
 
 def _handle_serve(args: argparse.Namespace) -> None:
     """Run the MCP server."""
-    # pylint: disable=import-outside-toplevel
     from .server import run_server
 
     if args.streamable_http is not None:
@@ -54,7 +53,6 @@ def _handle_serve(args: argparse.Namespace) -> None:
 
 def _handle_install_skills(args: argparse.Namespace) -> int:
     """Install bundled PyWry skills into vendor directories."""
-    # pylint: disable=import-outside-toplevel
     from .install import ALL_TARGETS, install_skills, list_bundled_skills, print_install_results
 
     targets: list[str] = args.target

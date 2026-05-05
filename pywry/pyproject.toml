@@ -55,10 +55,9 @@ test = [
 ]
 lint = [
     "ruff>=0.13",
-    "pylint>=3.0.0",
 ]
 typecheck = [
-    "mypy>=1.0.0",
+    "ty>=0.0.1a8",
 ]
 docs = [
     "mkdocs>=1.5.0",
@@ -108,8 +107,7 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "pytest-timeout>=2.0.0",
     "ruff>=0.13",
-    "mypy>=1.0.0",
-    "pylint>=3.0.0",
+    "ty>=0.0.1a8",
     "mkdocs>=1.5.0",
     "mkdocs-material>=9.5.0",
     "mkdocs-autorefs>=1.0.0",
@@ -225,41 +223,11 @@ include = [
 [tool.hatch.build.targets.sdist.hooks.custom]
 path = "hatch_build.py"
 
-[tool.mypy]
-python_version = "3.10"
-strict = true
-warn_return_any = true
-warn_unused_configs = true
+[tool.ty.environment]
+python-version = "3.10"
+
+[tool.ty.src]
 exclude = ["tests/"]
 
-[[tool.mypy.overrides]]
-module = [
-    "plotly.*",
-    "anywidget", "anywidget.*",
-    "ipywidgets", "ipywidgets.*",
-    "mcp.*",
-    "traitlets", "traitlets.*",
-    "IPython", "IPython.*",
-    "openai", "openai.*",
-    "anthropic", "anthropic.*",
-    "magentic", "magentic.*",
-    "keyring", "keyring.*",
-    "fastmcp", "fastmcp.*",
-    # LangChain / LangGraph / Deep Agents don't ship ``py.typed``
-    # markers.  These modules only exist when the ``deepagent`` extra
-    # is installed; without the overrides, mypy reports
-    # ``import-untyped`` when they ARE present and
-    # ``import-not-found`` when they aren't — the per-line
-    # ``# type: ignore`` comments can't cover both, so declare the
-    # whole family as untyped here.
-    "langchain", "langchain.*",
-    "langchain_core", "langchain_core.*",
-    "langchain_mcp_adapters", "langchain_mcp_adapters.*",
-    "langgraph", "langgraph.*",
-    "deepagents", "deepagents.*",
-]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "pywry.mcp.server"
-disallow_untyped_decorators = false
+[tool.ty.rules]
+unresolved-import = "ignore"

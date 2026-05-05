@@ -427,7 +427,7 @@ class TestAlertSystemEvents:
             def __init__(self) -> None:
                 self.last_event: tuple[str, dict] | None = None
 
-            def emit(self, event_type: str, data: dict) -> None:  # type: ignore[override]
+            def emit(self, event_type: str, data: dict) -> None:
                 self.last_event = (event_type, data)
 
         widget = MockWidget()

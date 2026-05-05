@@ -109,7 +109,7 @@ def generate_session_token(
     return f"{payload}:{signature}"
 
 
-def validate_session_token(  # pylint: disable=no-else-return
+def validate_session_token(
     token: str,
     secret: str,
 ) -> tuple[bool, str | None, str | None]:
@@ -448,7 +448,7 @@ class AuthMiddleware:
 
             wrapper = _RequestWrapper(headers, cookies, query_params)
             session = await get_session_from_request(
-                wrapper,  # type: ignore[arg-type]
+                wrapper,  # type: ignore
                 self.session_store,
                 self.config,
             )

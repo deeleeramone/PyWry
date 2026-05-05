@@ -17,8 +17,6 @@ Usage:
     python -m pywry.mcp --streamable-http 8001  # Streamable HTTP on port 8001
 """
 
-# pylint: disable=C0415
-
 from __future__ import annotations
 
 import os
@@ -36,7 +34,7 @@ if TYPE_CHECKING:
 # PYWRY_HEADLESS=0 or unset -> native windows (desktop mode)
 
 try:
-    from fastmcp import FastMCP  # pylint: disable=C0412
+    from fastmcp import FastMCP
 
     HAS_MCP = True
 except ImportError:
@@ -90,12 +88,12 @@ def _format_tool_result(result: Any) -> Any:
     ``text/html`` resources (Claude Desktop artifact pane, mcp-ui
     clients, PyWry's own chat widget) show the app inline.
     """
-    import json  # pylint: disable=C0415
+    import json
 
     if isinstance(result, dict) and "_app_artifact" in result:
         app = result.pop("_app_artifact")
         try:
-            from mcp.types import (  # pylint: disable=C0415
+            from mcp.types import (
                 EmbeddedResource,
                 TextContent,
                 TextResourceContents,
@@ -163,8 +161,8 @@ async def {tool_name.replace("-", "_")}({params_str}):
         "_make_callback": _make_event_callback,
         "_format_tool_result": _format_tool_result,
     }
-    exec(func_code, local_vars)  # noqa: S102  # pylint: disable=W0122
-    return local_vars[tool_name.replace("-", "_")]  # type: ignore
+    exec(func_code, local_vars)  # noqa: S102
+    return local_vars[tool_name.replace("-", "_")]
 
 
 def _register_tools(mcp: FastMCP) -> None:

@@ -4,8 +4,6 @@ Detects whether PyWry is running in a Jupyter notebook environment
 and provides utilities for inline rendering.
 """
 
-# mypy: disable-error-code="no-untyped-call,attr-defined,arg-type,type-arg"
-
 from __future__ import annotations
 
 import os
@@ -14,7 +12,7 @@ from datetime import datetime
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 
 class NotebookEnvironment(Enum):
@@ -39,20 +37,20 @@ _ENV_CHECKS: list[tuple[str, NotebookEnvironment]] = [
     ("_check_colab", NotebookEnvironment.COLAB),
     ("_check_kaggle", NotebookEnvironment.KAGGLE),
     ("_check_azure", NotebookEnvironment.AZURE),
+    ("_check_databricks", NotebookEnvironment.DATABRICKS),
+    ("_check_cocalc", NotebookEnvironment.COCALC),
     ("_check_vscode", NotebookEnvironment.VSCODE),
     ("_check_nteract", NotebookEnvironment.NTERACT),
-    ("_check_cocalc", NotebookEnvironment.COCALC),
-    ("_check_databricks", NotebookEnvironment.DATABRICKS),
     ("_check_remote_jupyter", NotebookEnvironment.REMOTE_JUPYTER),
     ("_check_jupyterlab", NotebookEnvironment.JUPYTERLAB),
 ]
 
 
 def _check_colab() -> bool:
+    if "COLAB_RELEASE_TAG" in os.environ or "COLAB_NOTEBOOK_ID" in os.environ:
+        return True
     try:
-        import google.colab as _colab  # type: ignore
-
-        del _colab
+        import google.colab  # noqa: F401
     except ImportError:
         return False
     return True
@@ -90,6 +88,44 @@ def _check_jupyterlab() -> bool:
     return "JUPYTERLAB_WORKSPACES_DIR" in os.environ
 
 
+def is_headless_environment() -> bool:
+    """Return True if the host has no usable graphical display.
+
+    Used to auto-fall-back from native-window modes to ``BROWSER`` mode (a
+    FastAPI server with a URL) when the pytauri webview cannot render — e.g.
+    a Linux container, an SSH session without X11 forwarding, or a CI runner.
+
+    Detection rules:
+
+    * **Linux / *BSD**: headless iff neither ``DISPLAY`` (X11) nor
+      ``WAYLAND_DISPLAY`` is set.
+    * **macOS / Windows**: assume a display is always available. macOS GUI
+      processes always have access to the Window Server; Windows always has a
+      desktop session except on rare Server Core installs.
+
+    Distinct from ``runtime.is_headless()``, which is the ``PYWRY_HEADLESS``
+    test/CI flag that creates real (but invisible) windows.
+    """
+    import sys
+
+    if sys.platform in ("darwin", "win32"):
+        return False
+    return not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
+_CHECKERS: dict[str, Any] = {
+    "_check_colab": _check_colab,
+    "_check_kaggle": _check_kaggle,
+    "_check_azure": _check_azure,
+    "_check_vscode": _check_vscode,
+    "_check_nteract": _check_nteract,
+    "_check_cocalc": _check_cocalc,
+    "_check_databricks": _check_databricks,
+    "_check_remote_jupyter": _check_remote_jupyter,
+    "_check_jupyterlab": _check_jupyterlab,
+}
+
+
 @lru_cache(maxsize=1)
 def detect_notebook_environment() -> NotebookEnvironment:
     """Detect the current notebook environment.
@@ -107,6 +143,8 @@ def detect_notebook_environment() -> NotebookEnvironment:
 
 def _detect_environment_impl() -> NotebookEnvironment:
     """Implementation of environment detection (avoids too many returns)."""
+    # IPython must actually be running — a plain Python script is never a
+    # notebook even if env vars like VSCODE_PID happen to be set.
     try:
         from IPython import get_ipython
     except ImportError:
@@ -116,46 +154,28 @@ def _detect_environment_impl() -> NotebookEnvironment:
     if ipython is None:
         return NotebookEnvironment.NONE
 
-    # Check shell class name
-    shell_class = ipython.__class__.__name__
-
-    # Terminal IPython - NOT inline rendering
-    if shell_class == "TerminalInteractiveShell":
+    # Terminal IPython renders to the console, not inline.
+    if ipython.__class__.__name__ == "TerminalInteractiveShell":
         return NotebookEnvironment.IPYTHON_TERMINAL
 
-    # Must be ZMQInteractiveShell (or similar) for notebook
-    if shell_class != "ZMQInteractiveShell":
-        return NotebookEnvironment.NONE
-
-    # Check if kernel is from ipykernel (real notebook kernel)
-    kernel_module = type(ipython).__module__
-    if not kernel_module.startswith("ipykernel"):
-        return NotebookEnvironment.NONE
-
-    # Check specific environments and return first match
-    return _check_specific_environment()
-
-
-def _check_specific_environment() -> NotebookEnvironment:
-    """Check for specific notebook environments."""
-    checkers = {
-        "_check_colab": _check_colab,
-        "_check_kaggle": _check_kaggle,
-        "_check_azure": _check_azure,
-        "_check_vscode": _check_vscode,
-        "_check_nteract": _check_nteract,
-        "_check_cocalc": _check_cocalc,
-        "_check_databricks": _check_databricks,
-        "_check_remote_jupyter": _check_remote_jupyter,
-        "_check_jupyterlab": _check_jupyterlab,
-    }
-
+    # Deterministic env-var / import checkers catch managed notebooks
+    # (Colab, Kaggle, Azure, Databricks, CoCalc, JupyterHub, VSCode,
+    # nteract) whose IPython shell may not be a vanilla ZMQInteractiveShell.
     for check_name, env in _ENV_CHECKS:
-        if checkers[check_name]():
+        if _CHECKERS[check_name]():
             return env
 
-    # Default to generic Jupyter notebook
-    return NotebookEnvironment.JUPYTER_NOTEBOOK
+    # Plain Jupyter: accept ZMQInteractiveShell or any subclass — strict
+    # leaf-class string match was the original Colab regression.
+    try:
+        from ipykernel.zmqshell import ZMQInteractiveShell
+
+        if isinstance(ipython, ZMQInteractiveShell):
+            return NotebookEnvironment.JUPYTER_NOTEBOOK
+    except ImportError:
+        pass
+
+    return NotebookEnvironment.NONE
 
 
 def should_use_inline_rendering() -> bool:
@@ -285,11 +305,11 @@ def _wrap_content_with_toolbars(content: str, toolbars: list[Any] | None) -> str
     return wrap_content_with_toolbars(content, toolbars)
 
 
-def create_plotly_widget(  # pylint: disable=too-many-branches
+def create_plotly_widget(
     figure_json: str,
     widget_id: str,
     title: str = "PyWry",
-    theme: str = "dark",
+    theme: Literal["dark", "light", "system"] = "dark",
     width: str = "100%",
     height: int = 500,
     port: int | None = None,
@@ -458,12 +478,12 @@ def _make_grid_export_handler(widget: Any) -> Any:
     return handle_export
 
 
-def create_dataframe_widget(  # pylint: disable=too-many-branches,too-many-arguments
+def create_dataframe_widget(
     config: Any,  # GridConfig from grid.py
     widget_id: str,
     title: str = "PyWry",
-    theme: str = "dark",
-    aggrid_theme: str = "alpine",
+    theme: Literal["dark", "light", "system"] = "dark",
+    aggrid_theme: Literal["quartz", "alpine", "balham", "material"] = "alpine",
     width: str = "100%",
     height: int = 500,
     header_html: str = "",

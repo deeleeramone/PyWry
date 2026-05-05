@@ -25,7 +25,7 @@ def _build_options(opts_data: list[dict[str, Any]] | None) -> list[Any]:
 def _build_button(cfg: dict[str, Any]) -> Any:
     from pywry.toolbar import Button
 
-    kwargs = {
+    kwargs: dict[str, Any] = {
         "label": cfg.get("label", "Button"),
         "event": cfg.get("event", "app:click"),
         "variant": cfg.get("variant", "neutral"),
@@ -41,7 +41,7 @@ def _build_button(cfg: dict[str, Any]) -> Any:
 def _build_select(cfg: dict[str, Any]) -> Any:
     from pywry.toolbar import Select
 
-    kwargs = {
+    kwargs: dict[str, Any] = {
         "label": cfg.get("label") or "",
         "event": cfg.get("event", "app:select"),
         "options": _build_options(cfg.get("options")),
@@ -164,7 +164,7 @@ def _build_number(cfg: dict[str, Any]) -> Any:
 def _build_date(cfg: dict[str, Any]) -> Any:
     from pywry.toolbar import DateInput
 
-    kwargs = {
+    kwargs: dict[str, Any] = {
         "label": cfg.get("label") or "",
         "event": cfg.get("event", "app:date"),
         "value": cfg.get("value", ""),
@@ -251,7 +251,7 @@ def _build_marquee(cfg: dict[str, Any]) -> Any:
     else:
         text = cfg.get("text", "")
 
-    kwargs = {
+    kwargs: dict[str, Any] = {
         "text": text,
         "event": cfg.get("event", "app:marquee"),
         "speed": cfg.get("speed", 15),

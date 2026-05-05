@@ -12,8 +12,6 @@ What this proves that unit tests cannot:
 - Base theme values survive where the user didn't override
 """
 
-# pylint: disable=unsubscriptable-object
-
 from __future__ import annotations
 
 import time

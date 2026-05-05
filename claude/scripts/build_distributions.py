@@ -36,7 +36,7 @@ EXCLUDE_DIR_NAMES = {
     "venv",
     ".pytest_cache",
     ".ruff_cache",
-    ".mypy_cache",
+    ".ty_cache",
     "node_modules",
     ".git",
 }

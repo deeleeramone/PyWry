@@ -37,7 +37,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[notebook,auth,mcp,acp,deepagent,openai,anthropic,magentic]"
-          pip install ruff mypy pylint pytauri-wheel plotly pandas cryptography
+          pip install ruff ty pytauri-wheel plotly pandas cryptography
 
       - name: Run Ruff linter
         run: ruff check pywry/ tests/
@@ -45,11 +45,8 @@ jobs:
       - name: Run Ruff formatter check
         run: ruff format --check pywry/ tests/
 
-      - name: Run Mypy type checker
-        run: mypy pywry/
-
-      - name: Run Pylint
-        run: pylint pywry/ --exit-zero --output-format=colorized
+      - name: Run ty type checker
+        run: ty check pywry/
 
   gen-matrix:
     name: Resolve test matrix

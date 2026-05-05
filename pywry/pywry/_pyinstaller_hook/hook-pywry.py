@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name
 """PyInstaller hook for pywry.
 
 Automatically applied when ``pywry`` is used as a dependency in a
@@ -19,7 +18,7 @@ from __future__ import annotations
 
 import contextlib
 
-from PyInstaller.utils.hooks import (  # type: ignore[import-untyped]  # pylint: disable=import-error
+from PyInstaller.utils.hooks import (
     collect_data_files,
     collect_dynamic_libs,
     collect_submodules,

@@ -233,7 +233,7 @@ class AssetLoader:
         self._hash_cache.clear()
 
 
-_asset_loader: AssetLoader | None = None  # pylint: disable=invalid-name
+_asset_loader: AssetLoader | None = None
 
 
 def get_asset_loader() -> AssetLoader:

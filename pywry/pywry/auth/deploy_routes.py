@@ -4,8 +4,6 @@ Provides login, callback, refresh, logout, userinfo, and status
 endpoints that integrate with the existing session store and auth middleware.
 """
 
-# pylint: disable=logging-too-many-args,too-many-statements
-
 from __future__ import annotations
 
 import asyncio
@@ -302,7 +300,7 @@ def create_auth_router(  # noqa: C901, PLR0915
 
     @router.get("/callback")
     async def auth_callback(
-        request: Request,  # pylint: disable=unused-argument
+        request: Request,
         code: str | None = None,
         state: str | None = None,
         error: str | None = None,

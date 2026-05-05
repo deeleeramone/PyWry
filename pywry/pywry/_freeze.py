@@ -99,7 +99,7 @@ def _setup_pytauri_standalone() -> None:
         return  # Can't find it; let the normal entry-point path try
 
     sys.modules["__pytauri_ext_mod__"] = ext_mod
-    sys._pytauri_standalone = True  # type: ignore[attr-defined]
+    sys._pytauri_standalone = True  # type: ignore
 
 
 def setup_pytauri_runtime() -> None:

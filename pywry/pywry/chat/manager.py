@@ -296,7 +296,7 @@ def _tool_result_text(content: Any) -> str:
     return ""
 
 
-class ChatManager:  # pylint: disable=too-many-instance-attributes
+class ChatManager:
     """ACP-native orchestrator for the PyWry chat component.
 
     Handles event wiring, thread management, streaming, cancellation,
@@ -984,7 +984,7 @@ class ChatManager:  # pylint: disable=too-many-instance-attributes
             },
         )
 
-    def _dispatch_session_update(  # pylint: disable=unused-argument
+    def _dispatch_session_update(
         self,
         update: Any,
         state: _StreamState,
@@ -1308,7 +1308,7 @@ class ChatManager:  # pylint: disable=too-many-instance-attributes
         """Execute the handler in a background thread."""
         try:
             messages = self._inject_context(messages, ctx, message_id, thread_id)
-            result = self._handler(messages, ctx)  # type: ignore[misc]
+            result = self._handler(messages, ctx)  # type: ignore
             self._dispatch_handler_result(result, message_id, thread_id, cancel, ctx)
         except Exception as exc:
             self._emit(
@@ -1504,7 +1504,7 @@ class ChatManager:  # pylint: disable=too-many-instance-attributes
         try:
             truncate = getattr(provider, "truncate_session", None)
             if callable(truncate):
-                truncate(thread_id, kept_messages)  # pylint: disable=not-callable
+                truncate(thread_id, kept_messages)
         except Exception:
             log.debug("provider.truncate_session failed", exc_info=True)
 

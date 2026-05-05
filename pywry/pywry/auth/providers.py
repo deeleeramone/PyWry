@@ -4,8 +4,6 @@ Defines the OAuthProvider ABC and concrete implementations for
 Google, GitHub, Microsoft, and generic OIDC providers.
 """
 
-# pylint: disable=logging-too-many-args
-
 from __future__ import annotations
 
 import logging
@@ -22,7 +20,7 @@ from ..state.types import OAuthTokenSet
 
 
 try:
-    from authlib.jose import JsonWebKey, JsonWebToken  # type: ignore[import-untyped]
+    from authlib.jose import JsonWebKey, JsonWebToken
 
     _HAS_AUTHLIB = True
 except ImportError:
@@ -252,7 +250,7 @@ class OAuthProvider(ABC):
             timeout=10.0,
         )
         resp.raise_for_status()
-        return resp.json()  # type: ignore[no-any-return]
+        return resp.json()
 
     async def revoke_token(self, token: str) -> bool:
         """Revoke a token at the provider (RFC 7009).
