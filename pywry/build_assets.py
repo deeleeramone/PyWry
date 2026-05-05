@@ -43,7 +43,7 @@ def _asset_manifest() -> dict[str, str]:
     data = json.loads(PACKAGE_JSON_PATH.read_text(encoding="utf-8"))
     dependencies = data.get("dependencies")
     if not isinstance(dependencies, dict):
-        raise ValueError("package.json must contain an object 'dependencies' field")
+        raise TypeError("package.json must contain an object 'dependencies' field")
 
     missing = [
         package
