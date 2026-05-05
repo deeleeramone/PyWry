@@ -1,6 +1,6 @@
 [project]
 name = "pywry"
-version = "2.0.0"
+version = "2.0.1"
 description = "A lightweight and blazingly fast, cross-platform, WebView rendering engine and desktop UI toolkit for Python. Batteries included."
 authors = [{ name = "PyWry", email = "pywry2@gmail.com" }]
 license = { text = "Apache 2.0" }
@@ -54,7 +54,7 @@ test = [
     "testcontainers>=4.14.0",
 ]
 lint = [
-    "ruff>=0.13",
+    "ruff>=0.15",
 ]
 typecheck = [
     "ty>=0.0.1a8",
