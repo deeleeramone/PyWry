@@ -28,7 +28,7 @@ from .models import (
     WindowConfig,
     WindowMode,
 )
-from .notebook import should_use_inline_rendering
+from .notebook import is_headless_environment, should_use_inline_rendering
 from .runtime import refresh_window as runtime_refresh_window
 from .state_mixins import GridStateMixin, PlotlyStateMixin, ToolbarStateMixin
 from .templates import build_html, build_plotly_init_script
@@ -127,6 +127,24 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # Initialize the appropriate window mode
         self._mode: WindowModeBase = self._create_mode(mode)
 
+        # Auto-fallback for environments that can't show a native window:
+        # if the user requested NEW/SINGLE/MULTI_WINDOW, no notebook UI is
+        # available to render anywidgets into (Jupyter/Colab/etc.), and the
+        # host has no display (e.g. a Linux VM, container, or SSH session
+        # without X11), promote silently to BROWSER mode. The user gets a
+        # FastAPI server + URL instead of a crashing pytauri subprocess.
+        if (
+            mode in (WindowMode.NEW_WINDOW, WindowMode.SINGLE_WINDOW, WindowMode.MULTI_WINDOW)
+            and not should_use_inline_rendering()
+            and is_headless_environment()
+        ):
+            info(
+                f"No display detected and not in a notebook — falling back from "
+                f"{mode.value} to BROWSER mode (server + URL)."
+            )
+            self._mode_enum = WindowMode.BROWSER
+            self._mode = BrowserMode()
+
         # Asset loader for CSS/JS files
         self._asset_loader = AssetLoader()
 
@@ -177,8 +195,27 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
             return SingleWindowMode()
         if mode == WindowMode.BROWSER:
             return BrowserMode()
+        # NOTEBOOK is handled by _use_inline() upstream — show*() short-circuits
+        # to an inline widget before this WindowModeBase is consulted.
         # MULTI_WINDOW
         return MultiWindowMode()
+
+    def _use_inline(self) -> bool:
+        """Return True if ``show*()`` should produce an inline widget.
+
+        Inline rendering is selected when:
+
+        * the user explicitly chose ``WindowMode.NOTEBOOK`` (overrides
+          environment auto-detection — useful in environments PyWry can't
+          recognise on its own);
+        * the user chose ``WindowMode.BROWSER`` (FastAPI server + system browser);
+        * the environment is auto-detected as a notebook (Colab, Jupyter, etc.).
+        """
+        return (
+            self._mode_enum == WindowMode.NOTEBOOK
+            or isinstance(self._mode, BrowserMode)
+            or should_use_inline_rendering()
+        )
 
     def _register_inline_widget(self, widget: Any) -> None:
         """Register an inline widget so app.emit() can route events to it.
@@ -724,8 +761,9 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # Check if we're in BROWSER mode - use inline server but open in system browser
         is_browser_mode = isinstance(self._mode, BrowserMode)
 
-        # Check if we're in a notebook environment OR explicit BROWSER mode
-        if should_use_inline_rendering() or is_browser_mode:
+        # Inline rendering covers: explicit NOTEBOOK mode, BROWSER mode, and
+        # auto-detected notebook environments (Colab, Jupyter, VSCode, etc.).
+        if self._use_inline():
             # Convert HtmlContent to string if needed, preserving inline_css
             if isinstance(content, HtmlContent):
                 html_str = content.html
@@ -1022,8 +1060,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # Check if we're in BROWSER mode - use inline server but open in system browser
         is_browser_mode = isinstance(self._mode, BrowserMode)
 
-        # Check if we're in a notebook environment OR explicit BROWSER mode
-        if should_use_inline_rendering() or is_browser_mode:
+        # Inline path covers explicit NOTEBOOK / BROWSER mode and auto-detected notebooks.
+        if self._use_inline():
             from . import inline as pywry_inline
 
             # Map specific callbacks to generic dict for inline
@@ -1179,8 +1217,8 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # Check if we're in BROWSER mode - use inline server but open in system browser
         is_browser_mode = isinstance(self._mode, BrowserMode)
 
-        # Check if we're in a notebook environment OR explicit BROWSER mode
-        if should_use_inline_rendering() or is_browser_mode:
+        # Inline path covers explicit NOTEBOOK / BROWSER mode and auto-detected notebooks.
+        if self._use_inline():
             from . import inline as pywry_inline
 
             # Map specific callbacks to generic dict for inline
@@ -1572,7 +1610,7 @@ class PyWry(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMix
         # bundled in the ESM.  The generic inline.show() path does not include
         # tvchart assets, so the chart would never initialise.
         is_browser_mode = isinstance(self._mode, BrowserMode)
-        if should_use_inline_rendering() or is_browser_mode:
+        if self._use_inline():
             from . import inline as pywry_inline
 
             plain_callbacks: dict[str, Any] | None = None
