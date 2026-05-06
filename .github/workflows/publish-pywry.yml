@@ -443,9 +443,65 @@ jobs:
     name: Generate release SBOM
     needs: [test]
     if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: pywry
     permissions:
       contents: read
-    uses: ./.github/workflows/sbom.yml
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "[all,dev,freeze]"
+
+      - name: Install CycloneDX tools
+        run: |
+          pip install cyclonedx-bom
+          npm ci --ignore-scripts
+
+      - name: Generate and validate merged SBOM
+        shell: bash
+        run: |
+          cyclonedx-py environment --pyproject pyproject.toml --output-format JSON --output-file sbom-python.cdx.json
+          npx @cyclonedx/cyclonedx-npm --package-lock-only --output-format JSON --output-file sbom-node.cdx.json
+
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            cyclonedx/cyclonedx-cli:latest \
+            merge \
+            --input-files sbom-python.cdx.json sbom-node.cdx.json \
+            --output-format json \
+            --output-file sbom.cdx.json
+
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            cyclonedx/cyclonedx-cli:latest \
+            validate \
+            --input-file sbom.cdx.json \
+            --input-format json \
+            --fail-on-errors
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: pywry/sbom.cdx.json
+          retention-days: 30
 
   # =============================================================================
   # Step 3: Merge all artifacts into single dist
@@ -956,4 +1012,3 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           verbose: true
-
