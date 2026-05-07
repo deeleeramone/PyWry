@@ -1008,7 +1008,17 @@ jobs:
           echo "📦 Publishing to PyPI:"
           ls -la dist/
 
+      - name: Prepare Python package artifacts
+        shell: bash
+        run: |
+          mkdir -p publish-dist
+          cp dist/*.whl publish-dist/
+          cp dist/*.tar.gz publish-dist/
+          echo "📦 Python package artifacts to publish:"
+          ls -la publish-dist/
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          packages-dir: publish-dist
           verbose: true
