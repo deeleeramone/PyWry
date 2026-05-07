@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/deeleeramone-pywry-badge.png)](https://mseep.ai/app/deeleeramone-pywry)
+
 <div align="center">
 
 <picture>
