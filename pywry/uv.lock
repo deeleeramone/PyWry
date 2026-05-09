@@ -3162,7 +3162,7 @@ wheels = [
 
 [[package]]
 name = "pywry"
-version = "2.0.0"
+version = "2.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },
@@ -3459,7 +3459,7 @@ dev = [
     { name = "pytest", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", specifier = ">=0.21.0" },
     { name = "pytest-timeout", specifier = ">=2.0.0" },
-    { name = "ruff", specifier = ">=0.13" },
+    { name = "ruff", specifier = ">=0.15" },
     { name = "sqlcipher3", specifier = ">=0.5.4" },
     { name = "testcontainers", specifier = ">=4.14.0" },
     { name = "ty", specifier = ">=0.0.1a8" },
@@ -3493,7 +3493,7 @@ features = [
     { name = "sqlcipher3", specifier = ">=0.5.4" },
     { name = "websockets", specifier = ">=16.0.0" },
 ]
-lint = [{ name = "ruff", specifier = ">=0.13" }]
+lint = [{ name = "ruff", specifier = ">=0.15" }]
 test = [
     { name = "fakeredis", specifier = ">=2.33.0" },
     { name = "pytest", specifier = ">=7.0.0" },
