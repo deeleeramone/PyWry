@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "pywry",
   "display_name": "PyWry",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Native Claude Desktop integration for PyWry — MCP tools for generating and rendering HTML components, chat artifacts, and building native, web, or Jupyter applications with live preview. Built-in support for AgGrid, Plotly, TradingView, and more.",
   "long_description": "PyWry is a cross-platform rendering engine and desktop UI toolkit for Python. This Desktop Extension bundles the PyWry MCP server (66+ tools) so Claude Desktop can scaffold widgets, render Plotly charts, drive AG Grid tables, build TradingView lightweight charts, and produce streaming chat artifacts — all delivered as embedded HTML resources viewable directly in the artifact pane. The `uv` runtime resolves `pywry[mcp]` from PyPI on first launch; no manual `pip install` is required.",
   "author": {

@@ -834,5 +834,11 @@ def build_content_update_script(html_content: str) -> str:
         }} else {{
             document.body.innerHTML = '<div class="pywry-container">' + {escaped_html} + '</div>';
         }}
+        if (typeof initToolbarHandlers === 'function') {{
+            initToolbarHandlers(document, window.pywry);
+        }}
+        if (typeof initChatHandlers === 'function') {{
+            initChatHandlers(document, window.pywry);
+        }}
     }})();
     """

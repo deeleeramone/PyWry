@@ -3,6 +3,25 @@
 Versioning follows [semver](https://semver.org/). Format is a feature
 list per release — not a delta.
 
+## 0.1.1 — chat-handler regression fix
+
+**Chat widget reliability.** Fixed a regression where the desktop chat
+panel rendered empty (no welcome message, dead buttons) after a
+`set_content` IPC swap. Root cause: `chat-handlers.js` contained a
+literal `'</head>'` string inside its iframe meta-tag injection
+helper. When inlined into the host document's `<head>`, the desktop
+subprocess's regex-based head-script extractor terminated early on
+the stray tag, dropping the chat-handlers `<script>` and leaving
+`window.initChatHandlers` undefined at re-init time. The literals are
+now split (`'<' + 'head>'` / `'</' + 'head>'`) so any naive HTML
+extractor sees a balanced document.
+
+**Demo refresh.** `pywry_demo_deepagent_nvidia.py` model catalog
+trimmed to a small curated set of currently-served NVIDIA NIM
+tool-capable models; stale ids that 404 at inference removed. The
+dropdown now only shows entries the live `ChatNVIDIA.
+get_available_models()` lookup confirms.
+
 ## 0.1.0 — first public release
 
 **MCP server.** `.mcp.json` launches `pywry mcp --transport stdio` and
