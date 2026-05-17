@@ -119,6 +119,9 @@
 
     window.pywry.on('pywry:set-content', function(data) {
         window.pywry.setContent(data);
+        if (typeof initChatHandlers === 'function') {
+            initChatHandlers(document, window.pywry);
+        }
     });
 
     window.pywry.on('pywry:refresh', function() {
@@ -223,6 +226,12 @@
                 app.innerHTML = data.html;
             } else {
                 document.body.innerHTML = data.html;
+            }
+            if (typeof initToolbarHandlers === 'function') {
+                initToolbarHandlers(document, window.pywry);
+            }
+            if (typeof initChatHandlers === 'function') {
+                initChatHandlers(document, window.pywry);
             }
         }
     });
