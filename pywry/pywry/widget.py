@@ -658,6 +658,9 @@ function render({ model, el }) {
                 if (event.type === 'pywry:update-html' && event.data && event.data.html) {
                     container.innerHTML = event.data.html;
                     initToolbarHandlers(container, pywry);
+                    if (typeof initChatHandlers === 'function') {
+                        initChatHandlers(container, pywry);
+                    }
                 }
 
                 const inlineHandledEvents = ['pywry:update-theme', 'pywry:inject-css', 'pywry:remove-css',
@@ -1256,6 +1259,9 @@ function render({ model, el }) {
                 if (event.type === 'pywry:update-html' && event.data && event.data.html) {
                     container.innerHTML = event.data.html;
                     initToolbarHandlers(container, pywry);
+                    if (typeof initChatHandlers === 'function') {
+                        initChatHandlers(container, pywry);
+                    }
                 }
 
                 const inlineHandledEvents = ['pywry:update-theme', 'pywry:inject-css', 'pywry:remove-css',

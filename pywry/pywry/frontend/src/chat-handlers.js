@@ -1878,12 +1878,18 @@ function initChatHandlers(container, pywry) {
     // they try to reconnect, which is the intended behaviour.
     var html = data.html || data.content || '';
     if (data.widgetId && data.revision) {
+      // NOTE: tag literals are split so this script can be safely inlined
+      // into a host document's <head> without a regex-based head/script
+      // extractor (see pywry/__main__.py) terminating early on a stray
+      // closing tag inside this string.
+      var headOpen = '<' + 'head>';
+      var headClose = '</' + 'head>';
       var meta = '<meta name="pywry-app-revision" content="' + data.revision + '">';
       // Insert meta tag into <head> if present, else as first element.
-      if (html.indexOf('<head>') !== -1) {
-        html = html.replace('<head>', '<head>' + meta);
+      if (html.indexOf(headOpen) !== -1) {
+        html = html.replace(headOpen, headOpen + meta);
       } else if (html.indexOf('<html>') !== -1) {
-        html = html.replace('<html>', '<html><head>' + meta + '</head>');
+        html = html.replace('<html>', '<html>' + headOpen + meta + headClose);
       } else {
         html = meta + html;
       }

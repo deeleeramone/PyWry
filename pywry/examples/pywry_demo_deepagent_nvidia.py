@@ -84,22 +84,19 @@ from pywry.chat.providers.deepagent import DeepagentProvider  # noqa: E402
 from pywry.tvchart import build_tvchart_toolbars  # noqa: E402
 
 
-DEFAULT_MODEL = "qwen/qwen3-coder-480b-a35b-instruct"
+DEFAULT_MODEL = "deepseek-ai/deepseek-v4-pro"
 
-# Preferred tool-capable chat models exposed through NVIDIA NIM, in
-# priority order.  The first model that the live ``ChatNVIDIA.
-# get_available_models()`` lookup actually returns is picked as the
-# default.  Llama variants are intentionally excluded — they under-
-# perform on strict-format tool-calling compared to the models below.
+# Small curated set of currently-hosted tool-capable chat models on
+# NVIDIA NIM (May 2026).  Kept intentionally short — every entry must
+# (a) support tool/function calling, (b) be currently served (no 4xx
+# at inference), and (c) be strong enough for the chart-agent loop.
+# The first entry that ``ChatNVIDIA.get_available_models()`` confirms
+# is live becomes the default; the rest populate the model dropdown.
 PREFERRED_TOOL_MODELS = [
+    "deepseek-ai/deepseek-v4-pro",
+    "nvidia/nemotron-3-super-120b-a12b",
     "qwen/qwen3-coder-480b-a35b-instruct",
-    "deepseek-ai/deepseek-v3.1",
-    "deepseek-ai/deepseek-r1",
-    "moonshotai/kimi-k2-instruct-0905",
     "openai/gpt-oss-120b",
-    "qwen/qwen3-235b-a22b-instruct-2507",
-    "zai-org/glm-4.5-air",
-    "mistralai/mistral-nemotron",
 ]
 
 CHART_SYSTEM_PROMPT = """\
@@ -304,26 +301,28 @@ def _start_pywry_mcp_server(app: PyWry, widget_id: str) -> tuple[str, Callable[[
 
 
 def _fetch_nvidia_models() -> list[str]:
-    """Fetch available tool-capable chat models from NVIDIA NIM."""
+    """Return the curated tool-capable models actually live on NIM.
+
+    Filters ``PREFERRED_TOOL_MODELS`` against the live
+    ``ChatNVIDIA.get_available_models()`` catalog so the dropdown only
+    ever shows models we've vetted AND that NVIDIA is currently serving.
+    Falls back to the full curated list on lookup failure so the UI is
+    never empty.
+    """
     try:
         from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
-        available = ChatNVIDIA.get_available_models()
-        model_ids = sorted(
+        live_ids = {
             m.id
-            for m in available
+            for m in ChatNVIDIA.get_available_models()
             if getattr(m, "model_type", None) == "chat" and getattr(m, "supports_tools", False)
-        )
-        if not model_ids:
-            return [DEFAULT_MODEL]
-        for preferred in PREFERRED_TOOL_MODELS:
-            if preferred in model_ids:
-                model_ids = [preferred, *[m for m in model_ids if m != preferred]]
-                break
-        if model_ids:
-            return model_ids
-    except Exception:
-        return [DEFAULT_MODEL]
+        }
+    except Exception as exc:
+        print(f"[deepagent] NVIDIA model catalog lookup failed ({exc}); using curated list.")
+        return list(PREFERRED_TOOL_MODELS)
+
+    curated_live = [m for m in PREFERRED_TOOL_MODELS if m in live_ids]
+    return curated_live or list(PREFERRED_TOOL_MODELS)
 
 
 def main() -> None:
