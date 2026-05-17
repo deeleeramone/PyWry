@@ -23,6 +23,12 @@ window.pywry = {
       htmlEl.classList.add('dark', 'pywry-theme-dark');
     }
     document.getElementById('app').innerHTML = html;
+    if (typeof initToolbarHandlers === 'function') {
+      initToolbarHandlers(document, window.pywry);
+    }
+    if (typeof initChatHandlers === 'function') {
+      initChatHandlers(document, window.pywry);
+    }
     window.pywry.sendEvent('content:ready', { timestamp: Date.now() });
   },
 
@@ -230,6 +236,12 @@ function registerBuiltinHandlers() {
         app.innerHTML = data.html;
       } else {
         document.body.innerHTML = data.html;
+      }
+      if (typeof initToolbarHandlers === 'function') {
+        initToolbarHandlers(document, window.pywry);
+      }
+      if (typeof initChatHandlers === 'function') {
+        initChatHandlers(document, window.pywry);
       }
     }
   });
