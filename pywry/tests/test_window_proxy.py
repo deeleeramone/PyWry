@@ -256,10 +256,41 @@ class TestWindowProxyActions:
             proxy.unmaximize()
             wait_for_state(proxy, "is_maximized", False)
 
-        # Minimize - use polling for async window state changes
+        # macOS NSWindow.miniaturize: is a no-op when the application is not
+        # the active app (common in CI runners where the process is launched
+        # in the background).  Activate via set_focus and give AppKit a
+        # moment to register before issuing the minimize request.
+        proxy.set_focus()
+        time.sleep(0.3)
+
+        # Poll both is_minimized and is_visible concurrently — different
+        # platforms / window managers transition through different states:
+        # macOS toggles is_minimized; some Linux WMs only flip is_visible.
         proxy.minimize()
-        minimized = wait_for_state(proxy, "is_minimized", True, timeout=8.0)
-        hidden = wait_for_state(proxy, "is_visible", False, timeout=8.0)
+        deadline = time.time() + 10.0
+        minimized = False
+        hidden = False
+        while time.time() < deadline:
+            try:
+                if proxy.is_minimized:
+                    minimized = True
+                    break
+                if not proxy.is_visible:
+                    hidden = True
+                    break
+            except IPCTimeoutError:
+                pass
+            time.sleep(0.1)
+
+        # Fall back to an explicit retry — macOS occasionally drops the very
+        # first miniaturize when the window only just became key.
+        if not (minimized or hidden):
+            proxy.set_focus()
+            time.sleep(0.3)
+            proxy.minimize()
+            minimized = wait_for_state(proxy, "is_minimized", True, timeout=8.0)
+            hidden = hidden or wait_for_state(proxy, "is_visible", False, timeout=2.0)
+
         assert minimized or hidden, "Window did not minimize/hide within timeout"
 
         # Unminimize - requires focus on some platforms
