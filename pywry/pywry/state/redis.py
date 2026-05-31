@@ -46,6 +46,30 @@ def _check_redis() -> None:
         raise ImportError(msg)
 
 
+def _to_str(value: Any) -> Any:
+    """Decode bytes → str, leave everything else unchanged."""
+    if isinstance(value, bytes):
+        try:
+            return value.decode("utf-8")
+        except UnicodeDecodeError:
+            return value
+    return value
+
+
+def _decode_hash(data: Any) -> dict[str, Any]:
+    """Normalise a Redis hash mapping to ``dict[str, str]``."""
+    if not data:
+        return {}
+    return {_to_str(k): _to_str(v) for k, v in data.items()}
+
+
+def _decode_set(data: Any) -> set[str]:
+    """Normalise a Redis set reply to ``set[str]``."""
+    if not data:
+        return set()
+    return {_to_str(m) for m in data}
+
+
 class RedisWidgetStore(WidgetStore):
     """Redis-backed widget store for horizontal scaling.
 
@@ -136,7 +160,7 @@ class RedisWidgetStore(WidgetStore):
     async def get(self, widget_id: str) -> WidgetData | None:
         """Get complete widget data."""
         r = await self._redis()
-        data = await r.hgetall(self._widget_key(widget_id))
+        data = _decode_hash(await r.hgetall(self._widget_key(widget_id)))
 
         if not data:
             return None
@@ -403,7 +427,7 @@ class RedisConnectionRouter(ConnectionRouter):
     async def get_connection_info(self, widget_id: str) -> ConnectionInfo | None:
         """Get connection information for a widget."""
         r = await self._redis()
-        data = await r.hgetall(self._conn_key(widget_id))
+        data = _decode_hash(await r.hgetall(self._conn_key(widget_id)))
 
         if not data:
             return None
@@ -559,7 +583,7 @@ class RedisSessionStore(SessionStore):
     async def get_session(self, session_id: str) -> UserSession | None:
         """Get a session by ID."""
         r = await self._redis()
-        data = await r.hgetall(self._session_key(session_id))
+        data = _decode_hash(await r.hgetall(self._session_key(session_id)))
 
         if not data:
             return None
@@ -617,7 +641,7 @@ class RedisSessionStore(SessionStore):
         r = await self._redis()
         key = self._session_key(session_id)
 
-        data = await r.hgetall(key)
+        data = _decode_hash(await r.hgetall(key))
         if not data:
             return False
 
@@ -779,7 +803,7 @@ class RedisChatStore(ChatStore):
         from pywry.chat import ChatThread
 
         r = await self._redis()
-        data = await r.hgetall(self._thread_key(widget_id, thread_id))
+        data = _decode_hash(await r.hgetall(self._thread_key(widget_id, thread_id)))
         if not data:
             return None
 
@@ -977,7 +1001,8 @@ class RedisChartStore(ChartStore):
         )
         results: list[dict[str, Any]] = []
         for lid, score in ids_with_scores:
-            meta = await r.hgetall(self._meta_key(user_id, lid))
+            s_lid = _to_str(lid)
+            meta = _decode_hash(await r.hgetall(self._meta_key(user_id, s_lid)))
             if meta:
                 meta["savedAt"] = int(float(meta.get("savedAt", score)))
                 results.append(meta)

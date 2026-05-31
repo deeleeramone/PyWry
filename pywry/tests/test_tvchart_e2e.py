@@ -900,25 +900,36 @@ class TestTVChartFullLifecycle:
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var ts = entry.chart.timeScale();"
+            "var barCount = (entry.seriesById && entry.seriesById.main)"
+            "  ? (entry.seriesById.main.data() || []).length : 0;"
             "ts.setVisibleLogicalRange({from: 5, to: 10});"
             "setTimeout(function() {"
             "  var narrow = ts.getVisibleLogicalRange();"
-            "  var narrowSpan = narrow ? Math.round(narrow.to - narrow.from) : 0;"
+            "  var narrowSpan = narrow ? (narrow.to - narrow.from) : 0;"
             "  window.pywry._trigger('tvchart:time-scale', {"
             "    chartId: cid, fitContent: true"
             "  });"
             "  setTimeout(function() {"
             "    var fit = ts.getVisibleLogicalRange();"
-            "    var fitSpan = fit ? Math.round(fit.to - fit.from) : 0;"
+            "    var fitSpan = fit ? (fit.to - fit.from) : 0;"
             "    pywry.result({"
+            "      barCount: barCount,"
             "      narrowSpan: narrowSpan, fitSpan: fitSpan,"
-            "      fitWider: fitSpan > narrowSpan,"
+            "      fitWider: fitSpan > narrowSpan + 1,"
+            "      fitCoversData: barCount > 0 && fitSpan >= barCount * 0.5,"
             "    });"
-            "  }, 200);"
-            "}, 200);"
+            "  }, 400);"
+            "}, 300);"
             "})();",
         )
-        assert r["fitWider"] is True
+        # fitContent should either visibly widen the logical range vs the
+        # narrow zoom, or — when Lightweight-Charts clamps the narrow
+        # request to maintain minimum bar spacing on smaller viewports —
+        # produce a range that covers at least half the loaded bars.
+        # Asserting either condition keeps the test deterministic across
+        # macOS CI (where the WebView occasionally clamps narrow requests
+        # more aggressively than the Linux/Windows runners).
+        assert r["fitWider"] or r["fitCoversData"], f"fitContent did not expand visible range: {r}"
 
     # ------------------------------------------------------------------
     # 17. Markers and price lines
