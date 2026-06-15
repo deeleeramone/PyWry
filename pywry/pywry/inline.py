@@ -1823,7 +1823,10 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarS
         webbrowser.open(self.url)
 
     def on(
-        self, event_type: str, callback: Callable[[dict[str, Any], str, str], Any]
+        self,
+        event_type: str,
+        callback: Callable[[dict[str, Any], str, str], Any],
+        label: str | None = None,
     ) -> InlineWidget:
         """Register a callback for events from JavaScript.
 
@@ -1833,6 +1836,9 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarS
             Event name (e.g., 'plotly:click', 'toggle', 'grid:cell-click').
         callback : Callable[[dict[str, Any], str, str], Any]
             Handler function receiving (data, event_type, label).
+        label : str or None, optional
+            Ignored for inline widgets (accepted for API compatibility with
+            ``PyWry.on()``).
 
         Returns
         -------
