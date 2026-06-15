@@ -41,6 +41,7 @@ from .state_mixins import (
     _UNSET,
     _Unset,
 )
+from .tvchart.mixin import TVChartStateMixin
 from .toolbar import Toolbar, get_toolbar_script, wrap_content_with_toolbars
 from .widget_protocol import BaseWidget  # noqa: TC001
 
@@ -1667,7 +1668,7 @@ async def get_widget_html_async(widget_id: str) -> str | None:
     return await _state.get_widget_html_async(widget_id)
 
 
-class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
+class InlineWidget(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMixin):
     """Base inline widget that renders via FastAPI server and IFrame.
 
     Implements BaseWidget protocol for unified API across rendering backends.
@@ -1822,7 +1823,10 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
         webbrowser.open(self.url)
 
     def on(
-        self, event_type: str, callback: Callable[[dict[str, Any], str, str], Any]
+        self,
+        event_type: str,
+        callback: Callable[[dict[str, Any], str, str], Any],
+        label: str | None = None,
     ) -> InlineWidget:
         """Register a callback for events from JavaScript.
 
@@ -1832,6 +1836,9 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
             Event name (e.g., 'plotly:click', 'toggle', 'grid:cell-click').
         callback : Callable[[dict[str, Any], str, str], Any]
             Handler function receiving (data, event_type, label).
+        label : str or None, optional
+            Ignored for inline widgets (accepted for API compatibility with
+            ``PyWry.on()``).
 
         Returns
         -------
@@ -3773,6 +3780,186 @@ def _preload_chart_data(user_id: str = "default") -> dict[str, str]:
     return preload
 
 
+def generate_tvchart_html(
+    chart_html: str,
+    config_payload: str,
+    chart_id: str,
+    widget_id: str,
+    title: str = "Chart",
+    theme: ThemeLiteral | None = None,
+    toolbars: list[dict[str, Any] | Toolbar] | None = None,
+    modals: list[dict[str, Any] | Modal] | None = None,
+    inline_css: str = "",
+    full_document: bool = True,
+    token: str | None = None,
+) -> str:
+    """Generate HTML for a TradingView Lightweight Chart.
+
+    Parameters
+    ----------
+    chart_html : str
+        The chart container ``<div>`` (and any toolbar/modal markup).
+    config_payload : str
+        JSON string with ``chartOptions``, ``series``, ``storage``, etc.
+    chart_id : str
+        DOM id of the chart container element.
+    widget_id : str
+        Unique widget identifier (used by the pywry bridge).
+    title : str
+        Page title.
+    theme : 'dark' or 'light', optional
+        Color theme.
+    toolbars : list, optional
+        Toolbar configurations.
+    modals : list, optional
+        Modal configurations.
+    inline_css : str
+        Extra CSS to inject.
+    full_document : bool
+        If True, return complete HTML document; if False, content fragment only.
+    token : str or None
+        Widget auth token for the pywry bridge.
+
+    Returns
+    -------
+    str
+    """
+    from .assets import (
+        get_pywry_css,
+        get_scrollbar_js,
+        get_toast_css,
+        get_tvchart_defaults_js,
+        get_tvchart_js,
+    )
+    from .modal import wrap_content_with_modals
+    from .notebook import _wrap_content_with_toolbars
+
+    if theme is None:
+        theme = _get_default_theme()
+
+    tvchart_js = get_tvchart_js()
+    tvchart_script = f"<script>{tvchart_js}</script>" if tvchart_js else ""
+    tvchart_defaults = get_tvchart_defaults_js()
+    tvchart_defaults_script = f"<script>{tvchart_defaults}</script>" if tvchart_defaults else ""
+
+    # Chart init script — waits for LightweightCharts then renders
+    chart_init_script = f"""<script>
+    (function() {{
+        function initChart() {{
+            if (typeof LightweightCharts === 'undefined') {{
+                setTimeout(initChart, 50);
+                return;
+            }}
+            var payload = {config_payload};
+            var container = document.getElementById('{chart_id}');
+            if (!container) {{
+                setTimeout(initChart, 50);
+                return;
+            }}
+            if (window.PYWRY_TVCHART_RENDER) {{
+                window.PYWRY_TVCHART_RENDER('{chart_id}', container, payload);
+            }} else if (window.PYWRY_TVCHART_CREATE) {{
+                window.PYWRY_TVCHART_CREATE('{chart_id}', container, payload);
+            }}
+        }}
+        initChart();
+    }})();
+    </script>"""
+
+    if not full_document:
+        # Content fragment for anywidget — caller handles wrapping
+        wrapped = _wrap_content_with_toolbars(chart_html, toolbars)
+        if modals:
+            modal_html, modal_scripts = wrap_content_with_modals("", modals)
+            wrapped = f"{wrapped}{modal_html}{modal_scripts}"
+        return f"{wrapped}\n{chart_init_script}"
+
+    # Full document for IFrame / browser mode
+    pywry_css = get_pywry_css()
+    pywry_style = f"<style>{pywry_css}</style>" if pywry_css else ""
+    toast_css = get_toast_css()
+    toast_style = f"<style>{toast_css}</style>" if toast_css else ""
+    scrollbar_js = get_scrollbar_js()
+    scrollbar_script = f"<script>{scrollbar_js}</script>" if scrollbar_js else ""
+    inline_style = f"<style>{inline_css}</style>" if inline_css else ""
+
+    if theme == "dark":
+        widget_theme_class = "pywry-theme-dark"
+    elif theme == "system":
+        widget_theme_class = "pywry-theme-system"
+    else:
+        widget_theme_class = "pywry-theme-light"
+
+    # Build widget content with toolbars
+    widget_content = wrap_content_with_toolbars(chart_html, toolbars)
+
+    # Inject modals
+    modal_block = ""
+    if modals:
+        modal_html, modal_scripts = wrap_content_with_modals("", modals)
+        modal_block = f"{modal_html}{modal_scripts}"
+
+    return f"""<!DOCTYPE html>
+<html class="{theme}">
+<head>
+    <meta charset="utf-8">
+    <title>{title}</title>
+    {tvchart_script}
+    {tvchart_defaults_script}
+    {pywry_style}
+    {toast_style}
+    {inline_style}
+    {scrollbar_script}
+    <style>
+        html, body {{
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--pywry-bg-primary);
+        }}
+        .pywry-widget {{
+            --pywry-widget-width: 100%;
+            --pywry-widget-height: 100%;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border: none;
+            border-radius: 0;
+            box-sizing: border-box;
+            background-color: var(--pywry-bg-primary);
+        }}
+        .pywry-toolbar {{
+            border: none;
+        }}
+        .pywry-content {{
+            flex: 1;
+            min-height: 0;
+            box-sizing: border-box;
+            overflow: hidden;
+        }}
+        .pywry-tvchart-container {{
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }}
+    </style>
+</head>
+<body>
+    <div class="pywry-widget pywry-custom-scrollbar {widget_theme_class}">
+        {widget_content}
+    </div>
+    {modal_block}
+    {_get_pywry_bridge_js(widget_id, token)}
+    {chart_init_script}
+</body>
+</html>"""
+
+
 def show_tvchart(
     data: Any = None,
     callbacks: dict[str, Callable[..., Any]] | None = None,
@@ -3845,10 +4032,8 @@ def show_tvchart(
     import json as _json
     import uuid as _uuid
 
-    from .modal import wrap_content_with_modals
-    from .notebook import _wrap_content_with_toolbars
+    from .notebook import create_tvchart_widget
     from .runtime import is_headless
-    from .widget import HAS_ANYWIDGET, PyWryTVChartWidget
 
     if theme is None:
         theme = _get_default_theme()
@@ -3930,25 +4115,21 @@ def show_tvchart(
 
     chart_html = f'<div id="{chart_id}" class="pywry-tvchart-container"></div>'
 
-    # Inject toolbars
-    chart_html = _wrap_content_with_toolbars(chart_html, toolbars)
-
-    # Inject modals
-    if modals:
-        modal_html, modal_scripts = wrap_content_with_modals("", modals)
-        chart_html = f"{chart_html}{modal_html}{modal_scripts}"
-
-    if HAS_ANYWIDGET and not open_browser and not is_headless():
-        widget = PyWryTVChartWidget(
-            content=chart_html,
-            chart_config=config_payload,
-            theme=theme,
-            width=width,
-            height=f"{height}px",
-            chart_id=chart_id,
-        )
-    else:
-        widget = PyWryTVChartWidget(content=chart_html)
+    # Create widget using auto-backend selection
+    # Force InlineWidget (IFrame) for BROWSER mode since it has open_in_browser()
+    widget = create_tvchart_widget(
+        chart_html=chart_html,
+        config_payload=config_payload,
+        chart_id=chart_id,
+        widget_id=widget_id,
+        title=title,
+        theme=theme,
+        width=width,
+        height=height,
+        toolbars=toolbars,
+        modals=modals,
+        force_iframe=open_browser,
+    )
 
     if callbacks:
         for event_type, callback in callbacks.items():
@@ -3960,14 +4141,17 @@ def show_tvchart(
             wire_storage(user_id="default")
 
     if provider is not None:
-        widget._wire_datafeed_provider(provider)
+        wire_datafeed = getattr(widget, "_wire_datafeed_provider", None)
+        if callable(wire_datafeed):
+            wire_datafeed(provider)
 
+    # Display
     if is_headless():
         pass
+    elif open_browser:
+        open_fn = getattr(widget, "open_in_browser", None)
+        if callable(open_fn):
+            open_fn()
     else:
-        open_in_browser = getattr(widget, "open_in_browser", None)
-        if open_browser and callable(open_in_browser):
-            open_in_browser()
-        else:
-            widget.display()
+        widget.display()
     return widget
