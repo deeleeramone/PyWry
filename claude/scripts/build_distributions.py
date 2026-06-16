@@ -121,9 +121,7 @@ def _build_cowork_plugin() -> Path:
     plugin = json.loads(plugin_json_path.read_text(encoding="utf-8"))
     if not plugin["description"].endswith(COWORK_DESCRIPTION_SUFFIX):
         plugin["description"] += COWORK_DESCRIPTION_SUFFIX
-    plugin_json_path.write_text(
-        json.dumps(plugin, indent=2) + "\n", encoding="utf-8"
-    )
+    plugin_json_path.write_text(json.dumps(plugin, indent=2) + "\n", encoding="utf-8")
 
     out = DIST / "pywry-cowork.plugin"
     _zip_directory(workdir, out)
@@ -140,9 +138,7 @@ def _build_desktop_extension() -> Path:
 def _summarize(path: Path) -> None:
     size = path.stat().st_size
     if size > SIZE_LIMIT_BYTES:
-        raise RuntimeError(
-            f"{path.name} is {size:,} bytes — exceeds the 50 MB limit"
-        )
+        raise RuntimeError(f"{path.name} is {size:,} bytes — exceeds the 50 MB limit")
     with zipfile.ZipFile(path) as zf:
         files = zf.namelist()
     rel = path.relative_to(REPO_ROOT)

@@ -41,6 +41,7 @@ from .state_mixins import (
     _UNSET,
     _Unset,
 )
+from .tvchart.mixin import TVChartStateMixin
 from .toolbar import Toolbar, get_toolbar_script, wrap_content_with_toolbars
 from .widget_protocol import BaseWidget  # noqa: TC001
 
@@ -1662,7 +1663,7 @@ async def get_widget_html_async(widget_id: str) -> str | None:
     return await _state.get_widget_html_async(widget_id)
 
 
-class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
+class InlineWidget(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarStateMixin):
     """Base inline widget that renders via FastAPI server and IFrame.
 
     Implements BaseWidget protocol for unified API across rendering backends.
@@ -1815,7 +1816,10 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
         webbrowser.open(self.url)
 
     def on(
-        self, event_type: str, callback: Callable[[dict[str, Any], str, str], Any]
+        self,
+        event_type: str,
+        callback: Callable[[dict[str, Any], str, str], Any],
+        label: str | None = None,
     ) -> InlineWidget:
         """Register a callback for events from JavaScript.
 
@@ -1825,6 +1829,9 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
             Event name (e.g., 'plotly:click', 'toggle', 'grid:cell-click').
         callback : Callable[[dict[str, Any], str, str], Any]
             Handler function receiving (data, event_type, label).
+        label : str or None, optional
+            Ignored for inline widgets (accepted for API compatibility with
+            ``PyWry.on()``).
 
         Returns
         -------
@@ -4018,10 +4025,8 @@ def show_tvchart(
     import json as _json
     import uuid as _uuid
 
-    from .modal import wrap_content_with_modals
-    from .notebook import _wrap_content_with_toolbars
+    from .notebook import create_tvchart_widget
     from .runtime import is_headless
-    from .widget import HAS_ANYWIDGET, PyWryTVChartWidget
 
     if theme is None:
         theme = _get_default_theme()
@@ -4103,25 +4108,21 @@ def show_tvchart(
 
     chart_html = f'<div id="{chart_id}" class="pywry-tvchart-container"></div>'
 
-    # Inject toolbars
-    chart_html = _wrap_content_with_toolbars(chart_html, toolbars)
-
-    # Inject modals
-    if modals:
-        modal_html, modal_scripts = wrap_content_with_modals("", modals)
-        chart_html = f"{chart_html}{modal_html}{modal_scripts}"
-
-    if HAS_ANYWIDGET and not open_browser and not is_headless():
-        widget = PyWryTVChartWidget(
-            content=chart_html,
-            chart_config=config_payload,
-            theme=theme,
-            width=width,
-            height=f"{height}px",
-            chart_id=chart_id,
-        )
-    else:
-        widget = PyWryTVChartWidget(content=chart_html)
+    # Create widget using auto-backend selection
+    # Force InlineWidget (IFrame) for BROWSER mode since it has open_in_browser()
+    widget = create_tvchart_widget(
+        chart_html=chart_html,
+        config_payload=config_payload,
+        chart_id=chart_id,
+        widget_id=widget_id,
+        title=title,
+        theme=theme,
+        width=width,
+        height=height,
+        toolbars=toolbars,
+        modals=modals,
+        force_iframe=open_browser,
+    )
 
     if callbacks:
         for event_type, callback in callbacks.items():
@@ -4133,14 +4134,17 @@ def show_tvchart(
             wire_storage(user_id="default")
 
     if provider is not None:
-        widget._wire_datafeed_provider(provider)
+        wire_datafeed = getattr(widget, "_wire_datafeed_provider", None)
+        if callable(wire_datafeed):
+            wire_datafeed(provider)
 
+    # Display
     if is_headless():
         pass
+    elif open_browser:
+        open_fn = getattr(widget, "open_in_browser", None)
+        if callable(open_fn):
+            open_fn()
     else:
-        open_in_browser = getattr(widget, "open_in_browser", None)
-        if open_browser and callable(open_in_browser):
-            open_in_browser()
-        else:
-            widget.display()
+        widget.display()
     return widget
