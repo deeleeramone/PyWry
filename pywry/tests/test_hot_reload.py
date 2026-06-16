@@ -264,9 +264,7 @@ class TestEnableDisableWindow:
 class TestReloadCss:
     """Test CSS reloading functionality."""
 
-    def test_reload_css_success(
-        self, manager: HotReloadManager, tmp_path: Path
-    ) -> None:
+    def test_reload_css_success(self, manager: HotReloadManager, tmp_path: Path) -> None:
         """A successful reload invalidates the cache and invokes the callback."""
         css_file = tmp_path / "style.css"
         css_file.write_text("body { color: blue; }")
@@ -293,9 +291,7 @@ class TestReloadCss:
         result = manager.reload_css("window1")
         assert result is False
 
-    def test_reload_css_unknown_window_returns_false(
-        self, manager: HotReloadManager
-    ) -> None:
+    def test_reload_css_unknown_window_returns_false(self, manager: HotReloadManager) -> None:
         """Reloading an unknown window returns False."""
         result = manager.reload_css("unknown_window")
         assert result is False
@@ -380,9 +376,7 @@ class TestRefreshWindow:
         assert result is True
         refresh_callback.assert_called_once_with("window1")
 
-    def test_refresh_window_no_callback_returns_false(
-        self, manager: HotReloadManager
-    ) -> None:
+    def test_refresh_window_no_callback_returns_false(self, manager: HotReloadManager) -> None:
         """Without a refresh callback, refresh_window returns False."""
         result = manager.refresh_window("window1")
         assert result is False
@@ -523,9 +517,7 @@ class TestGetWatchedFiles:
         assert "window1" in files
         assert len(files["window1"]) == 1
 
-    def test_get_watched_files_all(
-        self, manager: HotReloadManager, tmp_path: Path
-    ) -> None:
+    def test_get_watched_files_all(self, manager: HotReloadManager, tmp_path: Path) -> None:
         """Querying without arguments returns every registered window."""
         css1 = tmp_path / "style1.css"
         css2 = tmp_path / "style2.css"
@@ -539,9 +531,7 @@ class TestGetWatchedFiles:
         assert "window1" in files
         assert "window2" in files
 
-    def test_get_watched_files_unknown_label_returns_empty(
-        self, manager: HotReloadManager
-    ) -> None:
+    def test_get_watched_files_unknown_label_returns_empty(self, manager: HotReloadManager) -> None:
         """Querying an unknown label returns an empty dict."""
         assert manager.get_watched_files("unknown-window") == {}
 

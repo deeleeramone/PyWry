@@ -308,8 +308,6 @@ class TestMarqueeNativeWindowRendering:
 # =============================================================================
 
 
-
-
 @pytest.fixture
 def server_port():
     """Get a free port that's not in use."""
@@ -376,7 +374,6 @@ class MockOutput:
     def append_display_data(self, data):
         """Append display data to the outputs list."""
         self.outputs.append(data)
-
 
 
 class TestMarqueeInlineRendering:
@@ -688,7 +685,6 @@ class TestMarqueeInlineRendering:
         assert "toolbar:marquee-set-item" in html
 
 
-
 class TestMarqueeUpdatePayload:
     """Test Marquee.update_payload() helper method integration."""
 
@@ -719,7 +715,6 @@ class TestMarqueeUpdatePayload:
 
         assert event == "toolbar:marquee-set-content"
         assert payload["paused"] is True
-
 
 
 class TestTickerItemUpdatePayload:
@@ -754,7 +749,6 @@ class TestTickerItemUpdatePayload:
         _event, payload = item.update_payload(styles={"color": "#22c55e"})
 
         assert payload["styles"]["color"] == "#22c55e"
-
 
 
 class TestMarqueeStaticBehavior:

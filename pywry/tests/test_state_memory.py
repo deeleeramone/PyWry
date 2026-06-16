@@ -205,10 +205,7 @@ class TestMemoryEventBus:
         await asyncio.wait_for(consumer_task, timeout=1.0)
 
         await asyncio.sleep(0.05)
-        assert (
-            "cleanup-test" not in bus._channels
-            or len(bus._channels["cleanup-test"]) == 0
-        )
+        assert "cleanup-test" not in bus._channels or len(bus._channels["cleanup-test"]) == 0
 
 
 # --- MemoryConnectionRouter Tests ---

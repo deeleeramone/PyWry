@@ -814,9 +814,7 @@ class TestWindowProxyMockedActions:
 
     def test_set_resizable(self, runtime_mock: MagicMock) -> None:
         WindowProxy("x").set_resizable(False)
-        runtime_mock.window_call.assert_called_once_with(
-            "x", "set_resizable", {"resizable": False}
-        )
+        runtime_mock.window_call.assert_called_once_with("x", "set_resizable", {"resizable": False})
 
     def test_set_enabled(self, runtime_mock: MagicMock) -> None:
         WindowProxy("x").set_enabled(False)
@@ -846,15 +844,11 @@ class TestWindowProxyMockedActions:
 
     def test_set_skip_taskbar(self, runtime_mock: MagicMock) -> None:
         WindowProxy("x").set_skip_taskbar(True)
-        runtime_mock.window_call.assert_called_once_with(
-            "x", "set_skip_taskbar", {"skip": True}
-        )
+        runtime_mock.window_call.assert_called_once_with("x", "set_skip_taskbar", {"skip": True})
 
     def test_set_cursor_icon(self, runtime_mock: MagicMock) -> None:
         WindowProxy("x").set_cursor_icon(CursorIcon.HAND)
-        runtime_mock.window_call.assert_called_once_with(
-            "x", "set_cursor_icon", {"icon": "Hand"}
-        )
+        runtime_mock.window_call.assert_called_once_with("x", "set_cursor_icon", {"icon": "Hand"})
 
     def test_set_cursor_position(self, runtime_mock: MagicMock) -> None:
         WindowProxy("x").set_cursor_position(LogicalPosition(10.0, 20.0))
@@ -948,9 +942,7 @@ class TestWindowProxyMockedActions:
 
     def test_eval(self, runtime_mock: MagicMock) -> None:
         WindowProxy("x").eval("console.log()")
-        runtime_mock.window_call.assert_called_once_with(
-            "x", "eval", {"script": "console.log()"}
-        )
+        runtime_mock.window_call.assert_called_once_with("x", "eval", {"script": "console.log()"})
 
     def test_eval_with_result(self, runtime_mock: MagicMock) -> None:
         runtime_mock.window_call.return_value = "result"
@@ -962,9 +954,7 @@ class TestWindowProxyMockedActions:
 
     def test_navigate(self, runtime_mock: MagicMock) -> None:
         WindowProxy("x").navigate("https://x.com")
-        runtime_mock.window_call.assert_called_once_with(
-            "x", "navigate", {"url": "https://x.com"}
-        )
+        runtime_mock.window_call.assert_called_once_with("x", "navigate", {"url": "https://x.com"})
 
     def test_set_zoom(self, runtime_mock: MagicMock) -> None:
         WindowProxy("x").set_zoom(1.5)

@@ -469,9 +469,7 @@ class TestHandleConfigOutputFile:
 
     def test_writes_to_file(self, tmp_path):
         out = tmp_path / "out.toml"
-        args = argparse.Namespace(
-            show=False, toml=True, env=False, sources=False, output=str(out)
-        )
+        args = argparse.Namespace(show=False, toml=True, env=False, sources=False, output=str(out))
         with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
             result = handle_config(args)
         assert result == 0
@@ -481,9 +479,7 @@ class TestHandleConfigOutputFile:
 
 class TestHandleConfigEnvOption:
     def test_env_output_to_stdout(self):
-        args = argparse.Namespace(
-            show=False, toml=False, env=True, sources=False, output=None
-        )
+        args = argparse.Namespace(show=False, toml=False, env=True, sources=False, output=None)
         with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
             result = handle_config(args)
         assert result == 0
@@ -634,9 +630,7 @@ class TestHandleMcp:
 class TestHandleConfigDefaults:
     def test_show_defaults_when_no_flags(self):
         """When no toml/env/show flag passed, output defaults to show format."""
-        args = argparse.Namespace(
-            show=False, toml=False, env=False, sources=False, output=None
-        )
+        args = argparse.Namespace(show=False, toml=False, env=False, sources=False, output=None)
         with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
             result = handle_config(args)
         assert result == 0
@@ -794,18 +788,14 @@ class TestMainEntryPointDispatch:
         mock_handle.assert_called_once()
 
     def test_install_skills_command_dispatches(self):
-        with patch(
-            "pywry.cli.handle_install_skills", return_value=0
-        ) as mock_handle:
+        with patch("pywry.cli.handle_install_skills", return_value=0) as mock_handle:
             with patch.object(sys, "argv", ["pywry", "install-skills", "--list"]):
                 result = main()
         assert result == 0
         mock_handle.assert_called_once()
 
     def test_plugin_path_command_dispatches(self):
-        with patch(
-            "pywry.cli.handle_plugin_path", return_value=0
-        ) as mock_handle:
+        with patch("pywry.cli.handle_plugin_path", return_value=0) as mock_handle:
             with patch.object(sys, "argv", ["pywry", "plugin-path"]):
                 result = main()
         assert result == 0

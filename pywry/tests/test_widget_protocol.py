@@ -689,7 +689,10 @@ class TestProxyAndDelegation:
         instance.set_background_color.assert_called_once_with((10, 20, 30, 255))
         mock_app.emit.assert_called_with(
             "pywry:inject-css",
-            {"id": "pywry-bg-override", "css": ":root { --pywry-bg-primary: rgb(10, 20, 30) !important; }"},
+            {
+                "id": "pywry-bg-override",
+                "css": ":root { --pywry-bg-primary: rgb(10, 20, 30) !important; }",
+            },
             "test-window",
         )
 

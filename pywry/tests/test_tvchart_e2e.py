@@ -1457,11 +1457,11 @@ class TestTVChartStorage:
 # Inline Mode (synthetic data, no UDF)
 # ============================================================================
 
+
 def _http_get(url: str, timeout: float = 5.0) -> str:
     req = urllib.request.Request(url)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode("utf-8")
-
 
 
 class TestTVChartInline:
@@ -1523,7 +1523,6 @@ def _wait_for_port_release(port: int, timeout: float = 5.0) -> bool:
         except OSError:
             time.sleep(0.1)
     return False
-
 
 
 class TestTVChartBrowser:

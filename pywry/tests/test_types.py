@@ -652,7 +652,9 @@ class TestMenuConfig:
 
     def test_from_dict_unknown_kind_raises(self):
         with pytest.raises(ValueError, match="Unknown menu item kind"):
-            MenuConfig.from_dict({"id": "m", "items": [{"kind": "garbage", "id": "x", "text": "X"}]})
+            MenuConfig.from_dict(
+                {"id": "m", "items": [{"kind": "garbage", "id": "x", "text": "X"}]}
+            )
 
 
 class TestTrayIconConfig:

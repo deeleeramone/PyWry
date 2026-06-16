@@ -1369,9 +1369,7 @@ class TestNumpyEncoder:
 class TestCustomCssOsErrorHandling:
     """Tests for OSError handling in build_base_styles (lines 154-155)."""
 
-    def test_unreadable_custom_css_file_is_silently_ignored(
-        self, tmp_path, monkeypatch
-    ):
+    def test_unreadable_custom_css_file_is_silently_ignored(self, tmp_path, monkeypatch):
         """When a custom CSS file raises OSError on read, it's silently skipped."""
         from pywry.config import ThemeSettings
         from pywry.templates import build_base_styles
@@ -1583,9 +1581,7 @@ class TestBuildGlobalCssNoPath:
         css_file = tmp_path / "global.css"
         css_file.write_text("/* default loader */")
         default_loader = AssetLoader(base_dir=tmp_path)
-        monkeypatch.setattr(
-            "pywry.asset_loader.get_asset_loader", lambda: default_loader
-        )
+        monkeypatch.setattr("pywry.asset_loader.get_asset_loader", lambda: default_loader)
         settings = AssetSettings(css_files=["global.css"])
         result = tmpl.build_global_css(settings)
         assert "/* default loader */" in result
@@ -1598,9 +1594,7 @@ class TestBuildGlobalCssNoPath:
         js_file = tmp_path / "global.js"
         js_file.write_text("/* default scripts */")
         default_loader = AssetLoader(base_dir=tmp_path)
-        monkeypatch.setattr(
-            "pywry.asset_loader.get_asset_loader", lambda: default_loader
-        )
+        monkeypatch.setattr("pywry.asset_loader.get_asset_loader", lambda: default_loader)
         settings = AssetSettings(script_files=["global.js"])
         result = tmpl.build_global_scripts(settings)
         assert "/* default scripts */" in result
@@ -1680,8 +1674,7 @@ class TestInjectIntoCompleteDoc:
     def test_complete_doc_with_head_keeps_doctype(self):
         """A complete document with <head> has scripts injected before </head>."""
         user_html = (
-            "<!DOCTYPE html><html><head><title>Mine</title></head>"
-            "<body><p>Body</p></body></html>"
+            "<!DOCTYPE html><html><head><title>Mine</title></head><body><p>Body</p></body></html>"
         )
         config = WindowConfig()
         content = HtmlContent(html=user_html)
@@ -1695,9 +1688,7 @@ class TestInjectIntoCompleteDoc:
 
     def test_complete_doc_no_head_gets_head_inserted(self):
         """A complete document missing <head> has one inserted (line 669)."""
-        user_html = (
-            "<!DOCTYPE html><html><body><p>NoHead</p></body></html>"
-        )
+        user_html = "<!DOCTYPE html><html><body><p>NoHead</p></body></html>"
         config = WindowConfig()
         content = HtmlContent(html=user_html)
         result = build_html(content, config, window_label="main")
@@ -1728,9 +1719,7 @@ class TestInjectIntoCompleteDoc:
             "global_scripts": "",
             "custom_init": "",
         }
-        result = _inject_into_complete_doc(
-            user_html, "pywry-theme-dark", "", components
-        )
+        result = _inject_into_complete_doc(user_html, "pywry-theme-dark", "", components)
         # Without <head> or <html>, the function returns the (theme-class-untouched) input.
         assert result == user_html
 
@@ -1739,10 +1728,7 @@ class TestInjectIntoCompleteDoc:
         from pywry.modal import Modal
         from pywry.toolbar import Button
 
-        user_html = (
-            "<!DOCTYPE html><html><head></head>"
-            "<body><p>Main</p></body></html>"
-        )
+        user_html = "<!DOCTYPE html><html><head></head><body><p>Main</p></body></html>"
         config = WindowConfig()
         content = HtmlContent(html=user_html)
         modal = Modal(title="X", items=[Button(label="OK", event="m:ok")])

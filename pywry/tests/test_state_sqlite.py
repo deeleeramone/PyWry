@@ -123,9 +123,7 @@ class TestResolveEncryptionKey:
 
         assert _resolve_encryption_key() == "stored-key"
 
-    def test_keyring_generates_and_stores_new_key(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_keyring_generates_and_stores_new_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("PYWRY_SQLITE_KEY", raising=False)
 
         captured: list[tuple[str, str, str]] = []
@@ -405,12 +403,8 @@ class TestSqliteSessionStore:
         await session_store.create_session(
             session_id="viewer_s", user_id="viewer_user", roles=["viewer"]
         )
-        assert await session_store.check_permission(
-            "viewer_s", "widget", "w1", "read"
-        ) is True
-        assert await session_store.check_permission(
-            "viewer_s", "widget", "w1", "write"
-        ) is False
+        assert await session_store.check_permission("viewer_s", "widget", "w1", "read") is True
+        assert await session_store.check_permission("viewer_s", "widget", "w1", "write") is False
 
     async def test_check_permission_missing_session(
         self, session_store: SqliteSessionStore
@@ -422,9 +416,7 @@ class TestSqliteSessionStore:
     ) -> None:
         """Resource-specific permission via session metadata grants access."""
         meta = {"permissions": {"widget:w1": ["read"]}}
-        await session_store.create_session(
-            "s1", "u1", roles=["unknown-role"], metadata=meta
-        )
+        await session_store.create_session("s1", "u1", roles=["unknown-role"], metadata=meta)
 
         assert await session_store.check_permission("s1", "widget", "w1", "read") is True
         assert await session_store.check_permission("s1", "widget", "w1", "write") is False
@@ -437,15 +429,11 @@ class TestSqliteSessionStore:
     async def test_refresh_session_missing(self, session_store: SqliteSessionStore) -> None:
         assert await session_store.refresh_session("missing") is False
 
-    async def test_refresh_session_with_extend_ttl(
-        self, session_store: SqliteSessionStore
-    ) -> None:
+    async def test_refresh_session_with_extend_ttl(self, session_store: SqliteSessionStore) -> None:
         await session_store.create_session("s1", "u1", ttl=600)
         assert await session_store.refresh_session("s1", extend_ttl=1200) is True
 
-    async def test_refresh_session_no_extend_ttl(
-        self, session_store: SqliteSessionStore
-    ) -> None:
+    async def test_refresh_session_no_extend_ttl(self, session_store: SqliteSessionStore) -> None:
         await session_store.create_session("s1", "u1", ttl=600)
         assert await session_store.refresh_session("s1") is True
 
@@ -568,9 +556,7 @@ class TestSqliteChatStoreCRUD:
             messages = await chat_store.get_messages("w1", "t1", limit=20)
             assert len(messages) == 5
 
-    async def test_get_messages_before_id_not_found(
-        self, chat_store: SqliteChatStore
-    ) -> None:
+    async def test_get_messages_before_id_not_found(self, chat_store: SqliteChatStore) -> None:
         """When before_id doesn't match anything, no messages are returned."""
         await chat_store.save_thread("w1", ChatThread(thread_id="t1", title="A"))
         await chat_store.append_message(
@@ -621,9 +607,7 @@ class TestSqliteChatStoreCRUD:
         """Data written by one store is readable by a fresh store on the same file."""
         store1 = SqliteChatStore(db_path=db_path, encrypted=False)
         await store1.save_thread("w1", ChatThread(thread_id="t1", title="Persistent"))
-        await store1.append_message(
-            "w1", "t1", ChatMessage(role="user", content="saved")
-        )
+        await store1.append_message("w1", "t1", ChatMessage(role="user", content="saved"))
 
         store2 = SqliteChatStore(db_path=db_path, encrypted=False)
         thread = await store2.get_thread("w1", "t1")
@@ -675,9 +659,7 @@ class TestSqliteAuditTrail:
         assert artifacts[0]["artifact_type"] == "code"
         assert artifacts[0]["title"] == "main.py"
 
-    async def test_log_token_usage_and_stats_by_thread(
-        self, chat_store: SqliteChatStore
-    ) -> None:
+    async def test_log_token_usage_and_stats_by_thread(self, chat_store: SqliteChatStore) -> None:
         await chat_store.save_thread("w1", ChatThread(thread_id="t1", title="A"))
         await chat_store.append_message(
             "w1", "t1", ChatMessage(role="assistant", content="ok", message_id="m1")
@@ -696,9 +678,7 @@ class TestSqliteAuditTrail:
         assert stats["total_tokens"] == 150
         assert stats["cost_usd"] == 0.005
 
-    async def test_log_token_usage_stats_by_widget(
-        self, chat_store: SqliteChatStore
-    ) -> None:
+    async def test_log_token_usage_stats_by_widget(self, chat_store: SqliteChatStore) -> None:
         await chat_store.save_thread("w1", ChatThread(thread_id="t1", title="A"))
         await chat_store.append_message(
             "w1", "t1", ChatMessage(role="user", content="hi", message_id="m1")
@@ -766,9 +746,7 @@ class TestSqliteAuditTrail:
         assert len(results) == 1
         assert "fibonacci" in results[0]["content"]
 
-    async def test_search_messages_with_widget_filter(
-        self, chat_store: SqliteChatStore
-    ) -> None:
+    async def test_search_messages_with_widget_filter(self, chat_store: SqliteChatStore) -> None:
         await chat_store.save_thread("w1", ChatThread(thread_id="t1", title="A"))
         await chat_store.save_thread("w2", ChatThread(thread_id="t2", title="B"))
         await chat_store.append_message(

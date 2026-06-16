@@ -849,17 +849,13 @@ class TestNewSessionMcpServers:
         assert provider._agent is agent
 
     async def test_skips_non_dict_entry(self):
-        provider = DeepagentProvider(
-            agent=MagicMock(), auto_checkpointer=False, auto_store=False
-        )
+        provider = DeepagentProvider(agent=MagicMock(), auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         await provider.new_session("/tmp", mcp_servers=["junk", 42])
         assert provider._mcp_servers == {}
 
     async def test_no_name_falls_back_to_uuid_prefix(self):
-        provider = DeepagentProvider(
-            agent=MagicMock(), auto_checkpointer=False, auto_store=False
-        )
+        provider = DeepagentProvider(agent=MagicMock(), auto_checkpointer=False, auto_store=False)
         await provider.initialize(ClientCapabilities())
         await provider.new_session("/tmp", mcp_servers=[{"command": "x", "args": []}])
         assert any(k.startswith("acp_") for k in provider._mcp_servers)

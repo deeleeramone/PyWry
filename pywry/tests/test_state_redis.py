@@ -106,9 +106,7 @@ class TestDecodeHelpers:
 class TestNoRedisInstalled:
     """Test behavior when redis package is not installed."""
 
-    def test_widget_store_init_raises_when_no_redis(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_widget_store_init_raises_when_no_redis(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from pywry.state import redis as redis_module
 
         monkeypatch.setattr(redis_module, "HAS_REDIS", False)

@@ -926,9 +926,7 @@ class TestChatStateMixin:
         assert data == {"text": "hello"}
 
     def test_send_chat_message_full(self, chat_widget) -> None:
-        chat_widget.send_chat_message(
-            "hi", thread_id="t1", message_id="m1", model="claude-opus"
-        )
+        chat_widget.send_chat_message("hi", thread_id="t1", message_id="m1", model="claude-opus")
         evt, data = chat_widget.get_last_event()
         assert data["text"] == "hi"
         assert data["threadId"] == "t1"

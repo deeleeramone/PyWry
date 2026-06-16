@@ -5769,7 +5769,8 @@ class TestMarqueeCollectScripts:
         from pywry.toolbar import Div, Marquee
 
         inner = Marquee(
-            event="ns:inner", text="",
+            event="ns:inner",
+            text="",
             children=[Div(label="", event="ns:d", script="function b(){}")],
         )
         outer = Marquee(event="ns:outer", text="", children=[inner])
@@ -5964,7 +5965,9 @@ class TestWrapContentWithToolbarsBranches:
 
         wrapped = wrap_content_with_toolbars(
             "<div>main</div>",
-            toolbars=[{"position": "top", "items": [{"type": "button", "label": "X", "event": "ns:x"}]}],
+            toolbars=[
+                {"position": "top", "items": [{"type": "button", "label": "X", "event": "ns:x"}]}
+            ],
         )
         assert "pywry-wrapper-top" in wrapped
         assert "main" in wrapped
@@ -5991,9 +5994,7 @@ class TestWrapContentWithToolbarsBranches:
             def build_html(self) -> str:
                 return "<div class='custom-toolbar'>X</div>"
 
-        wrapped = wrap_content_with_toolbars(
-            "<div>main</div>", toolbars=[FakeToolbar()]
-        )
+        wrapped = wrap_content_with_toolbars("<div>main</div>", toolbars=[FakeToolbar()])
         assert "custom-toolbar" in wrapped
         # Top wrapper applied.
         assert "pywry-wrapper-top" in wrapped

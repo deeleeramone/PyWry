@@ -1001,5 +1001,3 @@ class TestInvalidAssetSettings:
         # Version strings aren't validated, user's responsibility
         settings = AssetSettings(plotly_version="not-a-version")
         assert settings.plotly_version == "not-a-version"
-
-

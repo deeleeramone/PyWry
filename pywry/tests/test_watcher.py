@@ -194,9 +194,7 @@ class TestFileWatcherWatch:
         watcher.watch(css_file, MagicMock(), "window2")
         assert len(watcher._watches[css_file.resolve()]) == 2
 
-    def test_watch_while_running_schedules_directory(
-        self, mocked_observer, tmp_path: Path
-    ) -> None:
+    def test_watch_while_running_schedules_directory(self, mocked_observer, tmp_path: Path) -> None:
         """When watch() is called while running, the directory is scheduled
         with the observer.
         """
@@ -284,9 +282,7 @@ class TestFileWatcherWatch:
         """Test unwatching a label that was never used is a no-op."""
         watcher.unwatch_label("nonexistent_window")
 
-    def test_unwatch_label_cancels_pending_timer(
-        self, css_file: Path
-    ) -> None:
+    def test_unwatch_label_cancels_pending_timer(self, css_file: Path) -> None:
         """unwatch_label cancels a pending debouncer timer and clears state."""
         watcher = FileWatcher(debounce_ms=10000)  # long so timer doesn't fire
         watcher.watch(css_file, MagicMock(), "winT")
@@ -330,9 +326,7 @@ class TestFileWatcherStartStop:
         watcher.start()
         mock_observer_class.assert_called_once()
 
-    def test_start_schedules_known_directories(
-        self, mocked_observer, tmp_path: Path
-    ) -> None:
+    def test_start_schedules_known_directories(self, mocked_observer, tmp_path: Path) -> None:
         """start() must call _ensure_directory_watched for every tracked directory."""
         _, mock_observer = mocked_observer
         f1 = tmp_path / "a.css"
@@ -371,9 +365,7 @@ class TestFileWatcherStartStop:
         watcher.stop()
         mock_observer_class.assert_not_called()
 
-    def test_stop_cancels_pending_timers(
-        self, mocked_observer, css_file: Path
-    ) -> None:
+    def test_stop_cancels_pending_timers(self, mocked_observer, css_file: Path) -> None:
         """stop() cancels pending debouncer timers and clears them."""
         _, mock_observer = mocked_observer
         watcher = FileWatcher(debounce_ms=10000)
@@ -429,9 +421,7 @@ class TestEnsureDirectoryWatched:
         watcher._ensure_directory_watched(tmp_path.resolve())
         mock_observer.schedule.assert_not_called()
 
-    def test_schedule_exception_is_swallowed(
-        self, mocked_observer, tmp_path: Path
-    ) -> None:
+    def test_schedule_exception_is_swallowed(self, mocked_observer, tmp_path: Path) -> None:
         """Schedule failures are logged and swallowed (no exception raised)."""
         _, mock_observer = mocked_observer
         mock_observer.schedule.side_effect = OSError("nope")
@@ -478,9 +468,7 @@ class TestFileChangeCallbacks:
         time.sleep(0.2)
         callback.assert_not_called()
 
-    def test_on_file_change_empty_watches_returns_early(
-        self, css_file: Path
-    ) -> None:
+    def test_on_file_change_empty_watches_returns_early(self, css_file: Path) -> None:
         """_on_file_change with an empty watch list returns without scheduling."""
         watcher = FileWatcher(debounce_ms=10)
         watcher.watch(css_file, MagicMock(), "w1")

@@ -770,7 +770,6 @@ class MockOutput:
 # =============================================================================
 
 
-
 class TestModalInlineMode:
     """Tests for modal rendering in inline notebook mode via FastAPI server."""
 
@@ -1110,7 +1109,6 @@ class TestModalAnywidgetDataFrameMode:
 # =============================================================================
 
 
-
 class TestModalBrowserMode:
     """Tests for modal rendering in browser mode (open_browser=True)."""
 
@@ -1207,7 +1205,6 @@ class TestModalBrowserMode:
 # =============================================================================
 # Modal + Toolbar in Inline Mode
 # =============================================================================
-
 
 
 class TestModalWithToolbarInline:

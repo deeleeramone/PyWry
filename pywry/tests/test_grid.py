@@ -1346,9 +1346,7 @@ class TestDetectColumnTypesTimedelta:
     def test_timedelta_column_is_text(self) -> None:
         import pandas as pd
 
-        df = pd.DataFrame(
-            {"diff": pd.to_timedelta(["1 days", "2 days", "3 days"])}
-        )
+        df = pd.DataFrame({"diff": pd.to_timedelta(["1 days", "2 days", "3 days"])})
         types = _detect_column_types(df)
         assert types["diff"] == "text"
 
@@ -1752,7 +1750,7 @@ class TestBuildGridHtml:
 
         config = build_grid_config([{"a": 1}])  # clientSide by default
         html = build_grid_html(config)
-        assert "<div id=\"myGrid\"" in html
+        assert '<div id="myGrid"' in html
         assert "agGrid" in html
         # No _pywry IPC block for clientSide.
         assert "_pywry" not in html
