@@ -1457,19 +1457,13 @@ class TestTVChartStorage:
 # Inline Mode (synthetic data, no UDF)
 # ============================================================================
 
-try:
-    from pywry.inline import HAS_FASTAPI
-except ImportError:
-    HAS_FASTAPI = False
-
-
 def _http_get(url: str, timeout: float = 5.0) -> str:
     req = urllib.request.Request(url)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode("utf-8")
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
+
 class TestTVChartInline:
     """Inline rendering path."""
 
@@ -1531,7 +1525,7 @@ def _wait_for_port_release(port: int, timeout: float = 5.0) -> bool:
     return False
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
+
 class TestTVChartBrowser:
     """Browser mode rendering path."""
 

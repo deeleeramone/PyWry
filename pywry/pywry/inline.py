@@ -79,16 +79,11 @@ def _get_default_theme() -> ThemeLiteral:
     return "system" if is_headless() else "dark"
 
 
-try:
-    import uvicorn
+import uvicorn
 
-    from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-    from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import HTMLResponse, Response
-
-    HAS_FASTAPI = True
-except ImportError:
-    HAS_FASTAPI = False
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, Response
 
 try:
     from ipywidgets import Output
@@ -1687,8 +1682,6 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, ToolbarStateMixin):
         token: str | None = None,
     ) -> None:
         super().__init__()
-        if not HAS_FASTAPI:
-            raise ImportError("fastapi and uvicorn required: pip install fastapi uvicorn")
 
         # For browser_only mode, we don't need IPython (just the server + browser)
         self._browser_only = browser_only
@@ -3330,8 +3323,6 @@ def generate_dataframe_html(
     }
     if grid_options:
         grid_config.update(grid_options)
-        if "rowData" not in grid_config:
-            grid_config["rowData"] = row_data
 
     assets = _build_aggrid_assets(aggrid_theme, theme_mode)
     # For system theme, default to dark AG Grid theme (JS will switch)
@@ -3771,6 +3762,188 @@ def _preload_chart_data(user_id: str = "default") -> dict[str, str]:
     except Exception:
         log_debug("Chart preload failed")
     return preload
+
+
+def generate_tvchart_html(
+    chart_html: str,
+    config_payload: str,
+    chart_id: str,
+    widget_id: str,
+    title: str = "Chart",
+    theme: ThemeLiteral | None = None,
+    toolbars: list[dict[str, Any] | Toolbar] | None = None,
+    modals: list[dict[str, Any] | Modal] | None = None,
+    inline_css: str = "",
+    full_document: bool = True,
+    token: str | None = None,
+) -> str:
+    """Generate HTML for a TradingView Lightweight Chart.
+
+    Parameters
+    ----------
+    chart_html : str
+        The chart container ``<div>`` (and any toolbar/modal markup).
+    config_payload : str
+        JSON string with ``chartOptions``, ``series``, ``storage``, etc.
+    chart_id : str
+        DOM id of the chart container element.
+    widget_id : str
+        Unique widget identifier (used by the pywry bridge).
+    title : str
+        Page title.
+    theme : 'dark' or 'light', optional
+        Color theme.
+    toolbars : list, optional
+        Toolbar configurations.
+    modals : list, optional
+        Modal configurations.
+    inline_css : str
+        Extra CSS to inject.
+    full_document : bool
+        If True, return complete HTML document; if False, content fragment only.
+    token : str or None
+        Widget auth token for the pywry bridge.
+
+    Returns
+    -------
+    str
+    """
+    from .assets import (
+        get_pywry_css,
+        get_scrollbar_js,
+        get_toast_css,
+        get_tvchart_defaults_js,
+        get_tvchart_js,
+    )
+    from .modal import wrap_content_with_modals
+    from .notebook import _wrap_content_with_toolbars
+
+    if theme is None:
+        theme = _get_default_theme()
+
+    tvchart_js = get_tvchart_js()
+    tvchart_script = f"<script>{tvchart_js}</script>" if tvchart_js else ""
+    tvchart_defaults = get_tvchart_defaults_js()
+    tvchart_defaults_script = f"<script>{tvchart_defaults}</script>" if tvchart_defaults else ""
+
+    # Chart init script — waits for LightweightCharts then renders
+    chart_init_script = f"""<script>
+    (function() {{
+        function initChart() {{
+            if (typeof LightweightCharts === 'undefined') {{
+                setTimeout(initChart, 50);
+                return;
+            }}
+            var payload = {config_payload};
+            var container = document.getElementById('{chart_id}');
+            if (!container) {{
+                setTimeout(initChart, 50);
+                return;
+            }}
+            if (window.PYWRY_TVCHART_RENDER) {{
+                window.PYWRY_TVCHART_RENDER('{chart_id}', container, payload);
+            }} else if (window.PYWRY_TVCHART_CREATE) {{
+                window.PYWRY_TVCHART_CREATE('{chart_id}', container, payload);
+            }}
+        }}
+        initChart();
+    }})();
+    </script>"""
+
+    if not full_document:
+        # Content fragment for anywidget — caller handles wrapping
+        wrapped = _wrap_content_with_toolbars(chart_html, toolbars)
+        if modals:
+            modal_html, modal_scripts = wrap_content_with_modals("", modals)
+            wrapped = f"{wrapped}{modal_html}{modal_scripts}"
+        return f"{wrapped}\n{chart_init_script}"
+
+    # Full document for IFrame / browser mode
+    pywry_css = get_pywry_css()
+    pywry_style = f"<style>{pywry_css}</style>" if pywry_css else ""
+    toast_css = get_toast_css()
+    toast_style = f"<style>{toast_css}</style>" if toast_css else ""
+    scrollbar_js = get_scrollbar_js()
+    scrollbar_script = f"<script>{scrollbar_js}</script>" if scrollbar_js else ""
+    inline_style = f"<style>{inline_css}</style>" if inline_css else ""
+
+    if theme == "dark":
+        widget_theme_class = "pywry-theme-dark"
+    elif theme == "system":
+        widget_theme_class = "pywry-theme-system"
+    else:
+        widget_theme_class = "pywry-theme-light"
+
+    # Build widget content with toolbars
+    widget_content = wrap_content_with_toolbars(chart_html, toolbars)
+
+    # Inject modals
+    modal_block = ""
+    if modals:
+        modal_html, modal_scripts = wrap_content_with_modals("", modals)
+        modal_block = f"{modal_html}{modal_scripts}"
+
+    bridge_js = _get_pywry_bridge_js(widget_id, token)
+
+    return f"""<!DOCTYPE html>
+<html class="{theme}">
+<head>
+    <meta charset="utf-8">
+    <title>{title}</title>
+    {pywry_style}
+    {toast_style}
+    {inline_style}
+    {scrollbar_script}
+    {bridge_js}
+    {tvchart_script}
+    {tvchart_defaults_script}
+    <style>
+        html, body {{
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--pywry-bg-primary);
+        }}
+        .pywry-widget {{
+            --pywry-widget-width: 100%;
+            --pywry-widget-height: 100%;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border: none;
+            border-radius: 0;
+            box-sizing: border-box;
+            background-color: var(--pywry-bg-primary);
+        }}
+        .pywry-toolbar {{
+            border: none;
+        }}
+        .pywry-content {{
+            flex: 1;
+            min-height: 0;
+            box-sizing: border-box;
+            overflow: hidden;
+        }}
+        .pywry-tvchart-container {{
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }}
+    </style>
+</head>
+<body>
+    <div class="pywry-widget pywry-custom-scrollbar {widget_theme_class}">
+        {widget_content}
+    </div>
+    {modal_block}
+    {chart_init_script}
+</body>
+</html>"""
 
 
 def show_tvchart(

@@ -22,7 +22,6 @@ import pytest
 
 from pywry.app import PyWry
 from pywry.inline import (
-    HAS_FASTAPI,
     _start_server,
     _state,
     show,
@@ -771,7 +770,7 @@ class MockOutput:
 # =============================================================================
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
+
 class TestModalInlineMode:
     """Tests for modal rendering in inline notebook mode via FastAPI server."""
 
@@ -1111,7 +1110,7 @@ class TestModalAnywidgetDataFrameMode:
 # =============================================================================
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
+
 class TestModalBrowserMode:
     """Tests for modal rendering in browser mode (open_browser=True)."""
 
@@ -1210,7 +1209,7 @@ class TestModalBrowserMode:
 # =============================================================================
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
+
 class TestModalWithToolbarInline:
     """Tests for modal + toolbar coexistence in inline mode."""
 

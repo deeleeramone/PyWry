@@ -400,3 +400,427 @@ class TestShowConfigSources:
 
         output = mock_stdout.getvalue()
         assert "override" in output.lower() or "precedence" in output.lower()
+
+
+class TestHandlePluginPath:
+    """Tests for the plugin-path command."""
+
+    def test_returns_plugin_root(self, tmp_path, monkeypatch):
+        # Mock pywry.__file__ and Path.exists to simulate plugin installed.
+        import pywry
+        from pywry.cli import handle_plugin_path
+
+        # Build a fake plugin directory tree
+        fake_pkg = tmp_path / "pywry"
+        plugin_root = fake_pkg / "_claude_plugin" / ".claude-plugin"
+        plugin_root.mkdir(parents=True)
+        (plugin_root / "marketplace.json").write_text("{}")
+        (plugin_root / "plugin.json").write_text("{}")
+
+        # Patch pywry.__file__ so resolve points to fake_pkg/__init__.py
+        fake_init = fake_pkg / "__init__.py"
+        fake_init.write_text("")
+        monkeypatch.setattr(pywry, "__file__", str(fake_init))
+
+        args = argparse.Namespace(check=False, marketplace=False)
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            result = handle_plugin_path(args)
+        assert result == 0
+        assert "_claude_plugin" in mock_stdout.getvalue()
+
+    def test_marketplace_flag_returns_marketplace_path(self, tmp_path, monkeypatch):
+        import pywry
+        from pywry.cli import handle_plugin_path
+
+        fake_pkg = tmp_path / "pywry"
+        plugin_root = fake_pkg / "_claude_plugin" / ".claude-plugin"
+        plugin_root.mkdir(parents=True)
+        (plugin_root / "marketplace.json").write_text("{}")
+        (plugin_root / "plugin.json").write_text("{}")
+        fake_init = fake_pkg / "__init__.py"
+        fake_init.write_text("")
+        monkeypatch.setattr(pywry, "__file__", str(fake_init))
+
+        args = argparse.Namespace(check=False, marketplace=True)
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            result = handle_plugin_path(args)
+        assert result == 0
+        assert "marketplace.json" in mock_stdout.getvalue()
+
+    def test_check_missing_returns_error(self, tmp_path, monkeypatch):
+        import pywry
+        from pywry.cli import handle_plugin_path
+
+        fake_pkg = tmp_path / "pywry"
+        fake_pkg.mkdir(parents=True)
+        fake_init = fake_pkg / "__init__.py"
+        fake_init.write_text("")
+        monkeypatch.setattr(pywry, "__file__", str(fake_init))
+
+        args = argparse.Namespace(check=True, marketplace=False)
+        with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+            result = handle_plugin_path(args)
+        assert result == 1
+        assert "not found" in mock_stderr.getvalue().lower()
+
+
+class TestHandleConfigOutputFile:
+    """Tests for the --output option of config command."""
+
+    def test_writes_to_file(self, tmp_path):
+        out = tmp_path / "out.toml"
+        args = argparse.Namespace(
+            show=False, toml=True, env=False, sources=False, output=str(out)
+        )
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            result = handle_config(args)
+        assert result == 0
+        assert out.exists()
+        assert "written" in mock_stdout.getvalue().lower()
+
+
+class TestHandleConfigEnvOption:
+    def test_env_output_to_stdout(self):
+        args = argparse.Namespace(
+            show=False, toml=False, env=True, sources=False, output=None
+        )
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            result = handle_config(args)
+        assert result == 0
+        out = mock_stdout.getvalue()
+        # to_env output should contain PYWRY_-prefixed vars or be empty if no overrides
+        assert isinstance(out, str)
+
+
+class TestHandleMcp:
+    def test_import_error_path(self):
+        import builtins
+
+        from pywry.cli import handle_mcp
+
+        real_import = builtins.__import__
+
+        # Save and remove cached pywry.mcp so the inner re-import goes through __import__
+        cached_pkg = sys.modules.pop("pywry.mcp", None)
+
+        def fake_import(name, *a, **k):
+            # Relative import inside pywry.cli: `from .mcp import run_server`
+            # passes name="mcp" (or "pywry.mcp" for absolute).
+            if name == "mcp" or name == "pywry.mcp":
+                raise ImportError("no mcp")
+            return real_import(name, *a, **k)
+
+        args = argparse.Namespace(
+            transport="stdio",
+            port=None,
+            host=None,
+            name=None,
+            headless=False,
+            native=False,
+        )
+        try:
+            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+                with patch.object(builtins, "__import__", side_effect=fake_import):
+                    result = handle_mcp(args)
+            assert result == 1
+            assert "MCP SDK" in mock_stderr.getvalue() or "mcp" in mock_stderr.getvalue().lower()
+        finally:
+            if cached_pkg is not None:
+                sys.modules["pywry.mcp"] = cached_pkg
+
+    def test_runs_server_successfully(self):
+        from pywry.cli import handle_mcp
+
+        with patch("pywry.mcp.run_server") as mock_run:
+            mock_run.return_value = None
+            args = argparse.Namespace(
+                transport=None,
+                port=None,
+                host=None,
+                name=None,
+                headless=False,
+                native=False,
+            )
+            result = handle_mcp(args)
+        assert result == 0
+        mock_run.assert_called_once()
+
+    def test_keyboard_interrupt(self):
+        from pywry.cli import handle_mcp
+
+        with patch("pywry.mcp.run_server", side_effect=KeyboardInterrupt):
+            args = argparse.Namespace(
+                transport=None,
+                port=None,
+                host=None,
+                name=None,
+                headless=False,
+                native=False,
+            )
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                result = handle_mcp(args)
+        assert result == 0
+        assert "stopped" in mock_stdout.getvalue().lower()
+
+    def test_server_error(self):
+        from pywry.cli import handle_mcp
+
+        with patch("pywry.mcp.run_server", side_effect=RuntimeError("boom")):
+            args = argparse.Namespace(
+                transport=None,
+                port=None,
+                host=None,
+                name=None,
+                headless=False,
+                native=False,
+            )
+            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+                result = handle_mcp(args)
+        assert result == 1
+        assert "boom" in mock_stderr.getvalue() or "Error" in mock_stderr.getvalue()
+
+    def test_native_flag_disables_headless(self):
+        from pywry.cli import handle_mcp
+
+        with patch("pywry.mcp.run_server") as mock_run:
+            args = argparse.Namespace(
+                transport=None,
+                port=None,
+                host=None,
+                name="my-server",
+                headless=False,
+                native=True,
+            )
+            handle_mcp(args)
+        # native=True → headless=False
+        call_kwargs = mock_run.call_args.kwargs
+        assert call_kwargs.get("headless") is False
+
+    def test_headless_flag(self):
+        from pywry.cli import handle_mcp
+
+        with patch("pywry.mcp.run_server") as mock_run:
+            args = argparse.Namespace(
+                transport=None,
+                port=None,
+                host=None,
+                name=None,
+                headless=True,
+                native=False,
+            )
+            handle_mcp(args)
+        call_kwargs = mock_run.call_args.kwargs
+        assert call_kwargs.get("headless") is True
+
+    def test_no_flags_uses_config_headless(self, monkeypatch):
+        """When --headless, --native, and PYWRY_HEADLESS env are all unset, use config."""
+        from pywry.cli import handle_mcp
+
+        monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
+        with patch("pywry.mcp.run_server") as mock_run:
+            args = argparse.Namespace(
+                transport=None,
+                port=None,
+                host=None,
+                name=None,
+                headless=False,
+                native=False,
+            )
+            handle_mcp(args)
+        # config default headless is used
+        assert "headless" in mock_run.call_args.kwargs
+
+
+class TestHandleConfigDefaults:
+    def test_show_defaults_when_no_flags(self):
+        """When no toml/env/show flag passed, output defaults to show format."""
+        args = argparse.Namespace(
+            show=False, toml=False, env=False, sources=False, output=None
+        )
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            result = handle_config(args)
+        assert result == 0
+        # Default falls through to show format
+        assert "[csp]" in mock_stdout.getvalue()
+
+
+class TestShowConfigSourcesEnvNotSet:
+    def test_empty_env_vars(self, monkeypatch):
+        """Env vars section shows ✗ No vars when no PYWRY_* present."""
+        # Remove all PYWRY_ env vars
+        for key in list(__import__("os").environ.keys()):
+            if key.startswith("PYWRY_"):
+                monkeypatch.delenv(key, raising=False)
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            show_config_sources()
+        out = mock_stdout.getvalue()
+        assert "No vars" in out or "No" in out
+
+    def test_more_than_three_env_vars_truncates(self, monkeypatch):
+        """Env vars section shows ... when more than 3 PYWRY_ vars exist."""
+        for i in range(5):
+            monkeypatch.setenv(f"PYWRY_FAKE_{i}", "1")
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            show_config_sources()
+        out = mock_stdout.getvalue()
+        assert "..." in out
+
+
+class TestHandleInstallSkillsImportError:
+    def test_import_error_path(self):
+        """When the mcp.install module isn't importable, return 1."""
+        import builtins
+
+        from pywry.cli import handle_install_skills
+
+        real_import = builtins.__import__
+
+        # Save and remove cached module so the re-import goes through __import__.
+        cached = sys.modules.pop("pywry.mcp.install", None)
+
+        def fake_import(name, *a, **k):
+            # Relative import inside pywry.cli passes name="mcp.install".
+            if "mcp.install" in name:
+                raise ImportError("no install")
+            return real_import(name, *a, **k)
+
+        args = argparse.Namespace(
+            list=False,
+            list_targets=False,
+            target=None,
+            skills=None,
+            custom_dir=None,
+            overwrite=False,
+            dry_run=False,
+            verbose=False,
+        )
+        try:
+            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+                with patch.object(builtins, "__import__", side_effect=fake_import):
+                    result = handle_install_skills(args)
+            assert result == 1
+            assert "MCP module" in mock_stderr.getvalue()
+        finally:
+            if cached is not None:
+                sys.modules["pywry.mcp.install"] = cached
+
+
+class TestHandleInstallSkills:
+    def test_list_flag_prints_skills(self):
+        from pywry.cli import handle_install_skills
+
+        args = argparse.Namespace(
+            list=True,
+            list_targets=False,
+            target=None,
+            skills=None,
+            custom_dir=None,
+            overwrite=False,
+            dry_run=False,
+            verbose=False,
+        )
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            result = handle_install_skills(args)
+        assert result == 0
+        assert "skills" in mock_stdout.getvalue().lower()
+
+    def test_list_targets_flag(self):
+        from pywry.cli import handle_install_skills
+
+        args = argparse.Namespace(
+            list=False,
+            list_targets=True,
+            target=None,
+            skills=None,
+            custom_dir=None,
+            overwrite=False,
+            dry_run=False,
+            verbose=False,
+        )
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            result = handle_install_skills(args)
+        assert result == 0
+        assert "target" in mock_stdout.getvalue().lower()
+
+    def test_install_with_targets(self):
+        from pywry.cli import handle_install_skills
+
+        args = argparse.Namespace(
+            list=False,
+            list_targets=False,
+            target=["claude_code"],
+            skills=None,
+            custom_dir=None,
+            overwrite=False,
+            dry_run=True,
+            verbose=False,
+        )
+        with patch("pywry.mcp.install.install_skills") as mock_install:
+            mock_install.return_value = {}
+            with patch("pywry.mcp.install.print_install_results"):
+                with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                    result = handle_install_skills(args)
+        assert result == 0
+        assert "DRY RUN" in mock_stdout.getvalue()
+
+    def test_install_value_error(self):
+        from pywry.cli import handle_install_skills
+
+        args = argparse.Namespace(
+            list=False,
+            list_targets=False,
+            target=["invalid"],
+            skills=None,
+            custom_dir=None,
+            overwrite=False,
+            dry_run=False,
+            verbose=False,
+        )
+        with patch("pywry.mcp.install.install_skills", side_effect=ValueError("bad")):
+            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
+                result = handle_install_skills(args)
+        assert result == 1
+        assert "Error" in mock_stderr.getvalue()
+
+
+class TestMainEntryPointDispatch:
+    """Cover the if/elif branches in main() for mcp/install-skills/plugin-path."""
+
+    def test_mcp_command_dispatches(self):
+        with patch("pywry.cli.handle_mcp", return_value=0) as mock_handle:
+            with patch.object(sys, "argv", ["pywry", "mcp"]):
+                result = main()
+        assert result == 0
+        mock_handle.assert_called_once()
+
+    def test_install_skills_command_dispatches(self):
+        with patch(
+            "pywry.cli.handle_install_skills", return_value=0
+        ) as mock_handle:
+            with patch.object(sys, "argv", ["pywry", "install-skills", "--list"]):
+                result = main()
+        assert result == 0
+        mock_handle.assert_called_once()
+
+    def test_plugin_path_command_dispatches(self):
+        with patch(
+            "pywry.cli.handle_plugin_path", return_value=0
+        ) as mock_handle:
+            with patch.object(sys, "argv", ["pywry", "plugin-path"]):
+                result = main()
+        assert result == 0
+        mock_handle.assert_called_once()
+
+
+class TestMainModuleEntry:
+    """Cover the `if __name__ == "__main__"` guard."""
+
+    def test_module_main(self):
+        import runpy
+
+        with patch("pywry.cli.main", return_value=0):
+            with patch.object(sys, "argv", ["pywry"]):
+                try:
+                    runpy.run_module("pywry.cli", run_name="__main__")
+                except SystemExit as e:
+                    assert e.code == 0

@@ -21,13 +21,12 @@ import uuid
 import pytest
 
 from pywry.config import clear_settings
-from pywry.inline import HAS_FASTAPI, _start_server, _state, stop_server
+from pywry.inline import _start_server, _state, stop_server
+
 from pywry.state._factory import clear_state_caches
 
 
-# Skip if FastAPI not installed
 pytestmark = [
-    pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed"),
     pytest.mark.redis,
     pytest.mark.container,
 ]

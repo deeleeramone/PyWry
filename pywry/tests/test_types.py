@@ -9,21 +9,29 @@ from __future__ import annotations
 import pytest
 
 from pywry.types import (
+    CheckMenuItemConfig,
     Cookie,
     CursorIcon,
     Effect,
     Effects,
     EffectState,
+    IconMenuItemConfig,
     LogicalPosition,
     LogicalSize,
+    MenuConfig,
+    MenuItemConfig,
     Monitor,
     PhysicalPosition,
     PhysicalSize,
+    PredefinedMenuItemConfig,
+    PredefinedMenuItemKind,
     ProgressBarState,
     ProgressBarStatus,
     SameSite,
+    SubmenuConfig,
     Theme,
     TitleBarStyle,
+    TrayIconConfig,
     UserAttentionType,
     serialize_effects,
     serialize_position,
@@ -474,3 +482,205 @@ class TestDataclassHashing:
             PhysicalPosition(1, 1),
         }
         assert len(positions) == 2
+
+
+def _click(*_args, **_kwargs):
+    return None
+
+
+class TestMenuItemConfig:
+    def test_handler_required(self):
+        with pytest.raises(TypeError, match="requires a handler"):
+            MenuItemConfig(id="x", text="X", handler=None)
+
+    def test_to_dict_basic(self):
+        item = MenuItemConfig(id="x", text="X", handler=_click)
+        d = item.to_dict()
+        assert d["kind"] == "item"
+        assert d["id"] == "x"
+        assert d["text"] == "X"
+        assert d["enabled"] is True
+        assert "accelerator" not in d
+
+    def test_to_dict_with_accelerator(self):
+        item = MenuItemConfig(id="x", text="X", handler=_click, accelerator="Ctrl+S")
+        d = item.to_dict()
+        assert d["accelerator"] == "Ctrl+S"
+
+
+class TestCheckMenuItemConfig:
+    def test_handler_required(self):
+        with pytest.raises(TypeError, match="requires a handler"):
+            CheckMenuItemConfig(id="x", text="X", handler=None)
+
+    def test_to_dict_basic(self):
+        item = CheckMenuItemConfig(id="x", text="X", handler=_click, checked=True)
+        d = item.to_dict()
+        assert d["kind"] == "check"
+        assert d["checked"] is True
+
+    def test_to_dict_accelerator(self):
+        item = CheckMenuItemConfig(id="x", text="X", handler=_click, accelerator="Ctrl+T")
+        d = item.to_dict()
+        assert d["accelerator"] == "Ctrl+T"
+
+
+class TestIconMenuItemConfig:
+    def test_handler_required(self):
+        with pytest.raises(TypeError, match="requires a handler"):
+            IconMenuItemConfig(id="x", text="X", handler=None)
+
+    def test_to_dict_with_icon_bytes(self):
+        item = IconMenuItemConfig(id="x", text="X", handler=_click, icon=b"\x00\x01\x02\x03")
+        d = item.to_dict()
+        assert d["kind"] == "icon"
+        assert "icon" in d
+        assert d["icon_width"] == 16
+        assert d["icon_height"] == 16
+
+    def test_to_dict_native_icon(self):
+        item = IconMenuItemConfig(id="x", text="X", handler=_click, native_icon="Add")
+        d = item.to_dict()
+        assert d["native_icon"] == "Add"
+
+    def test_to_dict_accelerator(self):
+        item = IconMenuItemConfig(id="x", text="X", handler=_click, accelerator="Ctrl+I")
+        d = item.to_dict()
+        assert d["accelerator"] == "Ctrl+I"
+
+    def test_to_dict_no_icon(self):
+        item = IconMenuItemConfig(id="x", text="X", handler=_click)
+        d = item.to_dict()
+        assert "icon" not in d
+        assert "icon_width" not in d
+
+
+class TestPredefinedMenuItemConfig:
+    def test_to_dict_basic(self):
+        item = PredefinedMenuItemConfig(kind_name=PredefinedMenuItemKind.SEPARATOR)
+        d = item.to_dict()
+        assert d["kind"] == "predefined"
+        assert d["kind_name"] == "separator"
+        assert "text" not in d
+
+    def test_to_dict_with_text(self):
+        item = PredefinedMenuItemConfig(kind_name=PredefinedMenuItemKind.QUIT, text="Exit")
+        d = item.to_dict()
+        assert d["text"] == "Exit"
+
+
+class TestSubmenuConfig:
+    def test_to_dict_empty(self):
+        s = SubmenuConfig(id="s", text="Sub")
+        d = s.to_dict()
+        assert d["kind"] == "submenu"
+        assert d["id"] == "s"
+        assert "items" not in d
+
+    def test_to_dict_with_items(self):
+        s = SubmenuConfig(
+            id="s",
+            text="Sub",
+            items=[
+                MenuItemConfig(id="i1", text="One", handler=_click),
+                MenuItemConfig(id="i2", text="Two", handler=_click),
+            ],
+        )
+        d = s.to_dict()
+        assert "items" in d
+        assert len(d["items"]) == 2
+
+    def test_collect_handlers_includes_descendants(self):
+        s = SubmenuConfig(
+            id="s",
+            text="Sub",
+            items=[
+                MenuItemConfig(id="i1", text="A", handler=_click),
+                CheckMenuItemConfig(id="i2", text="B", handler=_click),
+            ],
+        )
+        handlers = s.collect_handlers()
+        assert "i1" in handlers
+        assert "i2" in handlers
+
+
+class TestMenuConfig:
+    def test_to_dict(self):
+        cfg = MenuConfig(
+            id="main",
+            items=[MenuItemConfig(id="x", text="X", handler=_click)],
+        )
+        d = cfg.to_dict()
+        assert d["id"] == "main"
+        assert isinstance(d["items"], list)
+
+    def test_collect_handlers(self):
+        cfg = MenuConfig(
+            id="main",
+            items=[
+                MenuItemConfig(id="x", text="X", handler=_click),
+                SubmenuConfig(
+                    id="sub",
+                    text="Sub",
+                    items=[MenuItemConfig(id="nested", text="N", handler=_click)],
+                ),
+            ],
+        )
+        handlers = cfg.collect_handlers()
+        assert "x" in handlers
+        assert "nested" in handlers
+
+    def test_round_trip_from_dict(self):
+        original = MenuConfig(
+            id="main",
+            items=[
+                MenuItemConfig(id="x", text="X", handler=_click, accelerator="Ctrl+X"),
+                CheckMenuItemConfig(id="c", text="C", handler=_click, checked=True),
+                IconMenuItemConfig(id="i", text="I", handler=_click, icon=b"\x00\xff"),
+                PredefinedMenuItemConfig(kind_name=PredefinedMenuItemKind.SEPARATOR),
+                SubmenuConfig(
+                    id="sub",
+                    text="Sub",
+                    items=[MenuItemConfig(id="n", text="N", handler=_click)],
+                ),
+            ],
+        )
+        data = original.to_dict()
+        restored = MenuConfig.from_dict(data)
+        assert restored.id == "main"
+        assert len(restored.items) == 5
+
+    def test_from_dict_unknown_kind_raises(self):
+        with pytest.raises(ValueError, match="Unknown menu item kind"):
+            MenuConfig.from_dict({"id": "m", "items": [{"kind": "garbage", "id": "x", "text": "X"}]})
+
+
+class TestTrayIconConfig:
+    def test_minimal_to_dict(self):
+        cfg = TrayIconConfig(id="t1")
+        d = cfg.to_dict()
+        assert d["id"] == "t1"
+        assert d["menu_on_left_click"] is True
+        assert "tooltip" not in d
+        assert "title" not in d
+        assert "icon" not in d
+        assert "menu" not in d
+
+    def test_full_to_dict(self):
+        menu = MenuConfig(id="m", items=[MenuItemConfig(id="x", text="X", handler=_click)])
+        cfg = TrayIconConfig(
+            id="t1",
+            tooltip="Hover",
+            title="MyApp",
+            icon=b"\x00\xff\x00\xff",
+            menu=menu,
+            menu_on_left_click=False,
+        )
+        d = cfg.to_dict()
+        assert d["tooltip"] == "Hover"
+        assert d["title"] == "MyApp"
+        assert "icon" in d
+        assert d["icon_width"] == 32
+        assert d["icon_height"] == 32
+        assert d["menu_on_left_click"] is False
+        assert d["menu"]["id"] == "m"

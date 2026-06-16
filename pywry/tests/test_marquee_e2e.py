@@ -15,7 +15,8 @@ import pytest
 
 from pywry.app import PyWry
 from pywry.callbacks import get_registry
-from pywry.inline import HAS_FASTAPI, _start_server, _state, show, stop_server
+from pywry.inline import _start_server, _state, show, stop_server
+
 from pywry.models import ThemeMode
 from pywry.toolbar import Button, Marquee, TickerItem, Toolbar
 
@@ -307,8 +308,6 @@ class TestMarqueeNativeWindowRendering:
 # =============================================================================
 
 
-# Skip all inline tests if FastAPI not installed
-pytestmark_inline = pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
 
 
 @pytest.fixture
@@ -379,7 +378,7 @@ class MockOutput:
         self.outputs.append(data)
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
+
 class TestMarqueeInlineRendering:
     """E2E tests for Marquee rendering in inline notebook mode."""
 
@@ -689,7 +688,7 @@ class TestMarqueeInlineRendering:
         assert "toolbar:marquee-set-item" in html
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
+
 class TestMarqueeUpdatePayload:
     """Test Marquee.update_payload() helper method integration."""
 
@@ -722,7 +721,7 @@ class TestMarqueeUpdatePayload:
         assert payload["paused"] is True
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
+
 class TestTickerItemUpdatePayload:
     """Test TickerItem.update_payload() helper method integration."""
 
@@ -757,7 +756,7 @@ class TestTickerItemUpdatePayload:
         assert payload["styles"]["color"] == "#22c55e"
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
+
 class TestMarqueeStaticBehavior:
     """Test static marquee behavior with auto-cycling items."""
 

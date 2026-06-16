@@ -584,3 +584,160 @@ class TestNativeWindowHandleEdgeCases:
             result = native_handle.inject_css(css, "complex-styles")
             assert result is True
             mock_inject.assert_called_once()
+
+
+# =============================================================================
+# Coverage Gaps — proxy delegation, set_min_size None branches, etc.
+# =============================================================================
+
+
+class TestProxyAndDelegation:
+    def test_proxy_returns_window_proxy(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            mock_proxy.return_value = MagicMock()
+            proxy = native_handle.proxy
+        assert proxy is mock_proxy.return_value
+
+    def test_window_property_raises(self, native_handle):
+        with pytest.raises(NotImplementedError):
+            native_handle.window
+
+    def test_emit_fire(self, native_handle):
+        with patch("pywry.runtime.emit_event_fire") as mock_emit:
+            native_handle.emit_fire("evt:x", {"a": 1})
+        mock_emit.assert_called_once_with("test-window", "evt:x", {"a": 1})
+
+    def test_set_focus(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_focus()
+            instance.set_focus.assert_called_once()
+
+    def test_maximize_minimize_center(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.maximize()
+            native_handle.minimize()
+            native_handle.center()
+        instance.maximize.assert_called_once()
+        instance.minimize.assert_called_once()
+        instance.center.assert_called_once()
+
+    def test_set_title(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_title("Hello")
+        instance.set_title.assert_called_once_with("Hello")
+
+    def test_set_size(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_size(800, 600)
+        instance.set_size.assert_called_once()
+
+    def test_set_min_size_none_clears_constraint(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_min_size(None, None)
+        instance.set_min_size.assert_called_once_with(None)
+
+    def test_set_min_size_with_dimensions(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_min_size(100, 200)
+        instance.set_min_size.assert_called_once()
+
+    def test_set_max_size_none_clears_constraint(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_max_size(None, 500)
+        instance.set_max_size.assert_called_once_with(None)
+
+    def test_set_max_size_with_dimensions(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_max_size(800, 600)
+        instance.set_max_size.assert_called_once()
+
+    def test_set_always_on_top(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_always_on_top(True)
+        instance.set_always_on_top.assert_called_once_with(True)
+
+    def test_set_decorations(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_decorations(False)
+        instance.set_decorations.assert_called_once_with(False)
+
+    def test_set_background_color_opaque(self, native_handle, mock_app):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_background_color(10, 20, 30, 255)
+        instance.set_background_color.assert_called_once_with((10, 20, 30, 255))
+        mock_app.emit.assert_called_with(
+            "pywry:inject-css",
+            {"id": "pywry-bg-override", "css": ":root { --pywry-bg-primary: rgb(10, 20, 30) !important; }"},
+            "test-window",
+        )
+
+    def test_set_background_color_translucent(self, native_handle, mock_app):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_background_color(10, 20, 30, 128)
+        css = mock_app.emit.call_args[0][1]["css"]
+        assert "rgba(" in css
+
+    def test_open_devtools(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.open_devtools()
+        instance.open_devtools.assert_called_once()
+
+    def test_close_devtools(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.close_devtools()
+        instance.close_devtools.assert_called_once()
+
+    def test_set_zoom(self, native_handle):
+        with patch("pywry.window_proxy.WindowProxy") as mock_proxy:
+            instance = MagicMock()
+            mock_proxy.return_value = instance
+            native_handle.set_zoom(1.25)
+        instance.set_zoom.assert_called_once_with(1.25)
+
+    def test_inject_css_generates_id_when_omitted(self, native_handle):
+        with patch("pywry.runtime.inject_css") as mock_inject:
+            mock_inject.return_value = True
+            result = native_handle.inject_css("body{}")
+        assert result is True
+        called_args = mock_inject.call_args[0]
+        assert called_args[0] == "test-window"
+        assert called_args[2].startswith("pywry-css-")
+
+    def test_remove_css(self, native_handle):
+        with patch("pywry.runtime.remove_css") as mock_remove:
+            mock_remove.return_value = True
+            result = native_handle.remove_css("pywry-css-abc")
+        assert result is True
+
+    def test_show_alias(self, native_handle):
+        with patch("pywry.runtime.show_window") as mock_show:
+            native_handle.show()
+        mock_show.assert_called_once_with("test-window")

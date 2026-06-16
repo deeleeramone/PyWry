@@ -5413,3 +5413,772 @@ class TestAllTypesDiscriminatorComplete:
             assert item.component_id.startswith(item.type), (
                 f"{item.type} component_id doesn't start with type"
             )
+
+
+# =============================================================================
+# Invalid Toolbar Model Tests
+# =============================================================================
+
+
+class TestInvalidToolbarModels:
+    """Tests for invalid Toolbar model values."""
+
+    def test_button_empty_label_uses_default(self) -> None:
+        """Empty button label uses 'Button' default in HTML."""
+        btn = Button(label="", event="toolbar:click")
+        html = btn.build_html()
+        assert "Button" in html  # Default label used
+
+    def test_select_empty_options_allowed(self) -> None:
+        """Select without options is allowed."""
+        sel = Select(event="view:change", options=[])
+        assert len(sel.options) == 0
+
+    def test_slider_min_greater_than_max_raises(self) -> None:
+        """Slider with min > max raises validation error."""
+        with pytest.raises(ValidationError):
+            SliderInput(event="zoom:level", min=100, max=0)
+
+    def test_slider_value_out_of_range_raises(self) -> None:
+        """Slider with value outside min/max raises validation error."""
+        with pytest.raises(ValidationError):
+            SliderInput(event="zoom:level", value=150, min=0, max=100)
+
+    def test_range_start_greater_than_end_raises(self) -> None:
+        """Range with start > end raises validation error."""
+        with pytest.raises(ValidationError):
+            RangeInput(event="filter:range", start=100, end=0)
+
+    def test_range_min_greater_than_max_raises(self) -> None:
+        """Range with min > max raises validation error."""
+        with pytest.raises(ValidationError):
+            RangeInput(event="filter:range", min=100, max=0)
+
+    def test_range_start_out_of_range_raises(self) -> None:
+        """Range with start outside min/max raises validation error."""
+        with pytest.raises(ValidationError):
+            RangeInput(event="filter:range", start=-50, min=0, max=100)
+
+
+# =============================================================================
+# Coverage backfill tests below: each covers a specific missing source line.
+# =============================================================================
+
+
+class TestResolveScriptContent:
+    """Tests for _resolve_script_content (line 307)."""
+
+    def test_existing_file_path_is_read(self, tmp_path) -> None:
+        """When script Path exists, its text content is returned (line 307)."""
+        from pywry.toolbar import _resolve_script_content
+
+        script_file = tmp_path / "snippet.js"
+        script_file.write_text("console.log('hi');")
+        result = _resolve_script_content(script_file)
+        assert result == "console.log('hi');"
+
+    def test_existing_filelike_string_is_read(self, tmp_path) -> None:
+        """A string that points at an existing file is read from disk."""
+        from pywry.toolbar import _resolve_script_content
+
+        script_file = tmp_path / "alert.js"
+        script_file.write_text("alert('hi');")
+        # Strings that don't look like JS keywords ('(', 'function', ...) get
+        # treated as paths.  `alert(...)` starts with 'a' which is not in the
+        # JS-start set so it's treated as a path; the file exists so we read it.
+        result = _resolve_script_content(str(script_file))
+        assert result == "alert('hi');"
+
+    def test_inline_script_is_returned_verbatim(self) -> None:
+        """Inline JS-looking strings are passed through unchanged."""
+        from pywry.toolbar import _resolve_script_content
+
+        # Starts with 'function' so it's treated as inline JS.
+        result = _resolve_script_content("function init(){}")
+        assert result == "function init(){}"
+
+    def test_empty_script_returns_none(self) -> None:
+        """Empty string returns None."""
+        from pywry.toolbar import _resolve_script_content
+
+        assert _resolve_script_content("") is None
+        assert _resolve_script_content(None) is None
+
+
+class TestReservedNamespaceAllowedPatterns:
+    """Tests for reserved-namespace ALLOWED_RESERVED_PATTERNS (lines 396-397)."""
+
+    def test_pywry_prefixed_event_allowed(self) -> None:
+        """Events matching an ALLOWED_RESERVED_PATTERN bypass the reserved-namespace block."""
+        from pywry.toolbar import (
+            ALLOWED_RESERVED_PATTERNS,
+            Button,
+            RESERVED_NAMESPACES,
+        )
+
+        # Find an event in the allowed patterns that uses a reserved namespace.
+        # ALLOWED_RESERVED_PATTERNS is a sequence of prefixes like "pywry:alert".
+        assert ALLOWED_RESERVED_PATTERNS, "expected at least one allowed pattern"
+        pattern = ALLOWED_RESERVED_PATTERNS[0]
+        # That pattern must use a reserved namespace, otherwise the test is moot.
+        assert pattern.split(":")[0] in RESERVED_NAMESPACES
+        # Construct a button whose event begins with that prefix.
+        btn = Button(label="Notify", event=pattern)
+        assert btn.event == pattern
+
+
+class TestToolbarItemBaseRaisesNotImplemented:
+    """Tests for ToolbarItem.build_html (line 414)."""
+
+    def test_base_build_html_raises(self) -> None:
+        from pywry.toolbar import ToolbarItem
+
+        # Construct a minimal base instance.
+        item = ToolbarItem(event="ns:event")
+        with pytest.raises(NotImplementedError):
+            item.build_html()
+
+
+class TestSelectOptionInvalidType:
+    """Tests for Select option normalization (line 528)."""
+
+    def test_select_invalid_option_type_raises_typeerror(self) -> None:
+        from pywry.toolbar import Option, Select
+
+        with pytest.raises((TypeError, ValidationError)):
+            Select(event="theme:change", options=[Option(label="A"), 42])
+
+
+class TestSelectSearchableSearchInput:
+    """Search-enabled Select embeds a SearchInput in its dropdown header (lines 555-556)."""
+
+    def test_searchable_select_renders_search_header(self) -> None:
+        from pywry.toolbar import Option, Select
+
+        sel = Select(
+            event="theme:change",
+            options=[Option(label="Dark", value="dark"), Option(label="Light", value="light")],
+            searchable=True,
+        )
+        html_out = sel.build_html()
+        # The select-header wrapper from the searchable branch must be present.
+        assert "pywry-select-header" in html_out
+        assert "pywry-search-wrapper" in html_out
+
+
+class TestMultiSelectEdgeCases:
+    """Tests for MultiSelect normalization and display text branches (lines 623, 627, 652)."""
+
+    def test_multiselect_dict_option(self) -> None:
+        """A dict option is normalized into Option (line 623)."""
+        from pywry.toolbar import MultiSelect
+
+        ms = MultiSelect(
+            event="filter:multi",
+            options=[{"label": "A", "value": "a"}, {"label": "B", "value": "b"}],
+        )
+        assert len(ms.options) == 2
+        assert ms.options[0].label == "A"
+
+    def test_multiselect_string_option(self) -> None:
+        """A string option is normalized into Option(label=opt, value=opt)."""
+        from pywry.toolbar import MultiSelect
+
+        ms = MultiSelect(event="filter:multi", options=["X", "Y"])
+        assert ms.options[0].label == "X"
+        assert ms.options[0].value == "X"
+
+    def test_multiselect_invalid_option_type_raises(self) -> None:
+        """Invalid option type raises TypeError (line 627)."""
+        from pywry.toolbar import MultiSelect
+
+        with pytest.raises((TypeError, ValidationError)):
+            MultiSelect(event="filter:multi", options=[42])
+
+    def test_multiselect_many_selected_shows_count(self) -> None:
+        """More than 2 selected values renders 'N selected' (line 652)."""
+        from pywry.toolbar import MultiSelect
+
+        ms = MultiSelect(
+            event="filter:multi",
+            options=["A", "B", "C", "D"],
+            selected=["A", "B", "C"],
+        )
+        html_out = ms.build_html()
+        assert "3 selected" in html_out
+
+
+class TestNumberInputStepAttribute:
+    """NumberInput with step attribute writes step="..." (line 1548)."""
+
+    def test_step_appears_in_html(self) -> None:
+        from pywry.toolbar import NumberInput
+
+        n = NumberInput(event="num:val", step=0.25)
+        assert 'step="0.25"' in n.build_html()
+
+
+class TestSliderInputLabelBranch:
+    """SliderInput with a label wraps in pywry-input-group (line 1702)."""
+
+    def test_label_wraps_input_group(self) -> None:
+        from pywry.toolbar import SliderInput
+
+        s = SliderInput(label="Zoom", event="zoom:level")
+        html_out = s.build_html()
+        assert "pywry-input-group" in html_out
+        assert ">Zoom<" in html_out
+
+
+class TestRangeInputLabelBranch:
+    """RangeInput with a label wraps in pywry-input-group (line 1850)."""
+
+    def test_label_wraps_input_group(self) -> None:
+        from pywry.toolbar import RangeInput
+
+        r = RangeInput(label="Range", event="filter:range")
+        html_out = r.build_html()
+        assert "pywry-input-group" in html_out
+        assert ">Range<" in html_out
+
+
+class TestCheckboxStyleWrapper:
+    """Checkbox with style is wrapped in a span (line 1942)."""
+
+    def test_style_wrapper(self) -> None:
+        from pywry.toolbar import Checkbox
+
+        c = Checkbox(event="set:check", label="On", style="margin: 8px;")
+        html_out = c.build_html()
+        assert 'style="margin: 8px;"' in html_out
+        # Wrapper appears: outer <span>
+        assert html_out.startswith("<span")
+
+
+class TestRadioGroupInvalidOption:
+    """RadioGroup invalid option type raises (line 1994)."""
+
+    def test_invalid_option(self) -> None:
+        from pywry.toolbar import RadioGroup
+
+        with pytest.raises((TypeError, ValidationError)):
+            RadioGroup(event="view:change", options=[42])
+
+
+class TestTabGroupInvalidOption:
+    """TabGroup invalid option type raises (line 2093)."""
+
+    def test_invalid_option(self) -> None:
+        from pywry.toolbar import TabGroup
+
+        with pytest.raises((TypeError, ValidationError)):
+            TabGroup(event="view:change", options=[42])
+
+
+class TestDivWithScript:
+    """Div with a script renders a <script> tag (line 2237)."""
+
+    def test_div_with_inline_script(self) -> None:
+        from pywry.toolbar import Div
+
+        d = Div(label="", event="ns:div", content="<p>hi</p>", script="function init(){}")
+        html_out = d.build_html()
+        assert "<script>function init(){}</script>" in html_out
+
+
+class TestTickerItemHtmlContent:
+    """TickerItem.update_payload with html_content populates 'html' key (line 2386)."""
+
+    def test_html_content_in_payload(self) -> None:
+        from pywry.toolbar import TickerItem
+
+        item = TickerItem(ticker="AAPL", text="AAPL")
+        event, data = item.update_payload(html_content="<b>AAPL</b>")
+        assert event == "toolbar:marquee-set-item"
+        assert data["html"] == "<b>AAPL</b>"
+
+
+class TestMarqueeBuildHtmlBranches:
+    """Marquee build_html branches: parent_id, static items, title_attr, separator, etc."""
+
+    def test_disabled_marquee_includes_disabled_class(self) -> None:
+        """A disabled Marquee adds the pywry-disabled class (line 2568)."""
+        from pywry.toolbar import Marquee
+
+        m = Marquee(event="ns:marq", text="Hello", disabled=True)
+        html_out = m.build_html()
+        assert "pywry-disabled" in html_out
+
+    def test_marquee_with_parent_id_attr(self) -> None:
+        """Passing parent_id adds data-parent-id (line 2602)."""
+        from pywry.toolbar import Marquee
+
+        m = Marquee(event="ns:marq", text="Hello")
+        html_out = m.build_html(parent_id="parent-1")
+        assert 'data-parent-id="parent-1"' in html_out
+
+    def test_marquee_static_with_items_emits_data_attrs(self) -> None:
+        """Static behavior with items renders data-items/data-speed (lines 2606-2608)."""
+        from pywry.toolbar import Marquee
+
+        m = Marquee(
+            event="ns:marq",
+            text="",
+            behavior="static",
+            items=["A", "B", "C"],
+            speed=5.0,
+        )
+        html_out = m.build_html()
+        assert "data-items=" in html_out
+        assert 'data-speed="5.0"' in html_out
+
+    def test_marquee_with_description_emits_data_tooltip(self) -> None:
+        """description renders the title-attr branch (line 2612)."""
+        from pywry.toolbar import Marquee
+
+        m = Marquee(event="ns:marq", text="Hello", description="Tip")
+        html_out = m.build_html()
+        assert "data-tooltip=" in html_out
+        assert "Tip" in html_out
+
+    def test_marquee_static_single_track(self) -> None:
+        """Static behavior renders a single track span (line 2630)."""
+        from pywry.toolbar import Marquee
+
+        m = Marquee(event="ns:marq", text="Hello", behavior="static")
+        html_out = m.build_html()
+        # Static path renders a single content span.
+        assert html_out.count('class="pywry-marquee-content"') == 1
+
+
+class TestMarqueeCollectScripts:
+    """Marquee.collect_scripts collects from nested Div/Marquee children (lines 2666-2671)."""
+
+    def test_collects_div_child_scripts(self) -> None:
+        from pywry.toolbar import Div, Marquee
+
+        m = Marquee(
+            event="ns:marq",
+            text="",
+            children=[Div(label="", event="ns:d", script="function a(){}")],
+        )
+        scripts = m.collect_scripts()
+        assert any("function a()" in s for s in scripts)
+
+    def test_collects_nested_marquee_scripts(self) -> None:
+        from pywry.toolbar import Div, Marquee
+
+        inner = Marquee(
+            event="ns:inner", text="",
+            children=[Div(label="", event="ns:d", script="function b(){}")],
+        )
+        outer = Marquee(event="ns:outer", text="", children=[inner])
+        scripts = outer.collect_scripts()
+        assert any("function b()" in s for s in scripts)
+
+
+class TestTickerItemClassRemove:
+    """TickerItem.update_payload with class_remove (line 2718)."""
+
+    def test_class_remove(self) -> None:
+        from pywry.toolbar import TickerItem
+
+        ti = TickerItem(ticker="AAPL", text="AAPL")
+        _, data = ti.update_payload(class_remove=["stock-down"])
+        assert data["class_remove"] == ["stock-down"]
+
+
+class TestToolbarInvalidItemTypes:
+    """Toolbar normalize_items raises for invalid items (line 2843)."""
+
+    def test_invalid_item_type_raises(self) -> None:
+        from pywry.toolbar import Toolbar
+
+        with pytest.raises((TypeError, ValidationError)):
+            Toolbar(items=[42])
+
+
+class TestToolbarBuildHtmlWithScript:
+    """Toolbar build_html with script tag (line 2912)."""
+
+    def test_toolbar_with_inline_script_includes_script_tag(self) -> None:
+        from pywry.toolbar import Button, Toolbar
+
+        tb = Toolbar(
+            items=[Button(label="Go", event="app:go")],
+            script="function init(){}",
+        )
+        html_out = tb.build_html()
+        assert "<script>function init(){}</script>" in html_out
+
+
+class TestSecretInputBuildHtmlBranches:
+    """Specific SecretInput build_html paths (lines 911, 1124, 1168, 1241-1243)."""
+
+    def test_secret_input_no_value_renders_empty(self) -> None:
+        """When value is empty, no mask is shown and value attribute is empty."""
+        from pywry.toolbar import SecretInput
+
+        si = SecretInput(event="auth:key")  # no value
+        html_out = si.build_html()
+        # No data-has-value attribute when there is no value.
+        assert "data-has-value=" not in html_out
+        # Type is still password (masked).
+        assert "type='password'" in html_out or 'type="password"' in html_out
+
+    def test_wrap_handler_for_get_falls_back_to_registry(self) -> None:
+        """When handler is None, _wrap_handler_for_get returns from registry (line 1168)."""
+        from pywry.toolbar import SecretInput
+
+        si = SecretInput(event="auth:key", value="hunter2")
+        # Call _wrap_handler_for_get when no custom handler is configured.
+        # has_value is True so the registry is populated by register().
+        si.register()
+        result = si._wrap_handler_for_get({})
+        assert result == "hunter2"
+
+    def test_get_secret_value_no_handler_no_value(self) -> None:
+        """get_secret_value with no handler and no stored value returns None (lines 1241-1243)."""
+        from pywry.toolbar import SecretInput
+
+        si = SecretInput(event="auth:key")  # No value, no handler.
+        assert si.get_secret_value() is None
+
+    def test_get_secret_value_no_handler_uses_internal(self) -> None:
+        """get_secret_value with no handler returns the internal secret string."""
+        from pywry.toolbar import SecretInput
+
+        si = SecretInput(event="auth:key", value="hunter2")
+        assert si.get_secret_value() == "hunter2"
+
+
+class TestSecretHandlerFactories:
+    """Tests for the secret reveal/copy/update handler factories (3078-3085, 3103-3107)."""
+
+    def test_copy_handler_dispatches_response(self) -> None:
+        """make_copy_handler dispatches a copy-response with encoded value (3078-3085)."""
+        from pywry.toolbar import (
+            SecretInput,
+            create_default_secret_handlers,
+        )
+
+        dispatched: list[tuple[str, dict]] = []
+
+        def dispatch(event_type: str, data: dict) -> None:
+            dispatched.append((event_type, data))
+
+        factories = create_default_secret_handlers(dispatch)
+        copy_handler = factories["copy"]("auth:key")
+
+        # Set up a SecretInput so the registry has a value to copy.
+        si = SecretInput(event="auth:key", value="secret-value")
+        si.register()
+
+        copy_handler({"componentId": si.component_id}, "auth:key:copy", "")
+        assert len(dispatched) == 1
+        evt, data = dispatched[0]
+        assert evt == "auth:key:copy-response"
+        assert data["componentId"] == si.component_id
+        # Value is base64-encoded; decode and check it round-trips.
+        import base64
+
+        decoded = base64.b64decode(data["value"]).decode("utf-8")
+        assert decoded == "secret-value"
+        assert data["encoded"] is True
+
+    def test_update_handler_updates_secret(self) -> None:
+        """make_update_handler decodes encoded values and updates the SecretInput (3103-3107)."""
+        from pywry.toolbar import (
+            SecretInput,
+            create_default_secret_handlers,
+            encode_secret,
+        )
+
+        factories = create_default_secret_handlers(lambda *_: None)
+        si = SecretInput(event="auth:key", value="old")
+        handler = factories["update"](si)
+
+        encoded = encode_secret("new-value")
+        handler(
+            {"value": encoded, "encoded": True, "componentId": si.component_id},
+            "auth:key",
+            "",
+        )
+        # The internal value should now reflect the decoded plaintext.
+        assert si.get_secret_value() == "new-value"
+
+    def test_update_handler_ignores_payload_without_value(self) -> None:
+        """update handler returns early when data has no value (line 3103-3104)."""
+        from pywry.toolbar import SecretInput, create_default_secret_handlers
+
+        factories = create_default_secret_handlers(lambda *_: None)
+        si = SecretInput(event="auth:key", value="keep")
+        handler = factories["update"](si)
+        handler({}, "auth:key", "")
+        # Internal value unchanged.
+        assert si.get_secret_value() == "keep"
+
+
+class TestGetToolbarHandlersJsMissing:
+    """RuntimeError when toolbar-handlers.js cannot be loaded (line 3237)."""
+
+    def test_missing_handlers_js_raises(self, monkeypatch, tmp_path) -> None:
+        from pywry import toolbar as toolbar_module
+
+        monkeypatch.setattr(toolbar_module, "_SRC_DIR", tmp_path)
+        # Bust the lru_cache from earlier successful loads.
+        toolbar_module._get_toolbar_handlers_js.cache_clear()
+        toolbar_module._get_toolbar_script_content.cache_clear()
+        try:
+            with pytest.raises(RuntimeError, match="Toolbar handlers JS not found"):
+                toolbar_module._get_toolbar_handlers_js()
+        finally:
+            toolbar_module._get_toolbar_handlers_js.cache_clear()
+            toolbar_module._get_toolbar_script_content.cache_clear()
+
+
+class TestGetToolbarScriptWithoutTag:
+    """get_toolbar_script(with_script_tag=False) returns raw JS (line 3333)."""
+
+    def test_raw_js_returned(self) -> None:
+        from pywry.toolbar import get_toolbar_script
+
+        raw = get_toolbar_script(with_script_tag=False)
+        # Returned value is raw script content (no <script> wrapper).
+        assert not raw.startswith("<script")
+        assert "pywry" in raw or "function" in raw
+
+    def test_wrapped_includes_script_tag(self) -> None:
+        from pywry.toolbar import get_toolbar_script
+
+        wrapped = get_toolbar_script(with_script_tag=True)
+        assert wrapped.startswith("<script>")
+        assert wrapped.endswith("</script>")
+
+
+class TestWrapContentWithToolbarsBranches:
+    """wrap_content_with_toolbars: dict-like callable toolbar config (3394-3395, 3402)."""
+
+    def test_dict_with_position_and_items_produces_wrapper(self) -> None:
+        from pywry.toolbar import wrap_content_with_toolbars
+
+        wrapped = wrap_content_with_toolbars(
+            "<div>main</div>",
+            toolbars=[{"position": "top", "items": [{"type": "button", "label": "X", "event": "ns:x"}]}],
+        )
+        assert "pywry-wrapper-top" in wrapped
+        assert "main" in wrapped
+
+    def test_dict_without_items_is_skipped(self) -> None:
+        """A dict with no items produces no html and is skipped (line 3402)."""
+        from pywry.toolbar import wrap_content_with_toolbars
+
+        wrapped = wrap_content_with_toolbars(
+            "<div>main</div>",
+            toolbars=[{"position": "top", "items": []}],
+        )
+        # No top wrapper because items were empty.
+        assert "pywry-wrapper-top" not in wrapped
+        assert "main" in wrapped
+
+    def test_object_with_build_html_used(self) -> None:
+        """Toolbar-like object exposing build_html and position is used (lines 3393-3395)."""
+        from pywry.toolbar import wrap_content_with_toolbars
+
+        class FakeToolbar:
+            position = "top"
+
+            def build_html(self) -> str:
+                return "<div class='custom-toolbar'>X</div>"
+
+        wrapped = wrap_content_with_toolbars(
+            "<div>main</div>", toolbars=[FakeToolbar()]
+        )
+        assert "custom-toolbar" in wrapped
+        # Top wrapper applied.
+        assert "pywry-wrapper-top" in wrapped
+
+
+class TestRegisterSecretHandlersForToolbar:
+    """register_secret_handlers_for_toolbar wires reveal/copy/update events end-to-end."""
+
+    def test_registers_all_three_events_per_secret(self) -> None:
+        from pywry.toolbar import (
+            SecretInput,
+            Toolbar,
+            register_secret_handlers_for_toolbar,
+        )
+
+        si = SecretInput(event="auth:key", value="secret-value")
+        tb = Toolbar(items=[si])
+
+        registered_events: list[str] = []
+
+        def on_func(event_type: str, _handler) -> bool:
+            registered_events.append(event_type)
+            return True
+
+        dispatched: list[tuple[str, dict]] = []
+
+        def dispatch_func(event_type: str, data: dict) -> None:
+            dispatched.append((event_type, data))
+
+        result = register_secret_handlers_for_toolbar(tb, on_func, dispatch_func)
+
+        # The base, reveal, and copy events should all be registered.
+        assert "auth:key" in registered_events
+        assert "auth:key:reveal" in registered_events
+        assert "auth:key:copy" in registered_events
+        assert set(result) == {"auth:key", "auth:key:reveal", "auth:key:copy"}
+
+
+class TestLabelBranchesOnSimpleInputs:
+    """Cover the `if self.label` branches for inputs that lacked label coverage."""
+
+    def test_multiselect_with_label_wraps(self) -> None:
+        """MultiSelect with a label is wrapped in pywry-input-group (line 702)."""
+        from pywry.toolbar import MultiSelect
+
+        ms = MultiSelect(label="Filter:", event="filter:multi", options=["a", "b"])
+        html_out = ms.build_html()
+        assert "pywry-input-group" in html_out
+        assert ">Filter:<" in html_out
+
+    def test_textinput_with_label_wraps(self) -> None:
+        """TextInput with a label uses the labelled wrapper (line 780)."""
+        from pywry.toolbar import TextInput
+
+        ti = TextInput(label="Name:", event="form:name")
+        html_out = ti.build_html()
+        assert "pywry-input-group" in html_out
+        assert ">Name:<" in html_out
+
+    def test_numberinput_with_label_wraps(self) -> None:
+        """NumberInput with a label uses the labelled wrapper (line 1569)."""
+        from pywry.toolbar import NumberInput
+
+        ni = NumberInput(label="Qty:", event="form:qty")
+        html_out = ni.build_html()
+        assert "pywry-input-group" in html_out
+        assert ">Qty:<" in html_out
+
+    def test_dateinput_with_min_and_max(self) -> None:
+        """DateInput with min/max emits both attributes (lines 1617, 1619)."""
+        from pywry.toolbar import DateInput
+
+        di = DateInput(event="form:date", min="2024-01-01", max="2024-12-31")
+        html_out = di.build_html()
+        assert 'min="2024-01-01"' in html_out
+        assert 'max="2024-12-31"' in html_out
+
+    def test_dateinput_with_label_wraps(self) -> None:
+        """DateInput with a label uses the labelled wrapper (line 1624)."""
+        from pywry.toolbar import DateInput
+
+        di = DateInput(label="Start:", event="form:date")
+        html_out = di.build_html()
+        assert "pywry-input-group" in html_out
+        assert ">Start:<" in html_out
+
+    def test_tabgroup_with_label_wraps(self) -> None:
+        """TabGroup with a label uses the labelled wrapper (line 2139)."""
+        from pywry.toolbar import TabGroup
+
+        tg = TabGroup(label="View:", event="view:change", options=["A", "B"])
+        html_out = tg.build_html()
+        assert "pywry-input-group" in html_out
+        assert ">View:<" in html_out
+
+
+class TestRangeInputEndOutOfRange:
+    """RangeInput with end outside [min,max] raises (line 1769)."""
+
+    def test_end_out_of_range_raises(self) -> None:
+        from pywry.toolbar import RangeInput
+
+        with pytest.raises(ValidationError):
+            RangeInput(event="filter:range", start=0, end=200, min=0, max=100)
+
+
+class TestTextAreaWithStyle:
+    """TextArea with a style merges it into inline style (line 1332)."""
+
+    def test_textarea_style_in_inline_style(self) -> None:
+        from pywry.toolbar import TextArea
+
+        ta = TextArea(event="form:notes", style="border: 1px solid red")
+        html_out = ta.build_html()
+        # The style attribute is HTML-escaped in the rendered output.
+        assert "border: 1px solid red" in html_out
+
+
+class TestSecretInputCoerceValueAlreadySecret:
+    """SecretInput accepts an existing SecretStr unchanged (line 911)."""
+
+    def test_already_secret_returns_self(self) -> None:
+        from pydantic import SecretStr
+
+        from pywry.toolbar import SecretInput
+
+        s = SecretStr("hunter2")
+        si = SecretInput(event="auth:key", value=s)
+        # The internal value should be the same SecretStr instance.
+        assert si.value is s
+
+
+class TestMarqueeEmptyChildrenAndNestedMarquee:
+    """Marquee._build_children_html branches (lines 2516, 2526)."""
+
+    def test_marquee_build_children_html_with_no_children(self) -> None:
+        """Direct call to _build_children_html with no children returns '' (line 2516).
+
+        build_html() guards this defensively by only calling _build_children_html
+        when children is truthy, so we exercise the guard directly.
+        """
+        from pywry.toolbar import Marquee
+
+        m = Marquee(event="ns:marq", text="Hello")
+        assert m._build_children_html() == ""
+
+    def test_marquee_with_empty_children_uses_text(self) -> None:
+        """When children is an empty list, the text path is used."""
+        from pywry.toolbar import Marquee
+
+        m = Marquee(event="ns:marq", text="Hello", children=[])
+        # text gets rendered.
+        assert "Hello" in m.build_html()
+
+    def test_marquee_with_nested_marquee_child(self) -> None:
+        """Nested Marquee child receives parent_id (line 2526)."""
+        from pywry.toolbar import Marquee
+
+        inner = Marquee(event="ns:inner", text="Inner")
+        outer = Marquee(event="ns:outer", text="", children=[inner])
+        html_out = outer.build_html()
+        assert "Inner" in html_out
+        # The inner marquee gets a data-parent-id pointing at the outer.
+        assert f'data-parent-id="{outer.component_id}"' in html_out
+
+
+class TestMarqueeWithStyle:
+    """Marquee with style appends to inline style parts (line 2592)."""
+
+    def test_style_in_inline_style(self) -> None:
+        from pywry.toolbar import Marquee
+
+        m = Marquee(event="ns:marq", text="x", style="color: red")
+        html_out = m.build_html()
+        # The style attribute is composed as `--pywry-marquee-...; color: red`.
+        assert "color: red" in html_out
+
+
+class TestMarqueeUpdatePayloadHtmlContent:
+    """Marquee.update_payload with html_content (line 2718)."""
+
+    def test_html_content_in_payload(self) -> None:
+        from pywry.toolbar import Marquee
+
+        m = Marquee(event="ns:marq", text="orig")
+        evt, data = m.update_payload(html_content="<b>bold</b>")
+        assert evt == "toolbar:marquee-set-content"
+        assert data["html"] == "<b>bold</b>"

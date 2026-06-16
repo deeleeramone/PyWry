@@ -39,7 +39,6 @@ except ImportError:
 
 from pywry.config import clear_settings
 from pywry.inline import (
-    HAS_FASTAPI,
     InlineWidget,
     _start_server,
     _state,
@@ -47,11 +46,8 @@ from pywry.inline import (
     show_plotly,
     stop_server,
 )
+
 from pywry.models import WindowMode
-
-
-# Skip all tests if FastAPI not installed
-pytestmark = pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
 
 
 def wait_for_port_release(port: int, host: str = "127.0.0.1", timeout: float = 5.0) -> bool:

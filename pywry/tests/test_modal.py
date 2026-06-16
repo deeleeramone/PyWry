@@ -732,6 +732,29 @@ class TestModalGetSecretInputs:
         m = Modal()
         assert not m.get_secret_inputs()
 
+    def test_div_with_get_secret_inputs_method_extends_list(self) -> None:
+        """Div subclass exposing get_secret_inputs is recursed (line 435)."""
+
+        class SecretAwareDiv(Div):
+            """Div subclass that mirrors how a real container would expose secrets."""
+
+            def get_secret_inputs(self) -> list[SecretInput]:  # type: ignore[override]
+                found: list[SecretInput] = []
+                for c in self.children or []:
+                    if isinstance(c, SecretInput):
+                        found.append(c)
+                return found
+
+        nested_secret = SecretInput(label="Inner", event="m:inner")
+        outer_secret = SecretInput(label="Outer", event="m:outer")
+        div = SecretAwareDiv(label="", event="m:div", children=[nested_secret])
+        m = Modal(items=[outer_secret, div])
+        secrets = m.get_secret_inputs()
+        # Both the direct outer and the nested (via div.get_secret_inputs()) come back.
+        assert len(secrets) == 2
+        assert outer_secret in secrets
+        assert nested_secret in secrets
+
 
 class TestGetModalScript:
     """Tests for the get_modal_script() function."""
@@ -753,6 +776,23 @@ class TestGetModalScript:
         script = get_modal_script()
         assert "open" in script
         assert "close" in script
+
+    def test_missing_handlers_js_raises_runtime_error(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: "Path"
+    ) -> None:
+        """When modal-handlers.js is missing, _get_modal_handlers_js raises RuntimeError (line 450)."""
+        from pywry import modal as modal_module
+
+        # Point _SRC_DIR at an empty tmp dir so modal-handlers.js doesn't exist.
+        monkeypatch.setattr(modal_module, "_SRC_DIR", tmp_path)
+        # Bust the lru_cache from previous calls.
+        modal_module._get_modal_handlers_js.cache_clear()
+        try:
+            with pytest.raises(RuntimeError, match="Modal handlers JS not found"):
+                modal_module._get_modal_handlers_js()
+        finally:
+            # Restore for any subsequent tests in this session.
+            modal_module._get_modal_handlers_js.cache_clear()
 
 
 class TestWrapContentWithModals:

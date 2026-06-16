@@ -1,9 +1,14 @@
-"""Integration tests for WindowProxy.
+"""Tests for WindowProxy.
 
-These tests verify that WindowProxy methods actually work by creating
-real windows and testing real operations. No mocks - real execution.
+This file contains BOTH:
 
-Tests are marked slow because they spawn actual subprocess/windows.
+1. Integration tests at the top — they spawn a real pytauri subprocess and
+   verify proxy methods drive the underlying window.  They are slow and may
+   be skipped on headless CI.
+2. Unit tests at the bottom — they patch ``pywry.window_proxy.runtime`` so
+   they run in milliseconds without a subprocess.  These provide reliable
+   coverage in headless environments where the integration tests cannot
+   spawn windows.
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ import time
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -23,7 +29,22 @@ from pywry.app import PyWry
 from pywry.callbacks import get_registry
 from pywry.exceptions import IPCTimeoutError
 from pywry.models import ThemeMode, WindowMode
-from pywry.types import PhysicalPosition, PhysicalSize
+from pywry.types import (
+    Cookie,
+    CursorIcon,
+    Effect,
+    EffectState,
+    LogicalPosition,
+    LogicalSize,
+    PhysicalPosition,
+    PhysicalSize,
+    ProgressBarStatus,
+    Theme,
+    TitleBarStyle,
+    UserAttentionType,
+    serialize_position,
+    serialize_size,
+)
 from pywry.window_proxy import WindowProxy
 
 # Import shared test utilities from tests.conftest
@@ -518,3 +539,589 @@ class TestMultipleWindows:
         assert "Modified 1" in proxy1.title
         assert "Win 2" in proxy2.title or proxy2.title != proxy1.title
         app.close()
+
+
+# =============================================================================
+# Unit tests via mocked runtime — fast, headless-safe coverage
+# =============================================================================
+
+
+@patch("pywry.window_proxy.runtime")
+class TestWindowProxyMockedProperties:
+    """Test WindowProxy property getters via mocked runtime."""
+
+    def test_label(self, runtime_mock: MagicMock) -> None:
+        proxy = WindowProxy("test")
+        assert proxy.label == "test"
+
+    def test_title(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = "T"
+        proxy = WindowProxy("x")
+        assert proxy.title == "T"
+        runtime_mock.window_get.assert_called_with("x", "title")
+
+    def test_url(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = "http://x"
+        proxy = WindowProxy("x")
+        assert proxy.url == "http://x"
+
+    def test_theme(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = "Dark"
+        proxy = WindowProxy("x")
+        assert proxy.theme == Theme.DARK
+
+    def test_scale_factor(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = 2.0
+        proxy = WindowProxy("x")
+        assert proxy.scale_factor == 2.0
+
+    def test_inner_position(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = {"x": 10, "y": 20}
+        proxy = WindowProxy("x")
+        result = proxy.inner_position
+        assert isinstance(result, PhysicalPosition)
+        assert result.x == 10
+        assert result.y == 20
+
+    def test_outer_position(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = {"x": 5, "y": 6}
+        proxy = WindowProxy("x")
+        result = proxy.outer_position
+        assert isinstance(result, PhysicalPosition)
+        assert result.x == 5
+
+    def test_inner_size(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = {"width": 800, "height": 600}
+        proxy = WindowProxy("x")
+        result = proxy.inner_size
+        assert isinstance(result, PhysicalSize)
+        assert result.width == 800
+
+    def test_outer_size(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = {"width": 1024, "height": 768}
+        proxy = WindowProxy("x")
+        result = proxy.outer_size
+        assert isinstance(result, PhysicalSize)
+
+    def test_cursor_position(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = {"x": 1, "y": 2}
+        proxy = WindowProxy("x")
+        result = proxy.cursor_position
+        assert isinstance(result, PhysicalPosition)
+
+    def test_current_monitor_present(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = {
+            "name": "M",
+            "size": {"width": 1, "height": 2},
+            "position": {"x": 0, "y": 0},
+            "scale_factor": 1.0,
+        }
+        proxy = WindowProxy("x")
+        m = proxy.current_monitor
+        assert m is not None
+        assert m.name == "M"
+
+    def test_current_monitor_none(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = None
+        assert WindowProxy("x").current_monitor is None
+
+    def test_primary_monitor_present(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = {
+            "name": "P",
+            "size": {"width": 1, "height": 2},
+            "position": {"x": 0, "y": 0},
+            "scale_factor": 1.0,
+        }
+        assert WindowProxy("x").primary_monitor.name == "P"
+
+    def test_primary_monitor_none(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = None
+        assert WindowProxy("x").primary_monitor is None
+
+    def test_available_monitors(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = [
+            {
+                "name": "M1",
+                "size": {"width": 1, "height": 1},
+                "position": {"x": 0, "y": 0},
+                "scale_factor": 1.0,
+            }
+        ]
+        result = WindowProxy("x").available_monitors
+        assert isinstance(result, list)
+        assert len(result) == 1
+
+    @pytest.mark.parametrize(
+        "prop",
+        [
+            "is_fullscreen",
+            "is_minimized",
+            "is_maximized",
+            "is_focused",
+            "is_decorated",
+            "is_resizable",
+            "is_enabled",
+            "is_visible",
+            "is_closable",
+            "is_maximizable",
+            "is_minimizable",
+            "is_always_on_top",
+            "is_always_on_bottom",
+            "is_devtools_open",
+        ],
+    )
+    def test_boolean_props(self, runtime_mock: MagicMock, prop: str) -> None:
+        runtime_mock.window_get.return_value = True
+        assert getattr(WindowProxy("x"), prop) is True
+
+
+@patch("pywry.window_proxy.runtime")
+class TestWindowProxyMockedActions:
+    """Test WindowProxy action methods route to runtime."""
+
+    def test_show(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").show()
+        runtime_mock.window_call.assert_called_once_with("x", "show")
+
+    def test_hide(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").hide()
+        runtime_mock.window_call.assert_called_once_with("x", "hide")
+
+    def test_close(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").close()
+        runtime_mock.window_call.assert_called_once_with("x", "close")
+
+    def test_destroy(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").destroy()
+        runtime_mock.window_call.assert_called_once_with("x", "destroy")
+
+    def test_maximize(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").maximize()
+        runtime_mock.window_call.assert_called_once_with("x", "maximize")
+
+    def test_unmaximize(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").unmaximize()
+        runtime_mock.window_call.assert_called_once_with("x", "unmaximize")
+
+    def test_minimize(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").minimize()
+        runtime_mock.window_call.assert_called_once_with("x", "minimize")
+
+    def test_unminimize(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").unminimize()
+        runtime_mock.window_call.assert_called_once_with("x", "unminimize")
+
+    def test_toggle_maximize(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").toggle_maximize()
+        runtime_mock.window_call.assert_called_once_with("x", "toggle_maximize")
+
+    def test_center(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").center()
+        runtime_mock.window_call.assert_called_once_with("x", "center")
+
+    def test_set_focus(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_focus()
+        runtime_mock.window_call.assert_called_once_with("x", "set_focus")
+
+    def test_reload(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").reload()
+        runtime_mock.window_call.assert_called_once_with("x", "reload")
+
+    def test_print_page(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").print_page()
+        runtime_mock.window_call.assert_called_once_with("x", "print")
+
+    def test_open_devtools(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").open_devtools()
+        runtime_mock.window_call.assert_called_once_with("x", "open_devtools")
+
+    def test_close_devtools(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").close_devtools()
+        runtime_mock.window_call.assert_called_once_with("x", "close_devtools")
+
+    def test_clear_all_browsing_data(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").clear_all_browsing_data()
+        runtime_mock.window_call.assert_called_once_with("x", "clear_all_browsing_data")
+
+    def test_start_dragging(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").start_dragging()
+        runtime_mock.window_call.assert_called_once_with("x", "start_dragging")
+
+    def test_request_user_attention_with_type(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").request_user_attention(UserAttentionType.CRITICAL)
+        args = runtime_mock.window_call.call_args[0]
+        assert args[1] == "request_user_attention"
+        assert args[2] == {"attention_type": "Critical"}
+
+    def test_request_user_attention_none(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").request_user_attention(None)
+        assert runtime_mock.window_call.call_args[0][2] == {"attention_type": None}
+
+    def test_set_title(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_title("new")
+        runtime_mock.window_call.assert_called_once_with("x", "set_title", {"title": "new"})
+
+    def test_set_size(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_size(PhysicalSize(800, 600))
+        args = runtime_mock.window_call.call_args[0]
+        assert args[1] == "set_size"
+        assert args[2]["width"] == 800
+
+    def test_set_min_size_with_size(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_min_size(LogicalSize(100, 100))
+        runtime_mock.window_call.assert_called_once()
+
+    def test_set_min_size_none(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_min_size(None)
+        runtime_mock.window_call.assert_called_once_with("x", "set_min_size", {})
+
+    def test_set_max_size_with_size(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_max_size(PhysicalSize(2000, 1500))
+        runtime_mock.window_call.assert_called_once()
+
+    def test_set_max_size_none(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_max_size(None)
+        runtime_mock.window_call.assert_called_once_with("x", "set_max_size", {})
+
+    def test_set_position(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_position(PhysicalPosition(100, 200))
+        args = runtime_mock.window_call.call_args[0]
+        assert args[1] == "set_position"
+
+    def test_set_fullscreen(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_fullscreen(True)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_fullscreen", {"fullscreen": True}
+        )
+
+    def test_set_decorations(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_decorations(False)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_decorations", {"decorations": False}
+        )
+
+    def test_set_always_on_top(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_always_on_top(True)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_always_on_top", {"always_on_top": True}
+        )
+
+    def test_set_always_on_bottom(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_always_on_bottom(True)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_always_on_bottom", {"always_on_bottom": True}
+        )
+
+    def test_set_resizable(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_resizable(False)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_resizable", {"resizable": False}
+        )
+
+    def test_set_enabled(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_enabled(False)
+        runtime_mock.window_call.assert_called_once_with("x", "set_enabled", {"enabled": False})
+
+    def test_set_closable(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_closable(False)
+        runtime_mock.window_call.assert_called_once_with("x", "set_closable", {"closable": False})
+
+    def test_set_maximizable(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_maximizable(False)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_maximizable", {"maximizable": False}
+        )
+
+    def test_set_minimizable(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_minimizable(False)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_minimizable", {"minimizable": False}
+        )
+
+    def test_set_visible_on_all_workspaces(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_visible_on_all_workspaces(True)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_visible_on_all_workspaces", {"visible": True}
+        )
+
+    def test_set_skip_taskbar(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_skip_taskbar(True)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_skip_taskbar", {"skip": True}
+        )
+
+    def test_set_cursor_icon(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_cursor_icon(CursorIcon.HAND)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_cursor_icon", {"icon": "Hand"}
+        )
+
+    def test_set_cursor_position(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_cursor_position(LogicalPosition(10.0, 20.0))
+        runtime_mock.window_call.assert_called_once()
+
+    def test_set_cursor_visible(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_cursor_visible(False)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_cursor_visible", {"visible": False}
+        )
+
+    def test_set_cursor_grab(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_cursor_grab(True)
+        runtime_mock.window_call.assert_called_once_with("x", "set_cursor_grab", {"grab": True})
+
+    def test_set_ignore_cursor_events(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_ignore_cursor_events(True)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_ignore_cursor_events", {"ignore": True}
+        )
+
+    def test_set_icon_with_bytes(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_icon(b"png_data")
+        args = runtime_mock.window_call.call_args[0]
+        assert args[1] == "set_icon"
+        assert args[2]["icon"] is not None  # base64 encoded
+
+    def test_set_icon_none(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_icon(None)
+        args = runtime_mock.window_call.call_args[0]
+        assert args[2]["icon"] is None
+
+    def test_set_shadow(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_shadow(False)
+        runtime_mock.window_call.assert_called_once_with("x", "set_shadow", {"enable": False})
+
+    def test_set_title_bar_style(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_title_bar_style(TitleBarStyle.OVERLAY)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_title_bar_style", {"style": "Overlay"}
+        )
+
+    def test_set_theme_with_value(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_theme(Theme.LIGHT)
+        runtime_mock.window_call.assert_called_once_with("x", "set_theme", {"theme": "Light"})
+
+    def test_set_theme_none(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_theme(None)
+        runtime_mock.window_call.assert_called_once_with("x", "set_theme", {"theme": None})
+
+    def test_set_content_protected(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_content_protected(True)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_content_protected", {"protected": True}
+        )
+
+    def test_set_traffic_light_position(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_traffic_light_position(10.0, 20.0)
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "set_traffic_light_position", {"x": 10.0, "y": 20.0}
+        )
+
+    def test_set_size_constraints_both(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_size_constraints(
+            min_size=PhysicalSize(100, 100),
+            max_size=PhysicalSize(2000, 1500),
+        )
+        args = runtime_mock.window_call.call_args[0]
+        assert "min_size" in args[2]
+        assert "max_size" in args[2]
+
+    def test_set_size_constraints_none(self, runtime_mock: MagicMock) -> None:
+        """Both None still calls (with empty args)."""
+        WindowProxy("x").set_size_constraints()
+        runtime_mock.window_call.assert_called_once_with("x", "set_size_constraints", {})
+
+    def test_monitor_from_point_present(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = {
+            "name": "M",
+            "size": {"width": 1, "height": 1},
+            "position": {"x": 0, "y": 0},
+            "scale_factor": 1.0,
+        }
+        result = WindowProxy("x").monitor_from_point(10.0, 20.0)
+        assert result is not None
+        assert result.name == "M"
+
+    def test_monitor_from_point_none(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_get.return_value = None
+        assert WindowProxy("x").monitor_from_point(0, 0) is None
+
+    def test_eval(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").eval("console.log()")
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "eval", {"script": "console.log()"}
+        )
+
+    def test_eval_with_result(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_call.return_value = "result"
+        result = WindowProxy("x").eval_with_result("script")
+        assert result == "result"
+        # should pass expect_response=True
+        kwargs = runtime_mock.window_call.call_args.kwargs
+        assert kwargs.get("expect_response") is True
+
+    def test_navigate(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").navigate("https://x.com")
+        runtime_mock.window_call.assert_called_once_with(
+            "x", "navigate", {"url": "https://x.com"}
+        )
+
+    def test_set_zoom(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_zoom(1.5)
+        runtime_mock.window_call.assert_called_once_with("x", "set_zoom", {"scale": 1.5})
+
+    def test_set_background_color(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_background_color((10, 20, 30, 255))
+        args = runtime_mock.window_call.call_args[0]
+        assert args[1] == "set_background_color"
+        assert args[2]["color"] == [10, 20, 30, 255]
+
+    def test_set_effects(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_effects({"effects": [Effect.MICA], "state": EffectState.ACTIVE})
+        runtime_mock.window_call.assert_called_once()
+
+    def test_set_progress_bar(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_progress_bar({"status": ProgressBarStatus.NORMAL, "progress": 50})
+        runtime_mock.window_call.assert_called_once()
+
+    def test_set_badge_count(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_badge_count(5)
+        runtime_mock.window_call.assert_called_once_with("x", "set_badge_count", {"count": 5})
+
+    def test_set_overlay_icon_with_bytes(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_overlay_icon(b"png")
+        args = runtime_mock.window_call.call_args[0]
+        assert args[1] == "set_overlay_icon"
+        assert args[2]["icon"] is not None
+
+    def test_set_overlay_icon_none(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").set_overlay_icon(None)
+        args = runtime_mock.window_call.call_args[0]
+        assert args[2]["icon"] is None
+
+    def test_cookies(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_call.return_value = [{"name": "n", "value": "v"}]
+        result = WindowProxy("x").cookies()
+        assert isinstance(result, list)
+        assert len(result) == 1
+
+    def test_cookies_empty(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_call.return_value = None
+        assert WindowProxy("x").cookies() == []
+
+    def test_set_cookie(self, runtime_mock: MagicMock) -> None:
+        cookie = Cookie(name="n", value="v")
+        WindowProxy("x").set_cookie(cookie)
+        args = runtime_mock.window_call.call_args[0]
+        assert args[1] == "set_cookie"
+
+    def test_delete_cookie(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").delete_cookie("n")
+        runtime_mock.window_call.assert_called_once_with("x", "delete_cookie", {"name": "n"})
+
+    def test_remove_menu(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").remove_menu()
+        runtime_mock.window_call.assert_called_once_with("x", "remove_menu", {})
+
+    def test_hide_menu(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").hide_menu()
+        runtime_mock.window_call.assert_called_once_with("x", "hide_menu", {})
+
+    def test_show_menu(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").show_menu()
+        runtime_mock.window_call.assert_called_once_with("x", "show_menu", {})
+
+    def test_is_menu_visible(self, runtime_mock: MagicMock) -> None:
+        runtime_mock.window_call.return_value = True
+        assert WindowProxy("x").is_menu_visible() is True
+
+    def test_mocked_repr(self, runtime_mock: MagicMock) -> None:
+        proxy = WindowProxy("test-label")
+        assert repr(proxy) == "WindowProxy('test-label')"
+
+
+@patch("pywry.window_proxy.runtime")
+class TestWindowProxyMockedMenu:
+    """Test WindowProxy menu interaction methods."""
+
+    def test_set_menu_with_proxy_object(self, runtime_mock: MagicMock) -> None:
+        from pywry.menu_proxy import MenuProxy
+
+        menu = MenuProxy("m1")
+        wp = WindowProxy("x")
+        with patch("pywry.menu_proxy.runtime") as menu_runtime:
+            wp.set_menu(menu)
+        # set_as_window_menu should send via menu_proxy.runtime
+        menu_runtime.send_command.assert_called_once()
+
+    def test_set_menu_with_dict(self, runtime_mock: MagicMock) -> None:
+        """A non-MenuProxy menu uses send_command directly."""
+
+        class FakeMenu:
+            id = "fake-menu"
+
+        WindowProxy("x").set_menu(FakeMenu())
+        runtime_mock.send_command.assert_called_once()
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert cmd["action"] == "menu_set"
+        assert cmd["menu_id"] == "fake-menu"
+        assert cmd["target"] == "window"
+        assert cmd["label"] == "x"
+
+    def test_set_menu_with_str(self, runtime_mock: MagicMock) -> None:
+        """A bare string menu uses str() conversion."""
+        WindowProxy("x").set_menu("my-menu-id")
+        runtime_mock.send_command.assert_called_once()
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert cmd["menu_id"] == "my-menu-id"
+
+    def test_popup_menu_with_proxy(self, runtime_mock: MagicMock) -> None:
+        from pywry.menu_proxy import MenuProxy
+
+        menu = MenuProxy("m1")
+        with patch("pywry.menu_proxy.runtime") as menu_runtime:
+            WindowProxy("x").popup_menu(menu, x=10.0, y=20.0)
+        menu_runtime.send_command.assert_called_once()
+
+    def test_popup_menu_with_dict_and_position(self, runtime_mock: MagicMock) -> None:
+        class FakeMenu:
+            id = "fake"
+
+        WindowProxy("x").popup_menu(FakeMenu(), x=5.0, y=10.0)
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert cmd["action"] == "menu_popup"
+        assert cmd["position"] == {"x": 5.0, "y": 10.0}
+
+    def test_popup_menu_no_position(self, runtime_mock: MagicMock) -> None:
+        class FakeMenu:
+            id = "fake"
+
+        WindowProxy("x").popup_menu(FakeMenu())
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert "position" not in cmd
+
+    def test_popup_menu_with_str(self, runtime_mock: MagicMock) -> None:
+        WindowProxy("x").popup_menu("menu-str")
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert cmd["menu_id"] == "menu-str"
+
+
+class TestTypeSerialization:
+    """Verify the serializer helpers used by WindowProxy."""
+
+    def test_serialize_logical_size(self) -> None:
+        result = serialize_size(LogicalSize(800.0, 600.0))
+        assert result["type"] == "Logical"
+        assert result["width"] == 800.0
+
+    def test_serialize_physical_size(self) -> None:
+        result = serialize_size(PhysicalSize(800, 600))
+        assert result["type"] == "Physical"
+
+    def test_serialize_logical_position(self) -> None:
+        result = serialize_position(LogicalPosition(10.0, 20.0))
+        assert result["type"] == "Logical"
+
+    def test_serialize_physical_position(self) -> None:
+        result = serialize_position(PhysicalPosition(10, 20))
+        assert result["type"] == "Physical"

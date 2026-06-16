@@ -255,8 +255,6 @@ def _detect_symbol_column(  # noqa: C901
     for col in columns:
         if col not in _SYMBOL_ALIASES:
             continue
-        if col in _ALL_OHLCV_ALIASES:
-            continue
         if hasattr(data, "__getitem__") and hasattr(data, "__len__"):
             try:
                 col_data = data[col]
