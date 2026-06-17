@@ -81,7 +81,7 @@ class _FakeTimer:
     without scheduling.  Used to drive the inner poll callbacks
     deterministically."""
 
-    instances: list[_FakeTimer] = []  # noqa: RUF012 — collected across tests
+    instances: list[_FakeTimer] = []
 
     def __init__(self, interval: float, fn: Any) -> None:
         self.interval = interval
@@ -1027,7 +1027,7 @@ class TestQuotePollCallback:
 
         adapter._get_quotes = mock_get_quotes  # type: ignore[method-assign]
         captured: list[Any] = []
-        adapter._on_quote = lambda qs: captured.extend(qs)
+        adapter._on_quote = captured.extend
 
         _FakeTimer.instances.clear()
         with patch("pywry.tvchart.udf.threading.Timer", _FakeTimer):

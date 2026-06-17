@@ -1389,7 +1389,7 @@ class TestFlattenMultiindexColumns:
                 clone.columns = FakeCols(self.columns)
                 return clone
 
-        result_data, groups = _flatten_multiindex_columns(FakeFrame())
+        _result_data, groups = _flatten_multiindex_columns(FakeFrame())
         # Each non-tuple column becomes its own single-child group with
         # leaf==group, which collapses to {"field": name} (line 747).
         assert groups is not None
@@ -1449,7 +1449,7 @@ class TestFlattenMultiindexRows:
         # or nlevels > 1.  Our FakeIndex has name='myidx' so is_default_index is False.
         # But our FakeIndex has no `names` attribute, so the function falls through
         # to the else on line 791.
-        data, names = _flatten_multiindex_rows(FakeFrame())
+        _data, names = _flatten_multiindex_rows(FakeFrame())
         # Default to [index.name] -> ["myidx"]
         assert names == ["myidx"]
 

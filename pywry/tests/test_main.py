@@ -74,7 +74,7 @@ def _ensure_main_module() -> Any:
     sys.stdout = fake_stdout
     sys.stderr = fake_stderr
     try:
-        import pywry.__main__ as main_mod  # noqa: F401
+        import pywry.__main__ as main_mod
     finally:
         sys.stdin = real_stdin
         sys.stdout = real_stdout

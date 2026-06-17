@@ -15,12 +15,11 @@ from typing import TYPE_CHECKING, Any
 # around a Pydantic + beartype + coverage interaction that breaks test
 # collection when both packages are involved (e.g. anything importing
 # mcp.types). Keep these imports above pytest.
-import pydantic.root_model  # noqa: F401
+import pydantic.root_model
 
-try:
-    import beartype.claw._clawstate  # noqa: F401
-except ImportError:
-    pass
+
+with contextlib.suppress(ImportError):
+    import beartype.claw._clawstate
 
 import pytest
 
@@ -590,7 +589,7 @@ REDIS_ACL_COMMANDS = [
 
 def _configure_testcontainers() -> None:
     """Configure testcontainers settings for the current platform."""
-    try:
+    with contextlib.suppress(ImportError):
         from testcontainers.core.config import testcontainers_config
 
         testcontainers_config.ryuk_disabled = True
@@ -598,8 +597,6 @@ def _configure_testcontainers() -> None:
         # Ensure images are always pulled (don't rely on local cache check)
         # This fixes issues on some CI environments
         os.environ.setdefault("TC_IMAGE_PULL_POLICY", "always")
-    except ImportError:
-        pass  # testcontainers not installed
 
 
 def _start_redis_container_with_fallback():
@@ -656,7 +653,7 @@ def redis_container() -> Generator[str, None, None]:
         return
 
     try:
-        import testcontainers.redis  # noqa: F401
+        import testcontainers.redis
     except ImportError:
         pytest.skip("testcontainers not installed (pip install testcontainers[redis])")
         return
@@ -694,7 +691,7 @@ def redis_container_with_acl() -> Generator[dict, None, None]:
     - users: Dict of user info (username, password, role)
     """
     try:
-        import testcontainers.redis  # noqa: F401
+        import testcontainers.redis
     except ImportError:
         pytest.skip("testcontainers not installed")
         return

@@ -734,7 +734,7 @@ class TestEmittingWidgetAlert:
         """alert() with None optionals does not include those keys (lines 71-75 guards)."""
         w = MockEmitter()
         w.alert("plain", title=None, duration=None, callback_event=None)
-        evt, data = w.get_last_event()
+        _evt, data = w.get_last_event()
         assert "title" not in data
         assert "duration" not in data
         assert "callback_event" not in data
@@ -841,13 +841,13 @@ class TestUpdateGridDataFrame:
         w = MockGridWidget()
         rows = [{"id": 1}, {"id": 2}]
         w.update_grid(data=rows)
-        evt, data = w.get_last_event()
+        _evt, data = w.get_last_event()
         assert data["data"] == rows
 
     def test_update_grid_with_grid_id(self) -> None:
         w = MockGridWidget()
         w.update_grid(data=[{"id": 1}], grid_id="gx")
-        evt, data = w.get_last_event()
+        _evt, data = w.get_last_event()
         assert data["gridId"] == "gx"
 
 
@@ -927,7 +927,7 @@ class TestChatStateMixin:
 
     def test_send_chat_message_full(self, chat_widget) -> None:
         chat_widget.send_chat_message("hi", thread_id="t1", message_id="m1", model="claude-opus")
-        evt, data = chat_widget.get_last_event()
+        _evt, data = chat_widget.get_last_event()
         assert data["text"] == "hi"
         assert data["threadId"] == "t1"
         assert data["messageId"] == "m1"
@@ -941,7 +941,7 @@ class TestChatStateMixin:
 
     def test_stream_chat_chunk_done_with_thread_id(self, chat_widget) -> None:
         chat_widget.stream_chat_chunk("end", "m2", done=True, thread_id="thr")
-        evt, data = chat_widget.get_last_event()
+        _evt, data = chat_widget.get_last_event()
         assert data["done"] is True
         assert data["threadId"] == "thr"
 
@@ -953,7 +953,7 @@ class TestChatStateMixin:
 
     def test_set_chat_typing_false_with_thread(self, chat_widget) -> None:
         chat_widget.set_chat_typing(typing=False, thread_id="t9")
-        evt, data = chat_widget.get_last_event()
+        _evt, data = chat_widget.get_last_event()
         assert data == {"typing": False, "threadId": "t9"}
 
     def test_switch_chat_thread(self, chat_widget) -> None:
@@ -977,7 +977,7 @@ class TestChatStateMixin:
 
     def test_clear_chat_with_thread(self, chat_widget) -> None:
         chat_widget.clear_chat(thread_id="t1")
-        evt, data = chat_widget.get_last_event()
+        _evt, data = chat_widget.get_last_event()
         assert data == {"threadId": "t1"}
 
     def test_register_chat_command_default_fields(self, chat_widget) -> None:
@@ -990,7 +990,7 @@ class TestChatStateMixin:
         chat_widget.register_chat_command(
             "save", description="Save chat", handler_event="chat:save"
         )
-        evt, data = chat_widget.get_last_event()
+        _evt, data = chat_widget.get_last_event()
         assert data["name"] == "save"
         assert data["description"] == "Save chat"
         assert data["handlerEvent"] == "chat:save"

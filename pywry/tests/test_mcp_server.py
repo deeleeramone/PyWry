@@ -452,7 +452,9 @@ class TestHasMcpFallback:
         import subprocess
         import sys
 
-        rcfile = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".coveragerc"))
+        from pathlib import Path
+
+        rcfile = str(Path(__file__).resolve().parent.parent / ".coveragerc")
         script = tmp_path / "check_fastmcp_fallback.py"
         script.write_text(
             f"import os\n"
@@ -479,7 +481,7 @@ class TestHasMcpFallback:
             capture_output=True,
             text=True,
             timeout=30,
-            cwd=os.path.dirname(rcfile),
+            cwd=str(Path(rcfile).parent),
             env=env,
         )
         assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"

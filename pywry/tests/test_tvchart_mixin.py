@@ -653,7 +653,7 @@ class TestNormalizeTVChartDataStatic:
         falls through to empty results (defensive)."""
 
         class _MiniDF:
-            columns: list[str] = ["time", "close"]  # noqa: RUF012
+            columns: list[str] = ["time", "close"]
 
             def to_dict(self, orient: str = "records") -> list[dict[str, Any]]:
                 return []

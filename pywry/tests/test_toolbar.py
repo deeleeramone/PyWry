@@ -5512,8 +5512,8 @@ class TestReservedNamespaceAllowedPatterns:
         """Events matching an ALLOWED_RESERVED_PATTERN bypass the reserved-namespace block."""
         from pywry.toolbar import (
             ALLOWED_RESERVED_PATTERNS,
-            Button,
             RESERVED_NAMESPACES,
+            Button,
         )
 
         # Find an event in the allowed patterns that uses a reserved namespace.

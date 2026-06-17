@@ -16,7 +16,6 @@ import pytest
 from pywry.app import PyWry
 from pywry.callbacks import get_registry
 from pywry.inline import _start_server, _state, show, stop_server
-
 from pywry.models import ThemeMode
 from pywry.toolbar import Button, Marquee, TickerItem, Toolbar
 
@@ -82,8 +81,6 @@ class TestMarqueeNativeWindowRendering:
         )
         toolbar = Toolbar(position="header", items=[marquee])
 
-        from tests.test_e2e import show_and_wait_ready
-
         label = show_and_wait_ready(app, "<div>Content Test</div>", toolbars=[toolbar])
 
         result = wait_for_result(
@@ -113,8 +110,6 @@ class TestMarqueeNativeWindowRendering:
             component_id="speed-test",
         )
         toolbar = Toolbar(position="header", items=[marquee])
-
-        from tests.test_e2e import show_and_wait_ready
 
         label = show_and_wait_ready(app, "<div>CSS Props Test</div>", toolbars=[toolbar])
 
@@ -148,8 +143,6 @@ class TestMarqueeNativeWindowRendering:
             component_id="vertical-ticker",
         )
         toolbar = Toolbar(position="right", items=[marquee])
-
-        from tests.test_e2e import show_and_wait_ready
 
         label = show_and_wait_ready(app, "<div>Vertical Test</div>", toolbars=[toolbar])
 
@@ -186,8 +179,6 @@ class TestMarqueeNativeWindowRendering:
         )
         toolbar = Toolbar(position="header", items=[marquee])
 
-        from tests.test_e2e import show_and_wait_ready
-
         label = show_and_wait_ready(app, "<div>Click Test</div>", toolbars=[toolbar])
         get_registry().register(label, "ticker:click", on_click)
 
@@ -220,8 +211,6 @@ class TestMarqueeNativeWindowRendering:
             component_id="ticker-items",
         )
         toolbar = Toolbar(position="header", items=[marquee])
-
-        from tests.test_e2e import show_and_wait_ready
 
         label = show_and_wait_ready(app, "<div>TickerItem Test</div>", toolbars=[toolbar])
 
@@ -271,8 +260,6 @@ class TestMarqueeNativeWindowRendering:
                 {"id": "updatable-ticker", "text": "Updated content!"},
             )
             update_received["done"] = True
-
-        from tests.test_e2e import show_and_wait_ready
 
         label = show_and_wait_ready(app, "<div>Update Test</div>", toolbars=[toolbar, toolbar2])
         get_registry().register(label, "update:trigger", on_update)

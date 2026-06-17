@@ -3542,7 +3542,7 @@ class TestGenerateTVChartHtml:
             async def background():
                 await asyncio.sleep(100)
 
-            asyncio.create_task(background())
+            _task = asyncio.create_task(background())
             # Return immediately so finally runs with pending tasks
 
         mock_server.serve = serve_with_tasks
@@ -3626,7 +3626,9 @@ class TestHasIPythonFallback:
         import os
         import subprocess
 
-        rcfile = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".coveragerc"))
+        from pathlib import Path
+
+        rcfile = str(Path(__file__).resolve().parent.parent / ".coveragerc")
         script = tmp_path / "check_ipython_fallback.py"
         script.write_text(
             f"import os\n"
@@ -3654,7 +3656,7 @@ class TestHasIPythonFallback:
             capture_output=True,
             text=True,
             timeout=30,
-            cwd=os.path.dirname(rcfile),
+            cwd=str(Path(rcfile).parent),
             env=env,
         )
         assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"

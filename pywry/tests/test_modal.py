@@ -778,7 +778,7 @@ class TestGetModalScript:
         assert "close" in script
 
     def test_missing_handlers_js_raises_runtime_error(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: "Path"
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """When modal-handlers.js is missing, _get_modal_handlers_js raises RuntimeError (line 450)."""
         from pywry import modal as modal_module

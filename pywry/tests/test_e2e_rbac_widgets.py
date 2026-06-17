@@ -22,7 +22,6 @@ import pytest
 
 from pywry.config import clear_settings
 from pywry.inline import _start_server, _state, stop_server
-
 from pywry.state._factory import clear_state_caches
 
 

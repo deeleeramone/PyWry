@@ -225,7 +225,7 @@ def _detect_ohlcv_column_types(data: Any) -> dict[str, str]:
     return {str(col): str(dtype) for col, dtype in data.dtypes.items()}
 
 
-def _detect_symbol_column(  # noqa: C901
+def _detect_symbol_column(
     columns: list[str],
     data: Any,
     symbol_col: str | None = None,

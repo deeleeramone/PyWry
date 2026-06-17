@@ -334,9 +334,11 @@ class TestRegisterCommandsAsyncWrappers:
         assert result["success"] is True
 
         # pywry_event error path
-        with patch("pywry.commands.handle_pywry_event", side_effect=RuntimeError("x")):
-            with pytest.raises(RuntimeError):
-                asyncio.run(captured[0](body))
+        with (
+            patch("pywry.commands.handle_pywry_event", side_effect=RuntimeError("x")),
+            pytest.raises(RuntimeError),
+        ):
+            asyncio.run(captured[0](body))
 
         # pywry_result
         rp = ResultPayload(data={"x": 1}, window_label="w")

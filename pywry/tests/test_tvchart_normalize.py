@@ -25,14 +25,14 @@ import pytest
 from pywry.tvchart.config import SeriesType
 from pywry.tvchart.models import TVChartData, TVChartSeriesData
 from pywry.tvchart.normalize import (
-    _ColumnProxy,
-    _ColumnsProxy,
-    _FakeDtype,
     _build_narrow_multi_series,
     _build_wide_multi_series,
+    _ColumnProxy,
+    _ColumnsProxy,
     _detect_ohlcv_column_types,
     _detect_symbol_column,
     _df_to_records,
+    _FakeDtype,
     _handle_multiindex_columns,
     _has_multiindex_columns,
     _is_wide_format,
@@ -428,7 +428,7 @@ class TestIsWideFormat:
 
     def test_keyerror_on_dtype_access_false(self, with_time: dict[str, str | None]) -> None:
         class BrokenDF:
-            dtypes: dict[str, Any] = {}  # noqa: RUF012
+            dtypes: dict[str, Any] = {}
 
             def __getitem__(self, _key: str) -> Any:
                 raise KeyError("nope")

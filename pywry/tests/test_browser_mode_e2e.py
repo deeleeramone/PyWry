@@ -46,7 +46,6 @@ from pywry.inline import (
     show_plotly,
     stop_server,
 )
-
 from pywry.models import WindowMode
 
 

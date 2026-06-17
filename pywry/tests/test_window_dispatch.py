@@ -34,9 +34,9 @@ from pywry._freeze import _setup_pytauri_standalone
 
 _setup_pytauri_standalone()
 
-import pytest  # noqa: E402
+import pytest
 
-from pywry.window_dispatch import (  # noqa: E402
+from pywry.window_dispatch import (
     APPEARANCE_METHODS,
     BEHAVIOR_METHODS,
     COOKIE_METHODS,

@@ -408,6 +408,7 @@ class TestHandlePluginPath:
     def test_returns_plugin_root(self, tmp_path, monkeypatch):
         # Mock pywry.__file__ and Path.exists to simulate plugin installed.
         import pywry
+
         from pywry.cli import handle_plugin_path
 
         # Build a fake plugin directory tree
@@ -430,6 +431,7 @@ class TestHandlePluginPath:
 
     def test_marketplace_flag_returns_marketplace_path(self, tmp_path, monkeypatch):
         import pywry
+
         from pywry.cli import handle_plugin_path
 
         fake_pkg = tmp_path / "pywry"
@@ -449,6 +451,7 @@ class TestHandlePluginPath:
 
     def test_check_missing_returns_error(self, tmp_path, monkeypatch):
         import pywry
+
         from pywry.cli import handle_plugin_path
 
         fake_pkg = tmp_path / "pywry"
@@ -502,7 +505,7 @@ class TestHandleMcp:
         def fake_import(name, *a, **k):
             # Relative import inside pywry.cli: `from .mcp import run_server`
             # passes name="mcp" (or "pywry.mcp" for absolute).
-            if name == "mcp" or name == "pywry.mcp":
+            if name in {"mcp", "pywry.mcp"}:
                 raise ImportError("no mcp")
             return real_import(name, *a, **k)
 
@@ -515,9 +518,11 @@ class TestHandleMcp:
             native=False,
         )
         try:
-            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-                with patch.object(builtins, "__import__", side_effect=fake_import):
-                    result = handle_mcp(args)
+            with (
+                patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+                patch.object(builtins, "__import__", side_effect=fake_import),
+            ):
+                result = handle_mcp(args)
             assert result == 1
             assert "MCP SDK" in mock_stderr.getvalue() or "mcp" in mock_stderr.getvalue().lower()
         finally:
@@ -689,9 +694,11 @@ class TestHandleInstallSkillsImportError:
             verbose=False,
         )
         try:
-            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-                with patch.object(builtins, "__import__", side_effect=fake_import):
-                    result = handle_install_skills(args)
+            with (
+                patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+                patch.object(builtins, "__import__", side_effect=fake_import),
+            ):
+                result = handle_install_skills(args)
             assert result == 1
             assert "MCP module" in mock_stderr.getvalue()
         finally:
@@ -751,9 +758,11 @@ class TestHandleInstallSkills:
         )
         with patch("pywry.mcp.install.install_skills") as mock_install:
             mock_install.return_value = {}
-            with patch("pywry.mcp.install.print_install_results"):
-                with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
-                    result = handle_install_skills(args)
+            with (
+                patch("pywry.mcp.install.print_install_results"),
+                patch("sys.stdout", new_callable=StringIO) as mock_stdout,
+            ):
+                result = handle_install_skills(args)
         assert result == 0
         assert "DRY RUN" in mock_stdout.getvalue()
 
@@ -770,9 +779,11 @@ class TestHandleInstallSkills:
             dry_run=False,
             verbose=False,
         )
-        with patch("pywry.mcp.install.install_skills", side_effect=ValueError("bad")):
-            with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-                result = handle_install_skills(args)
+        with (
+            patch("pywry.mcp.install.install_skills", side_effect=ValueError("bad")),
+            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+        ):
+            result = handle_install_skills(args)
         assert result == 1
         assert "Error" in mock_stderr.getvalue()
 
@@ -781,23 +792,29 @@ class TestMainEntryPointDispatch:
     """Cover the if/elif branches in main() for mcp/install-skills/plugin-path."""
 
     def test_mcp_command_dispatches(self):
-        with patch("pywry.cli.handle_mcp", return_value=0) as mock_handle:
-            with patch.object(sys, "argv", ["pywry", "mcp"]):
-                result = main()
+        with (
+            patch("pywry.cli.handle_mcp", return_value=0) as mock_handle,
+            patch.object(sys, "argv", ["pywry", "mcp"]),
+        ):
+            result = main()
         assert result == 0
         mock_handle.assert_called_once()
 
     def test_install_skills_command_dispatches(self):
-        with patch("pywry.cli.handle_install_skills", return_value=0) as mock_handle:
-            with patch.object(sys, "argv", ["pywry", "install-skills", "--list"]):
-                result = main()
+        with (
+            patch("pywry.cli.handle_install_skills", return_value=0) as mock_handle,
+            patch.object(sys, "argv", ["pywry", "install-skills", "--list"]),
+        ):
+            result = main()
         assert result == 0
         mock_handle.assert_called_once()
 
     def test_plugin_path_command_dispatches(self):
-        with patch("pywry.cli.handle_plugin_path", return_value=0) as mock_handle:
-            with patch.object(sys, "argv", ["pywry", "plugin-path"]):
-                result = main()
+        with (
+            patch("pywry.cli.handle_plugin_path", return_value=0) as mock_handle,
+            patch.object(sys, "argv", ["pywry", "plugin-path"]),
+        ):
+            result = main()
         assert result == 0
         mock_handle.assert_called_once()
 
@@ -808,9 +825,8 @@ class TestMainModuleEntry:
     def test_module_main(self):
         import runpy
 
-        with patch("pywry.cli.main", return_value=0):
-            with patch.object(sys, "argv", ["pywry"]):
-                try:
-                    runpy.run_module("pywry.cli", run_name="__main__")
-                except SystemExit as e:
-                    assert e.code == 0
+        with patch("pywry.cli.main", return_value=0), patch.object(sys, "argv", ["pywry"]):
+            try:
+                runpy.run_module("pywry.cli", run_name="__main__")
+            except SystemExit as e:
+                assert e.code == 0
