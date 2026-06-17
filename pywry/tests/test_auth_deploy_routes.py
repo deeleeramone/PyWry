@@ -621,8 +621,8 @@ class TestAuthStateStoreInternals:
 # ── /auth/login extra branches ──────────────────────────────────────
 
 
-class TestLoginExtraBranches:
-    """Cover extra branches in /auth/login (configured URI, force_https)."""
+class TestLoginRedirectConfiguration:
+    """Test /auth/login with configured URI and force_https."""
 
     def test_login_uses_configured_redirect_uri(self) -> None:
         """If auth_redirect_uri is configured, it overrides the request-derived URI."""

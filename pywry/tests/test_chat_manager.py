@@ -1652,7 +1652,7 @@ class TestChatManagerState:
         assert len(bound_manager.threads[tid]) == 0
 
 
-class TestRequestStateExtra:
+class TestSlashCommandAndSettingsEmission:
     """Test slash-command / settings-item / context-source emission paths."""
 
     def test_slash_command_models_emitted(self, widget):

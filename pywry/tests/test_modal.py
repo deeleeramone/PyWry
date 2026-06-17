@@ -274,7 +274,7 @@ class TestModalSizing:
             Modal(overlay_opacity=1.1)
 
 
-class TestModalExtraFields:
+class TestModalFieldValidation:
     """Tests that extra fields are rejected (model_config extra='forbid')."""
 
     def test_extra_field_rejected(self) -> None:

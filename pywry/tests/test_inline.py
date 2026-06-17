@@ -2830,7 +2830,7 @@ class TestLifespan:
 # =============================================================================
 
 
-class TestExtraCoverage:
+class TestGetAppConfiguration:
     def test_get_app_uses_configured_internal_token(self):
         clear_settings()
         os.environ["PYWRY_SERVER__INTERNAL_API_TOKEN"] = "preset-token"
@@ -3199,9 +3199,12 @@ class TestExtraCoverage:
                 client_secret="secret",
             )
 
-            # Mock all the auth dependencies to succeed
+            # Mock all the auth dependencies to succeed.
+            # Use a real APIRouter so FastAPI's include_router validation passes.
+            from fastapi import APIRouter
+
             mock_provider = MagicMock()
-            mock_router = MagicMock()
+            mock_router = APIRouter()
             mock_token_store = MagicMock()
             mock_session_store = MagicMock()
             mock_auth_middleware = MagicMock()
@@ -3617,47 +3620,33 @@ class TestHasIPythonFallback:
     """
 
     def test_module_loads_without_ipywidgets(self, tmp_path):
-        """Spawn a fresh interpreter with ipywidgets pre-blocked, then import pywry.inline.
-
-        Uses ``coverage.process_startup()`` so the fallback lines are
-        tracked by the parent's coverage tool when it runs ``coverage
-        combine``.
-        """
+        """Spawn a fresh interpreter with ipywidgets pre-blocked, then import pywry.inline."""
         import os
         import subprocess
 
-        from pathlib import Path
-
-        rcfile = str(Path(__file__).resolve().parent.parent / ".coveragerc")
         script = tmp_path / "check_ipython_fallback.py"
         script.write_text(
-            f"import os\n"
-            f"os.environ['COVERAGE_PROCESS_START'] = {rcfile!r}\n"
-            f"import coverage\n"
-            f"coverage.process_startup()\n"
-            f"import sys\n"
-            f"import builtins\n"
-            f"_real = builtins.__import__\n"
-            f"def _blocked(name, *a, **k):\n"
-            f"    if name == 'ipywidgets' or name.startswith('ipywidgets.'):\n"
-            f"        raise ImportError('blocked for test')\n"
-            f"    return _real(name, *a, **k)\n"
-            f"builtins.__import__ = _blocked\n"
-            f"sys.modules.pop('ipywidgets', None)\n"
-            f"import pywry.inline\n"
-            f"assert pywry.inline.HAS_IPYTHON is False\n"
-            f"assert pywry.inline.Output is None\n"
-            f"print('OK')\n"
+            "import sys\n"
+            "import builtins\n"
+            "_real = builtins.__import__\n"
+            "def _blocked(name, *a, **k):\n"
+            "    if name == 'ipywidgets' or name.startswith('ipywidgets.'):\n"
+            "        raise ImportError('blocked for test')\n"
+            "    return _real(name, *a, **k)\n"
+            "builtins.__import__ = _blocked\n"
+            "sys.modules.pop('ipywidgets', None)\n"
+            "import pywry.inline\n"
+            "assert pywry.inline.HAS_IPYTHON is False\n"
+            "assert pywry.inline.Output is None\n"
+            "print('OK')\n"
         )
-        env = {**os.environ, "COVERAGE_PROCESS_START": rcfile}
         result = subprocess.run(
             [sys.executable, str(script)],
             check=False,
             capture_output=True,
             text=True,
             timeout=30,
-            cwd=str(Path(rcfile).parent),
-            env=env,
+            env=os.environ,
         )
         assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
         assert "OK" in result.stdout

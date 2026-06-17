@@ -452,37 +452,28 @@ class TestHasMcpFallback:
         import subprocess
         import sys
 
-        from pathlib import Path
-
-        rcfile = str(Path(__file__).resolve().parent.parent / ".coveragerc")
         script = tmp_path / "check_fastmcp_fallback.py"
         script.write_text(
-            f"import os\n"
-            f"os.environ['COVERAGE_PROCESS_START'] = {rcfile!r}\n"
-            f"import coverage\n"
-            f"coverage.process_startup()\n"
-            f"import sys\n"
-            f"import builtins\n"
-            f"_real = builtins.__import__\n"
-            f"def _blocked(name, *a, **k):\n"
-            f"    if name == 'fastmcp' or name.startswith('fastmcp.'):\n"
-            f"        raise ImportError('blocked for test')\n"
-            f"    return _real(name, *a, **k)\n"
-            f"builtins.__import__ = _blocked\n"
-            f"sys.modules.pop('fastmcp', None)\n"
-            f"from pywry.mcp import server\n"
-            f"assert server.HAS_MCP is False\n"
-            f"print('OK')\n"
+            "import sys\n"
+            "import builtins\n"
+            "_real = builtins.__import__\n"
+            "def _blocked(name, *a, **k):\n"
+            "    if name == 'fastmcp' or name.startswith('fastmcp.'):\n"
+            "        raise ImportError('blocked for test')\n"
+            "    return _real(name, *a, **k)\n"
+            "builtins.__import__ = _blocked\n"
+            "sys.modules.pop('fastmcp', None)\n"
+            "from pywry.mcp import server\n"
+            "assert server.HAS_MCP is False\n"
+            "print('OK')\n"
         )
-        env = {**os.environ, "COVERAGE_PROCESS_START": rcfile}
         result = subprocess.run(
             [sys.executable, str(script)],
             check=False,
             capture_output=True,
             text=True,
             timeout=30,
-            cwd=str(Path(rcfile).parent),
-            env=env,
+            env=os.environ,
         )
         assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
         assert "OK" in result.stdout

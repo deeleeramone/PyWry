@@ -864,7 +864,7 @@ class TestToolbar:
         assert 'style="background: red;"' in html
 
 
-class TestToolbarExtraFieldsRejected:
+class TestToolbarFieldValidation:
     """Test that extra fields are rejected (typo protection)."""
 
     def test_button_extra_field_rejected(self) -> None:
