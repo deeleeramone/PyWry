@@ -422,9 +422,6 @@ def _time_range_presets(intervals: list[str] | None = None) -> tuple[list[Any], 
             if value in {"all", "ytd"} or (span_lookup[value] / finest_days) >= 3
         ]
 
-    if not preferred:
-        preferred = candidates[-3:]
-
     selected = next(
         (
             candidate
