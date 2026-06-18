@@ -468,3 +468,320 @@ class TestAllThemesAllModes:
         # Both should contain the theme name
         assert f"ag-theme-{theme}" in dark
         assert f"ag-theme-{theme}" in light
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fallback paths — exercised by patching ``Path.exists`` so the bundled files
+# look absent. ``lru_cache`` is cleared so each test sees the patched state.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+import pywry.assets as _assets
+
+
+def _no_files_exist(monkeypatch):
+    """Patch all bundled-file lookups so each ``Path.exists()`` returns False."""
+
+    def fake_exists(self):
+        return False
+
+    monkeypatch.setattr("pathlib.Path.exists", fake_exists)
+    monkeypatch.setattr("pathlib.Path.is_dir", lambda self: False)
+
+
+class TestPlotlyFallbacks:
+    def test_returns_empty_when_no_bundle(self, monkeypatch):
+        _assets.get_plotly_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_plotly_js() == ""
+        _assets.get_plotly_js.cache_clear()
+
+    def test_uncompressed_fallback(self, monkeypatch):
+        _assets.get_plotly_js.cache_clear()
+
+        def fake_exists(self):
+            return self.name == "plotly-3.3.1.js"
+
+        def fake_read_text(self, encoding="utf-8"):
+            return "PLOTLY_TEXT"
+
+        monkeypatch.setattr("pathlib.Path.exists", fake_exists)
+        monkeypatch.setattr("pathlib.Path.read_text", fake_read_text)
+        assert _assets.get_plotly_js() == "PLOTLY_TEXT"
+        _assets.get_plotly_js.cache_clear()
+
+    def test_min_gz_fallback(self, monkeypatch):
+        _assets.get_plotly_js.cache_clear()
+
+        def fake_exists(self):
+            return self.name == "plotly-3.3.1.min.js.gz"
+
+        def fake_read_bytes(self):
+            import gzip
+
+            return gzip.compress(b"MIN_PLOTLY")
+
+        monkeypatch.setattr("pathlib.Path.exists", fake_exists)
+        monkeypatch.setattr("pathlib.Path.read_bytes", fake_read_bytes)
+        assert _assets.get_plotly_js() == "MIN_PLOTLY"
+        _assets.get_plotly_js.cache_clear()
+
+    def test_min_uncompressed_fallback(self, monkeypatch):
+        _assets.get_plotly_js.cache_clear()
+
+        def fake_exists(self):
+            return self.name == "plotly-3.3.1.min.js"
+
+        monkeypatch.setattr("pathlib.Path.exists", fake_exists)
+        monkeypatch.setattr("pathlib.Path.read_text", lambda self, encoding="utf-8": "MIN_PLOTLY")
+        assert _assets.get_plotly_js() == "MIN_PLOTLY"
+        _assets.get_plotly_js.cache_clear()
+
+
+class TestPlotlyTemplatesFallback:
+    def test_no_file_returns_empty(self, monkeypatch):
+        _assets.get_plotly_templates_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_plotly_templates_js() == ""
+        _assets.get_plotly_templates_js.cache_clear()
+
+
+class TestAggridFallbacks:
+    def test_no_files_returns_empty(self, monkeypatch):
+        _assets.get_aggrid_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_aggrid_js() == ""
+        _assets.get_aggrid_js.cache_clear()
+
+    def test_uncompressed_aggrid_js(self, monkeypatch):
+        _assets.get_aggrid_js.cache_clear()
+
+        def fake_exists(self):
+            return self.name == "ag-grid-community-35.0.0.min.js"
+
+        monkeypatch.setattr("pathlib.Path.exists", fake_exists)
+        monkeypatch.setattr("pathlib.Path.read_text", lambda self, encoding="utf-8": "AGGRID")
+        assert _assets.get_aggrid_js() == "AGGRID"
+        _assets.get_aggrid_js.cache_clear()
+
+    def test_aggrid_css_uncompressed(self, monkeypatch):
+        _assets.get_aggrid_css.cache_clear()
+
+        def fake_exists(self):
+            return self.name == "ag-theme-quartz-dark-35.0.0.css"
+
+        monkeypatch.setattr("pathlib.Path.exists", fake_exists)
+        monkeypatch.setattr("pathlib.Path.read_text", lambda self, encoding="utf-8": "QUARTZ_CSS")
+        assert _assets.get_aggrid_css("quartz", ThemeMode.DARK) == "QUARTZ_CSS"
+        _assets.get_aggrid_css.cache_clear()
+
+    def test_aggrid_css_no_file_returns_empty(self, monkeypatch):
+        _assets.get_aggrid_css.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_aggrid_css("alpine", ThemeMode.LIGHT) == ""
+        _assets.get_aggrid_css.cache_clear()
+
+
+class TestPyWryCssFallbacks:
+    def test_no_files_returns_empty(self, monkeypatch):
+        from pywry.assets import _get_pywry_css_bundled, get_pywry_css
+
+        get_pywry_css.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert get_pywry_css() == ""
+        assert _get_pywry_css_bundled() == ""
+        get_pywry_css.cache_clear()
+
+    def test_only_pywry_css_present(self, monkeypatch):
+        from pywry.assets import _get_pywry_css_bundled, get_pywry_css
+
+        get_pywry_css.cache_clear()
+
+        def fake_exists(self):
+            return self.name == "pywry.css"
+
+        monkeypatch.setattr("pathlib.Path.exists", fake_exists)
+        monkeypatch.setattr("pathlib.Path.read_text", lambda self, encoding="utf-8": "PYWRY_CSS")
+        assert get_pywry_css() == "PYWRY_CSS"
+        assert _get_pywry_css_bundled() == "PYWRY_CSS"
+        get_pywry_css.cache_clear()
+
+
+class TestScrollbarFallback:
+    def test_no_file(self, monkeypatch):
+        _assets.get_scrollbar_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_scrollbar_js() == ""
+        _assets.get_scrollbar_js.cache_clear()
+
+
+class TestClearCssCache:
+    def test_calls_cache_clear(self):
+        from pywry.assets import clear_css_cache, get_pywry_css
+
+        get_pywry_css.cache_clear()
+        clear_css_cache()
+
+
+class TestPyWryIconFallback:
+    def test_no_icon_returns_empty(self, monkeypatch):
+        _assets.get_pywry_icon.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_pywry_icon() == b""
+        _assets.get_pywry_icon.cache_clear()
+
+    def test_get_icon_path_returns_none(self, monkeypatch):
+        _no_files_exist(monkeypatch)
+        assert _assets.get_pywry_icon_path() is None
+
+
+class TestDefaultsJsFallbacks:
+    def test_plotly_defaults_no_file(self, monkeypatch):
+        _assets.get_plotly_defaults_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_plotly_defaults_js() == ""
+        _assets.get_plotly_defaults_js.cache_clear()
+
+    def test_aggrid_defaults_no_file(self, monkeypatch):
+        _assets.get_aggrid_defaults_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_aggrid_defaults_js() == ""
+        _assets.get_aggrid_defaults_js.cache_clear()
+
+
+class TestToastFallbacks:
+    def test_toast_js_no_file(self, monkeypatch):
+        _assets.get_toast_notifications_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_toast_notifications_js() == ""
+        _assets.get_toast_notifications_js.cache_clear()
+
+    def test_toast_css_no_file(self, monkeypatch):
+        _assets.get_toast_css.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert _assets.get_toast_css() == ""
+        _assets.get_toast_css.cache_clear()
+
+
+class TestModalAndChat:
+    def test_modal_handlers_no_file(self, monkeypatch):
+        from pywry.assets import get_modal_handlers_js
+
+        get_modal_handlers_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert get_modal_handlers_js() == ""
+        get_modal_handlers_js.cache_clear()
+
+    def test_chat_handlers_no_file(self, monkeypatch):
+        from pywry.assets import get_chat_handlers_js
+
+        get_chat_handlers_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert get_chat_handlers_js() == ""
+        get_chat_handlers_js.cache_clear()
+
+    def test_chat_css_no_file(self, monkeypatch):
+        from pywry.assets import get_chat_css
+
+        get_chat_css.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert get_chat_css() == ""
+        get_chat_css.cache_clear()
+
+    def test_modal_handlers_loads(self):
+        from pywry.assets import get_modal_handlers_js
+
+        result = get_modal_handlers_js()
+        assert isinstance(result, str)
+
+    def test_chat_handlers_loads(self):
+        from pywry.assets import get_chat_handlers_js
+
+        result = get_chat_handlers_js()
+        assert isinstance(result, str)
+
+    def test_chat_css_loads(self):
+        from pywry.assets import get_chat_css
+
+        result = get_chat_css()
+        assert isinstance(result, str)
+
+
+class TestTVChartFallbacks:
+    def test_no_files_returns_empty(self, monkeypatch):
+        from pywry.assets import get_tvchart_js
+
+        get_tvchart_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert get_tvchart_js() == ""
+        get_tvchart_js.cache_clear()
+
+    def test_uncompressed_fallback(self, monkeypatch):
+        from pywry.assets import get_tvchart_js
+
+        get_tvchart_js.cache_clear()
+
+        def fake_exists(self):
+            return self.name == "lightweight-charts-5.1.0.standalone.production.js"
+
+        monkeypatch.setattr("pathlib.Path.exists", fake_exists)
+        monkeypatch.setattr("pathlib.Path.read_text", lambda self, encoding="utf-8": "TV")
+        assert get_tvchart_js() == "TV"
+        get_tvchart_js.cache_clear()
+
+    def test_defaults_no_file_or_dir(self, monkeypatch):
+        from pywry.assets import get_tvchart_defaults_js
+
+        get_tvchart_defaults_js.cache_clear()
+        _no_files_exist(monkeypatch)
+        assert get_tvchart_defaults_js() == ""
+        get_tvchart_defaults_js.cache_clear()
+
+    def test_defaults_loads_monolithic(self, monkeypatch):
+        from pywry.assets import get_tvchart_defaults_js
+
+        get_tvchart_defaults_js.cache_clear()
+
+        def fake_exists(self):
+            return self.name == "tvchart-defaults.js"
+
+        monkeypatch.setattr("pathlib.Path.exists", fake_exists)
+        monkeypatch.setattr("pathlib.Path.read_text", lambda self, encoding="utf-8": "TVD")
+        assert get_tvchart_defaults_js() == "TVD"
+        get_tvchart_defaults_js.cache_clear()
+
+
+class TestClearCache:
+    def test_clears_all_caches(self):
+        from pywry.assets import clear_cache
+
+        clear_cache()
+
+
+class TestExistingFileLoaders:
+    def test_plotly_defaults_loads(self):
+        from pywry.assets import get_plotly_defaults_js
+
+        get_plotly_defaults_js.cache_clear()
+        result = get_plotly_defaults_js()
+        assert isinstance(result, str)
+
+    def test_aggrid_defaults_loads(self):
+        from pywry.assets import get_aggrid_defaults_js
+
+        get_aggrid_defaults_js.cache_clear()
+        result = get_aggrid_defaults_js()
+        assert isinstance(result, str)
+
+    def test_tvchart_defaults_loads(self):
+        from pywry.assets import get_tvchart_defaults_js
+
+        get_tvchart_defaults_js.cache_clear()
+        result = get_tvchart_defaults_js()
+        assert isinstance(result, str)
+
+    def test_pywry_css_with_both_files_present(self):
+        from pywry.assets import _get_pywry_css_bundled
+
+        result = _get_pywry_css_bundled()
+        assert "\n" in result

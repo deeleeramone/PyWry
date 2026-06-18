@@ -80,16 +80,11 @@ def _get_default_theme() -> ThemeLiteral:
     return "system" if is_headless() else "dark"
 
 
-try:
-    import uvicorn
+import uvicorn
 
-    from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-    from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import HTMLResponse, Response
-
-    HAS_FASTAPI = True
-except ImportError:
-    HAS_FASTAPI = False
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, Response
 
 try:
     from ipywidgets import Output
@@ -1688,8 +1683,6 @@ class InlineWidget(GridStateMixin, PlotlyStateMixin, TVChartStateMixin, ToolbarS
         token: str | None = None,
     ) -> None:
         super().__init__()
-        if not HAS_FASTAPI:
-            raise ImportError("fastapi and uvicorn required: pip install fastapi uvicorn")
 
         # For browser_only mode, we don't need IPython (just the server + browser)
         self._browser_only = browser_only
@@ -3337,8 +3330,6 @@ def generate_dataframe_html(
     }
     if grid_options:
         grid_config.update(grid_options)
-        if "rowData" not in grid_config:
-            grid_config["rowData"] = row_data
 
     assets = _build_aggrid_assets(aggrid_theme, theme_mode)
     # For system theme, default to dark AG Grid theme (JS will switch)
@@ -3899,17 +3890,20 @@ def generate_tvchart_html(
         modal_html, modal_scripts = wrap_content_with_modals("", modals)
         modal_block = f"{modal_html}{modal_scripts}"
 
+    bridge_js = _get_pywry_bridge_js(widget_id, token)
+
     return f"""<!DOCTYPE html>
 <html class="{theme}">
 <head>
     <meta charset="utf-8">
     <title>{title}</title>
-    {tvchart_script}
-    {tvchart_defaults_script}
     {pywry_style}
     {toast_style}
     {inline_style}
     {scrollbar_script}
+    {bridge_js}
+    {tvchart_script}
+    {tvchart_defaults_script}
     <style>
         html, body {{
             margin: 0;
@@ -3954,7 +3948,6 @@ def generate_tvchart_html(
         {widget_content}
     </div>
     {modal_block}
-    {_get_pywry_bridge_js(widget_id, token)}
     {chart_init_script}
 </body>
 </html>"""

@@ -6,8 +6,11 @@ import contextlib
 import threading
 import time
 
+from unittest.mock import MagicMock
 from urllib.parse import urlencode
 from urllib.request import urlopen
+
+import pytest
 
 from pywry.auth.callback_server import OAuthCallbackServer
 
@@ -201,3 +204,72 @@ class TestOAuthCallbackServer:
             assert "'none'" in csp or "style-src" in csp
         finally:
             server.stop()
+
+    def test_unknown_path_returns_404(self) -> None:
+        """Non-/, non-/callback paths return 404."""
+        from urllib.error import HTTPError
+
+        server = OAuthCallbackServer()
+        server.start()
+
+        try:
+            url = f"http://127.0.0.1:{server._actual_port}/unknown-path"
+            with pytest.raises(HTTPError) as exc_info:
+                urlopen(url, timeout=5)
+            assert exc_info.value.code == 404
+        finally:
+            server.stop()
+
+    def test_second_callback_returns_success_html(self) -> None:
+        """A second callback after the first one fired returns the success page."""
+        server = OAuthCallbackServer()
+        server.start()
+
+        try:
+            # Pre-set the result_event manually so that the handler's
+            # _shutdown_server() is NOT triggered by our request.
+            # This way, the server stays alive for the second branch.
+            server._result = {
+                "code": "preset",
+                "state": "preset_state",
+                "error": None,
+                "error_description": None,
+            }
+            server._result_event.set()
+
+            # Now send a callback request — since result_event is set, the
+            # handler takes the "already captured" branch.
+            params = urlencode({"code": "ignored", "state": "ignored"})
+            resp = urlopen(f"{server.redirect_uri}?{params}", timeout=5)
+            assert resp.status == 200
+            content = resp.read().decode("utf-8")
+            assert "Authentication Complete" in content
+
+            # Result is unchanged — second callback does not overwrite first
+            assert server._result is not None
+            assert server._result["code"] == "preset"
+        finally:
+            server.stop()
+
+    def test_stop_joins_thread(self) -> None:
+        """stop() joins the running thread instead of leaking it."""
+        server = OAuthCallbackServer()
+        # Build a placeholder server thread that is alive but not necessarily
+        # a real HTTP server, so we can exercise the join branch reliably.
+        stop_event = threading.Event()
+
+        def _busy_loop() -> None:
+            stop_event.wait(timeout=10)
+
+        server._thread = threading.Thread(target=_busy_loop, daemon=True)
+        server._thread.start()
+
+        # Mock the _server so server.shutdown() unblocks _busy_loop
+        fake_server = MagicMock()
+        fake_server.shutdown = stop_event.set
+        server._server = fake_server  # type: ignore[assignment]
+
+        assert server._thread.is_alive()
+        server.stop()
+        assert server._thread is None
+        assert server._server is None
