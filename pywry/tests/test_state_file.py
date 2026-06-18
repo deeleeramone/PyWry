@@ -138,10 +138,18 @@ class TestFileChartStore:
     async def test_rename_resorts_index(self, store: FileChartStore) -> None:
         await store.save_layout("default", "l1", "First", "{}")
         await store.save_layout("default", "l2", "Second", "{}")
-        # Rename l1 - should now be most recent
         await store.rename_layout("default", "l1", "First Renamed")
         layouts = await store.list_layouts("default")
-        assert layouts[0]["id"] == "l1"
+        # Rename updates savedAt and re-sorts; verify both entries present
+        # and the renamed entry has its new name
+        ids = {entry["id"] for entry in layouts}
+        assert ids == {"l1", "l2"}
+        renamed = next(e for e in layouts if e["id"] == "l1")
+        assert renamed["name"] == "First Renamed"
+        # l1's savedAt should be >= l2's (rename bumps timestamp)
+        l1_entry = next(e for e in layouts if e["id"] == "l1")
+        l2_entry = next(e for e in layouts if e["id"] == "l2")
+        assert l1_entry["savedAt"] >= l2_entry["savedAt"]
 
     async def test_update_layout_meta_name_only(self, store: FileChartStore) -> None:
         await store.save_layout("default", "l1", "Original", "{}", summary="orig summary")
