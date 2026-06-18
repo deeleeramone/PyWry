@@ -784,3 +784,178 @@ def _make_tray_proxy(tray_id: str, mock_runtime: MagicMock) -> Any:
     proxy = TrayProxy(tray_id)
     mock_runtime.reset_mock()
     return proxy
+
+
+# ── MenuProxy and TrayProxy remaining branches ──────────────────────────
+
+# Note: callback registry cleanup is handled by the autouse cleanup_runtime
+# fixture in conftest.py — no per-class fixture needed.
+
+
+@patch("pywry.menu_proxy.runtime")
+class TestMenuProxyBranches:
+    """Cover MenuProxy branches not exercised above."""
+
+    def test_register_handlers_no_handlers(self, runtime_mock: MagicMock) -> None:
+        """register_handlers with no handlers is a no-op."""
+        from pywry.menu_proxy import MenuProxy
+
+        proxy = MenuProxy("m1")  # No handlers
+        proxy.register_handlers("x")
+        # No callbacks registered
+        assert "x" not in proxy._registered_labels
+
+    def test_prepend(self, runtime_mock: MagicMock) -> None:
+        from pywry.menu_proxy import MenuProxy
+
+        proxy = MenuProxy("m1")
+        item = MenuItemConfig(id="i", text="I", handler=_noop)
+        proxy.prepend(item)
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert cmd["operation"] == "prepend"
+
+    def test_insert(self, runtime_mock: MagicMock) -> None:
+        from pywry.menu_proxy import MenuProxy
+
+        proxy = MenuProxy("m1")
+        item = MenuItemConfig(id="i", text="I", handler=_noop)
+        proxy.insert(item, position=2)
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert cmd["operation"] == "insert"
+        assert cmd["position"] == 2
+
+    def test_set_accelerator(self, runtime_mock: MagicMock) -> None:
+        from pywry.menu_proxy import MenuProxy
+
+        proxy = MenuProxy("m1")
+        proxy.set_accelerator("save", "CmdOrCtrl+S")
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert cmd["operation"] == "set_accelerator"
+        assert cmd["accelerator"] == "CmdOrCtrl+S"
+
+    def test_set_icon_with_bytes(self, runtime_mock: MagicMock) -> None:
+        from pywry.menu_proxy import MenuProxy
+
+        proxy = MenuProxy("m1")
+        proxy.set_icon("doc", b"\x00\x01\x02", width=16, height=16)
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert cmd["operation"] == "set_icon"
+        assert cmd["icon"] is not None
+
+    def test_set_icon_none(self, runtime_mock: MagicMock) -> None:
+        from pywry.menu_proxy import MenuProxy
+
+        proxy = MenuProxy("m1")
+        proxy.set_icon("doc", None)
+        cmd = runtime_mock.send_command.call_args[0][0]
+        assert cmd["icon"] is None
+
+
+@patch("pywry.tray_proxy.runtime")
+class TestTrayProxyBranches:
+    """Cover TrayProxy branches not exercised above."""
+
+    def test_create_starts_runtime_when_not_running(self, runtime_mock: MagicMock) -> None:
+        """create() starts subprocess when not running."""
+        from pywry.tray_proxy import TrayProxy
+
+        runtime_mock.is_running.return_value = False
+        runtime_mock.start.return_value = True
+        runtime_mock.wait_ready.return_value = True
+        runtime_mock.send_command_with_response.return_value = {"success": True}
+
+        tray = TrayProxy.create(tray_id="t1", tooltip="T")
+        runtime_mock.start.assert_called_once()
+        assert tray.id == "t1"
+
+    def test_create_runtime_start_failure(self, runtime_mock: MagicMock) -> None:
+        """create() raises when subprocess won't start."""
+        from pywry.tray_proxy import TrayProxy
+
+        runtime_mock.is_running.return_value = False
+        runtime_mock.start.return_value = False
+        with pytest.raises(RuntimeError, match="Failed to start"):
+            TrayProxy.create(tray_id="t1")
+
+    def test_create_runtime_not_ready(self, runtime_mock: MagicMock) -> None:
+        """create() raises when subprocess never becomes ready."""
+        from pywry.tray_proxy import TrayProxy
+
+        runtime_mock.is_running.return_value = True
+        runtime_mock.wait_ready.return_value = False
+        with pytest.raises(RuntimeError, match="did not become ready"):
+            TrayProxy.create(tray_id="t1")
+
+    def test_create_with_title_and_icon(self, runtime_mock: MagicMock) -> None:
+        from pywry.tray_proxy import TrayProxy
+
+        runtime_mock.is_running.return_value = True
+        runtime_mock.wait_ready.return_value = True
+        runtime_mock.send_command_with_response.return_value = {"success": True}
+
+        TrayProxy.create(
+            tray_id="t1",
+            title="App",
+            icon=b"\x00\x01",
+            icon_width=8,
+            icon_height=8,
+        )
+        cmd = runtime_mock.send_command_with_response.call_args[0][0]
+        assert cmd["title"] == "App"
+        assert "icon" in cmd
+        assert cmd["icon_width"] == 8
+
+    def test_from_config_with_event_handlers(self, runtime_mock: MagicMock) -> None:
+        """from_config registers on_click / on_double_click / on_right_click handlers."""
+        from pywry.callbacks import get_registry
+        from pywry.tray_proxy import TrayProxy
+
+        runtime_mock.is_running.return_value = True
+        runtime_mock.wait_ready.return_value = True
+        runtime_mock.send_command_with_response.return_value = {"success": True}
+
+        click = MagicMock()
+        dbl = MagicMock()
+        right = MagicMock()
+        config = TrayIconConfig(
+            id="t-events",
+            on_click=click,
+            on_double_click=dbl,
+            on_right_click=right,
+        )
+        TrayProxy.from_config(config)
+
+        registry = get_registry()
+        assert registry.dispatch("__tray__t-events", "tray:click", {"button": "Left"})
+        assert registry.dispatch("__tray__t-events", "tray:double-click", {"button": "Left"})
+        assert registry.dispatch("__tray__t-events", "tray:right-click", {"button": "Right"})
+
+    def test_remove_all(self, runtime_mock: MagicMock) -> None:
+        """remove_all removes every tracked tray."""
+        from pywry.tray_proxy import TrayProxy
+
+        runtime_mock.is_running.return_value = True
+        runtime_mock.wait_ready.return_value = True
+        runtime_mock.send_command_with_response.return_value = {"success": True}
+
+        # Create a few trays
+        TrayProxy.create(tray_id="ra1")
+        TrayProxy.create(tray_id="ra2")
+        assert "ra1" in TrayProxy._all_proxies
+        assert "ra2" in TrayProxy._all_proxies
+
+        TrayProxy.remove_all()
+        assert TrayProxy._all_proxies == {}
+
+    def test_remove_all_swallows_errors(self, runtime_mock: MagicMock) -> None:
+        """remove_all suppresses exceptions from individual proxies."""
+        from pywry.tray_proxy import TrayProxy
+
+        # Inject a fake proxy that raises on remove
+        bad = TrayProxy("bad")
+        TrayProxy._all_proxies["bad"] = bad
+
+        with patch.object(bad, "remove", side_effect=ValueError("boom")):
+            # Should not raise
+            TrayProxy.remove_all()
+        assert TrayProxy._all_proxies == {}

@@ -616,3 +616,111 @@ def create_dataframe_widget(
     widget.on("grid:export-csv", _make_grid_export_handler(widget))
 
     return widget
+
+
+def create_tvchart_widget(
+    chart_html: str,
+    config_payload: str,
+    chart_id: str,
+    widget_id: str,
+    title: str = "Chart",
+    theme: Literal["dark", "light", "system"] = "dark",
+    width: str = "100%",
+    height: int = 500,
+    toolbars: list[Any] | None = None,
+    modals: list[Any] | None = None,
+    inline_css: str = "",
+    port: int | None = None,
+    force_iframe: bool = False,
+) -> Any:
+    """Create a TVChart widget using the best available backend.
+
+    Automatically selects:
+    1. PyWryTVChartWidget (anywidget) if available - best performance
+    2. InlineWidget (FastAPI) as fallback - broader compatibility
+
+    Parameters
+    ----------
+    chart_html : str
+        Chart container ``<div>`` HTML.
+    config_payload : str
+        JSON string with chart configuration.
+    chart_id : str
+        DOM id of the chart container element.
+    widget_id : str
+        Unique widget identifier.
+    title : str
+        Widget title.
+    theme : str
+        'dark', 'light', or 'system'.
+    width : str
+        Widget width (CSS).
+    height : int
+        Widget height in pixels.
+    toolbars : list, optional
+        Toolbar configurations.
+    modals : list, optional
+        Modal configurations.
+    inline_css : str
+        Extra CSS to inject.
+    port : int, optional
+        Server port (only for InlineWidget fallback).
+    force_iframe : bool, optional
+        If True, force use of InlineWidget instead of anywidget.
+        Required for BROWSER mode which needs open_in_browser() method.
+        Default: False.
+
+    Returns
+    -------
+    BaseWidget
+        Widget instance implementing BaseWidget protocol.
+    """
+    from . import inline
+    from .modal import wrap_content_with_modals
+    from .runtime import is_headless
+    from .widget import HAS_ANYWIDGET
+
+    use_anywidget = HAS_ANYWIDGET and not force_iframe and not is_headless()
+    if use_anywidget:
+        from .widget import PyWryTVChartWidget
+
+        content = _wrap_content_with_toolbars(chart_html, toolbars)
+        if modals:
+            modal_html, modal_scripts = wrap_content_with_modals("", modals)
+            content = f"{content}{modal_html}{modal_scripts}"
+
+        return PyWryTVChartWidget(
+            content=content,
+            chart_config=config_payload,
+            theme=theme,
+            width=width,
+            height=f"{height}px" if isinstance(height, int) else height,
+            chart_id=chart_id,
+        )
+
+    # Fallback to InlineWidget (FastAPI server)
+    widget_token = inline._generate_widget_token(widget_id)
+
+    html = inline.generate_tvchart_html(
+        chart_html=chart_html,
+        config_payload=config_payload,
+        chart_id=chart_id,
+        widget_id=widget_id,
+        title=title,
+        theme=theme,
+        toolbars=toolbars,
+        modals=modals,
+        inline_css=inline_css,
+        full_document=True,
+        token=widget_token,
+    )
+
+    return inline.InlineWidget(
+        html=html,
+        width=width,
+        height=height,
+        port=port or 8765,
+        widget_id=widget_id,
+        browser_only=force_iframe,
+        token=widget_token,
+    )
