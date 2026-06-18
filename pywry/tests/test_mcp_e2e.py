@@ -23,9 +23,9 @@ import pytest
 
 # Check if MCP + fastmcp are available
 try:
-    import mcp  # noqa: F401
+    import mcp
 
-    from fastmcp import Client  # noqa: F401
+    from fastmcp import Client
 
     HAS_MCP = True
 except ImportError:

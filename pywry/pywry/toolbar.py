@@ -1113,15 +1113,12 @@ class SecretInput(ToolbarItem):
                 f'onclick="{toggle_script}">{_EYE_ICON_SVG}</button>'
             )
 
-        if buttons_html:
-            input_wrapper = (
-                f'<span class="pywry-secret-wrapper">'
-                f"{input_html}"
-                f'<span class="pywry-secret-actions">{buttons_html}</span>'
-                f"</span>"
-            )
-        else:
-            input_wrapper = input_html
+        input_wrapper = (
+            f'<span class="pywry-secret-wrapper">'
+            f"{input_html}"
+            f'<span class="pywry-secret-actions">{buttons_html}</span>'
+            f"</span>"
+        )
 
         if self.label:
             return (

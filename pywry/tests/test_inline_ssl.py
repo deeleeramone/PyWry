@@ -205,7 +205,7 @@ def test_client_verification_settings_localhost_default(ssl_certs):
 
 
 @pytest.mark.asyncio
-async def test_e2e_wss_callback_flow(  # noqa: PLR0915
+async def test_e2e_wss_callback_flow(
     ssl_certs,
 ):
     """Test true E2E flow: HTTPS init -> WSS connect -> Client logic triggers callback."""
@@ -694,7 +694,7 @@ def test_encode_decode_roundtrip_ssl():
 
 
 @pytest.mark.asyncio
-async def test_e2e_wss_custom_secret_handler_reveal(  # noqa: PLR0915
+async def test_e2e_wss_custom_secret_handler_reveal(
     ssl_certs,
 ):
     """Custom secret handler should work correctly over WSS."""
@@ -832,7 +832,7 @@ async def test_e2e_wss_custom_secret_handler_reveal(  # noqa: PLR0915
 
 
 @pytest.mark.asyncio
-async def test_e2e_wss_custom_handler_with_context(  # noqa: PLR0915
+async def test_e2e_wss_custom_handler_with_context(
     ssl_certs,
 ):
     """Custom handler receives full context data over WSS."""
