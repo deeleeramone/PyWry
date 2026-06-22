@@ -38,13 +38,20 @@ def _install_fake_magentic(monkeypatch, *, chat_chunks=None):
     class _AsyncStrIter:
         def __init__(self, items):
             self._items = items
+            self._gen = None
 
         def __aiter__(self):
             async def _gen():
                 for x in self._items:
                     yield x
 
-            return _gen()
+            if self._gen is None:
+                self._gen = _gen()
+            return self._gen
+
+        async def aclose(self):
+            if self._gen:
+                await self._gen.aclose()
 
     class _FakeChat:
         def __init__(self, **_kwargs):

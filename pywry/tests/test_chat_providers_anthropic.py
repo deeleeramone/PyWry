@@ -31,11 +31,14 @@ class _FakeAnthStream:
 
     def __init__(self, chunks: list[str]):
         self._chunks = chunks
+        self._gen = None
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
+        if self._gen:
+            await self._gen.aclose()
         return False
 
     @property
@@ -44,7 +47,9 @@ class _FakeAnthStream:
             for c in self._chunks:
                 yield c
 
-        return _gen()
+        if self._gen is None:
+            self._gen = _gen()
+        return self._gen
 
 
 def _make_anthropic_client(chunks: list[str]) -> MagicMock:

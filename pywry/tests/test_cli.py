@@ -818,6 +818,15 @@ class TestMainEntryPointDispatch:
         assert result == 0
         mock_handle.assert_called_once()
 
+    def test_no_command_prints_help(self):
+        with (
+            patch("argparse.ArgumentParser.print_help") as mock_help,
+            patch.object(sys, "argv", ["pywry"]),
+        ):
+            result = main()
+        assert result == 0
+        mock_help.assert_called_once()
+
 
 class TestMainModuleEntry:
     """Cover the `if __name__ == "__main__"` guard."""

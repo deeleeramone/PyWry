@@ -43,6 +43,7 @@ class _FakeOaiResponse:
 
     def __init__(self, chunks: list[Any]):
         self._chunks = chunks
+        self._gen = None
         self.response = MagicMock()
         self.response.aclose = AsyncMock()
 
@@ -51,7 +52,9 @@ class _FakeOaiResponse:
             for c in self._chunks:
                 yield c
 
-        return _gen()
+        if self._gen is None:
+            self._gen = _gen()
+        return self._gen
 
 
 def _make_openai_client(chunks: list[Any]) -> MagicMock:
