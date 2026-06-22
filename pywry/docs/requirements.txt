@@ -5,7 +5,7 @@ mkdocs-autorefs>=1.4.4
 
 # Auto-generated API documentation from source
 mkdocstrings[python]>=1.0.4
-griffe>=2.0.2
+griffe>=2.1.0
 
 # For cross-references
 mkdocs-gen-files>=0.6.1
