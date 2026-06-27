@@ -77,8 +77,13 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # rule is inappropriate under ``tests/`` specifically.
 "tests/**/*.py" = [
     "S101",     # `assert` is the primary test mechanism
+    "S102",     # `exec` used intentionally in subprocess / module-reload tests
+    "S603",     # subprocess calls are intentional in fallback tests
     "D",        # pydocstyle rules do not apply to test fixtures / cases
+    "F401",     # unused imports common in test scaffolding (`from x import y` for side effects)
+    "F841",     # unused variables from `with patch(...) as mock_x:` — side-effect-only mocks
     "PLR2004",  # magic numbers are expected in assertions
+    "PLR0915",  # long test functions are acceptable
     "S104",     # binding to 0.0.0.0 in integration tests (testcontainers, etc.)
     "S105",     # hard-coded "password" / secret fixtures
     "S106",     # hard-coded passwords in test kwargs (e.g. OAuth fixtures)
@@ -86,7 +91,27 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "S310",     # unverified urllib calls against fixture URLs
     "ARG",      # unused fixture / mock arguments are idiomatic in pytest
     "ASYNC240", # deliberately blocking calls in async tests (e.g. assertions)
+    "ASYNC251", # time.sleep in async test functions is intentional
     "PERF401",  # readability beats micro-optimisation in tests
+    "E741",     # ambiguous variable names (`l` for label in lambdas)
+    "N802",     # test names may contain camelCase from source code identifiers
+    "N805",     # first arg not `self` in test helper classes
+    "N806",     # variable names in tests may be uppercase for clarity
+    "B017",     # blind exception catches acceptable in validation tests
+    "B018",     # useless expressions acceptable in test assertions
+    "C901",     # complex test helper functions are acceptable
+    "RUF006",   # un-stored asyncio.create_task in test scaffolding
+    "RUF012",   # mutable class defaults in test helper dataclasses
+    "RUF043",   # unescaped regex metacharacters in match= patterns
+    "TRY301",   # raise in try block is intentional in test helpers
+    "PTH100",   # os.path usage acceptable in tests
+    "PTH118",   # os.path.join acceptable in tests
+    "PTH120",   # os.path.dirname acceptable in tests
+    "PLW2901",  # loop variable overwrite acceptable in test data processing
+    "A002",     # shadowing builtins acceptable in test fixture args
+    "F811",     # redefinition acceptable for test class name reuse
+    "SIM117",   # nested with statements acceptable in complex test setup
+    "E402",     # late imports acceptable after pytest.importorskip / guards
 ]
 
 "__init__.py" = [

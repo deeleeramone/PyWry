@@ -137,10 +137,13 @@ class AnthropicProvider(ChatProvider):
             temperature=session.get("temperature", 0.7),
             max_tokens=session.get("max_tokens", 4096),
         ) as stream:
-            async for text in stream.text_stream:
-                if cancel_event and cancel_event.is_set():
-                    raise GenerationCancelledError()
-                yield AgentMessageUpdate(text=text)
+            try:
+                async for text in stream.text_stream:
+                    if cancel_event and cancel_event.is_set():
+                        raise GenerationCancelledError()
+                    yield AgentMessageUpdate(text=text)
+            finally:
+                await stream.text_stream.aclose()
 
     async def cancel(self, session_id: str) -> None:
         """Cancel is handled cooperatively via ``cancel_event``.

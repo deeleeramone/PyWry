@@ -27,7 +27,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 if sys.version_info >= (3, 11):
     import tomllib
-else:
+else:  # pragma: no cover - python 3.10 fallback; cannot be exercised on 3.11+
     try:
         import tomli as tomllib
     except ImportError:
