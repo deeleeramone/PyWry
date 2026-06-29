@@ -19,6 +19,8 @@ from typing import Any
 
 import pytest
 
+from pydantic import ValidationError
+
 from pywry.grid import (
     ColDef,
     ColGroupDef,
@@ -1160,3 +1162,612 @@ class TestRowPinningJavaScript:
     def test_unpin_action_has_guard_clauses(self, aggrid_defaults_js: str):
         """Unpin action has guard clause for missing context/data."""
         assert "if (!ctx || !ctx.data) return" in aggrid_defaults_js
+
+
+# =============================================================================
+# ColDef Validation Tests
+# =============================================================================
+
+
+class TestInvalidGridModels:
+    """Tests for Grid model validation."""
+
+    def test_coldef_field_can_be_none(self) -> None:
+        """None field is allowed (field is optional)."""
+        col = ColDef(field=None)
+        assert col.field is None
+
+    def test_coldef_empty_field_allowed(self) -> None:
+        """Empty string field is allowed (user's responsibility)."""
+        col = ColDef(field="")
+        assert col.field == ""
+
+    def test_coldef_with_valid_field(self) -> None:
+        """Valid field name works correctly."""
+        col = ColDef(field="myColumn")
+        assert col.field == "myColumn"
+
+    def test_coldef_negative_width_raises(self) -> None:
+        """Negative width raises validation error."""
+        with pytest.raises(ValidationError):
+            ColDef(field="test", width=-100)
+
+    def test_coldef_negative_min_width_raises(self) -> None:
+        """Negative min_width raises validation error."""
+        with pytest.raises(ValidationError):
+            ColDef(field="test", min_width=-50)
+
+    def test_coldef_negative_max_width_raises(self) -> None:
+        """Negative max_width raises validation error."""
+        with pytest.raises(ValidationError):
+            ColDef(field="test", max_width=-50)
+
+    def test_coldef_zero_width_allowed(self) -> None:
+        """Zero width is allowed (just not visible)."""
+        col = ColDef(field="test", width=0)
+        assert col.width == 0
+
+
+# =============================================================================
+# _serialize_value: pandas, datetime, numpy paths
+# =============================================================================
+
+
+class TestSerializeValue:
+    """Tests for the _serialize_value helper (lines 75-76, 80-83, 91-96, 104-107)."""
+
+    def test_pandas_isna_returns_none(self) -> None:
+        """pandas NaN/NaT values are serialized as None."""
+        import numpy as np
+
+        from pywry.grid import _serialize_value
+
+        assert _serialize_value(np.nan) is None
+
+    def test_pandas_nat_returns_none(self) -> None:
+        """pandas NaT is serialized as None."""
+        import pandas as pd
+
+        from pywry.grid import _serialize_value
+
+        assert _serialize_value(pd.NaT) is None
+
+    def test_isna_with_unhashable_object_falls_through(self) -> None:
+        """pd.isna() that raises is caught (line 75-76)."""
+        from pywry.grid import _serialize_value
+
+        # Lists raise ValueError ("The truth value of an array..." / "Lengths must match")
+        # in pd.isna, which the try/except in _serialize_value swallows.
+        result = _serialize_value([1, 2, 3])
+        assert result == [1, 2, 3]
+
+    def test_pandas_timedelta_with_days(self) -> None:
+        """pandas.Timedelta with days renders as 'Nd HH:MM:SS' (lines 80-82)."""
+        import pandas as pd
+
+        from pywry.grid import _serialize_value
+
+        td = pd.Timedelta(days=2, hours=5, minutes=30, seconds=10)
+        assert _serialize_value(td) == "2d 05:30:10"
+
+    def test_pandas_timedelta_no_days(self) -> None:
+        """pandas.Timedelta without days renders as 'HH:MM:SS' (line 83)."""
+        import pandas as pd
+
+        from pywry.grid import _serialize_value
+
+        td = pd.Timedelta(hours=3, minutes=15, seconds=5)
+        assert _serialize_value(td) == "03:15:05"
+
+    def test_datetime_timedelta_with_days(self) -> None:
+        """datetime.timedelta with days renders correctly (lines 91-95)."""
+        import datetime
+
+        from pywry.grid import _serialize_value
+
+        td = datetime.timedelta(days=1, hours=4, minutes=15, seconds=20)
+        # `value.days` is truthy, so 'Nd HH:MM:SS' branch is taken.
+        assert _serialize_value(td) == "1d 04:15:20"
+
+    def test_datetime_timedelta_no_days(self) -> None:
+        """datetime.timedelta without days renders as 'HH:MM:SS' (line 96)."""
+        import datetime
+
+        from pywry.grid import _serialize_value
+
+        td = datetime.timedelta(hours=2, minutes=20, seconds=5)
+        assert _serialize_value(td) == "02:20:05"
+
+    def test_numpy_scalar_uses_item(self) -> None:
+        """numpy scalar types are converted via .item()."""
+        import numpy as np
+
+        from pywry.grid import _serialize_value
+
+        result = _serialize_value(np.int64(42))
+        assert result == 42
+        assert isinstance(result, int)
+
+    def test_item_failure_returns_value(self) -> None:
+        """When .item() raises, the original value is returned (lines 104-107)."""
+        from pywry.grid import _serialize_value
+
+        class WeirdScalar:
+            def item(self):
+                raise ValueError("nope")
+
+        w = WeirdScalar()
+        assert _serialize_value(w) is w
+
+    def test_datetime_uses_isoformat(self) -> None:
+        """datetime objects use .isoformat()."""
+        import datetime
+
+        from pywry.grid import _serialize_value
+
+        dt = datetime.datetime(2024, 6, 15, 10, 30, 0)
+        assert _serialize_value(dt) == "2024-06-15T10:30:00"
+
+
+# =============================================================================
+# GridOptions row_selection coercion
+# =============================================================================
+
+
+class TestGridOptionsRowSelectionCoercion:
+    """Tests for the _coerce_row_selection field validator (lines 485, 490)."""
+
+    def test_row_selection_with_rowselection_instance(self) -> None:
+        """A RowSelection instance is coerced to its dict form (line 485)."""
+        rs = RowSelection(mode="multiRow", check_boxes=True)
+        opts = GridOptions(row_selection=rs)
+        # Should be a dict after coercion.
+        assert isinstance(opts.row_selection, dict)
+        assert opts.row_selection["mode"] == "multiRow"
+        assert opts.row_selection.get("checkboxes") is True
+
+    def test_coerce_row_selection_unknown_type_passes_through(self) -> None:
+        """Unknown types fall through to the final cast (line 490), exercised at the classmethod level."""
+        # We exercise the validator directly because pydantic's outer type check
+        # rejects unknown types — but the inner _coerce_row_selection still runs
+        # in mode='before' and must return the value untouched.
+        result = GridOptions._coerce_row_selection(("foo",))
+        assert result == ("foo",)
+
+
+# =============================================================================
+# _detect_column_types: timedelta64
+# =============================================================================
+
+
+class TestDetectColumnTypesTimedelta:
+    """timedelta64 dtype gets 'text' cell data type (line 667)."""
+
+    def test_timedelta_column_is_text(self) -> None:
+        import pandas as pd
+
+        df = pd.DataFrame({"diff": pd.to_timedelta(["1 days", "2 days", "3 days"])})
+        types = _detect_column_types(df)
+        assert types["diff"] == "text"
+
+
+# =============================================================================
+# _flatten_multiindex_columns / _flatten_multiindex_rows edge cases
+# =============================================================================
+
+
+class TestFlattenMultiindexColumns:
+    """Tests for paths inside _flatten_multiindex_columns (lines 711, 726-728, 747)."""
+
+    def test_no_columns_attribute_returns_input(self) -> None:
+        """Data without .columns falls through (line 711 - first short-circuit)."""
+        from pywry.grid import _flatten_multiindex_columns
+
+        data = [{"a": 1}]
+        result_data, groups = _flatten_multiindex_columns(data)
+        assert result_data is data
+        assert groups is None
+
+    def test_non_tuple_column_treated_as_flat(self) -> None:
+        """A column that is not a tuple uses flat-name/group/leaf=self (lines 726-728).
+
+        We construct a custom container that exposes .columns with .nlevels > 1
+        but iterates as plain strings, so we enter the loop and hit the else branch.
+        """
+        from pywry.grid import _flatten_multiindex_columns
+
+        class FakeCols(list):
+            nlevels = 2
+
+        class FakeFrame:
+            def __init__(self) -> None:
+                self.columns = FakeCols(["a", "b"])
+
+            def copy(self):
+                # Return a shallow copy so the function can mutate .columns.
+                clone = FakeFrame()
+                clone.columns = FakeCols(self.columns)
+                return clone
+
+        _result_data, groups = _flatten_multiindex_columns(FakeFrame())
+        # Each non-tuple column becomes its own single-child group with
+        # leaf==group, which collapses to {"field": name} (line 747).
+        assert groups is not None
+        assert {"field": "a"} in groups
+        assert {"field": "b"} in groups
+
+    def test_single_child_group_collapses_to_field_only(self) -> None:
+        """A group with one child whose headerName matches the group name collapses (line 747)."""
+        import pandas as pd
+
+        from pywry.grid import _flatten_multiindex_columns
+
+        # MultiIndex where one group (Z) has a single child whose leaf-name
+        # equals the group name 'Z' — flat_name='Z_Z', leaf='Z', group='Z'.
+        cols = pd.MultiIndex.from_tuples([("Z", "Z"), ("W", "a"), ("W", "b")])
+        df = pd.DataFrame([[1, 2, 3]], columns=cols)
+        _, groups = _flatten_multiindex_columns(df)
+        assert groups is not None
+        # Z's single child collapses to {"field": "Z_Z"}.
+        single = next(g for g in groups if g.get("field") == "Z_Z")
+        assert single == {"field": "Z_Z"}
+
+
+class TestFlattenMultiindexRows:
+    """Tests for _flatten_multiindex_rows edge cases (lines 771, 791)."""
+
+    def test_data_without_index_attribute_returns_empty(self) -> None:
+        """Data without .index returns ([], []) early (line 771)."""
+        from pywry.grid import _flatten_multiindex_rows
+
+        data = [{"a": 1}]
+        result_data, idx_names = _flatten_multiindex_rows(data)
+        assert result_data is data
+        assert idx_names == []
+
+    def test_index_without_names_uses_single_name_fallback(self) -> None:
+        """When index lacks .names, fallback to [index.name] (line 791).
+
+        Achieved with a custom object exposing .index without .names.
+        """
+        from pywry.grid import _flatten_multiindex_rows
+
+        class FakeIndex:
+            name = "myidx"
+            nlevels = 2  # > 1 to escape the is_default_index check
+
+            def __iter__(self):
+                yield from []
+
+        class FakeFrame:
+            index = FakeIndex()
+
+            def reset_index(self):
+                return self
+
+        # The is_default_index check needs at least one of: name not None, names existing,
+        # or nlevels > 1.  Our FakeIndex has name='myidx' so is_default_index is False.
+        # But our FakeIndex has no `names` attribute, so the function falls through
+        # to the else on line 791.
+        _data, names = _flatten_multiindex_rows(FakeFrame())
+        # Default to [index.name] -> ["myidx"]
+        assert names == ["myidx"]
+
+
+# =============================================================================
+# normalize_data edge cases
+# =============================================================================
+
+
+class TestNormalizeDataEdgeCases:
+    """Tests for normalize_data fallback/error branches (lines 871-877)."""
+
+    def test_non_list_non_dict_iterable_fallback(self) -> None:
+        """Non-list/non-dict iterable goes through the else branch (lines 871-873)."""
+        # A tuple of dicts is not isinstance(data, list) but is iterable.
+        data = ({"a": 1}, {"a": 2})
+        result = normalize_data(data)
+        assert result.total_rows == 2
+        assert result.columns == ["a"]
+        assert result.row_data == [{"a": 1}, {"a": 2}]
+
+    def test_invalid_data_returns_empty_grid(self) -> None:
+        """Data that raises during normalization yields empty rows (lines 874-877)."""
+
+        class BadIterator:
+            # Walks like a duck up to a point, then fails.
+            def __iter__(self):
+                raise ValueError("kaboom")
+
+            # Not a DataFrame (no columns), not a dict, but list(...) will fail.
+
+        result = normalize_data(BadIterator())
+        assert result.total_rows == 0
+        assert result.row_data == []
+        assert result.columns == []
+
+
+# =============================================================================
+# _infer_column_types_from_values edge cases
+# =============================================================================
+
+
+class TestInferColumnTypesFromValues:
+    """Tests for _infer_column_types_from_values branches (lines 918, 927, 933, 942)."""
+
+    def test_empty_rows_returns_empty(self) -> None:
+        """Empty row_data returns empty (line 918)."""
+        from pywry.grid import _infer_column_types_from_values
+
+        assert _infer_column_types_from_values([], ["a"]) == {}
+
+    def test_all_none_in_column_skips(self) -> None:
+        """Column with only None values is skipped (line 927)."""
+        from pywry.grid import _infer_column_types_from_values
+
+        rows = [{"a": None}, {"a": None}]
+        result = _infer_column_types_from_values(rows, ["a"])
+        assert "a" not in result
+
+    def test_bool_first_value_marks_boolean(self) -> None:
+        """A bool first value marks column as boolean (line 933)."""
+        from pywry.grid import _infer_column_types_from_values
+
+        rows = [{"flag": True}, {"flag": False}]
+        result = _infer_column_types_from_values(rows, ["flag"])
+        assert result["flag"] == "boolean"
+
+    def test_string_with_leading_zero_marks_text(self) -> None:
+        """Strings with leading zero get 'text' type (line 942)."""
+        from pywry.grid import _infer_column_types_from_values
+
+        rows = [{"code": "007"}, {"code": "0123"}]
+        result = _infer_column_types_from_values(rows, ["code"])
+        assert result["code"] == "text"
+
+
+# =============================================================================
+# _build_number_col_def: temporal patterns
+# =============================================================================
+
+
+class TestBuildNumberColDefTemporal:
+    """Temporal-named number columns get cellDataType=False (line 986)."""
+
+    def test_year_column_gets_cellDataType_false(self) -> None:
+        from pywry.grid import _build_number_col_def
+
+        col_def: dict[str, Any] = {"field": "year"}
+        _build_number_col_def(col_def, "number")
+        assert col_def["cellDataType"] is False
+
+    def test_date_column_gets_cellDataType_false(self) -> None:
+        from pywry.grid import _build_number_col_def
+
+        col_def: dict[str, Any] = {"field": "report_date"}
+        _build_number_col_def(col_def, "number")
+        assert col_def["cellDataType"] is False
+
+    def test_non_temporal_number_unchanged(self) -> None:
+        from pywry.grid import _build_number_col_def
+
+        col_def: dict[str, Any] = {"field": "price"}
+        _build_number_col_def(col_def, "number")
+        # No cellDataType key added for non-temporal fields.
+        assert "cellDataType" not in col_def
+
+
+# =============================================================================
+# build_column_defs: user-supplied defs path
+# =============================================================================
+
+
+class TestBuildColumnDefsUserSupplied:
+    """User column_defs + enable_cell_span + index_columns adds spanRows (line 1035)."""
+
+    def test_user_coldef_in_index_gets_spanrows_when_cellspan(self) -> None:
+        result = build_column_defs(
+            columns=["region", "value"],
+            column_defs=[ColDef(field="region"), ColDef(field="value")],
+            index_columns=["region"],
+            enable_cell_span=True,
+        )
+        region = next(c for c in result if c["field"] == "region")
+        value = next(c for c in result if c["field"] == "value")
+        assert region.get("spanRows") is True
+        # Non-index columns are untouched.
+        assert "spanRows" not in value
+
+    def test_user_dict_in_index_gets_spanrows(self) -> None:
+        result = build_column_defs(
+            columns=["region", "value"],
+            column_defs=[{"field": "region"}, {"field": "value"}],
+            index_columns=["region"],
+            enable_cell_span=True,
+        )
+        region = next(c for c in result if c["field"] == "region")
+        assert region.get("spanRows") is True
+
+    def test_user_coldef_no_cellspan_does_not_add_spanrows(self) -> None:
+        result = build_column_defs(
+            columns=["region"],
+            column_defs=[ColDef(field="region")],
+            index_columns=["region"],
+            enable_cell_span=False,
+        )
+        region = next(c for c in result if c["field"] == "region")
+        assert "spanRows" not in region
+
+
+# =============================================================================
+# build_column_defs: index columns with type hints
+# =============================================================================
+
+
+class TestBuildColumnDefsIndexTypes:
+    """Index columns with detected types get cellDataType + filterParams (1056-1058)."""
+
+    def test_datetime_index_gets_filter_params(self) -> None:
+        result = build_column_defs(
+            columns=["date", "val"],
+            index_columns=["date"],
+            column_types={"date": "dateTimeString"},
+        )
+        date_col = next(c for c in result if c["field"] == "date")
+        assert date_col["cellDataType"] == "dateTimeString"
+        assert date_col["filterParams"] == {"includeBlanksInEquals": True}
+
+    def test_number_index_temporal_pattern(self) -> None:
+        result = build_column_defs(
+            columns=["year", "val"],
+            index_columns=["year"],
+            column_types={"year": "number"},
+        )
+        year_col = next(c for c in result if c["field"] == "year")
+        assert year_col["cellDataType"] is False  # temporal -> False
+
+
+# =============================================================================
+# build_column_defs: column groups with types
+# =============================================================================
+
+
+class TestBuildColumnDefsGroupsWithTypes:
+    """Column groups with child types attach cellDataType (1070-1073)."""
+
+    def test_group_child_with_type(self) -> None:
+        groups = [
+            {
+                "headerName": "Sales",
+                "children": [
+                    {"field": "Sales_2024", "headerName": "2024"},
+                    {"field": "Sales_2025", "headerName": "2025"},
+                ],
+            }
+        ]
+        result = build_column_defs(
+            columns=["Sales_2024", "Sales_2025"],
+            column_groups=groups,
+            column_types={"Sales_2024": "number"},
+        )
+        sales_group = next(g for g in result if g.get("headerName") == "Sales")
+        c24 = next(c for c in sales_group["children"] if c["field"] == "Sales_2024")
+        c25 = next(c for c in sales_group["children"] if c["field"] == "Sales_2025")
+        assert c24["cellDataType"] == "number"
+        # 2025 had no type -> unchanged
+        assert "cellDataType" not in c25
+        assert sales_group["marryChildren"] is True
+
+    def test_group_single_field_with_type(self) -> None:
+        """Single-field (collapsed) group entries with types add cellDataType (1087-1089)."""
+        groups = [{"field": "amount"}]
+        result = build_column_defs(
+            columns=["amount"],
+            column_groups=groups,
+            column_types={"amount": "number"},
+        )
+        amount = result[0]
+        # "amount" is not temporal -> cellDataType="number" should be set.
+        assert amount["field"] == "amount"
+        assert amount["cellDataType"] == "number"
+
+
+# =============================================================================
+# build_grid_config: truncation & dataset-size paths
+# =============================================================================
+
+
+class TestBuildGridConfigDatasetSize:
+    """Tests for MAX_SAFE_ROWS / SERVER_SIDE_THRESHOLD branches (1214-1219, 1221-1225)."""
+
+    def test_truncation_at_max_safe_rows(self, monkeypatch) -> None:
+        """Datasets above MAX_SAFE_ROWS are truncated and recorded (lines 1214-1219)."""
+        from pywry import grid as grid_module
+
+        # Use a tiny threshold so we don't actually generate 100k rows.
+        monkeypatch.setattr(grid_module, "MAX_SAFE_ROWS", 5)
+        monkeypatch.setattr(grid_module, "SERVER_SIDE_THRESHOLD", 1)
+        rows = [{"id": i} for i in range(8)]
+        config = grid_module.build_grid_config(rows)
+        assert config.context.total_rows == 8
+        # 8 - 5 = 3 truncated rows
+        assert config.context.truncated_rows == 3
+        # row_data passed to AG Grid is truncated.
+        assert len(config.options.row_data) == 5
+
+    def test_server_side_threshold_warning_path(self, monkeypatch) -> None:
+        """Datasets above SERVER_SIDE_THRESHOLD (but below MAX_SAFE_ROWS) hit the debug path."""
+        from pywry import grid as grid_module
+
+        monkeypatch.setattr(grid_module, "MAX_SAFE_ROWS", 1000)
+        monkeypatch.setattr(grid_module, "SERVER_SIDE_THRESHOLD", 3)
+        rows = [{"id": i} for i in range(5)]
+        config = grid_module.build_grid_config(rows)
+        # Above threshold (3) but below max (1000) -> no truncation.
+        assert config.context.total_rows == 5
+        assert config.context.truncated_rows == 0
+        assert len(config.options.row_data) == 5
+
+
+class TestBuildGridConfigRowSelection:
+    """Tests for row_selection handling (lines 1237-1238, 1246)."""
+
+    def test_row_selection_as_rowselection_instance(self) -> None:
+        """A RowSelection instance is coerced into a dict via to_dict (line 1236-1237)."""
+        rs = RowSelection(mode="singleRow", check_boxes=False)
+        config = build_grid_config([{"a": 1}], row_selection=rs)
+        assert isinstance(config.options.row_selection, dict)
+        assert config.options.row_selection["mode"] == "singleRow"
+
+    def test_row_selection_as_dict_is_passed_through(self) -> None:
+        """A dict is passed through (line 1237-1238)."""
+        config = build_grid_config(
+            [{"a": 1}], row_selection={"mode": "multiRow", "checkboxes": True}
+        )
+        assert config.options.row_selection == {"mode": "multiRow", "checkboxes": True}
+
+    def test_grid_options_snake_case_row_selection_picked_up(self) -> None:
+        """A snake_case row_selection inside grid_options is consumed (line 1246)."""
+        config = build_grid_config(
+            [{"a": 1}],
+            row_selection=False,  # explicit False so grid_options wins
+            grid_options={"row_selection": {"mode": "singleRow"}},
+        )
+        # Should preserve the grid_options value (popped via the snake_case alias path).
+        assert config.options.row_selection == {"mode": "singleRow"}
+
+
+# =============================================================================
+# build_grid_html
+# =============================================================================
+
+
+class TestBuildGridHtml:
+    """Tests for build_grid_html (lines 1325-1337)."""
+
+    def test_clientside_html_does_not_include_pywry_block(self) -> None:
+        from pywry.grid import build_grid_html
+
+        config = build_grid_config([{"a": 1}])  # clientSide by default
+        html = build_grid_html(config)
+        assert '<div id="myGrid"' in html
+        assert "agGrid" in html
+        # No _pywry IPC block for clientSide.
+        assert "_pywry" not in html
+
+    def test_infinite_model_html_embeds_pywry_metadata(self) -> None:
+        """Non-clientSide row model adds _pywry metadata block (lines 1328-1333)."""
+        from pywry.grid import build_grid_html
+
+        config = build_grid_config(
+            [{"a": i} for i in range(3)],
+            row_model_type="infinite",
+            cache_block_size=50,
+        )
+        html = build_grid_html(config)
+        # The _pywry IPC block must reference the grid id and block size.
+        assert "_pywry" in html
+        assert config.context.grid_id in html
+        assert "blockSize" in html
+        # Theme class flows into the wrapper div.
+        assert config.context.theme_class in html

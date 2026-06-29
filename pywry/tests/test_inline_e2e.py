@@ -22,7 +22,6 @@ except ImportError:
 
 from pywry.config import clear_settings, get_settings
 from pywry.inline import (
-    HAS_FASTAPI,
     InlineWidget,
     _start_server,
     _state,
@@ -35,10 +34,6 @@ from pywry.notebook import (
     should_use_inline_rendering,
 )
 from pywry.state._factory import clear_state_caches
-
-
-# Skip all tests if FastAPI not installed
-pytestmark = pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
 
 
 def _clear_deploy_env_vars():
