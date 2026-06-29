@@ -33,11 +33,16 @@ jobs:
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Install dependencies
+        shell: bash
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[notebook,auth,mcp,acp,deepagent,openai,anthropic,magentic]"
-          pip install ruff ty pytauri-wheel plotly pandas cryptography
+          uv export --frozen --all-extras --group dev --format requirements-txt --no-hashes --output-file "$RUNNER_TEMP/ci-dev-requirements.txt"
+          pip install -r "$RUNNER_TEMP/ci-dev-requirements.txt"
+          pip install -e .
 
       - name: Run Ruff linter
         run: ruff check pywry/ tests/
@@ -138,6 +143,9 @@ jobs:
           allow-prereleases: true
           cache: 'pip'
           cache-dependency-path: pywry/pyproject.toml
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Set up Rust (Linux only)
         if: runner.os == 'Linux'
@@ -268,9 +276,13 @@ jobs:
           python -c "from cryptography.hazmat.bindings._rust import openssl; print('cryptography OK')"
 
       - name: Install dependencies
+        shell: bash
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]" pytest-xdist
+          uv export --frozen --all-extras --group dev --format requirements-txt --no-hashes --output-file "$RUNNER_TEMP/ci-dev-requirements.txt"
+          pip install -r "$RUNNER_TEMP/ci-dev-requirements.txt"
+          pip install -e .
+          pip install pytest-xdist
 
       - name: Verify Docker (Linux)
         if: runner.os == 'Linux'
