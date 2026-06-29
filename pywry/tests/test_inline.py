@@ -338,10 +338,12 @@ class TestServerStateDeployMode:
     def test_get_widget_html_deploy_mode(self):
         store = MagicMock()
         store.get_html = AsyncMock(return_value="<p>x</p>")
+
         def mock_run_async(coro):
-            if hasattr(coro, 'close'):
+            if hasattr(coro, "close"):
                 coro.close()
             return "<p>x</p>"
+
         with (
             patch("pywry.state.is_deploy_mode", return_value=True),
             patch.object(_state, "get_widget_store", return_value=store),
@@ -384,10 +386,12 @@ class TestServerStateDeployMode:
     def test_update_widget_html_deploy_mode(self):
         store = MagicMock()
         store.update_html = AsyncMock()
+
         def mock_run_async(coro):
-            if hasattr(coro, 'close'):
+            if hasattr(coro, "close"):
                 coro.close()
             return None
+
         with (
             patch("pywry.state.is_deploy_mode", return_value=True),
             patch.object(_state, "get_widget_store", return_value=store),
