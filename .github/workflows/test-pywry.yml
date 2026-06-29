@@ -126,12 +126,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-test') }}
-      # ``deepagents`` (pulled in by ``.[dev]`` → ``features``) hard-
-      # requires Python >=3.11 — 3.10 can't resolve the dev extra.
-      # ``sqlcipher3`` is a source build against the SQLCipher C
-      # library installed in the ``Build SQLCipher`` step below, so
-      # any Python ABI works (no binary-wheel coverage gaps).
-      matrix: ${{ fromJSON(github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-test') ? needs.gen-matrix.outputs.pr-matrix : needs.gen-matrix.outputs.full-matrix) }}
+      matrix: ${{ fromJSON((github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-test') && needs.gen-matrix.outputs.pr-matrix) || needs.gen-matrix.outputs.full-matrix) }}
 
     steps:
       - uses: actions/checkout@v5
