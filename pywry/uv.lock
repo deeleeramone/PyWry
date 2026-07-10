@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -3263,7 +3263,6 @@ dev = [
     { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "plotly" },
     { name = "pyinstaller" },
-    { name = "pytauri-wheel" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-timeout" },
@@ -3434,7 +3433,6 @@ requires-dist = [
     { name = "pyinstaller", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "pyinstaller", marker = "extra == 'freeze'", specifier = ">=6.0" },
     { name = "pytauri", specifier = ">=0.8.0" },
-    { name = "pytauri-wheel", marker = "extra == 'dev'", specifier = ">=0.8.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "pytest-timeout", marker = "extra == 'dev'", specifier = ">=2.0.0" },
