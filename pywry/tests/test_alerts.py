@@ -1015,13 +1015,6 @@ class TestNativeWindowAlertE2E:
 # =============================================================================
 
 
-try:
-    from pywry.inline import HAS_FASTAPI
-except ImportError:
-    HAS_FASTAPI = False
-
-
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
 class TestInlineAlertE2E:
     """E2E tests for alerts in inline/notebook rendering."""
 

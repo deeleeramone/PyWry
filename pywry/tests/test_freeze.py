@@ -260,3 +260,41 @@ class TestPyInstallerHook:
         hook_path = Path(get_hook_dirs()[0]) / "hook-pywry.py"
         source = hook_path.read_text(encoding="utf-8")
         assert "importlib_metadata" in source
+
+
+class TestSetupPytauriStandaloneFallback:
+    """Cover the early-return when both ext_mod candidates fail to import."""
+
+    def test_no_op_when_ext_mod_unavailable(self) -> None:
+        import importlib
+
+        old_standalone = getattr(sys, "_pytauri_standalone", None)
+        old_mod = sys.modules.pop("__pytauri_ext_mod__", None)
+        try:
+            if hasattr(sys, "_pytauri_standalone"):
+                del sys._pytauri_standalone
+
+            real_import = importlib.import_module
+
+            def fake_import(name, *args, **kwargs):
+                if name in (
+                    "pywry._vendor.pytauri_wheel.ext_mod",
+                    "pytauri_wheel.ext_mod",
+                ):
+                    raise ImportError("simulated")
+                return real_import(name, *args, **kwargs)
+
+            with patch.object(importlib, "import_module", side_effect=fake_import):
+                _setup_pytauri_standalone()
+
+            # Both imports failed → standalone flag remains unset
+            assert not getattr(sys, "_pytauri_standalone", False)
+        finally:
+            if old_standalone is not None:
+                sys._pytauri_standalone = old_standalone  # type: ignore
+            elif hasattr(sys, "_pytauri_standalone"):
+                del sys._pytauri_standalone
+            if old_mod is not None:
+                sys.modules["__pytauri_ext_mod__"] = old_mod
+            else:
+                sys.modules.pop("__pytauri_ext_mod__", None)

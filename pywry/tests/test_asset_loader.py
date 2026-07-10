@@ -250,3 +250,174 @@ class TestFileWatching:
         loader.load_css("tracked.css")
         resolved = loader.resolve_path("tracked.css")
         assert resolved in loader._hash_cache
+
+
+class TestLoadCssFromCache:
+    def test_returns_cached_value(self, tmp_path):
+        css = tmp_path / "x.css"
+        css.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        loader.load_css("x.css")
+        css.write_text("b{}")
+        assert loader.load_css("x.css", use_cache=True) == "a{}"
+
+
+class TestLoadScriptExtended:
+    def test_cached_value(self, tmp_path):
+        js = tmp_path / "x.js"
+        js.write_text("var x;")
+        loader = AssetLoader(base_dir=tmp_path)
+        loader.load_script("x.js")
+        js.write_text("var y;")
+        assert loader.load_script("x.js", use_cache=True) == "var x;"
+
+
+class TestLoadAllCssAndScripts:
+    def test_load_all_css_concatenates(self, tmp_path):
+        a = tmp_path / "a.css"
+        b = tmp_path / "b.css"
+        a.write_text("a{}")
+        b.write_text("b{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        result = loader.load_all_css(["a.css", "b.css"])
+        assert "a{}" in result
+        assert "b{}" in result
+        assert "Source: a.css" in result
+
+    def test_load_all_css_skips_empty(self, tmp_path):
+        a = tmp_path / "a.css"
+        a.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        result = loader.load_all_css(["a.css", "missing.css"])
+        assert result.count("Source:") == 1
+
+    def test_load_all_scripts(self, tmp_path):
+        a = tmp_path / "a.js"
+        b = tmp_path / "b.js"
+        a.write_text("scriptA;")
+        b.write_text("scriptB;")
+        loader = AssetLoader(base_dir=tmp_path)
+        result = loader.load_all_scripts(["a.js", "b.js"])
+        assert len(result) == 2
+        assert "scriptA;" in result[0]
+        assert "scriptB;" in result[1]
+
+
+class TestGetAssetIdExtended:
+    def test_returns_id_format(self, tmp_path):
+        css = tmp_path / "my-style.css"
+        css.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        loader.load_css("my-style.css")
+        asset_id = loader.get_asset_id("my-style.css")
+        assert asset_id.startswith("pywry-css-my-style-")
+
+    def test_loads_file_when_no_hash_yet(self, tmp_path):
+        css = tmp_path / "fresh.css"
+        css.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        asset_id = loader.get_asset_id("fresh.css")
+        assert asset_id.startswith("pywry-css-fresh-")
+
+    def test_handles_missing_file_with_unknown_hash(self, tmp_path):
+        loader = AssetLoader(base_dir=tmp_path)
+        asset_id = loader.get_asset_id("missing.css")
+        assert "unknown" in asset_id
+
+
+class TestHasChangedExtended:
+    def test_returns_true_when_no_old_hash(self, tmp_path):
+        css = tmp_path / "x.css"
+        css.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        assert loader.has_changed("x.css") is True
+
+    def test_returns_false_when_unchanged(self, tmp_path):
+        css = tmp_path / "x.css"
+        css.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        loader.load_css("x.css")
+        assert loader.has_changed("x.css") is False
+
+    def test_returns_true_after_modification(self, tmp_path):
+        css = tmp_path / "x.css"
+        css.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        loader.load_css("x.css")
+        css.write_text("b{}")
+        assert loader.has_changed("x.css") is True
+
+    def test_returns_true_on_read_error(self, tmp_path):
+        css = tmp_path / "x.css"
+        css.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        loader.load_css("x.css")
+        css.unlink()
+        assert loader.has_changed("x.css") is True
+
+
+class TestInvalidateAndClear:
+    def test_invalidate_removes_cache(self, tmp_path):
+        css = tmp_path / "x.css"
+        css.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        loader.load_css("x.css")
+        assert any(loader._cache)
+        loader.invalidate("x.css")
+        assert not any(loader._cache)
+        assert any(loader._hash_cache)
+
+    def test_clear_cache_removes_both(self, tmp_path):
+        css = tmp_path / "x.css"
+        css.write_text("a{}")
+        loader = AssetLoader(base_dir=tmp_path)
+        loader.load_css("x.css")
+        loader.clear_cache()
+        assert not any(loader._cache)
+        assert not any(loader._hash_cache)
+
+
+class TestGlobalLoaderHelpers:
+    def test_get_asset_loader_singleton(self):
+        from pywry.asset_loader import get_asset_loader
+
+        a = get_asset_loader()
+        b = get_asset_loader()
+        assert a is b
+
+    def test_configure_with_base_dir(self, tmp_path):
+        from pywry.asset_loader import configure_asset_loader
+
+        loader = configure_asset_loader(base_dir=tmp_path)
+        assert loader.base_dir == tmp_path
+
+    def test_configure_with_settings_path(self, tmp_path):
+        from pywry.asset_loader import configure_asset_loader
+        from pywry.config import AssetSettings
+
+        settings = AssetSettings(path=str(tmp_path))
+        loader = configure_asset_loader(settings=settings)
+        assert loader.base_dir == tmp_path
+
+
+class TestBuildTags:
+    def test_build_style_tag(self):
+        from pywry.asset_loader import build_style_tag
+
+        tag = build_style_tag("body { color: red; }", "my-id")
+        assert 'id="my-id"' in tag
+        assert "<style" in tag
+
+    def test_build_script_tag_with_id(self):
+        from pywry.asset_loader import build_script_tag
+
+        tag = build_script_tag("var x;", "my-id")
+        assert 'id="my-id"' in tag
+        assert "<script" in tag
+
+    def test_build_script_tag_no_id(self):
+        from pywry.asset_loader import build_script_tag
+
+        tag = build_script_tag("var x;", None)
+        assert "<script" in tag
+        assert "id=" not in tag

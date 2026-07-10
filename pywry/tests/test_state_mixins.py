@@ -675,3 +675,368 @@ class TestEdgeCases:
         event, data = result
         assert event == "grid:update-data"
         assert len(data["data"]) == 10000
+
+
+# =============================================================================
+# _Unset Sentinel
+# =============================================================================
+
+
+class TestUnsetSentinel:
+    """Tests for the _Unset sentinel class (line 23)."""
+
+    def test_repr_marker(self) -> None:
+        """_Unset.__repr__ returns the documented marker (line 23)."""
+        from pywry.state_mixins import _UNSET, _Unset
+
+        assert repr(_UNSET) == "<UNSET>"
+        # Fresh instance behaves the same.
+        assert repr(_Unset()) == "<UNSET>"
+
+
+# =============================================================================
+# EmittingWidget.alert
+# =============================================================================
+
+
+class TestEmittingWidgetAlert:
+    """Tests for EmittingWidget.alert (lines 65-76)."""
+
+    def test_alert_minimal_payload(self) -> None:
+        """alert() with only message emits pywry:alert with required fields."""
+        w = MockEmitter()
+        w.alert("hello")
+        evt, data = w.get_last_event()
+        assert evt == "pywry:alert"
+        assert data == {"message": "hello", "type": "info", "position": "top-right"}
+
+    def test_alert_with_optional_fields(self) -> None:
+        """alert() includes title/duration/callback_event when provided."""
+        w = MockEmitter()
+        w.alert(
+            "you sure?",
+            alert_type="confirm",
+            title="Confirm",
+            duration=5000,
+            callback_event="ui:confirmed",
+            position="bottom-left",
+        )
+        evt, data = w.get_last_event()
+        assert evt == "pywry:alert"
+        assert data["message"] == "you sure?"
+        assert data["type"] == "confirm"
+        assert data["title"] == "Confirm"
+        assert data["duration"] == 5000
+        assert data["callback_event"] == "ui:confirmed"
+        assert data["position"] == "bottom-left"
+
+    def test_alert_omits_none_optional_fields(self) -> None:
+        """alert() with None optionals does not include those keys (lines 71-75 guards)."""
+        w = MockEmitter()
+        w.alert("plain", title=None, duration=None, callback_event=None)
+        _evt, data = w.get_last_event()
+        assert "title" not in data
+        assert "duration" not in data
+        assert "callback_event" not in data
+
+
+# =============================================================================
+# _normalize_figure: to_dict path
+# =============================================================================
+
+
+class TestNormalizeFigureToDict:
+    """Tests for _normalize_figure to_dict branch (line 89)."""
+
+    def test_to_dict_used_when_no_to_json(self) -> None:
+        """Object with .to_dict() but no .to_json() falls through to to_dict."""
+
+        class DictOnlyFigure:
+            def to_dict(self) -> dict[str, Any]:
+                return {"data": [], "layout": {"title": "via to_dict"}}
+
+        result = _normalize_figure(DictOnlyFigure())
+        assert result == {"data": [], "layout": {"title": "via to_dict"}}
+
+    def test_json_string_fallback(self) -> None:
+        """A JSON string with no .to_json/.to_dict/dict path uses json.loads(str(fig))."""
+        # A bare JSON string (the fallback path on lines 92-94).
+        result = _normalize_figure('{"data": [{"x": 1}]}')
+        assert result == {"data": [{"x": 1}]}
+
+
+# =============================================================================
+# Extra GridStateMixin paths that hit the grid_id branches
+# =============================================================================
+
+
+class TestGridStateMixinOptionalGridId:
+    """Cover the `if grid_id` branches in GridStateMixin (lines 131, 147, 160, 183, 190)."""
+
+    def test_restore_state_with_grid_id_sets_payload(self) -> None:
+        w = MockGridWidget()
+        w.restore_state({"k": "v"}, grid_id="g1")
+        evt, data = w.get_last_event()
+        assert evt == "grid:restore-state"
+        assert data["gridId"] == "g1"
+        assert data["state"] == {"k": "v"}
+
+    def test_reset_state_with_grid_id_sets_payload(self) -> None:
+        w = MockGridWidget()
+        w.reset_state(grid_id="g2", hard=True)
+        evt, data = w.get_last_event()
+        assert evt == "grid:reset-state"
+        assert data["gridId"] == "g2"
+        assert data["hard"] is True
+
+    def test_update_cell_with_grid_id_sets_payload(self) -> None:
+        w = MockGridWidget()
+        w.update_cell(row_id=3, col_id="qty", value=12, grid_id="g3")
+        evt, data = w.get_last_event()
+        assert evt == "grid:update-cell"
+        assert data["gridId"] == "g3"
+        assert data["rowId"] == 3
+        assert data["colId"] == "qty"
+        assert data["value"] == 12
+
+    def test_update_data_with_grid_id_and_strategy_append(self) -> None:
+        w = MockGridWidget()
+        w.update_data([{"id": 1}], grid_id="g4", strategy="append")
+        evt, data = w.get_last_event()
+        assert evt == "grid:update-data"
+        assert data["gridId"] == "g4"
+        assert data["strategy"] == "append"
+
+    def test_update_columns_with_grid_id_sets_payload(self) -> None:
+        w = MockGridWidget()
+        cols = [{"field": "id"}]
+        w.update_columns(cols, grid_id="g5")
+        evt, data = w.get_last_event()
+        assert evt == "grid:update-columns"
+        assert data["columnDefs"] == cols
+        assert data["gridId"] == "g5"
+
+
+class TestUpdateGridDataFrame:
+    """update_grid converts DataFrame-like inputs to records (lines 222-225)."""
+
+    def test_dataframe_like_uses_to_dict_records(self) -> None:
+        w = MockGridWidget()
+
+        class FakeDF:
+            columns = ["id", "name"]
+
+            def to_dict(self, orient: str = "records"):
+                if orient == "records":
+                    return [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]
+                return {}
+
+        w.update_grid(data=FakeDF())
+        evt, data = w.get_last_event()
+        assert evt == "grid:update-grid"
+        assert data["data"] == [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]
+
+    def test_non_dataframe_list_passes_through(self) -> None:
+        """A plain list is used as-is (line 227 branch)."""
+        w = MockGridWidget()
+        rows = [{"id": 1}, {"id": 2}]
+        w.update_grid(data=rows)
+        _evt, data = w.get_last_event()
+        assert data["data"] == rows
+
+    def test_update_grid_with_grid_id(self) -> None:
+        w = MockGridWidget()
+        w.update_grid(data=[{"id": 1}], grid_id="gx")
+        _evt, data = w.get_last_event()
+        assert data["gridId"] == "gx"
+
+
+# =============================================================================
+# PlotlyStateMixin extra paths
+# =============================================================================
+
+
+class TestPlotlyStateMixinOptionalChartId:
+    """Cover `if chart_id` branches in PlotlyStateMixin (lines 260, 262, 269, 281, 290, 297)."""
+
+    def test_update_figure_with_chart_id_and_config(self) -> None:
+        w = MockPlotlyWidget()
+        w.update_figure(
+            {"data": [], "layout": {}},
+            chart_id="cid",
+            animate=True,
+            config={"responsive": True},
+        )
+        evt, data = w.get_last_event()
+        assert evt == "plotly:update-figure"
+        assert data["chartId"] == "cid"
+        assert data["animate"] is True
+        assert data["config"] == {"responsive": True}
+
+    def test_update_layout_with_chart_id(self) -> None:
+        w = MockPlotlyWidget()
+        w.update_layout({"title": "T"}, chart_id="cid")
+        evt, data = w.get_last_event()
+        assert evt == "plotly:update-layout"
+        assert data["chartId"] == "cid"
+
+    def test_update_traces_with_chart_id(self) -> None:
+        w = MockPlotlyWidget()
+        w.update_traces({"visible": True}, indices=[0], chart_id="cid")
+        evt, data = w.get_last_event()
+        assert evt == "plotly:update-traces"
+        assert data["chartId"] == "cid"
+
+    def test_request_plotly_state_with_chart_id(self) -> None:
+        w = MockPlotlyWidget()
+        w.request_plotly_state(chart_id="cid")
+        evt, data = w.get_last_event()
+        assert evt == "plotly:request-state"
+        assert data["chartId"] == "cid"
+
+    def test_reset_zoom_with_chart_id(self) -> None:
+        w = MockPlotlyWidget()
+        w.reset_zoom(chart_id="cid")
+        evt, data = w.get_last_event()
+        assert evt == "plotly:reset-zoom"
+        assert data["chartId"] == "cid"
+
+
+# =============================================================================
+# ChatStateMixin — entire mixin block (lines 349-430)
+# =============================================================================
+
+
+class TestChatStateMixin:
+    """Test ChatStateMixin event emission (covers lines 349-430)."""
+
+    @pytest.fixture
+    def chat_widget(self):
+        from pywry.state_mixins import ChatStateMixin
+
+        class MockChat(MockEmitter, ChatStateMixin):
+            pass
+
+        return MockChat()
+
+    def test_send_chat_message_minimal(self, chat_widget) -> None:
+        chat_widget.send_chat_message("hello")
+        evt, data = chat_widget.get_last_event()
+        assert evt == "chat:assistant-message"
+        assert data == {"text": "hello"}
+
+    def test_send_chat_message_full(self, chat_widget) -> None:
+        chat_widget.send_chat_message("hi", thread_id="t1", message_id="m1", model="claude-opus")
+        _evt, data = chat_widget.get_last_event()
+        assert data["text"] == "hi"
+        assert data["threadId"] == "t1"
+        assert data["messageId"] == "m1"
+        assert data["model"] == "claude-opus"
+
+    def test_stream_chat_chunk_default_not_done(self, chat_widget) -> None:
+        chat_widget.stream_chat_chunk("partial", "m1")
+        evt, data = chat_widget.get_last_event()
+        assert evt == "chat:stream-chunk"
+        assert data == {"chunk": "partial", "messageId": "m1", "done": False}
+
+    def test_stream_chat_chunk_done_with_thread_id(self, chat_widget) -> None:
+        chat_widget.stream_chat_chunk("end", "m2", done=True, thread_id="thr")
+        _evt, data = chat_widget.get_last_event()
+        assert data["done"] is True
+        assert data["threadId"] == "thr"
+
+    def test_set_chat_typing_default_true(self, chat_widget) -> None:
+        chat_widget.set_chat_typing()
+        evt, data = chat_widget.get_last_event()
+        assert evt == "chat:typing-indicator"
+        assert data == {"typing": True}
+
+    def test_set_chat_typing_false_with_thread(self, chat_widget) -> None:
+        chat_widget.set_chat_typing(typing=False, thread_id="t9")
+        _evt, data = chat_widget.get_last_event()
+        assert data == {"typing": False, "threadId": "t9"}
+
+    def test_switch_chat_thread(self, chat_widget) -> None:
+        chat_widget.switch_chat_thread("t-42")
+        evt, data = chat_widget.get_last_event()
+        assert evt == "chat:switch-thread"
+        assert data == {"threadId": "t-42"}
+
+    def test_update_chat_thread_list(self, chat_widget) -> None:
+        threads = [{"thread_id": "t1", "title": "First"}, {"thread_id": "t2", "title": "Second"}]
+        chat_widget.update_chat_thread_list(threads)
+        evt, data = chat_widget.get_last_event()
+        assert evt == "chat:update-thread-list"
+        assert data == {"threads": threads}
+
+    def test_clear_chat_no_thread(self, chat_widget) -> None:
+        chat_widget.clear_chat()
+        evt, data = chat_widget.get_last_event()
+        assert evt == "chat:clear"
+        assert data == {}
+
+    def test_clear_chat_with_thread(self, chat_widget) -> None:
+        chat_widget.clear_chat(thread_id="t1")
+        _evt, data = chat_widget.get_last_event()
+        assert data == {"threadId": "t1"}
+
+    def test_register_chat_command_default_fields(self, chat_widget) -> None:
+        chat_widget.register_chat_command("help")
+        evt, data = chat_widget.get_last_event()
+        assert evt == "chat:register-command"
+        assert data == {"name": "help", "description": "", "handlerEvent": ""}
+
+    def test_register_chat_command_with_metadata(self, chat_widget) -> None:
+        chat_widget.register_chat_command(
+            "save", description="Save chat", handler_event="chat:save"
+        )
+        _evt, data = chat_widget.get_last_event()
+        assert data["name"] == "save"
+        assert data["description"] == "Save chat"
+        assert data["handlerEvent"] == "chat:save"
+
+    def test_update_chat_settings(self, chat_widget) -> None:
+        cfg = {"theme": "dark", "model": "claude-opus"}
+        chat_widget.update_chat_settings(cfg)
+        evt, data = chat_widget.get_last_event()
+        assert evt == "chat:update-settings"
+        assert data == cfg
+
+    def test_request_chat_state(self, chat_widget) -> None:
+        chat_widget.request_chat_state()
+        evt, data = chat_widget.get_last_event()
+        assert evt == "chat:request-state"
+        assert data == {}
+
+
+# =============================================================================
+# ToolbarStateMixin extra paths
+# =============================================================================
+
+
+class TestToolbarStateMixinOptionalToolbarId:
+    """Cover the `if toolbar_id` branches in ToolbarStateMixin (lines 440, 475, 484)."""
+
+    def test_request_toolbar_state_with_toolbar_id(self) -> None:
+        w = MockToolbarWidget()
+        w.request_toolbar_state(toolbar_id="tb1")
+        evt, data = w.get_last_event()
+        assert evt == "toolbar:request-state"
+        assert data["toolbarId"] == "tb1"
+
+    def test_set_toolbar_value_with_toolbar_id(self) -> None:
+        w = MockToolbarWidget()
+        w.set_toolbar_value(component_id="c1", value=42, toolbar_id="tb1")
+        evt, data = w.get_last_event()
+        assert evt == "toolbar:set-value"
+        assert data["toolbarId"] == "tb1"
+        assert data["componentId"] == "c1"
+        assert data["value"] == 42
+
+    def test_set_toolbar_values_with_toolbar_id(self) -> None:
+        w = MockToolbarWidget()
+        w.set_toolbar_values({"c1": 1, "c2": 2}, toolbar_id="tb1")
+        evt, data = w.get_last_event()
+        assert evt == "toolbar:set-values"
+        assert data["toolbarId"] == "tb1"
+        assert data["values"] == {"c1": 1, "c2": 2}

@@ -161,65 +161,53 @@ class _ToolCallTextFilter:
                 self._in_string = False
                 self._escape = False
 
-    def _step_in_special(self, ch: str, out: list[str]) -> None:
-        """Advance the ``<|...|>`` state machine; recurse on tail after ``|>``."""
+    def _step_in_special(self, ch: str, _out: list[str]) -> None:
+        """Advance the ``<|...|>`` state machine; close when ``|>`` arrives.
+
+        Because ``feed()`` drives one character at a time and ``_in_special``
+        is entered with an empty buffer, the close marker is always at the
+        tail of the buffer — there is no trailing text to recurse on.
+        """
         self._buffer += ch
-        close_idx = self._buffer.find(self._SPECIAL_CLOSE)
-        if close_idx < 0:
+        if self._SPECIAL_CLOSE not in self._buffer:
             return
-        rest = self._buffer[close_idx + len(self._SPECIAL_CLOSE) :]
         self._buffer = ""
         self._in_special = False
-        if rest:
-            out.append(self.feed(rest))
 
-    def _try_open_call(self, out: list[str]) -> bool:
+    def _try_open_call(self, _out: list[str]) -> bool:
         """If a complete ``functions.<name>...{`` opener sits in buffer, enter call mode.
 
         Returns True if the buffer was consumed (caller skips other checks);
-        False if the marker isn't fully present yet — caller must NOT keep
-        scanning the buffer for ``<|`` (the ``functions.`` prefix already
-        committed us to wait).
+        False if the marker isn't fully present yet.  ``_flush_safe_prefix``
+        guarantees ``functions.`` always sits at the buffer head when it's
+        present, and char-by-char feeding means ``{`` is always the tail —
+        no leading prefix to emit and no trailing text to recurse on.
         """
-        call_idx = self._buffer.find(self._CALL_START)
-        if call_idx < 0:
+        if self._CALL_START not in self._buffer:
             return False
-        brace_idx = self._buffer.find("{", call_idx + len(self._CALL_START))
+        brace_idx = self._buffer.find("{", len(self._CALL_START))
         if brace_idx < 0:
             # Marker present but no ``{`` yet — keep buffering, do not
             # fall through to the ``<|`` check (it would never match
             # ``functions.`` and we'd over-emit).
             return True
-        if call_idx > 0:
-            out.append(self._buffer[:call_idx])
-        rest = self._buffer[brace_idx + 1 :]
         self._buffer = ""
         self._in_call = True
         self._depth = 1
         self._in_string = False
         self._escape = False
-        if rest:
-            out.append(self.feed(rest))
         return True
 
-    def _try_open_special(self, out: list[str]) -> bool:
-        """If a ``<|...|>`` token (or its open) is in buffer, drop it; return True."""
-        special_idx = self._buffer.find(self._SPECIAL_OPEN)
-        if special_idx < 0:
+    def _try_open_special(self, _out: list[str]) -> bool:
+        """If a ``<|`` opener sits in buffer, drop it and enter skip mode.
+
+        ``_flush_safe_prefix`` guarantees only ``<|`` itself (no trailing
+        text) ever reaches us, and the closing ``|>`` is consumed later
+        by ``_step_in_special`` — so we only need to handle the "open
+        seen, no close yet" case.
+        """
+        if self._SPECIAL_OPEN not in self._buffer:
             return False
-        close_idx = self._buffer.find(self._SPECIAL_CLOSE, special_idx + len(self._SPECIAL_OPEN))
-        if close_idx >= 0:
-            if special_idx > 0:
-                out.append(self._buffer[:special_idx])
-            rest = self._buffer[close_idx + len(self._SPECIAL_CLOSE) :]
-            self._buffer = ""
-            if rest:
-                out.append(self.feed(rest))
-            return True
-        # Open seen but no close yet — drop everything from ``<|`` on,
-        # emit the prefix, enter token-skip mode.
-        if special_idx > 0:
-            out.append(self._buffer[:special_idx])
         self._buffer = ""
         self._in_special = True
         return True

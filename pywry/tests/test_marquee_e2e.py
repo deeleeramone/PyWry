@@ -15,7 +15,7 @@ import pytest
 
 from pywry.app import PyWry
 from pywry.callbacks import get_registry
-from pywry.inline import HAS_FASTAPI, _start_server, _state, show, stop_server
+from pywry.inline import _start_server, _state, show, stop_server
 from pywry.models import ThemeMode
 from pywry.toolbar import Button, Marquee, TickerItem, Toolbar
 
@@ -81,8 +81,6 @@ class TestMarqueeNativeWindowRendering:
         )
         toolbar = Toolbar(position="header", items=[marquee])
 
-        from tests.test_e2e import show_and_wait_ready
-
         label = show_and_wait_ready(app, "<div>Content Test</div>", toolbars=[toolbar])
 
         result = wait_for_result(
@@ -112,8 +110,6 @@ class TestMarqueeNativeWindowRendering:
             component_id="speed-test",
         )
         toolbar = Toolbar(position="header", items=[marquee])
-
-        from tests.test_e2e import show_and_wait_ready
 
         label = show_and_wait_ready(app, "<div>CSS Props Test</div>", toolbars=[toolbar])
 
@@ -147,8 +143,6 @@ class TestMarqueeNativeWindowRendering:
             component_id="vertical-ticker",
         )
         toolbar = Toolbar(position="right", items=[marquee])
-
-        from tests.test_e2e import show_and_wait_ready
 
         label = show_and_wait_ready(app, "<div>Vertical Test</div>", toolbars=[toolbar])
 
@@ -185,8 +179,6 @@ class TestMarqueeNativeWindowRendering:
         )
         toolbar = Toolbar(position="header", items=[marquee])
 
-        from tests.test_e2e import show_and_wait_ready
-
         label = show_and_wait_ready(app, "<div>Click Test</div>", toolbars=[toolbar])
         get_registry().register(label, "ticker:click", on_click)
 
@@ -219,8 +211,6 @@ class TestMarqueeNativeWindowRendering:
             component_id="ticker-items",
         )
         toolbar = Toolbar(position="header", items=[marquee])
-
-        from tests.test_e2e import show_and_wait_ready
 
         label = show_and_wait_ready(app, "<div>TickerItem Test</div>", toolbars=[toolbar])
 
@@ -271,8 +261,6 @@ class TestMarqueeNativeWindowRendering:
             )
             update_received["done"] = True
 
-        from tests.test_e2e import show_and_wait_ready
-
         label = show_and_wait_ready(app, "<div>Update Test</div>", toolbars=[toolbar, toolbar2])
         get_registry().register(label, "update:trigger", on_update)
 
@@ -305,10 +293,6 @@ class TestMarqueeNativeWindowRendering:
 # =============================================================================
 # Inline Notebook E2E Tests
 # =============================================================================
-
-
-# Skip all inline tests if FastAPI not installed
-pytestmark_inline = pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
 
 
 @pytest.fixture
@@ -379,7 +363,6 @@ class MockOutput:
         self.outputs.append(data)
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
 class TestMarqueeInlineRendering:
     """E2E tests for Marquee rendering in inline notebook mode."""
 
@@ -689,7 +672,6 @@ class TestMarqueeInlineRendering:
         assert "toolbar:marquee-set-item" in html
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
 class TestMarqueeUpdatePayload:
     """Test Marquee.update_payload() helper method integration."""
 
@@ -722,7 +704,6 @@ class TestMarqueeUpdatePayload:
         assert payload["paused"] is True
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
 class TestTickerItemUpdatePayload:
     """Test TickerItem.update_payload() helper method integration."""
 
@@ -757,7 +738,6 @@ class TestTickerItemUpdatePayload:
         assert payload["styles"]["color"] == "#22c55e"
 
 
-@pytest.mark.skipif(not HAS_FASTAPI, reason="FastAPI not installed")
 class TestMarqueeStaticBehavior:
     """Test static marquee behavior with auto-cycling items."""
 

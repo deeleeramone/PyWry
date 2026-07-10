@@ -100,3 +100,12 @@ class TestBuildInitScript:
     def test_hot_reload_excluded_when_disabled(self):
         script = build_init_script(window_label="main", enable_hot_reload=False)
         assert "saveScrollPosition" not in script
+
+
+class TestLoadJsMissingFile:
+    """Cover the _load_js fallback when a file does not exist."""
+
+    def test_returns_empty_string_for_missing_file(self):
+        from pywry.scripts import _load_js
+
+        assert _load_js("definitely-nonexistent-file.js") == ""

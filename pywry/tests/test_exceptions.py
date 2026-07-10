@@ -258,3 +258,21 @@ class TestExceptionHierarchy:
                 raise WindowError("test")
             except IPCError:
                 pytest.fail("WindowError should not be caught by IPCError")
+
+
+class TestExceptionChaining:
+    """Tests for exception chaining and context preservation in string output."""
+
+    def test_window_error_preserves_context(self) -> None:
+        """WindowError includes label and operation in string representation."""
+        exc = WindowError("Failed", label="test-win", operation="close")
+        exc_str = str(exc)
+        assert "test-win" in exc_str
+        assert "close" in exc_str
+
+    def test_specific_exception_caught_as_base(self) -> None:
+        """Specific exceptions can be caught as base PyWryException with original message preserved."""
+        try:
+            raise WindowError("Test error", label="win")
+        except PyWryException as e:
+            assert "Test error" in str(e)

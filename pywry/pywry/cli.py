@@ -447,9 +447,6 @@ def show_config_sources() -> int:
         if forced_status is True:
             status = "✓ Active"
             path_display = ""
-        elif forced_status is False:
-            status = "✗ Not found"
-            path_display = path_str
         # Check if file exists
         elif name == "Environment variables":
             import os

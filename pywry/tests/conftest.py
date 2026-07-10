@@ -11,6 +11,16 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+# Pre-import pydantic.root_model and beartype.claw._clawstate to work
+# around a Pydantic + beartype + coverage interaction that breaks test
+# collection when both packages are involved (e.g. anything importing
+# mcp.types). Keep these imports above pytest.
+import pydantic.root_model
+
+
+with contextlib.suppress(ImportError):
+    import beartype.claw._clawstate
+
 import pytest
 
 from tests.constants import (
@@ -579,7 +589,7 @@ REDIS_ACL_COMMANDS = [
 
 def _configure_testcontainers() -> None:
     """Configure testcontainers settings for the current platform."""
-    try:
+    with contextlib.suppress(ImportError):
         from testcontainers.core.config import testcontainers_config
 
         testcontainers_config.ryuk_disabled = True
@@ -587,8 +597,6 @@ def _configure_testcontainers() -> None:
         # Ensure images are always pulled (don't rely on local cache check)
         # This fixes issues on some CI environments
         os.environ.setdefault("TC_IMAGE_PULL_POLICY", "always")
-    except ImportError:
-        pass  # testcontainers not installed
 
 
 def _start_redis_container_with_fallback():
@@ -645,7 +653,7 @@ def redis_container() -> Generator[str, None, None]:
         return
 
     try:
-        import testcontainers.redis  # noqa: F401
+        import testcontainers.redis
     except ImportError:
         pytest.skip("testcontainers not installed (pip install testcontainers[redis])")
         return
@@ -683,7 +691,7 @@ def redis_container_with_acl() -> Generator[dict, None, None]:
     - users: Dict of user info (username, password, role)
     """
     try:
-        import testcontainers.redis  # noqa: F401
+        import testcontainers.redis
     except ImportError:
         pytest.skip("testcontainers not installed")
         return
@@ -867,4 +875,70 @@ def auth_session_manager(mock_oauth_provider, memory_token_store):
         provider=mock_oauth_provider,
         token_store=memory_token_store,
         session_key="test_user",
+    )
+
+
+# =============================================================================
+# MCP Test Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def mcp_fresh_state():
+    """Reset all MCP global state before and after each test.
+
+    Clears the singleton app, widget registry, widget configs, pending
+    responses, pending events, and the server-side events bucket.
+    """
+    from pywry.mcp import state as mcp_state
+    from pywry.mcp.server import _events
+
+    mcp_state._app = None
+    mcp_state._widgets.clear()
+    mcp_state._widget_configs.clear()
+    mcp_state._pending_responses.clear()
+    mcp_state._pending_events.clear()
+    _events.clear()
+    yield
+    mcp_state._app = None
+    mcp_state._widgets.clear()
+    mcp_state._widget_configs.clear()
+    mcp_state._pending_responses.clear()
+    mcp_state._pending_events.clear()
+    _events.clear()
+
+
+@pytest.fixture
+def mcp_widget(mcp_fresh_state):
+    """Register a single mock widget under id ``w``.
+
+    Depends on ``mcp_fresh_state`` so the registry is clean.
+    """
+    from unittest.mock import MagicMock
+
+    from pywry.mcp import state as mcp_state
+
+    widget = MagicMock()
+    widget.widget_id = "w"
+    mcp_state._widgets["w"] = widget
+    yield widget
+
+
+def make_handler_ctx(
+    args: dict[str, Any],
+    headless: bool = False,
+    events: dict | None = None,
+):
+    """Build a HandlerContext for unit-testing MCP handlers.
+
+    The ``make_callback`` is a no-op so tests can focus on the handler
+    contract (widget.emit calls + return dict).
+    """
+    from pywry.mcp.handlers import HandlerContext
+
+    return HandlerContext(
+        args=args,
+        events=events if events is not None else {},
+        make_callback=lambda _wid: lambda *_a, **_kw: None,
+        headless=headless,
     )

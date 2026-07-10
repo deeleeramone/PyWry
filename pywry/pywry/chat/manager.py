@@ -1160,23 +1160,26 @@ class ChatManager:
         """Stream from an async generator."""
         state = _StreamState(message_id)
         typing_hidden = False
-        async for item in agen:
+        try:
+            async for item in agen:
+                if not typing_hidden:
+                    typing_hidden = True
+                    self._emit(
+                        "chat:typing-indicator",
+                        {"typing": False, "threadId": thread_id},
+                    )
+                if cancel.is_set():
+                    self._handle_cancel(state, thread_id)
+                    return
+                self._process_handler_item(item, state, thread_id, ctx)
             if not typing_hidden:
-                typing_hidden = True
                 self._emit(
                     "chat:typing-indicator",
                     {"typing": False, "threadId": thread_id},
                 )
-            if cancel.is_set():
-                self._handle_cancel(state, thread_id)
-                return
-            self._process_handler_item(item, state, thread_id, ctx)
-        if not typing_hidden:
-            self._emit(
-                "chat:typing-indicator",
-                {"typing": False, "threadId": thread_id},
-            )
-        self._finalize_stream(state, thread_id)
+            self._finalize_stream(state, thread_id)
+        finally:
+            await agen.aclose()
 
     def _inject_context(
         self,

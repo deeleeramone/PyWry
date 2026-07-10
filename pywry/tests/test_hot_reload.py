@@ -1,14 +1,18 @@
 """Unit tests for hot reload manager.
 
 Tests cover:
-- HotReloadManager initialization
+- HotReloadManager initialization (defaults + injected dependencies)
 - Start/stop lifecycle
 - Window enable/disable for hot reload
 - CSS injection
 - Page refresh
 - File change handling
+- get_watched_files queries
+- Global singleton get/stop functions
+- All branches required for 100% coverage
 
-All tests use mocks for dependencies (FileWatcher, AssetLoader, callbacks).
+Dependencies (FileWatcher, AssetLoader, callbacks) are injected via mocks
+so we exercise HotReloadManager's logic directly.
 """
 
 from __future__ import annotations
@@ -16,16 +20,25 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from pywry.hot_reload import HotReloadManager
+import pytest
+
+import pywry.hot_reload as hot_reload_mod
+
+from pywry.hot_reload import (
+    HotReloadManager,
+    get_hot_reload_manager,
+    stop_hot_reload_manager,
+)
 
 
 # =============================================================================
-# Mock Fixtures
+# Fixtures
 # =============================================================================
 
 
-def create_mock_settings() -> MagicMock:
-    """Create a mock HotReloadSettings."""
+@pytest.fixture
+def mock_settings() -> MagicMock:
+    """Mock HotReloadSettings with css_reload='inject' by default."""
     settings = MagicMock()
     settings.debounce_ms = 100
     settings.css_reload = "inject"
@@ -33,8 +46,9 @@ def create_mock_settings() -> MagicMock:
     return settings
 
 
-def create_mock_asset_loader() -> MagicMock:
-    """Create a mock AssetLoader."""
+@pytest.fixture
+def mock_asset_loader() -> MagicMock:
+    """Mock AssetLoader that resolves paths and returns non-empty CSS."""
     loader = MagicMock()
     loader.resolve_path = MagicMock(side_effect=lambda p: Path(p).resolve())
     loader.get_asset_id = MagicMock(side_effect=lambda p: f"asset_{p.name}")
@@ -43,18 +57,27 @@ def create_mock_asset_loader() -> MagicMock:
     return loader
 
 
-def create_mock_file_watcher() -> MagicMock:
-    """Create a mock FileWatcher."""
-    watcher = MagicMock()
-    watcher.start = MagicMock()
-    watcher.stop = MagicMock()
-    watcher.watch = MagicMock()
-    watcher.unwatch = MagicMock()
-    watcher.unwatch_label = MagicMock()
-    return watcher
+@pytest.fixture
+def mock_file_watcher() -> MagicMock:
+    """Mock FileWatcher with no-op start/stop/watch methods."""
+    return MagicMock()
 
 
-def create_mock_content(
+@pytest.fixture
+def manager(
+    mock_settings: MagicMock,
+    mock_asset_loader: MagicMock,
+    mock_file_watcher: MagicMock,
+) -> HotReloadManager:
+    """HotReloadManager wired to all-mock dependencies."""
+    return HotReloadManager(
+        settings=mock_settings,
+        asset_loader=mock_asset_loader,
+        file_watcher=mock_file_watcher,
+    )
+
+
+def _make_content(
     css_files: list[Path] | None = None,
     script_files: list[Path] | None = None,
     watch: bool = True,
@@ -75,43 +98,29 @@ def create_mock_content(
 class TestHotReloadManagerInit:
     """Test HotReloadManager initialization."""
 
-    def test_default_initialization(self) -> None:
-        """Test initialization with defaults."""
+    def test_default_initialization_creates_real_settings(self) -> None:
+        """With settings=None, a real HotReloadSettings is constructed."""
         with (
             patch("pywry.hot_reload.get_asset_loader") as mock_get_loader,
             patch("pywry.hot_reload.get_file_watcher") as mock_get_watcher,
         ):
-            mock_get_loader.return_value = create_mock_asset_loader()
-            mock_get_watcher.return_value = create_mock_file_watcher()
+            mock_get_loader.return_value = MagicMock()
+            mock_get_watcher.return_value = MagicMock()
 
             manager = HotReloadManager()
 
             assert manager.is_running is False
-            assert manager.settings is not None
+            from pywry.config import HotReloadSettings
 
-    def test_initialization_with_settings(self) -> None:
-        """Test initialization with custom settings."""
-        settings = create_mock_settings()
-        loader = create_mock_asset_loader()
-        watcher = create_mock_file_watcher()
+            assert isinstance(manager.settings, HotReloadSettings)
 
-        manager = HotReloadManager(
-            settings=settings,
-            asset_loader=loader,
-            file_watcher=watcher,
-        )
-
-        assert manager.settings is settings
-        assert manager.is_running is False
-
-    def test_is_running_property(self) -> None:
-        """Test is_running property."""
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=create_mock_file_watcher(),
-        )
-
+    def test_initialization_with_injected_dependencies(
+        self,
+        manager: HotReloadManager,
+        mock_settings: MagicMock,
+    ) -> None:
+        """Injected settings are used and is_running starts False."""
+        assert manager.settings is mock_settings
         assert manager.is_running is False
 
 
@@ -123,61 +132,58 @@ class TestHotReloadManagerInit:
 class TestHotReloadManagerStartStop:
     """Test HotReloadManager start/stop lifecycle."""
 
-    def test_start(self) -> None:
-        """Test starting the manager."""
-        watcher = create_mock_file_watcher()
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=watcher,
-        )
-
+    def test_start_starts_watcher(
+        self, manager: HotReloadManager, mock_file_watcher: MagicMock
+    ) -> None:
+        """Starting the manager starts the underlying file watcher."""
         manager.start()
-
         assert manager.is_running is True
-        watcher.start.assert_called_once()
+        mock_file_watcher.start.assert_called_once()
 
-    def test_start_idempotent(self) -> None:
-        """Test that starting twice doesn't call watcher.start twice."""
-        watcher = create_mock_file_watcher()
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=watcher,
-        )
-
+    def test_start_idempotent(
+        self, manager: HotReloadManager, mock_file_watcher: MagicMock
+    ) -> None:
+        """Calling start twice only starts the watcher once."""
         manager.start()
         manager.start()
+        mock_file_watcher.start.assert_called_once()
 
-        watcher.start.assert_called_once()
-
-    def test_stop(self) -> None:
-        """Test stopping the manager."""
-        watcher = create_mock_file_watcher()
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=watcher,
-        )
-
+    def test_stop_stops_watcher(
+        self, manager: HotReloadManager, mock_file_watcher: MagicMock
+    ) -> None:
+        """Stopping the manager stops the underlying file watcher."""
         manager.start()
         manager.stop()
-
         assert manager.is_running is False
-        watcher.stop.assert_called_once()
+        mock_file_watcher.stop.assert_called_once()
 
-    def test_stop_without_start(self) -> None:
-        """Test stopping without starting is safe."""
-        watcher = create_mock_file_watcher()
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=watcher,
-        )
+    def test_stop_without_start_is_safe(
+        self, manager: HotReloadManager, mock_file_watcher: MagicMock
+    ) -> None:
+        """Stopping without starting does not call watcher.stop."""
+        manager.stop()
+        mock_file_watcher.stop.assert_not_called()
 
-        manager.stop()  # Should not raise
 
-        watcher.stop.assert_not_called()
+# =============================================================================
+# Callback Configuration Tests
+# =============================================================================
+
+
+class TestCallbacks:
+    """Test callback assignment."""
+
+    def test_set_inject_css_callback(self, manager: HotReloadManager) -> None:
+        """The configured callback is stored on the manager."""
+        callback = MagicMock()
+        manager.set_inject_css_callback(callback)
+        assert manager._inject_css_callback is callback
+
+    def test_set_refresh_callback(self, manager: HotReloadManager) -> None:
+        """The configured refresh callback is stored on the manager."""
+        callback = MagicMock()
+        manager.set_refresh_callback(callback)
+        assert manager._refresh_callback is callback
 
 
 # =============================================================================
@@ -188,118 +194,66 @@ class TestHotReloadManagerStartStop:
 class TestEnableDisableWindow:
     """Test enabling/disabling hot reload for windows."""
 
-    def test_enable_for_window_with_css(self, tmp_path: Path) -> None:
-        """Test enabling hot reload with CSS files."""
+    def test_enable_with_css_starts_watching(
+        self,
+        manager: HotReloadManager,
+        mock_file_watcher: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Enabling for a window with CSS files registers each with the watcher."""
         css_file = tmp_path / "style.css"
         css_file.write_text("body {}")
-
-        loader = create_mock_asset_loader()
-        watcher = create_mock_file_watcher()
-        content = create_mock_content(css_files=[css_file])
-
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=loader,
-            file_watcher=watcher,
-        )
+        content = _make_content(css_files=[css_file])
 
         manager.enable_for_window("window1", content)
 
-        # Verify watcher.watch was called
-        watcher.watch.assert_called_once()
-        call_args = watcher.watch.call_args
-        assert call_args[0][2] == "window1"  # label
+        mock_file_watcher.watch.assert_called_once()
+        # Third positional arg is the label
+        assert mock_file_watcher.watch.call_args[0][2] == "window1"
 
-    def test_enable_for_window_with_script(self, tmp_path: Path) -> None:
-        """Test enabling hot reload with script files."""
+    def test_enable_with_script_starts_watching(
+        self,
+        manager: HotReloadManager,
+        mock_file_watcher: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Enabling for a window with script files registers each with the watcher."""
         script_file = tmp_path / "app.js"
         script_file.write_text("console.log('hello');")
-
-        loader = create_mock_asset_loader()
-        watcher = create_mock_file_watcher()
-        content = create_mock_content(script_files=[script_file])
-
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=loader,
-            file_watcher=watcher,
-        )
+        content = _make_content(script_files=[script_file])
 
         manager.enable_for_window("window1", content)
+        mock_file_watcher.watch.assert_called_once()
 
-        watcher.watch.assert_called_once()
-
-    def test_enable_for_window_watch_false(self, tmp_path: Path) -> None:
-        """Test that watch=False prevents watching."""
+    def test_enable_with_watch_false_does_nothing(
+        self,
+        manager: HotReloadManager,
+        mock_file_watcher: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Content with watch=False does not register any files."""
         css_file = tmp_path / "style.css"
         css_file.write_text("body {}")
-
-        watcher = create_mock_file_watcher()
-        content = create_mock_content(css_files=[css_file], watch=False)
-
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=watcher,
-        )
+        content = _make_content(css_files=[css_file], watch=False)
 
         manager.enable_for_window("window1", content)
+        mock_file_watcher.watch.assert_not_called()
 
-        watcher.watch.assert_not_called()
-
-    def test_disable_for_window(self, tmp_path: Path) -> None:
-        """Test disabling hot reload for a window."""
+    def test_disable_for_window_unwatches(
+        self,
+        manager: HotReloadManager,
+        mock_file_watcher: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Disabling for a window unwatches it from the underlying watcher."""
         css_file = tmp_path / "style.css"
         css_file.write_text("body {}")
-
-        watcher = create_mock_file_watcher()
-        content = create_mock_content(css_files=[css_file])
-
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=watcher,
-        )
+        content = _make_content(css_files=[css_file])
 
         manager.enable_for_window("window1", content)
         manager.disable_for_window("window1")
 
-        watcher.unwatch_label.assert_called_once_with("window1")
-
-
-# =============================================================================
-# Callback Tests
-# =============================================================================
-
-
-class TestCallbacks:
-    """Test callback configuration."""
-
-    def test_set_inject_css_callback(self) -> None:
-        """Test setting CSS injection callback."""
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=create_mock_file_watcher(),
-        )
-
-        callback = MagicMock()
-        manager.set_inject_css_callback(callback)
-
-        assert manager._inject_css_callback is callback
-
-    def test_set_refresh_callback(self) -> None:
-        """Test setting refresh callback."""
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=create_mock_file_watcher(),
-        )
-
-        callback = MagicMock()
-        manager.set_refresh_callback(callback)
-
-        assert manager._refresh_callback is callback
+        mock_file_watcher.unwatch_label.assert_called_once_with("window1")
 
 
 # =============================================================================
@@ -310,20 +264,11 @@ class TestCallbacks:
 class TestReloadCss:
     """Test CSS reloading functionality."""
 
-    def test_reload_css_success(self, tmp_path: Path) -> None:
-        """Test successful CSS reload."""
+    def test_reload_css_success(self, manager: HotReloadManager, tmp_path: Path) -> None:
+        """A successful reload invalidates the cache and invokes the callback."""
         css_file = tmp_path / "style.css"
         css_file.write_text("body { color: blue; }")
-
-        loader = create_mock_asset_loader()
-        watcher = create_mock_file_watcher()
-        content = create_mock_content(css_files=[css_file])
-
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=loader,
-            file_watcher=watcher,
-        )
+        content = _make_content(css_files=[css_file])
 
         inject_callback = MagicMock()
         manager.set_inject_css_callback(inject_callback)
@@ -334,35 +279,83 @@ class TestReloadCss:
         assert result is True
         inject_callback.assert_called_once()
 
-    def test_reload_css_no_callback(self, tmp_path: Path) -> None:
-        """Test CSS reload without callback configured."""
+    def test_reload_css_no_callback_returns_false(
+        self, manager: HotReloadManager, tmp_path: Path
+    ) -> None:
+        """Without a configured callback, reload_css returns False."""
         css_file = tmp_path / "style.css"
         css_file.write_text("body {}")
-
-        content = create_mock_content(css_files=[css_file])
-
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=create_mock_file_watcher(),
-        )
+        content = _make_content(css_files=[css_file])
 
         manager.enable_for_window("window1", content)
         result = manager.reload_css("window1")
-
         assert result is False
 
-    def test_reload_css_unknown_window(self) -> None:
-        """Test CSS reload for unknown window."""
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=create_mock_file_watcher(),
-        )
-
+    def test_reload_css_unknown_window_returns_false(self, manager: HotReloadManager) -> None:
+        """Reloading an unknown window returns False."""
         result = manager.reload_css("unknown_window")
-
         assert result is False
+
+    def test_reload_css_with_unknown_path_returns_false(
+        self, manager: HotReloadManager, tmp_path: Path
+    ) -> None:
+        """Passing a specific path not in css_files returns False."""
+        css_file = tmp_path / "style.css"
+        css_file.write_text("body {}")
+        unknown_path = tmp_path / "other.css"
+        content = _make_content(css_files=[css_file])
+
+        manager.set_inject_css_callback(MagicMock())
+        manager.enable_for_window("win1", content)
+
+        result = manager.reload_css("win1", path=unknown_path)
+        assert result is False
+
+    def test_reload_css_callback_exception_returns_false(
+        self, manager: HotReloadManager, tmp_path: Path
+    ) -> None:
+        """When inject_css_callback raises, reload_css logs and returns False."""
+        css_file = tmp_path / "style.css"
+        css_file.write_text("body {}")
+        content = _make_content(css_files=[css_file])
+
+        bad_cb = MagicMock(side_effect=RuntimeError("inject failed"))
+        manager.set_inject_css_callback(bad_cb)
+        manager.enable_for_window("win1", content)
+
+        result = manager.reload_css("win1")
+        assert result is False
+        bad_cb.assert_called_once()
+
+    def test_reload_css_empty_content_skips_callback(
+        self,
+        mock_settings: MagicMock,
+        mock_file_watcher: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """When load_css returns empty content, the inject callback is not invoked."""
+        css_file = tmp_path / "style.css"
+        css_file.write_text("")
+
+        loader = MagicMock()
+        loader.resolve_path = MagicMock(side_effect=lambda p: Path(p).resolve())
+        loader.get_asset_id = MagicMock(side_effect=lambda p: f"asset_{p.name}")
+        loader.load_css = MagicMock(return_value="")  # empty
+        loader.invalidate = MagicMock()
+
+        content = _make_content(css_files=[css_file])
+        manager = HotReloadManager(
+            settings=mock_settings,
+            asset_loader=loader,
+            file_watcher=mock_file_watcher,
+        )
+        inject_cb = MagicMock()
+        manager.set_inject_css_callback(inject_cb)
+        manager.enable_for_window("win1", content)
+
+        result = manager.reload_css("win1")
+        assert result is False
+        inject_cb.assert_not_called()
 
 
 # =============================================================================
@@ -373,14 +366,8 @@ class TestReloadCss:
 class TestRefreshWindow:
     """Test window refresh functionality."""
 
-    def test_refresh_window_success(self) -> None:
-        """Test successful window refresh."""
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=create_mock_file_watcher(),
-        )
-
+    def test_refresh_window_success(self, manager: HotReloadManager) -> None:
+        """A successful refresh invokes the configured callback."""
         refresh_callback = MagicMock()
         manager.set_refresh_callback(refresh_callback)
 
@@ -389,31 +376,19 @@ class TestRefreshWindow:
         assert result is True
         refresh_callback.assert_called_once_with("window1")
 
-    def test_refresh_window_no_callback(self) -> None:
-        """Test refresh without callback configured."""
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=create_mock_file_watcher(),
-        )
-
+    def test_refresh_window_no_callback_returns_false(self, manager: HotReloadManager) -> None:
+        """Without a refresh callback, refresh_window returns False."""
         result = manager.refresh_window("window1")
-
         assert result is False
 
-    def test_refresh_window_callback_exception(self) -> None:
-        """Test refresh when callback raises exception."""
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=create_mock_file_watcher(),
-        )
-
+    def test_refresh_window_callback_exception_returns_false(
+        self, manager: HotReloadManager
+    ) -> None:
+        """A raising callback is caught and refresh_window returns False."""
         refresh_callback = MagicMock(side_effect=RuntimeError("Refresh failed"))
         manager.set_refresh_callback(refresh_callback)
 
         result = manager.refresh_window("window1")
-
         assert result is False
 
 
@@ -423,101 +398,102 @@ class TestRefreshWindow:
 
 
 class TestFileChangeHandler:
-    """Test file change event handling."""
+    """Test file change event handling and CSS reload modes."""
 
-    def test_css_change_injects(self, tmp_path: Path) -> None:
-        """Test that CSS change triggers injection."""
+    def test_css_change_inject_mode_calls_inject_callback(
+        self,
+        mock_settings: MagicMock,
+        mock_asset_loader: MagicMock,
+        mock_file_watcher: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """CSS change with css_reload='inject' invokes the inject callback."""
         css_file = tmp_path / "style.css"
         css_file.write_text("body {}")
 
-        settings = create_mock_settings()
-        settings.css_reload = "inject"
-        loader = create_mock_asset_loader()
-        watcher = create_mock_file_watcher()
-        content = create_mock_content(css_files=[css_file])
-
+        mock_settings.css_reload = "inject"
         manager = HotReloadManager(
-            settings=settings,
-            asset_loader=loader,
-            file_watcher=watcher,
+            settings=mock_settings,
+            asset_loader=mock_asset_loader,
+            file_watcher=mock_file_watcher,
         )
 
         inject_callback = MagicMock()
         manager.set_inject_css_callback(inject_callback)
-        manager.enable_for_window("window1", content)
+        manager.enable_for_window("window1", _make_content(css_files=[css_file]))
 
-        # Simulate file change
-        resolved_path = loader.resolve_path(css_file)
-        manager._on_file_change(resolved_path, "window1")
-
+        manager._on_file_change(mock_asset_loader.resolve_path(css_file), "window1")
         inject_callback.assert_called_once()
 
-    def test_css_change_refresh_mode(self, tmp_path: Path) -> None:
-        """Test that CSS change in refresh mode triggers refresh."""
+    def test_css_change_refresh_mode_calls_refresh_callback(
+        self,
+        mock_settings: MagicMock,
+        mock_asset_loader: MagicMock,
+        mock_file_watcher: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """CSS change with css_reload='refresh' triggers a full refresh."""
         css_file = tmp_path / "style.css"
         css_file.write_text("body {}")
 
-        settings = create_mock_settings()
-        settings.css_reload = "refresh"
-        loader = create_mock_asset_loader()
-        watcher = create_mock_file_watcher()
-        content = create_mock_content(css_files=[css_file])
-
+        mock_settings.css_reload = "refresh"
         manager = HotReloadManager(
-            settings=settings,
-            asset_loader=loader,
-            file_watcher=watcher,
+            settings=mock_settings,
+            asset_loader=mock_asset_loader,
+            file_watcher=mock_file_watcher,
         )
 
         refresh_callback = MagicMock()
         manager.set_refresh_callback(refresh_callback)
-        manager.enable_for_window("window1", content)
+        manager.enable_for_window("window1", _make_content(css_files=[css_file]))
 
-        resolved_path = loader.resolve_path(css_file)
-        manager._on_file_change(resolved_path, "window1")
-
+        manager._on_file_change(mock_asset_loader.resolve_path(css_file), "window1")
         refresh_callback.assert_called_once_with("window1")
 
-    def test_script_change_always_refreshes(self, tmp_path: Path) -> None:
-        """Test that script change always triggers refresh."""
+    def test_script_change_always_refreshes(
+        self,
+        manager: HotReloadManager,
+        mock_asset_loader: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Script changes always trigger a full refresh, regardless of mode."""
         script_file = tmp_path / "app.js"
         script_file.write_text("console.log('hello');")
 
-        settings = create_mock_settings()
-        loader = create_mock_asset_loader()
-        watcher = create_mock_file_watcher()
-        content = create_mock_content(script_files=[script_file])
-
-        manager = HotReloadManager(
-            settings=settings,
-            asset_loader=loader,
-            file_watcher=watcher,
-        )
-
         refresh_callback = MagicMock()
         manager.set_refresh_callback(refresh_callback)
-        manager.enable_for_window("window1", content)
+        manager.enable_for_window("window1", _make_content(script_files=[script_file]))
 
-        resolved_path = loader.resolve_path(script_file)
-        manager._on_file_change(resolved_path, "window1")
-
+        manager._on_file_change(mock_asset_loader.resolve_path(script_file), "window1")
         refresh_callback.assert_called_once_with("window1")
 
-    def test_unknown_window_ignored(self) -> None:
-        """Test that changes for unknown windows are ignored."""
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=create_mock_asset_loader(),
-            file_watcher=create_mock_file_watcher(),
-        )
-
+    def test_unknown_window_ignored(self, manager: HotReloadManager) -> None:
+        """File changes for unknown windows are silently ignored."""
         refresh_callback = MagicMock()
         manager.set_refresh_callback(refresh_callback)
 
-        # Simulate change for unknown window
         manager._on_file_change(Path("/some/file.css"), "unknown_window")
-
         refresh_callback.assert_not_called()
+
+    def test_unknown_path_for_known_window_ignored(
+        self, manager: HotReloadManager, tmp_path: Path
+    ) -> None:
+        """If the window is registered but the path isn't tracked, nothing fires."""
+        css_file = tmp_path / "style.css"
+        css_file.write_text("body {}")
+        unknown = tmp_path / "ghost.css"
+        content = _make_content(css_files=[css_file])
+
+        inject_cb = MagicMock()
+        refresh_cb = MagicMock()
+        manager.set_inject_css_callback(inject_cb)
+        manager.set_refresh_callback(refresh_cb)
+        manager.enable_for_window("win1", content)
+
+        manager._on_file_change(unknown.resolve(), "win1")
+
+        inject_cb.assert_not_called()
+        refresh_cb.assert_not_called()
 
 
 # =============================================================================
@@ -526,49 +502,87 @@ class TestFileChangeHandler:
 
 
 class TestGetWatchedFiles:
-    """Test get_watched_files method."""
+    """Test get_watched_files queries."""
 
-    def test_get_watched_files_specific_window(self, tmp_path: Path) -> None:
-        """Test getting watched files for specific window."""
+    def test_get_watched_files_specific_window(
+        self, manager: HotReloadManager, tmp_path: Path
+    ) -> None:
+        """Querying by label returns just that label's files."""
         css_file = tmp_path / "style.css"
         css_file.write_text("body {}")
 
-        loader = create_mock_asset_loader()
-        content = create_mock_content(css_files=[css_file])
-
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=loader,
-            file_watcher=create_mock_file_watcher(),
-        )
-
-        manager.enable_for_window("window1", content)
+        manager.enable_for_window("window1", _make_content(css_files=[css_file]))
         files = manager.get_watched_files("window1")
 
         assert "window1" in files
         assert len(files["window1"]) == 1
 
-    def test_get_watched_files_all(self, tmp_path: Path) -> None:
-        """Test getting all watched files."""
-        css_file1 = tmp_path / "style1.css"
-        css_file2 = tmp_path / "style2.css"
-        css_file1.write_text("body {}")
-        css_file2.write_text("p {}")
+    def test_get_watched_files_all(self, manager: HotReloadManager, tmp_path: Path) -> None:
+        """Querying without arguments returns every registered window."""
+        css1 = tmp_path / "style1.css"
+        css2 = tmp_path / "style2.css"
+        css1.write_text("body {}")
+        css2.write_text("p {}")
 
-        loader = create_mock_asset_loader()
-        content1 = create_mock_content(css_files=[css_file1])
-        content2 = create_mock_content(css_files=[css_file2])
-
-        manager = HotReloadManager(
-            settings=create_mock_settings(),
-            asset_loader=loader,
-            file_watcher=create_mock_file_watcher(),
-        )
-
-        manager.enable_for_window("window1", content1)
-        manager.enable_for_window("window2", content2)
+        manager.enable_for_window("window1", _make_content(css_files=[css1]))
+        manager.enable_for_window("window2", _make_content(css_files=[css2]))
 
         files = manager.get_watched_files()
-
         assert "window1" in files
         assert "window2" in files
+
+    def test_get_watched_files_unknown_label_returns_empty(self, manager: HotReloadManager) -> None:
+        """Querying an unknown label returns an empty dict."""
+        assert manager.get_watched_files("unknown-window") == {}
+
+
+# =============================================================================
+# Global Manager Singleton Tests
+# =============================================================================
+
+
+class TestGlobalManagerFunctions:
+    """Test get_hot_reload_manager / stop_hot_reload_manager singleton functions."""
+
+    def test_get_creates_singleton(self) -> None:
+        """Repeated get_hot_reload_manager() calls return the same instance."""
+        stop_hot_reload_manager()
+        try:
+            mgr1 = get_hot_reload_manager()
+            mgr2 = get_hot_reload_manager()
+            assert mgr1 is mgr2
+        finally:
+            stop_hot_reload_manager()
+
+    def test_stop_clears_singleton(self) -> None:
+        """stop_hot_reload_manager clears the module-level reference."""
+        stop_hot_reload_manager()
+        try:
+            mgr = get_hot_reload_manager()
+            assert hot_reload_mod._hot_reload_manager is mgr
+
+            stop_hot_reload_manager()
+            assert hot_reload_mod._hot_reload_manager is None
+
+            # Subsequent get returns a new instance
+            new_mgr = get_hot_reload_manager()
+            assert new_mgr is not mgr
+        finally:
+            stop_hot_reload_manager()
+
+    def test_stop_when_not_set_is_noop(self) -> None:
+        """stop_hot_reload_manager is safe when no manager exists."""
+        hot_reload_mod._hot_reload_manager = None
+        stop_hot_reload_manager()
+        assert hot_reload_mod._hot_reload_manager is None
+
+    def test_stop_invokes_manager_stop(self) -> None:
+        """stop_hot_reload_manager invokes stop() on the live manager."""
+        mock_manager = MagicMock()
+        hot_reload_mod._hot_reload_manager = mock_manager
+        try:
+            stop_hot_reload_manager()
+            mock_manager.stop.assert_called_once()
+            assert hot_reload_mod._hot_reload_manager is None
+        finally:
+            hot_reload_mod._hot_reload_manager = None

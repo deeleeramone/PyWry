@@ -1157,12 +1157,12 @@
 
         // Indicators button
         bridge.on('tvchart:show-indicators', function(data) {
-            var chartId = data.chartId || _cid;
+            var chartId = _tvResolveChartId(data.chartId || _cid);
             _tvShowIndicatorsPanel(chartId);
         });
 
         bridge.on('tvchart:add-indicator', function(data) {
-            var chartId = data.chartId || _cid;
+            var chartId = _tvResolveChartId(data.chartId || _cid);
             var def = {
                 name: data.name || '',
                 key: data.key || undefined,
@@ -1210,8 +1210,8 @@
         });
 
         bridge.on('tvchart:list-indicators', function(data) {
-            var chartId = data.chartId || _cid;
-            var resolved = _tvResolveChartEntry(chartId);
+            var chartId = _tvResolveChartId(data.chartId || _cid);
+            var resolved = chartId ? { chartId: chartId, entry: window.__PYWRY_TVCHARTS__[chartId] } : null;
             var listEntry = resolved ? resolved.entry : null;
             var result = [];
             var keys = Object.keys(_activeIndicators);

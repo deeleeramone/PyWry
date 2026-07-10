@@ -1273,3 +1273,534 @@ class TestSecretInputBeforeUnloadBehavior:
 
         # Should reset type to password (in clearSecrets or toggle script)
         assert "type='password'" in html or 'type="password"' in html
+
+
+class TestNumpyEncoder:
+    """Tests for the _NumpyEncoder JSON encoder (lines 44-58)."""
+
+    def test_tolist_for_array_like(self):
+        """Objects with .tolist() (numpy arrays) use that path."""
+        import json
+
+        from pywry.templates import _NumpyEncoder
+
+        class FakeArray:
+            def tolist(self):
+                return [1, 2, 3]
+
+        result = json.dumps({"a": FakeArray()}, cls=_NumpyEncoder)
+        assert '"a": [1, 2, 3]' in result
+
+    def test_item_for_numpy_scalar(self):
+        """Objects with .item() (numpy scalars) use that path."""
+        import json
+
+        from pywry.templates import _NumpyEncoder
+
+        class FakeScalar:
+            # No tolist; only item().
+            def item(self):
+                return 42
+
+        result = json.dumps({"x": FakeScalar()}, cls=_NumpyEncoder)
+        assert '"x": 42' in result
+
+    def test_datetime_uses_isoformat(self):
+        """datetime objects use isoformat()."""
+        import datetime
+        import json
+
+        from pywry.templates import _NumpyEncoder
+
+        dt = datetime.datetime(2024, 1, 2, 3, 4, 5)
+        result = json.dumps({"dt": dt}, cls=_NumpyEncoder)
+        assert "2024-01-02T03:04:05" in result
+
+    def test_date_uses_isoformat(self):
+        """date objects use isoformat()."""
+        import datetime
+        import json
+
+        from pywry.templates import _NumpyEncoder
+
+        d = datetime.date(2024, 6, 15)
+        result = json.dumps({"d": d}, cls=_NumpyEncoder)
+        assert "2024-06-15" in result
+
+    def test_timedelta_uses_total_seconds(self):
+        """timedelta objects use total_seconds()."""
+        import datetime
+        import json
+
+        from pywry.templates import _NumpyEncoder
+
+        td = datetime.timedelta(seconds=90)
+        result = json.dumps({"td": td}, cls=_NumpyEncoder)
+        assert '"td": 90' in result
+
+    def test_numpy_datetime64_uses_str(self):
+        """Objects of type datetime64/timedelta64 use str() (lines 55-57)."""
+        import json
+
+        from pywry.templates import _NumpyEncoder
+
+        class datetime64:  # noqa: N801 - mimic numpy's class name
+            def __str__(self) -> str:
+                return "2024-01-02T03:04:05"
+
+        result = json.dumps({"d": datetime64()}, cls=_NumpyEncoder)
+        assert "2024-01-02T03:04:05" in result
+
+    def test_unsupported_type_falls_through_to_default(self):
+        """Types with no .tolist/.item and not datetime/datetime64 raise TypeError."""
+        import json
+
+        import pytest
+
+        from pywry.templates import _NumpyEncoder
+
+        class Unknown:
+            pass
+
+        with pytest.raises(TypeError):
+            json.dumps({"u": Unknown()}, cls=_NumpyEncoder)
+
+
+class TestCustomCssOsErrorHandling:
+    """Tests for OSError handling in build_base_styles (lines 154-155)."""
+
+    def test_unreadable_custom_css_file_is_silently_ignored(self, tmp_path, monkeypatch):
+        """When a custom CSS file raises OSError on read, it's silently skipped."""
+        from pywry.config import ThemeSettings
+        from pywry.templates import build_base_styles
+
+        css_file = tmp_path / "broken.css"
+        css_file.write_text("/* ok */")
+
+        # Force Path.read_text to raise OSError for this exact path.
+        original_read_text = type(css_file).read_text
+
+        def boom(self, *args, **kwargs):
+            if str(self) == str(css_file):
+                raise OSError("read failed")
+            return original_read_text(self, *args, **kwargs)
+
+        monkeypatch.setattr(type(css_file), "read_text", boom)
+
+        settings = PyWrySettings(theme=ThemeSettings(css_file=str(css_file)))
+        result = build_base_styles(settings)
+        # Custom CSS not included because read errored — base styles still returned.
+        assert "/* ok */" not in result
+
+
+class TestBuildPlotlyInitScript:
+    """Tests for build_plotly_init_script (lines 208-232)."""
+
+    def test_generates_chart_id_when_none(self):
+        """When chart_id is None, a unique chart-xxxx id is generated."""
+        from pywry.templates import build_plotly_init_script
+
+        html = build_plotly_init_script({"data": [], "layout": {}})
+        assert 'id="chart-' in html
+        assert "Plotly.newPlot" in html
+
+    def test_uses_provided_chart_id(self):
+        """When chart_id is provided, it is used verbatim."""
+        from pywry.templates import build_plotly_init_script
+
+        html = build_plotly_init_script({"data": []}, chart_id="my-chart")
+        assert 'id="my-chart"' in html
+        assert "'my-chart'" in html
+
+    def test_creates_layout_when_missing(self):
+        """When figure lacks a layout key, an empty layout is added."""
+        from pywry.templates import build_plotly_init_script
+
+        fig: dict = {"data": []}
+        build_plotly_init_script(fig, chart_id="c1")
+        assert "layout" in fig
+        assert fig["layout"] == {}
+
+    def test_applies_default_config_when_none(self):
+        """When figure has no config, default config is applied."""
+        from pywry.templates import build_plotly_init_script
+
+        fig: dict = {"data": [], "config": None}
+        build_plotly_init_script(fig, chart_id="c1")
+        assert fig["config"]["displaylogo"] is False
+        assert fig["config"]["responsive"] is True
+        assert fig["config"]["displayModeBar"] == "hover"
+
+    def test_merges_user_config_with_defaults(self):
+        """User config overrides defaults when both are present."""
+        from pywry.templates import build_plotly_init_script
+
+        fig: dict = {"data": [], "config": {"displaylogo": True, "extra": 1}}
+        build_plotly_init_script(fig, chart_id="c1")
+        # User wins.
+        assert fig["config"]["displaylogo"] is True
+        # Defaults still added.
+        assert fig["config"]["responsive"] is True
+        # User extras retained.
+        assert fig["config"]["extra"] == 1
+
+    def test_dark_theme_uses_plotly_dark(self):
+        """ThemeMode.DARK selects plotly_dark template."""
+        from pywry.templates import build_plotly_init_script
+
+        html = build_plotly_init_script({"data": []}, theme=ThemeMode.DARK)
+        assert "plotly_dark" in html
+
+    def test_light_theme_uses_plotly_white(self):
+        """ThemeMode.LIGHT selects plotly_white template."""
+        from pywry.templates import build_plotly_init_script
+
+        html = build_plotly_init_script({"data": []}, theme=ThemeMode.LIGHT)
+        assert "plotly_white" in html
+
+
+class TestAssetMissingErrors:
+    """Tests for the 'asset not bundled' error paths (lines 316, 357, 359, 379-389)."""
+
+    def test_plotly_script_missing_raises(self, monkeypatch):
+        """build_plotly_script raises RuntimeError when Plotly.js not bundled."""
+        from pywry import templates as tmpl
+
+        monkeypatch.setattr(tmpl, "get_plotly_js", lambda: "")
+        config = WindowConfig(enable_plotly=True)
+        with pytest.raises(RuntimeError, match="Plotly.js not found"):
+            tmpl.build_plotly_script(config)
+
+    def test_aggrid_script_missing_js_raises(self, monkeypatch):
+        """build_aggrid_script raises RuntimeError when AG Grid JS not bundled."""
+        from pywry import templates as tmpl
+
+        monkeypatch.setattr(tmpl, "get_aggrid_js", lambda: "")
+        monkeypatch.setattr(tmpl, "get_aggrid_css", lambda *a, **k: "/* css */")
+        config = WindowConfig(enable_aggrid=True)
+        with pytest.raises(RuntimeError, match="AG Grid JS not found"):
+            tmpl.build_aggrid_script(config)
+
+    def test_aggrid_script_missing_css_raises(self, monkeypatch):
+        """build_aggrid_script raises RuntimeError when AG Grid CSS not found for theme."""
+        from pywry import templates as tmpl
+
+        monkeypatch.setattr(tmpl, "get_aggrid_js", lambda: "// ok")
+        monkeypatch.setattr(tmpl, "get_aggrid_css", lambda *a, **k: "")
+        config = WindowConfig(enable_aggrid=True)
+        with pytest.raises(RuntimeError, match="AG Grid CSS not found"):
+            tmpl.build_aggrid_script(config)
+
+
+class TestBuildTvchartScript:
+    """Tests for build_tvchart_script (lines 379-389)."""
+
+    def test_returns_empty_when_disabled(self):
+        """Returns empty string when enable_tvchart=False."""
+        from pywry.templates import build_tvchart_script
+
+        config = WindowConfig(enable_tvchart=False)
+        assert build_tvchart_script(config) == ""
+
+    def test_missing_js_raises(self, monkeypatch):
+        """RuntimeError when Lightweight Charts JS missing from assets."""
+        from pywry import templates as tmpl
+
+        monkeypatch.setattr(tmpl, "get_tvchart_js", lambda: "")
+        config = WindowConfig(enable_tvchart=True)
+        with pytest.raises(RuntimeError, match="Lightweight Charts JS not found"):
+            tmpl.build_tvchart_script(config)
+
+    def test_returns_js_and_defaults_when_enabled(self, monkeypatch):
+        """Returns script tags with bundled JS and defaults when both are present."""
+        from pywry import templates as tmpl
+
+        monkeypatch.setattr(tmpl, "get_tvchart_js", lambda: "/* tvchart */")
+        monkeypatch.setattr(tmpl, "get_tvchart_defaults_js", lambda: "/* defaults */")
+        config = WindowConfig(enable_tvchart=True)
+        result = tmpl.build_tvchart_script(config)
+        assert "/* tvchart */" in result
+        assert "/* defaults */" in result
+        assert result.count("<script>") == 2
+
+    def test_returns_just_js_when_no_defaults(self, monkeypatch):
+        """Returns only the JS script when defaults JS is empty."""
+        from pywry import templates as tmpl
+
+        monkeypatch.setattr(tmpl, "get_tvchart_js", lambda: "/* tvchart */")
+        monkeypatch.setattr(tmpl, "get_tvchart_defaults_js", lambda: "")
+        config = WindowConfig(enable_tvchart=True)
+        result = tmpl.build_tvchart_script(config)
+        assert result.count("<script>") == 1
+        assert "/* tvchart */" in result
+
+
+class TestBuildCustomScripts:
+    """Tests for build_custom_scripts (lines 447-458)."""
+
+    def test_returns_empty_when_no_script_files(self):
+        """Returns empty when content has no script_files."""
+        from pywry.templates import build_custom_scripts
+
+        content = HtmlContent(html="<div></div>")
+        assert build_custom_scripts(content) == ""
+
+    def test_loads_script_files_from_disk(self, tmp_path):
+        """Reads each script_file from disk and wraps in <script> tag."""
+        from pywry.templates import build_custom_scripts
+
+        js_file = tmp_path / "custom.js"
+        js_file.write_text("console.log('custom');")
+        content = HtmlContent(html="<div></div>", script_files=[str(js_file)])
+        result = build_custom_scripts(content)
+        assert "console.log('custom');" in result
+        assert "<script>" in result
+        assert "</script>" in result
+
+    def test_uses_provided_loader(self, tmp_path):
+        """When a loader is provided, it's used in place of the default."""
+        from pywry.asset_loader import AssetLoader
+        from pywry.templates import build_custom_scripts
+
+        js_file = tmp_path / "x.js"
+        js_file.write_text("var x = 1;")
+        loader = AssetLoader(base_dir=tmp_path)
+        content = HtmlContent(html="<div></div>", script_files=["x.js"])
+        result = build_custom_scripts(content, loader=loader)
+        assert "var x = 1;" in result
+
+
+class TestBuildGlobalCssNoPath:
+    """Tests for build_global_css/build_global_scripts when settings.path is empty (488, 527)."""
+
+    def test_global_css_without_path_uses_default_loader(self, tmp_path, monkeypatch):
+        """When settings.path is empty, default get_asset_loader is used (line 488)."""
+        from pywry import templates as tmpl
+        from pywry.asset_loader import AssetLoader
+
+        css_file = tmp_path / "global.css"
+        css_file.write_text("/* default loader */")
+        default_loader = AssetLoader(base_dir=tmp_path)
+        monkeypatch.setattr("pywry.asset_loader.get_asset_loader", lambda: default_loader)
+        settings = AssetSettings(css_files=["global.css"])
+        result = tmpl.build_global_css(settings)
+        assert "/* default loader */" in result
+
+    def test_global_scripts_without_path_uses_default_loader(self, tmp_path, monkeypatch):
+        """When settings.path is empty, default get_asset_loader is used (line 527)."""
+        from pywry import templates as tmpl
+        from pywry.asset_loader import AssetLoader
+
+        js_file = tmp_path / "global.js"
+        js_file.write_text("/* default scripts */")
+        default_loader = AssetLoader(base_dir=tmp_path)
+        monkeypatch.setattr("pywry.asset_loader.get_asset_loader", lambda: default_loader)
+        settings = AssetSettings(script_files=["global.js"])
+        result = tmpl.build_global_scripts(settings)
+        assert "/* default scripts */" in result
+
+
+class TestAddThemeClassToHtmlTag:
+    """Tests for _add_theme_class_to_html_tag (lines 600-616)."""
+
+    def test_adds_class_when_no_class_attribute(self):
+        """Adds class attribute when none exists."""
+        from pywry.templates import _add_theme_class_to_html_tag
+
+        result = _add_theme_class_to_html_tag("<html><body></body></html>", "pywry-theme-dark")
+        assert 'class="pywry-theme-dark"' in result
+
+    def test_appends_to_existing_class(self):
+        """Appends new class to existing class attribute."""
+        from pywry.templates import _add_theme_class_to_html_tag
+
+        result = _add_theme_class_to_html_tag(
+            '<html class="existing"><body></body></html>', "pywry-theme-dark"
+        )
+        assert 'class="existing pywry-theme-dark"' in result
+
+    def test_does_not_duplicate_class(self):
+        """Does not add class if already present."""
+        from pywry.templates import _add_theme_class_to_html_tag
+
+        result = _add_theme_class_to_html_tag(
+            '<html class="pywry-theme-dark"><body></body></html>', "pywry-theme-dark"
+        )
+        # Class should appear exactly once.
+        assert result.count("pywry-theme-dark") == 1
+
+    def test_preserves_other_attributes(self):
+        """Preserves other attributes on the html tag."""
+        from pywry.templates import _add_theme_class_to_html_tag
+
+        result = _add_theme_class_to_html_tag(
+            '<html lang="en"><body></body></html>', "pywry-theme-light"
+        )
+        assert 'lang="en"' in result
+        assert "pywry-theme-light" in result
+
+
+class TestInjectModalBeforeBodyClose:
+    """Tests for _inject_modal_before_body_close (lines 621-626)."""
+
+    def test_returns_html_unchanged_when_modal_empty(self):
+        """When modal_html is empty, html is returned unchanged."""
+        from pywry.templates import _inject_modal_before_body_close
+
+        html = "<html><body>x</body></html>"
+        assert _inject_modal_before_body_close(html, "") == html
+
+    def test_injects_modal_before_body_close(self):
+        """Modal HTML is inserted just before </body>."""
+        from pywry.templates import _inject_modal_before_body_close
+
+        result = _inject_modal_before_body_close(
+            "<html><body>main</body></html>", '<div class="modal"></div>'
+        )
+        assert 'main<div class="modal"></div></body>' in result
+
+    def test_no_body_close_returns_html_unchanged(self):
+        """When </body> is missing, html is returned unchanged."""
+        from pywry.templates import _inject_modal_before_body_close
+
+        html = "<html>orphan</html>"
+        result = _inject_modal_before_body_close(html, "<div class='m'></div>")
+        assert result == html
+
+
+class TestInjectIntoCompleteDoc:
+    """Tests for _inject_into_complete_doc (lines 631, 653-670, 809)."""
+
+    def test_complete_doc_with_head_keeps_doctype(self):
+        """A complete document with <head> has scripts injected before </head>."""
+        user_html = (
+            "<!DOCTYPE html><html><head><title>Mine</title></head><body><p>Body</p></body></html>"
+        )
+        config = WindowConfig()
+        content = HtmlContent(html=user_html)
+        result = build_html(content, config, window_label="main")
+        # Doctype preserved
+        assert result.startswith("<!DOCTYPE html>")
+        # User title preserved
+        assert "<title>Mine</title>" in result
+        # Body content preserved
+        assert "<p>Body</p>" in result
+
+    def test_complete_doc_no_head_gets_head_inserted(self):
+        """A complete document missing <head> has one inserted (line 669)."""
+        user_html = "<!DOCTYPE html><html><body><p>NoHead</p></body></html>"
+        config = WindowConfig()
+        content = HtmlContent(html=user_html)
+        result = build_html(content, config, window_label="main")
+        # A head with the CSP meta tag should now exist.
+        assert "<head>" in result
+        assert "Content-Security-Policy" in result
+        assert "<p>NoHead</p>" in result
+
+    def test_complete_doc_doctype_only_returns_html_unchanged(self):
+        """A 'complete doc' starting with <!doctype but lacking <html> falls through (line 670)."""
+        from pywry.templates import _inject_into_complete_doc
+
+        # Pathological input: <!doctype...> with no <head> and no <html>.
+        user_html = "<!doctype html>just text"
+        components = {
+            "csp_meta": "",
+            "base_styles": "",
+            "json_script": "",
+            "plotly_script": "",
+            "aggrid_script": "",
+            "tvchart_script": "",
+            "init_script": "",
+            "toolbar_script": "",
+            "modal_scripts": "",
+            "custom_css": "",
+            "custom_scripts": "",
+            "global_css": "",
+            "global_scripts": "",
+            "custom_init": "",
+        }
+        result = _inject_into_complete_doc(user_html, "pywry-theme-dark", "", components)
+        # Without <head> or <html>, the function returns the (theme-class-untouched) input.
+        assert result == user_html
+
+    def test_complete_doc_with_modals_injects_modal_before_body_close(self):
+        """Modals on a complete doc get injected before </body>."""
+        from pywry.modal import Modal
+        from pywry.toolbar import Button
+
+        user_html = "<!DOCTYPE html><html><head></head><body><p>Main</p></body></html>"
+        config = WindowConfig()
+        content = HtmlContent(html=user_html)
+        modal = Modal(title="X", items=[Button(label="OK", event="m:ok")])
+        result = build_html(content, config, window_label="main", modals=[modal])
+        # Modal markup must appear, and it must appear before </body>.
+        body_close_idx = result.lower().rfind("</body>")
+        modal_idx = result.find(modal.component_id)
+        assert modal_idx != -1
+        assert modal_idx < body_close_idx
+
+
+class TestChatHandlersInjection:
+    """Tests for chat handlers JS injection (lines 791-802)."""
+
+    def test_chat_handlers_injected_when_pywry_chat_present(self, monkeypatch):
+        """When 'pywry-chat' appears in HTML, the chat handlers JS is appended."""
+        from pywry import templates as tmpl
+
+        monkeypatch.setattr(tmpl, "get_chat_handlers_js", lambda: "function initChatHandlers(){}")
+        config = WindowConfig()
+        content = HtmlContent(html='<div class="pywry-chat"></div>')
+        result = tmpl.build_html(content, config, window_label="main")
+        assert "function initChatHandlers(){}" in result
+        assert "window.initChatHandlers = initChatHandlers" in result
+        assert "initChatHandlers(document,window.pywry)" in result
+
+    def test_chat_handlers_skipped_when_no_chat_class(self, monkeypatch):
+        """Without 'pywry-chat' in HTML, chat handlers JS is not injected."""
+        from pywry import templates as tmpl
+
+        monkeypatch.setattr(tmpl, "get_chat_handlers_js", lambda: "SENTINEL_CHAT_JS")
+        config = WindowConfig()
+        content = HtmlContent(html="<div>no chat here</div>")
+        result = tmpl.build_html(content, config, window_label="main")
+        assert "SENTINEL_CHAT_JS" not in result
+
+    def test_chat_handlers_skipped_when_no_js_bundled(self, monkeypatch):
+        """When pywry-chat present but get_chat_handlers_js empty, the chat init wrapper is not added."""
+        from pywry import templates as tmpl
+
+        monkeypatch.setattr(tmpl, "get_chat_handlers_js", lambda: "")
+        config = WindowConfig()
+        content = HtmlContent(html='<div class="pywry-chat"></div>')
+        result = tmpl.build_html(content, config, window_label="main")
+        # The chat-init wrapper added by build_html (assigning to window.initChatHandlers)
+        # only appears when the JS is bundled — without it that exact wrapper is absent.
+        assert "window.initChatHandlers = initChatHandlers" not in result
+
+
+class TestBuildContentUpdateScript:
+    """Tests for build_content_update_script (lines 828-829)."""
+
+    def test_includes_escaped_html_payload(self):
+        """The function returns JS that injects the (JSON-escaped) html into the container."""
+        from pywry.templates import build_content_update_script
+
+        result = build_content_update_script("<p>hello</p>")
+        # JSON-escaped content (with literal backslashes for quotes) appears in the script.
+        assert '"<p>hello<\\/p>"' in result or '"<p>hello</p>"' in result
+        assert "pywry-container" in result
+
+    def test_preserves_unicode_without_escaping(self):
+        """ensure_ascii=False means emoji/unicode are preserved literally."""
+        from pywry.templates import build_content_update_script
+
+        result = build_content_update_script("<p>café</p>")
+        assert "café" in result
+
+    def test_initialises_toolbar_and_chat_handlers(self):
+        """Generated script calls initToolbarHandlers and initChatHandlers if present."""
+        from pywry.templates import build_content_update_script
+
+        result = build_content_update_script("<p>x</p>")
+        assert "initToolbarHandlers" in result
+        assert "initChatHandlers" in result

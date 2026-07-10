@@ -3,7 +3,15 @@
 Tests model validation, field types, and serialization.
 """
 
+from pathlib import Path
+
+import pytest
+
+from pydantic import ValidationError
+
 from pywry.models import (
+    GenericEvent,
+    GenericEventPayload,
     GridCellEvent,
     GridRowClickEvent,
     GridSelectionEvent,
@@ -470,3 +478,223 @@ class TestGridRowClickEvent:
         )
         assert event.row_data["name"] == "Test"
         assert event.row_id == "row-1"
+
+
+class TestWindowConfigBuilderKwargs:
+    def test_dimensions_validation_min_width(self):
+        with pytest.raises(ValueError, match="min_width"):
+            WindowConfig(width=200, min_width=300)
+
+    def test_dimensions_validation_min_height(self):
+        with pytest.raises(ValueError, match="min_height"):
+            WindowConfig(height=200, min_height=300)
+
+    def test_builder_kwargs_default_is_empty(self):
+        cfg = WindowConfig()
+        assert cfg.builder_kwargs() == {}
+
+    def test_builder_kwargs_picks_up_overrides(self):
+        cfg = WindowConfig(resizable=False, fullscreen=True)
+        kwargs = cfg.builder_kwargs()
+        assert kwargs.get("resizable") is False
+        assert kwargs.get("fullscreen") is True
+
+
+class TestHtmlContentPathConversion:
+    def test_none_passthrough(self):
+        c = HtmlContent(html="<p/>", css_files=None)
+        assert c.css_files is None
+
+    def test_string_path_wrapped_in_list(self):
+        c = HtmlContent(html="<p/>", css_files="style.css")
+        assert c.css_files == [Path("style.css")]
+
+    def test_path_object_wrapped_in_list(self):
+        p = Path("style.css")
+        c = HtmlContent(html="<p/>", css_files=p)
+        assert c.css_files == [p]
+
+    def test_list_with_strings_and_paths(self):
+        c = HtmlContent(
+            html="<p/>",
+            css_files=["a.css", Path("b.css"), "c.css"],
+        )
+        assert all(isinstance(p, Path) for p in c.css_files)
+        assert len(c.css_files) == 3
+
+    def test_script_files_conversion(self):
+        c = HtmlContent(html="<p/>", script_files="x.js")
+        assert c.script_files == [Path("x.js")]
+
+
+class TestGenericEventPayloadValidator:
+    def test_invalid_event_type_raises(self):
+        with pytest.raises(ValueError, match="Invalid event type"):
+            GenericEventPayload(event_type="invalidNoColon", window_label="w")
+
+    def test_valid_event_type(self):
+        evt = GenericEventPayload(event_type="evt:click", window_label="w")
+        assert evt.event_type == "evt:click"
+
+
+class TestGenericEventValidator:
+    def test_invalid_event_type_raises(self):
+        with pytest.raises(ValueError, match="Invalid event type"):
+            GenericEvent(event_type="badformat", window_label="w")
+
+    def test_valid_event_type_returned(self):
+        evt = GenericEvent(event_type="my:evt", window_label="w")
+        assert evt.event_type == "my:evt"
+
+    def test_wildcard_accepted(self):
+        evt = GenericEvent(event_type="*", window_label="w")
+        assert evt.event_type == "*"
+
+
+class TestInvalidWindowConfig:
+    """Tests for invalid WindowConfig values."""
+
+    def test_width_below_minimum_raises(self) -> None:
+        """Width below 200 raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(width=100)  # min is 200
+
+    def test_height_below_minimum_raises(self) -> None:
+        """Height below 150 raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(height=100)  # min is 150
+
+    def test_negative_width_raises(self) -> None:
+        """Negative width raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(width=-100)
+
+    def test_negative_height_raises(self) -> None:
+        """Negative height raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(height=-100)
+
+    def test_min_width_below_minimum_raises(self) -> None:
+        """min_width below 100 raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(min_width=50)  # min is 100
+
+    def test_min_height_below_minimum_raises(self) -> None:
+        """min_height below 100 raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(min_height=50)  # min is 100
+
+    def test_invalid_theme_string_raises(self) -> None:
+        """Invalid theme string raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(theme="invalid_theme")  # type: ignore
+
+    def test_invalid_plotly_theme_string_raises(self) -> None:
+        """Invalid plotly_theme string raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(plotly_theme="invalid_plotly_theme")  # type: ignore
+
+
+class TestInvalidHtmlContent:
+    """Tests for invalid HtmlContent values."""
+
+    def test_empty_html_allowed(self) -> None:
+        """Empty HTML is allowed."""
+        content = HtmlContent(html="")
+        assert content.html == ""
+
+    def test_none_html_raises(self) -> None:
+        """None HTML raises validation error."""
+        with pytest.raises(ValidationError):
+            HtmlContent(html=None)  # type: ignore
+
+    def test_invalid_json_data_type_raises(self) -> None:
+        """Non-dict json_data raises validation error."""
+        with pytest.raises(ValidationError):
+            HtmlContent(html="<div></div>", json_data="not a dict")  # type: ignore
+
+
+class TestWindowConfigBoundaryConditions:
+    """Tests for WindowConfig boundary conditions and edge cases."""
+
+    def test_very_large_window_dimensions(self) -> None:
+        """Very large window dimensions are accepted."""
+        config = WindowConfig(width=10000, height=10000)
+        assert config.width == 10000
+        assert config.height == 10000
+
+    def test_minimum_valid_dimensions(self) -> None:
+        """Minimum valid dimensions are accepted (width=200, height=150)."""
+        config = WindowConfig(width=200, height=150, min_width=100, min_height=100)
+        assert config.width == 200
+        assert config.height == 150
+
+    def test_very_long_title(self) -> None:
+        """Very long title is accepted."""
+        long_title = "A" * 1000
+        config = WindowConfig(title=long_title)
+        assert config.title == long_title
+
+    def test_unicode_in_title(self) -> None:
+        """Unicode characters in title are accepted."""
+        config = WindowConfig(title="测试窗口 🪟")
+        assert config.title == "测试窗口 🪟"
+
+
+class TestHtmlContentBoundaryConditions:
+    """Tests for HtmlContent boundary conditions and edge cases."""
+
+    def test_unicode_in_html_content(self) -> None:
+        """Unicode characters in HTML content are accepted."""
+        content = HtmlContent(html="<div>こんにちは 🌍</div>")
+        assert "こんにちは" in content.html
+
+    def test_special_characters_in_json_data(self) -> None:
+        """Special characters in JSON data are preserved."""
+        content = HtmlContent(
+            html="<div></div>",
+            json_data={"message": "Hello <script>alert('xss')</script>"},
+        )
+        json_data = content.json_data
+        assert json_data is not None
+        assert "<script>" in json_data["message"]
+
+    def test_deeply_nested_json_data(self) -> None:
+        """Deeply nested JSON data is accepted."""
+        from typing import Any
+
+        nested: dict[str, Any] = {"level1": {"level2": {"level3": {"level4": {"value": "deep"}}}}}
+        content = HtmlContent(html="<div></div>", json_data=nested)
+        json_data = content.json_data
+        assert json_data is not None
+        assert json_data["level1"]["level2"]["level3"]["level4"]["value"] == "deep"
+
+
+class TestTypeCoercionErrors:
+    """Tests for type coercion and validation."""
+
+    def test_window_width_string_coerced(self) -> None:
+        """String width is coerced to int."""
+        config = WindowConfig(width="800")  # type: ignore
+        assert config.width == 800
+
+    def test_window_width_float_not_coerced(self) -> None:
+        """Float width with fractional part raises validation error."""
+        # Pydantic v2 strict mode doesn't auto-coerce floats with decimals
+        with pytest.raises(ValidationError):
+            WindowConfig(width=800.5)  # type: ignore
+
+    def test_window_width_float_whole_number_coerced(self) -> None:
+        """Float width without fractional part is coerced to int."""
+        config = WindowConfig(width=800.0)  # type: ignore
+        assert config.width == 800
+
+    def test_invalid_type_raises_validation_error(self) -> None:
+        """Non-numeric width raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(width="not-a-number")  # type: ignore
+
+    def test_list_to_string_raises(self) -> None:
+        """List where string expected raises validation error."""
+        with pytest.raises(ValidationError):
+            WindowConfig(title=["not", "a", "string"])  # type: ignore

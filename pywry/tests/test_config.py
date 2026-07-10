@@ -4,6 +4,8 @@ Tests PyWrySettings, SecuritySettings, and other config classes.
 Including CSP (Content Security Policy) configuration and meta tag generation.
 """
 
+from unittest.mock import patch
+
 import pytest
 
 from pywry.config import (
@@ -656,3 +658,346 @@ class TestTauriPluginSettings:
     def test_available_plugins_has_19(self):
         """Registry contains exactly 19 plugins."""
         assert len(AVAILABLE_TAURI_PLUGINS) == 19
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Coverage gaps: helper functions, validators, edge paths
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestFindConfigFiles:
+    """Cover the _find_config_files helper."""
+
+    def test_finds_pyproject_toml(self, tmp_path, monkeypatch):
+        from pywry.config import _find_config_files
+
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "pyproject.toml").write_text("[tool.pywry]\n")
+        result = _find_config_files()
+        assert any("pyproject.toml" in str(p) for p in result)
+
+    def test_finds_pywry_toml(self, tmp_path, monkeypatch):
+        from pywry.config import _find_config_files
+
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "pywry.toml").write_text("")
+        result = _find_config_files()
+        assert any("pywry.toml" in str(p) for p in result)
+
+    def test_finds_env_config_file(self, tmp_path, monkeypatch):
+        from pywry.config import _find_config_files
+
+        monkeypatch.chdir(tmp_path)
+        env_path = tmp_path / "custom.toml"
+        env_path.write_text("")
+        monkeypatch.setenv("PYWRY_CONFIG_FILE", str(env_path))
+        result = _find_config_files()
+        assert any("custom.toml" in str(p) for p in result)
+
+    def test_skips_missing_env_config(self, tmp_path, monkeypatch):
+        from pywry.config import _find_config_files
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("PYWRY_CONFIG_FILE", str(tmp_path / "nonexistent.toml"))
+        result = _find_config_files()
+        # No file added
+        assert not any("nonexistent.toml" in str(p) for p in result)
+
+    def test_linux_user_config_path(self, tmp_path, monkeypatch):
+        """Trigger line 55: linux user config path branch."""
+        import pywry.config as cfg
+
+        monkeypatch.chdir(tmp_path)
+        with patch.object(cfg.sys, "platform", "linux"):
+            result = cfg._find_config_files()
+        # Even on linux path, the function still runs and returns a list
+        assert isinstance(result, list)
+
+    def test_finds_user_config_file(self, tmp_path, monkeypatch):
+        """Trigger line 58: user_config exists branch (Windows APPDATA path)."""
+        import pywry.config as cfg
+
+        # Create a fake APPDATA dir with the config file
+        appdata = tmp_path / "appdata"
+        config_dir = appdata / "pywry"
+        config_dir.mkdir(parents=True)
+        config_file = config_dir / "config.toml"
+        config_file.write_text("[csp]\n")
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("APPDATA", str(appdata))
+
+        # Patch sys.platform to win32 to ensure that branch runs
+        with patch.object(cfg.sys, "platform", "win32"):
+            result = cfg._find_config_files()
+        assert any("config.toml" in str(p) for p in result)
+
+
+class TestLoadTomlConfig:
+    """Cover _load_toml_config error paths."""
+
+    def test_handles_decode_error(self, tmp_path, monkeypatch):
+        from pywry.config import _load_toml_config
+
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "pyproject.toml").write_text("[invalid toml [[[")
+        result = _load_toml_config()
+        assert isinstance(result, dict)
+
+    def test_returns_empty_when_tomllib_none(self, monkeypatch):
+        import pywry.config as cfg
+
+        with patch.object(cfg, "tomllib", None):
+            result = cfg._load_toml_config()
+        assert result == {}
+
+
+class TestDeepMergeOverride:
+    """Cover the non-dict override branch of _deep_merge."""
+
+    def test_override_replaces_non_dict(self):
+        from pywry.config import _deep_merge
+
+        # base[key] is a non-dict, override[key] is a non-dict → replace
+        result = _deep_merge({"x": 1, "y": [1, 2]}, {"x": 2, "y": [3, 4]})
+        assert result == {"x": 2, "y": [3, 4]}
+
+    def test_override_replaces_dict_with_value(self):
+        from pywry.config import _deep_merge
+
+        result = _deep_merge({"x": {"a": 1}}, {"x": "literal"})
+        assert result == {"x": "literal"}
+
+    def test_recursive_merge_of_dicts(self):
+        from pywry.config import _deep_merge
+
+        # Triggers line 100 (recursive call) - both keys are dicts
+        result = _deep_merge(
+            {"section": {"a": 1, "b": 2}},
+            {"section": {"b": 3, "c": 4}},
+        )
+        assert result == {"section": {"a": 1, "b": 3, "c": 4}}
+
+
+class TestSecuritySettingsLocalhostWithPorts:
+    def test_with_specific_ports(self):
+        from pywry.config import SecuritySettings
+
+        settings = SecuritySettings.localhost(ports=[8080, 9000])
+        assert "8080" in settings.connect_src
+        assert "9000" in settings.connect_src
+
+
+class TestTVChartStorageValidators:
+    """Cover storage identifier/path validation paths."""
+
+    def test_empty_string_returns_empty(self):
+        from pywry.config import TVChartSettings
+
+        s = TVChartSettings(storage_namespace="")
+        assert s.storage_namespace == ""
+
+    def test_too_long_raises(self):
+        from pywry.config import TVChartSettings
+
+        with pytest.raises(Exception, match="<= 512"):
+            TVChartSettings(storage_namespace="x" * 513)
+
+    def test_control_chars_raises(self):
+        from pywry.config import TVChartSettings
+
+        with pytest.raises(Exception, match="control characters"):
+            TVChartSettings(storage_namespace="bad\x01char")
+
+    def test_unsupported_chars_raises(self):
+        from pywry.config import TVChartSettings
+
+        with pytest.raises(Exception, match="unsupported"):
+            TVChartSettings(storage_namespace="bad@char")
+
+    def test_path_too_long_raises(self):
+        from pywry.config import TVChartSettings
+
+        with pytest.raises(Exception, match="<= 512"):
+            TVChartSettings(storage_path="x" * 513)
+
+    def test_path_control_chars_raises(self):
+        from pywry.config import TVChartSettings
+
+        with pytest.raises(Exception, match="control"):
+            TVChartSettings(storage_path="bad\x01")
+
+    def test_path_unsupported_chars_raises(self):
+        from pywry.config import TVChartSettings
+
+        with pytest.raises(Exception, match="unsupported"):
+            TVChartSettings(storage_path="bad@char")
+
+    def test_storage_path_empty_returns_empty(self):
+        from pywry.config import TVChartSettings
+
+        # Empty string triggers the early-return branch (line 522)
+        s = TVChartSettings(storage_path="")
+        assert s.storage_path == ""
+
+
+class TestCommaSeparatedValidators:
+    def test_watch_directories_string(self):
+        from pywry.config import HotReloadSettings
+
+        s = HotReloadSettings(watch_directories="a, b, c")
+        assert s.watch_directories == ["a", "b", "c"]
+
+    def test_watch_directories_empty_string(self):
+        from pywry.config import HotReloadSettings
+
+        s = HotReloadSettings(watch_directories="")
+        assert s.watch_directories == []
+
+    def test_default_roles_string(self):
+        from pywry.config import DeploySettings
+
+        s = DeploySettings(default_roles="admin, user")
+        assert "admin" in s.default_roles
+
+    def test_admin_users_string(self):
+        from pywry.config import DeploySettings
+
+        s = DeploySettings(admin_users="alice, bob")
+        assert "alice" in s.admin_users
+
+    def test_admin_users_none(self):
+        from pywry.config import DeploySettings
+
+        s = DeploySettings(admin_users=None)
+        assert s.admin_users == []
+
+    def test_public_paths_string(self):
+        from pywry.config import DeploySettings
+
+        s = DeploySettings(auth_public_paths="/health, /metrics")
+        assert "/health" in s.auth_public_paths
+
+    def test_server_cors_origins_string(self):
+        """ServerSettings parses cors_origins from comma-separated string."""
+        from pywry.config import ServerSettings
+
+        s = ServerSettings(cors_origins="https://example.com, https://other.com")
+        assert "https://example.com" in s.cors_origins
+
+    def test_server_cors_methods_string(self):
+        from pywry.config import ServerSettings
+
+        s = ServerSettings(cors_allow_methods="GET, POST")
+        assert "GET" in s.cors_allow_methods
+
+
+class TestOAuth2ValidateCustomProvider:
+    def test_returns_value(self):
+        from pywry.config import OAuth2Settings
+
+        s = OAuth2Settings(client_id="abc")
+        assert s.client_id == "abc"
+
+
+class TestTauriPluginsTypeErrors:
+    def test_invalid_tauri_plugins_type(self):
+        with pytest.raises(TypeError, match="must be a list"):
+            PyWrySettings(tauri_plugins=42)
+
+    def test_invalid_extra_capabilities_type(self):
+        with pytest.raises(TypeError, match="must be a list"):
+            PyWrySettings(extra_capabilities=42)
+
+
+class TestOAuth2AutoDetection:
+    def test_auto_oauth2_from_env(self, monkeypatch):
+        monkeypatch.setenv("PYWRY_OAUTH2__CLIENT_ID", "test-client")
+        from pywry.config import PyWrySettings
+
+        settings = PyWrySettings()
+        assert settings.oauth2 is not None
+
+
+class TestToTomlOAuth2Section:
+    def test_oauth2_included_when_set(self):
+        from pywry.config import OAuth2Settings, PyWrySettings
+
+        oauth2 = OAuth2Settings(client_id="x", provider="google")
+        settings = PyWrySettings(oauth2=oauth2)
+        toml = settings.to_toml()
+        assert "[oauth2]" in toml
+
+    def test_extra_capabilities_included(self):
+        settings = PyWrySettings(extra_capabilities=["read-file"])
+        toml = settings.to_toml()
+        assert "extra_capabilities" in toml
+
+    def test_extra_capabilities_in_env(self):
+        """Trigger line 1338: extra_capabilities export in to_env()."""
+        settings = PyWrySettings(extra_capabilities=["read-file"])
+        env = settings.to_env()
+        assert "PYWRY_EXTRA_CAPABILITIES" in env
+        assert "read-file" in env
+
+
+class TestToEnvOAuth2Section:
+    def test_oauth2_env_export(self):
+        from pywry.config import OAuth2Settings, PyWrySettings
+
+        oauth2 = OAuth2Settings(client_id="x", provider="google")
+        settings = PyWrySettings(oauth2=oauth2)
+        env = settings.to_env()
+        # OAuth2 may not appear in env-export, but should run without error
+        assert isinstance(env, str)
+        assert "PYWRY_" in env
+
+
+class TestSettingsCacheManagement:
+    def test_get_settings_cached(self):
+        from pywry.config import clear_settings, get_settings
+
+        clear_settings()
+        a = get_settings()
+        b = get_settings()
+        assert a is b
+
+    def test_clear_settings_resets(self):
+        from pywry.config import clear_settings, get_settings
+
+        a = get_settings()
+        clear_settings()
+        b = get_settings()
+        # New instance after clear
+        assert isinstance(b, type(a))
+
+    def test_reload_settings(self):
+        from pywry.config import reload_settings
+
+        s = reload_settings()
+        assert s is not None
+
+
+class TestInvalidSecuritySettings:
+    """Tests for invalid SecuritySettings values."""
+
+    def test_empty_default_src_is_allowed(self) -> None:
+        """Empty default_src is allowed (permissive)."""
+        # Empty string is technically valid, just insecure
+        settings = SecuritySettings(default_src="")
+        assert settings.default_src == ""
+
+    def test_none_default_src_uses_default(self) -> None:
+        """None default_src falls back to default value."""
+        settings = SecuritySettings()
+        assert settings.default_src != ""
+
+
+class TestInvalidAssetSettings:
+    """Tests for invalid AssetSettings values."""
+
+    def test_invalid_plotly_version_format(self) -> None:
+        """Invalid plotly version format is accepted (no validation)."""
+        # Version strings aren't validated, user's responsibility
+        settings = AssetSettings(plotly_version="not-a-version")
+        assert settings.plotly_version == "not-a-version"

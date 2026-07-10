@@ -143,10 +143,14 @@ class CallbackProvider(ChatProvider):
             return AgentMessageUpdate(text=item) if isinstance(item, str) else item
 
         if hasattr(result, "__aiter__"):
-            async for item in result:
-                if cancel_event and cancel_event.is_set():
-                    raise GenerationCancelledError()
-                yield _wrap(item)
+            try:
+                async for item in result:
+                    if cancel_event and cancel_event.is_set():
+                        raise GenerationCancelledError()
+                    yield _wrap(item)
+            finally:
+                if hasattr(result, "aclose"):
+                    await result.aclose()
         elif hasattr(result, "__iter__"):
             for item in result:
                 if cancel_event and cancel_event.is_set():

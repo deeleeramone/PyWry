@@ -297,3 +297,177 @@ class TestSessionManagerRefreshScheduling:
         _run(mgr.save_tokens(valid_tokens))
         mgr._cancel_refresh_timer()
         assert mgr._refresh_timer is None
+
+
+# ── Extended refresh paths ──────────────────────────────────────────
+
+
+def _make_provider_with_refresh(
+    refresh_side_effect: object | None = None,
+) -> MagicMock:
+    """Build a mock provider whose refresh_tokens returns a fresh OAuthTokenSet."""
+    provider = MagicMock()
+    provider.__class__.__name__ = "FakeProvider"
+    provider.revoke_token = AsyncMock()
+    if refresh_side_effect is not None:
+        provider.refresh_tokens = AsyncMock(side_effect=refresh_side_effect)
+    else:
+        provider.refresh_tokens = AsyncMock(
+            return_value=OAuthTokenSet(
+                access_token="at_new",
+                refresh_token="rt_new",
+                expires_in=3600,
+            )
+        )
+    return provider
+
+
+class TestSessionManagerRefreshPaths:
+    """Cover edge paths in SessionManager.refresh() / get_access_token()."""
+
+    def test_initialize_refresh_failure_returns_none(self) -> None:
+        """If refresh fails on init, return None."""
+        provider = _make_provider_with_refresh(refresh_side_effect=RuntimeError("provider down"))
+        store = MemoryTokenStore()
+        expired = OAuthTokenSet(
+            access_token="at_old",
+            refresh_token="rt_old",
+            expires_in=3600,
+            issued_at=time.time() - 7200,
+        )
+        _run(store.save("default", expired))
+
+        mgr = SessionManager(provider, store)
+        result = _run(mgr.initialize())
+        assert result is None
+
+    def test_get_access_token_refreshes_when_expired(self) -> None:
+        """get_access_token triggers refresh when token is expired."""
+        provider = _make_provider_with_refresh()
+        store = MemoryTokenStore()
+        expired = OAuthTokenSet(
+            access_token="at_old",
+            refresh_token="rt_old",
+            expires_in=3600,
+            issued_at=time.time() - 7200,
+        )
+        mgr = SessionManager(provider, store)
+        _run(mgr.save_tokens(expired))
+        # Expired -> triggers refresh -> returns at_new
+        token = _run(mgr.get_access_token())
+        assert token == "at_new"
+
+    def test_refresh_loads_from_store_when_no_current(self) -> None:
+        """If _current_tokens is None, refresh() loads from store."""
+        provider = _make_provider_with_refresh()
+        store = MemoryTokenStore()
+        tokens = OAuthTokenSet(
+            access_token="at",
+            refresh_token="rt",
+            expires_in=3600,
+            issued_at=time.time(),
+        )
+        _run(store.save("default", tokens))
+        mgr = SessionManager(provider, store)
+        # _current_tokens is None until we initialize
+        new_tokens = _run(mgr.refresh())
+        assert new_tokens.access_token == "at_new"
+
+    def test_refresh_failure_calls_reauth_callback(self) -> None:
+        """When provider.refresh_tokens raises, on_reauth_required is called."""
+        provider = _make_provider_with_refresh(refresh_side_effect=RuntimeError("provider down"))
+        store = MemoryTokenStore()
+        tokens = OAuthTokenSet(
+            access_token="at",
+            refresh_token="rt",
+            expires_in=3600,
+            issued_at=time.time(),
+        )
+        reauth_calls: list[bool] = []
+        mgr = SessionManager(
+            provider,
+            store,
+            on_reauth_required=lambda: reauth_calls.append(True),
+        )
+        _run(mgr.save_tokens(tokens))
+        with pytest.raises(TokenRefreshError, match="Token refresh failed"):
+            _run(mgr.refresh())
+        assert reauth_calls == [True]
+
+    def test_refresh_fallback_no_refresh_token_with_reauth(self) -> None:
+        """If no refresh_token and on_reauth_required is set, callback fires first."""
+        provider = _make_provider_with_refresh()
+        store = MemoryTokenStore()
+        no_refresh = OAuthTokenSet(
+            access_token="at",
+            refresh_token=None,
+            expires_in=3600,
+            issued_at=time.time(),
+        )
+        reauth_calls: list[bool] = []
+        mgr = SessionManager(
+            provider,
+            store,
+            on_reauth_required=lambda: reauth_calls.append(True),
+        )
+        _run(mgr.save_tokens(no_refresh))
+        with pytest.raises(TokenRefreshError, match="Re-authentication required"):
+            _run(mgr.refresh())
+        assert reauth_calls == [True]
+
+
+class TestSessionManagerScheduleRefresh:
+    """Cover branch in _schedule_refresh where delay <= 0."""
+
+    def test_schedule_when_already_expired_uses_immediate(self) -> None:
+        """When token already expired (delay <= 0), schedules with delay=1.0."""
+        provider = MagicMock()
+        provider.__class__.__name__ = "Fake"
+        store = MemoryTokenStore()
+        # Token already expired (issued an hour+ ago, but expires_in is 3600)
+        expired = OAuthTokenSet(
+            access_token="at",
+            refresh_token="rt",
+            expires_in=3600,
+            issued_at=time.time() - 7200,
+        )
+        mgr = SessionManager(provider, store, refresh_buffer_seconds=60)
+        # Calling _schedule_refresh directly to avoid triggering refresh logic
+        mgr._schedule_refresh(expired)
+        assert mgr._refresh_timer is not None
+        # Cancel before it fires
+        mgr._cancel_refresh_timer()
+
+
+class TestSessionManagerBackgroundRefresh:
+    """Cover SessionManager._do_background_refresh exception path."""
+
+    def test_background_refresh_failure_calls_reauth(self) -> None:
+        """Background refresh failure invokes on_reauth_required."""
+        provider = MagicMock()
+        provider.__class__.__name__ = "Fake"
+        provider.refresh_tokens = AsyncMock(side_effect=RuntimeError("provider down"))
+        provider.revoke_token = AsyncMock()
+        store = MemoryTokenStore()
+        reauth_calls: list[bool] = []
+
+        mgr = SessionManager(
+            provider,
+            store,
+            on_reauth_required=lambda: reauth_calls.append(True),
+        )
+        # Pre-populate with valid tokens (so _current_tokens is set)
+        tokens = OAuthTokenSet(
+            access_token="at",
+            refresh_token="rt",
+            expires_in=3600,
+        )
+        _run(mgr.save_tokens(tokens))
+        # Cancel scheduled timer so we drive it manually
+        mgr._cancel_refresh_timer()
+
+        # Run the background refresh — should not raise
+        mgr._do_background_refresh()
+        # refresh() raises -> exception handler calls reauth; the inner refresh()
+        # may also call it for no-refresh-token or provider-down branches.
+        assert len(reauth_calls) >= 1

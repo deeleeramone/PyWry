@@ -150,10 +150,14 @@ class MagenticProvider(ChatProvider):
             output_types=[AsyncStreamedStr],
         )
         chat = await chat.asubmit()
-        async for chunk in chat.last_message.content:
-            if cancel_event and cancel_event.is_set():
-                raise GenerationCancelledError()
-            yield AgentMessageUpdate(text=chunk)
+        try:
+            async for chunk in chat.last_message.content:
+                if cancel_event and cancel_event.is_set():
+                    raise GenerationCancelledError()
+                yield AgentMessageUpdate(text=chunk)
+        finally:
+            if hasattr(chat.last_message.content, "aclose"):
+                await chat.last_message.content.aclose()
 
     async def cancel(self, session_id: str) -> None:
         """Cancel is handled cooperatively via ``cancel_event``.

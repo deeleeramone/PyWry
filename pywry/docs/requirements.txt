@@ -5,7 +5,7 @@ mkdocs-autorefs>=1.4.4
 
 # Auto-generated API documentation from source
 mkdocstrings[python]>=1.0.4
-griffe>=2.0.2
+griffe>=2.1.0
 
 # For cross-references
 mkdocs-gen-files>=0.6.1
@@ -14,4 +14,4 @@ mkdocs-section-index>=0.3.12
 
 # Needed for building docs (dependencies of pywry)
 pydantic>=2.13.4
-pydantic-settings>=2.14.1
+pydantic-settings>=2.14.2

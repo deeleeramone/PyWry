@@ -310,8 +310,10 @@ class RedisEventBus(EventBus):
         pubsub = r.pubsub()
         await pubsub.subscribe(self._channel_name(channel))
 
+        listen_gen = None
         try:
-            async for message in pubsub.listen():
+            listen_gen = pubsub.listen()
+            async for message in listen_gen:
                 if message["type"] == "message":
                     try:
                         data = json.loads(message["data"])
@@ -327,6 +329,8 @@ class RedisEventBus(EventBus):
                     except json.JSONDecodeError:
                         continue
         finally:
+            if listen_gen:
+                await listen_gen.aclose()
             await pubsub.unsubscribe(self._channel_name(channel))
             await pubsub.close()
 

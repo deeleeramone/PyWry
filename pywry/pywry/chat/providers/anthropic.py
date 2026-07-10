@@ -16,7 +16,7 @@ from . import ChatProvider
 if TYPE_CHECKING:
     import asyncio
 
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
     from ..models import ContentBlock
     from ..session import AgentCapabilities, ClientCapabilities
@@ -137,10 +137,16 @@ class AnthropicProvider(ChatProvider):
             temperature=session.get("temperature", 0.7),
             max_tokens=session.get("max_tokens", 4096),
         ) as stream:
-            async for text in stream.text_stream:
-                if cancel_event and cancel_event.is_set():
-                    raise GenerationCancelledError()
-                yield AgentMessageUpdate(text=text)
+            text_stream = stream.text_stream
+            try:
+                async for text in text_stream:
+                    if cancel_event and cancel_event.is_set():
+                        raise GenerationCancelledError()
+                    yield AgentMessageUpdate(text=text)
+            finally:
+                close_stream = getattr(text_stream, "aclose", None)
+                if close_stream is not None:
+                    await cast("Callable[[], Awaitable[None]]", close_stream)()
 
     async def cancel(self, session_id: str) -> None:
         """Cancel is handled cooperatively via ``cancel_event``.

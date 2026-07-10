@@ -291,7 +291,7 @@ def _node_available() -> bool:
 def _run_js(code: str) -> str:
     """Run a JS snippet in Node.js and return stdout."""
     full = _JS_FUNCTIONS + "\n" + code
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         ["node", "-e", full],  # noqa: S607
         capture_output=True,
         text=True,
