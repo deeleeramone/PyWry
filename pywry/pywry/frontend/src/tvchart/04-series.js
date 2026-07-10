@@ -1458,7 +1458,8 @@ function _tvCreateIndicatorLine(entry, color, lineWidth, isSubplot, useBaseline)
 }
 
 function _tvAddIndicator(indicatorDef, chartId) {
-    chartId = chartId || 'main';
+    chartId = _tvResolveChartId(chartId);
+    if (!chartId) return;
     var entry = window.__PYWRY_TVCHARTS__[chartId];
         if (!entry || !entry.chart || !entry.chartId) return;
 
