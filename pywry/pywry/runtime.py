@@ -45,6 +45,7 @@ def is_headless() -> bool:
 _process: subprocess.Popen[str] | None = None
 _reader_thread: threading.Thread | None = None
 _writer_thread: threading.Thread | None = None
+_stderr_thread: threading.Thread | None = None
 _ready_event = threading.Event()
 _outgoing: Queue[dict[str, Any]] = Queue()
 _responses: Queue[dict[str, Any]] = Queue()
@@ -229,12 +230,16 @@ def wait_ready(timeout: float = 10.0) -> bool:
     return _ready_event.wait(timeout)
 
 
-def _stdout_reader() -> None:
-    """Read responses from subprocess stdout."""
-    global _running
+def _stdout_reader(proc: subprocess.Popen[str] | None = None) -> None:
+    """Read responses from subprocess stdout.
+
+    Bound to the Popen it was started with so a reader from a previous
+    runtime generation can never consume a newer generation's pipe.
+    """
+    proc = proc if proc is not None else _process
     try:
-        while _running and _process and _process.stdout:
-            line = _process.stdout.readline()
+        while _running and proc and proc.stdout:
+            line = proc.stdout.readline()
             if not line:
                 break
             line = line.strip()
@@ -407,21 +412,25 @@ def _handle_content_request(label: str, data: dict[str, Any] | None = None) -> N
     set_content(label, html, theme)
 
 
-def _stdin_writer() -> None:
-    """Write commands to subprocess stdin."""
-    global _running
+def _stdin_writer(proc: subprocess.Popen[str] | None = None) -> None:
+    """Write commands to subprocess stdin.
+
+    Bound to the Popen it was started with so a writer from a previous
+    runtime generation can never write to a newer generation's pipe.
+    """
+    proc = proc if proc is not None else _process
     try:
-        while _running and _process and _process.stdin and not _process.stdin.closed:
+        while _running and proc and proc.stdin and not proc.stdin.closed:
             try:
                 cmd = _outgoing.get(timeout=0.1)
-                if not _running or not _process or not _process.stdin or _process.stdin.closed:
+                if not _running or not proc or not proc.stdin or proc.stdin.closed:
                     break
                 line = json.dumps(cmd) + "\n"
-                _process.stdin.write(line)
-                _process.stdin.flush()
+                proc.stdin.write(line)
+                proc.stdin.flush()
             except Empty:
                 continue
-            except (OSError, BrokenPipeError):
+            except (OSError, BrokenPipeError, ValueError):
                 # Pipe closed during shutdown - expected
                 break
             except Exception as e:
@@ -950,6 +959,31 @@ def eval_js(label: str, script: str) -> bool:
     return response is not None and response.get("success", False)
 
 
+def _stderr_reader(proc: subprocess.Popen[str]) -> None:
+    """Mirror subprocess stderr for debugging.
+
+    Bound to the Popen it was started with so a reader from a previous
+    runtime generation can never consume a newer generation's pipe.
+    """
+    try:
+        while _running and proc.stderr:
+            line = proc.stderr.readline()
+            if not line:
+                break
+            sys.stderr.write(f"[pywry-subprocess] {line}")
+    except Exception:
+        pass
+
+
+def _drain_queue(q: Queue[dict[str, Any]]) -> None:
+    """Discard everything currently in ``q``."""
+    while not q.empty():
+        try:
+            q.get_nowait()
+        except Empty:
+            break
+
+
 def start() -> bool:
     """Start the pytauri subprocess.
 
@@ -958,12 +992,15 @@ def start() -> bool:
     bool
         True if started successfully.
     """
-    global _process, _reader_thread, _writer_thread, _running
+    global _process, _reader_thread, _writer_thread, _stderr_thread, _running
 
     if is_running():
         return True
 
     _ready_event.clear()
+    # Drop commands queued against a previous runtime generation so the
+    # new subprocess never receives messages for windows it has never seen.
+    _drain_queue(_outgoing)
     _running = True
     pywry_dir = get_pywry_dir()
 
@@ -1016,30 +1053,24 @@ def start() -> bool:
         _running = False
         return False
 
+    proc = _process
+
     # Start reader thread
-    _reader_thread = threading.Thread(target=_stdout_reader, daemon=True)
+    _reader_thread = threading.Thread(target=_stdout_reader, args=(proc,), daemon=True)
     _reader_thread.start()
 
     # Start writer thread
-    _writer_thread = threading.Thread(target=_stdin_writer, daemon=True)
+    _writer_thread = threading.Thread(target=_stdin_writer, args=(proc,), daemon=True)
     _writer_thread.start()
 
     # Start stderr reader for debugging
-    def stderr_reader() -> None:
-        try:
-            while _running and _process and _process.stderr:
-                line = _process.stderr.readline()
-                if not line:
-                    break
-                sys.stderr.write(f"[pywry-subprocess] {line}")
-        except Exception:
-            pass
-
-    stderr_thread = threading.Thread(target=stderr_reader, daemon=True)
-    stderr_thread.start()
+    _stderr_thread = threading.Thread(target=_stderr_reader, args=(proc,), daemon=True)
+    _stderr_thread.start()
 
     # Wait for ready signal
-    if not wait_ready(timeout=10.0):
+    from .config import get_settings
+
+    if not wait_ready(timeout=get_settings().timeout.startup):
         log_error("Subprocess did not become ready")
         stop()
         return False
@@ -1050,24 +1081,16 @@ def start() -> bool:
     return True
 
 
-def stop() -> None:  # noqa: C901
+def stop() -> None:
     """Stop the pytauri subprocess."""
-    global _process, _running
+    global _process, _running, _reader_thread, _writer_thread, _stderr_thread
 
     _running = False
     _ready_event.clear()
 
     # Clear queues to prevent stale data on restart
-    while not _outgoing.empty():
-        try:
-            _outgoing.get_nowait()
-        except Empty:
-            break
-    while not _responses.empty():
-        try:
-            _responses.get_nowait()
-        except Empty:
-            break
+    _drain_queue(_outgoing)
+    _drain_queue(_responses)
 
     # Clear pending requests
     with _pending_lock:
@@ -1101,8 +1124,20 @@ def stop() -> None:  # noqa: C901
             except Exception:
                 with contextlib.suppress(Exception):
                     _process.kill()
+                    _process.wait(timeout=1.0)
 
         _process = None
+
+    # Join IO threads before returning so a stopping runtime can never
+    # interleave with the next generation. The threads exit promptly:
+    # _running is False and their pipes are closed.
+    current = threading.current_thread()
+    for thread in (_reader_thread, _writer_thread, _stderr_thread):
+        if thread is not None and thread is not current:
+            thread.join(timeout=2.0)
+    _reader_thread = None
+    _writer_thread = None
+    _stderr_thread = None
 
     # Clean up portal AFTER subprocess termination
     # (follows PyTauri pattern: portal must not close while app is running)

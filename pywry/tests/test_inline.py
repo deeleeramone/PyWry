@@ -390,7 +390,6 @@ class TestServerStateDeployMode:
         def mock_run_async(coro):
             if hasattr(coro, "close"):
                 coro.close()
-            return None
 
         with (
             patch("pywry.state.is_deploy_mode", return_value=True),

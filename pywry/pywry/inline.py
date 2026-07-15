@@ -1282,6 +1282,11 @@ def _start_server(port: int | None = None, host: str | None = None) -> None:  # 
         except Exception:  # noqa: S110
             pass
         time.sleep(0.1)
+    else:
+        log_error(
+            f"[PyWry] Server did not confirm startup on {_state.host}:{_state.port} - "
+            "the port may already be in use by another process"
+        )
 
 
 def stop_server(timeout: float = 5.0) -> None:

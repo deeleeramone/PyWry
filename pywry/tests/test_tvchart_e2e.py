@@ -1464,6 +1464,17 @@ def _http_get(url: str, timeout: float = 5.0) -> str:
         return resp.read().decode("utf-8")
 
 
+def _worker_port() -> int:
+    """Deterministic per-xdist-worker port so parallel workers can never collide.
+
+    Within a worker tests run sequentially and the fixtures stop the server
+    and wait for port release, so reusing one port per worker is safe.
+    """
+    worker = os.environ.get("PYTEST_XDIST_WORKER", "master")
+    idx = int(worker[2:]) if worker.startswith("gw") else 0
+    return 9300 + idx
+
+
 class TestTVChartInline:
     """Inline rendering path."""
 
@@ -1472,10 +1483,12 @@ class TestTVChartInline:
         from pywry.config import clear_settings
         from pywry.inline import _state, stop_server
 
+        saved_env = {k: v for k, v in os.environ.items() if k.startswith("PYWRY_")}
         for key in list(os.environ.keys()):
             if key.startswith("PYWRY_DEPLOY"):
                 del os.environ[key]
         os.environ.pop("PYWRY_HEADLESS", None)
+        os.environ["PYWRY_SERVER__PORT"] = str(_worker_port())
         stop_server()
         _state.widgets.clear()
         clear_settings()
@@ -1486,6 +1499,7 @@ class TestTVChartInline:
         for key in list(os.environ.keys()):
             if key.startswith("PYWRY_"):
                 del os.environ[key]
+        os.environ.update(saved_env)
 
     def test_01_widget_registered(self) -> None:
         from pywry.inline import InlineWidget, _state
@@ -1533,12 +1547,14 @@ class TestTVChartBrowser:
         from pywry.config import clear_settings
         from pywry.inline import _state, stop_server
 
+        saved_env = {k: v for k, v in os.environ.items() if k.startswith("PYWRY_")}
         old_port = _state.port
         stop_server(timeout=5.0)
         _state.widgets.clear()
         clear_settings()
         if old_port is not None:
             _wait_for_port_release(old_port, timeout=3.0)
+        os.environ["PYWRY_SERVER__PORT"] = str(_worker_port())
         yield
         old_port = _state.port
         stop_server(timeout=5.0)
@@ -1549,6 +1565,7 @@ class TestTVChartBrowser:
         for key in list(os.environ.keys()):
             if key.startswith("PYWRY_"):
                 del os.environ[key]
+        os.environ.update(saved_env)
 
     def test_01_serves_tvchart_html(self) -> None:
         from pywry.inline import InlineWidget, _state

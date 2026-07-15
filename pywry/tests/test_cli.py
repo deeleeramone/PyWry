@@ -631,6 +631,24 @@ class TestHandleMcp:
         # config default headless is used
         assert "headless" in mock_run.call_args.kwargs
 
+    def test_env_var_headless_without_flags(self, monkeypatch):
+        """PYWRY_HEADLESS env decides when neither --headless nor --native is passed."""
+        from pywry.cli import handle_mcp
+
+        for env_value, expected in (("1", True), ("0", False)):
+            monkeypatch.setenv("PYWRY_HEADLESS", env_value)
+            with patch("pywry.mcp.run_server") as mock_run:
+                args = argparse.Namespace(
+                    transport=None,
+                    port=None,
+                    host=None,
+                    name=None,
+                    headless=False,
+                    native=False,
+                )
+                handle_mcp(args)
+            assert mock_run.call_args.kwargs.get("headless") is expected
+
 
 class TestHandleConfigDefaults:
     def test_show_defaults_when_no_flags(self):
