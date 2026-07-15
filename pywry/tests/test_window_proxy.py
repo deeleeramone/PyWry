@@ -117,7 +117,13 @@ def show_and_wait_ready(
     timeout: float = 10.0,
     **kwargs: Any,
 ) -> WindowProxy:
-    """Show content and return WindowProxy once window is ready."""
+    """Show content and return WindowProxy once the window is fully ready.
+
+    Ready means both: the DOM signalled pywry:ready AND the window reports
+    real geometry. The DOM signal alone races window layout - a freshly
+    created window can transiently report 0x0 sizes, so returning on the
+    DOM signal would hand tests a half-initialized window.
+    """
     waiter = ReadyWaiter(timeout=timeout)
 
     # Merge callbacks
@@ -125,12 +131,26 @@ def show_and_wait_ready(
     callbacks["pywry:ready"] = waiter.on_ready
 
     widget = app.show(content, callbacks=callbacks, **kwargs)
+    label = widget.label if hasattr(widget, "label") else str(widget)
 
     if not waiter.wait():
-        label = widget.label if hasattr(widget, "label") else str(widget)
         raise TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
 
-    return widget.proxy
+    proxy = widget.proxy
+    deadline = time.time() + timeout
+    sizes = None
+    while time.time() < deadline:
+        try:
+            inner = proxy.inner_size
+            outer = proxy.outer_size
+            sizes = (inner, outer)
+            if 0 not in (inner.width, inner.height, outer.width, outer.height):
+                return proxy
+        except IPCTimeoutError:
+            pass
+        time.sleep(0.05)
+
+    raise TimeoutError(f"Window '{label}' never reported laid-out geometry (sizes={sizes})")
 
 
 class TestWindowProxyProperties:
@@ -178,8 +198,8 @@ class TestWindowProxyProperties:
         assert outer is not None
         assert isinstance(outer, PhysicalSize)
         # Outer includes window chrome, should be >= inner
-        assert outer.width >= inner.width
-        assert outer.height >= inner.height
+        assert outer.width >= inner.width, f"outer {outer} < inner {inner}"
+        assert outer.height >= inner.height, f"outer {outer} < inner {inner}"
         app.close()
 
     def test_inner_position_property(self) -> None:

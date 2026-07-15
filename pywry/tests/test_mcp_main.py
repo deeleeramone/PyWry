@@ -313,19 +313,14 @@ class TestMainNameMain:
 
     def test_runpy_invokes_main(self, monkeypatch) -> None:
         import runpy
+        import sys
 
-        # Stub out main so the runpy call doesn't actually start a server.
-        called: dict[str, bool] = {}
-
-        def fake_main():
-            called["main"] = True
-
-        monkeypatch.setattr("pywry.mcp.__main__.main", fake_main)
+        # --list makes the real main print and exit without starting a server.
         monkeypatch.setattr("sys.argv", ["pywry.mcp", "--list"])
+        # runpy executes pywry.mcp.__main__ from source in a fresh namespace;
+        # drop the cached module so the re-execution doesn't shadow it
+        # (RuntimeWarning otherwise). monkeypatch restores it afterwards.
+        monkeypatch.delitem(sys.modules, "pywry.mcp.__main__", raising=False)
         # Use run_module — the guard at the bottom of __main__.py should fire.
-        # The patched main() prevents real server start.
         with contextlib.suppress(SystemExit):
             runpy.run_module("pywry.mcp", run_name="__main__")
-        # Either fake_main was called OR the original main parsed the args.
-        # Both prove the entry-point invocation happened.
-        assert True  # tolerant
