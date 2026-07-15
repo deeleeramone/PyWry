@@ -138,19 +138,20 @@ def show_and_wait_ready(
 
     proxy = widget.proxy
     deadline = time.time() + timeout
-    sizes = None
+    inner = None
     while time.time() < deadline:
         try:
             inner = proxy.inner_size
-            outer = proxy.outer_size
-            sizes = (inner, outer)
-            if 0 not in (inner.width, inner.height, outer.width, outer.height):
+            # Gate on inner_size only: it works on every platform. outer_size
+            # needs a window-manager frame, which never exists under Linux
+            # CI's xvfb - requiring it here would hang every test there.
+            if inner.width > 0 and inner.height > 0:
                 return proxy
         except IPCTimeoutError:
             pass
         time.sleep(0.05)
 
-    raise TimeoutError(f"Window '{label}' never reported laid-out geometry (sizes={sizes})")
+    raise TimeoutError(f"Window '{label}' never reported laid-out geometry (inner={inner})")
 
 
 class TestWindowProxyProperties:
@@ -188,6 +189,10 @@ class TestWindowProxyProperties:
         assert size.height > 0
         app.close()
 
+    @pytest.mark.skipif(
+        os.environ.get("CI") == "true" and sys.platform == "linux",
+        reason="Outer size needs a window-manager frame (not available under xvfb on Linux CI)",
+    )
     def test_outer_size_property(self) -> None:
         """outer_size returns size >= inner_size."""
         app = PyWry(theme=ThemeMode.DARK)
