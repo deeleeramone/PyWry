@@ -1548,6 +1548,10 @@ class TestTVChartBrowser:
         from pywry.inline import _state, stop_server
 
         saved_env = {k: v for k, v in os.environ.items() if k.startswith("PYWRY_")}
+        for key in list(os.environ.keys()):
+            if key.startswith("PYWRY_DEPLOY"):
+                del os.environ[key]
+        os.environ.pop("PYWRY_HEADLESS", None)
         old_port = _state.port
         stop_server(timeout=5.0)
         _state.widgets.clear()

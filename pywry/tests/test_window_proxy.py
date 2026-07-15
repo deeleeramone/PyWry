@@ -195,8 +195,11 @@ class TestWindowProxyProperties:
         assert isinstance(pos.y, int)
         app.close()
 
-    def test_is_visible_property(self) -> None:
+    def test_is_visible_property(self, monkeypatch) -> None:
         """is_visible returns True for shown window."""
+        # Visibility semantics require a real visible window - headless
+        # mode creates windows hidden, so is_visible would always be False.
+        monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Visible</h1>", title="Visible Test")
 
@@ -267,8 +270,10 @@ class TestWindowProxyActions:
         os.environ.get("CI") == "true" and sys.platform == "linux",
         reason="Maximize/minimize requires a real window manager (not available on Linux CI)",
     )
-    def test_minimize_unminimize(self) -> None:
+    def test_minimize_unminimize(self, monkeypatch) -> None:
         """minimize and unminimize change window state."""
+        # Minimize/visibility transitions need a real visible window.
+        monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Min</h1>", title="Minimize Test")
 
@@ -345,8 +350,10 @@ class TestWindowProxyActions:
         assert abs(new_size.height - 600) < 50
         app.close()
 
-    def test_hide_show(self) -> None:
+    def test_hide_show(self, monkeypatch) -> None:
         """hide and show change visibility."""
+        # Hide/show assertions need a real visible window.
+        monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Hide</h1>", title="Hide Test")
 
