@@ -137,6 +137,9 @@ _DRAW_PIXEL_JS = (
 
 
 def _draw_hline_script() -> str:
+    # After the synthetic click, the canvas render may not happen
+    # synchronously on headless WebKit. Poll _canvasHasPixels with a
+    # short retry loop so we're not racing the compositor.
     return (
         _DRAW_PIXEL_JS
         + "_tvSetDrawTool(cid, 'hline');"
@@ -144,14 +147,19 @@ def _draw_hline_script() -> str:
         + "if (!ds) { pywry.result({error:'no drawing state'}); return; }"
         + "var before = ds.drawings.length;"
         + "_dispatchDrawClick(ds, 0.5, 0.5);"
-        + "var rendered = _canvasHasPixels(ds);"
-        + "_tvSetDrawTool(cid, 'cursor');"
-        + "pywry.result({"
-        + "  count: ds.drawings.length,"
-        + "  added: ds.drawings.length - before,"
-        + "  type: ds.drawings.length ? ds.drawings[ds.drawings.length - 1].type : null,"
-        + "  rendered: rendered,"
-        + "});"
+        + "var _tries = 0;"
+        + "function _poll() {"
+        + "  if (_canvasHasPixels(ds) || _tries > 20) {"
+        + "    _tvSetDrawTool(cid, 'cursor');"
+        + "    pywry.result({"
+        + "      count: ds.drawings.length,"
+        + "      added: ds.drawings.length - before,"
+        + "      type: ds.drawings.length ? ds.drawings[ds.drawings.length - 1].type : null,"
+        + "      rendered: _canvasHasPixels(ds),"
+        + "    });"
+        + "  } else { _tries++; setTimeout(_poll, 50); }"
+        + "}"
+        + "_poll();"
     )
 
 
@@ -900,26 +908,31 @@ class TestTVChartFullLifecycle:
         r = _js(
             chart["label"],
             "(function() {" + _cid() + "var ts = entry.chart.timeScale();"
-            "var barCount = (entry.seriesById && entry.seriesById.main)"
-            "  ? (entry.seriesById.main.data() || []).length : 0;"
-            "ts.setVisibleLogicalRange({from: 5, to: 10});"
-            "setTimeout(function() {"
-            "  var narrow = ts.getVisibleLogicalRange();"
-            "  var narrowSpan = narrow ? (narrow.to - narrow.from) : 0;"
-            "  window.pywry._trigger('tvchart:time-scale', {"
-            "    chartId: cid, fitContent: true"
-            "  });"
+            # Wait for data to load before narrowing.
+            "function _run() {"
+            "  var barCount = (entry.seriesById && entry.seriesById.main)"
+            "    ? (entry.seriesById.main.data() || []).length : 0;"
+            "  if (barCount === 0) { setTimeout(_run, 100); return; }"
+            "  ts.setVisibleLogicalRange({from: 5, to: 10});"
             "  setTimeout(function() {"
-            "    var fit = ts.getVisibleLogicalRange();"
-            "    var fitSpan = fit ? (fit.to - fit.from) : 0;"
-            "    pywry.result({"
-            "      barCount: barCount,"
-            "      narrowSpan: narrowSpan, fitSpan: fitSpan,"
-            "      fitWider: fitSpan > narrowSpan + 1,"
-            "      fitCoversData: barCount > 0 && fitSpan >= barCount * 0.5,"
+            "    var narrow = ts.getVisibleLogicalRange();"
+            "    var narrowSpan = narrow ? (narrow.to - narrow.from) : 0;"
+            "    window.pywry._trigger('tvchart:time-scale', {"
+            "      chartId: cid, fitContent: true"
             "    });"
-            "  }, 400);"
-            "}, 300);"
+            "    setTimeout(function() {"
+            "      var fit = ts.getVisibleLogicalRange();"
+            "      var fitSpan = fit ? (fit.to - fit.from) : 0;"
+            "      pywry.result({"
+            "        barCount: barCount,"
+            "        narrowSpan: narrowSpan, fitSpan: fitSpan,"
+            "        fitWider: fitSpan > narrowSpan + 1,"
+            "        fitCoversData: barCount > 0 && fitSpan >= barCount * 0.5,"
+            "      });"
+            "    }, 400);"
+            "  }, 300);"
+            "}"
+            "_run();"
             "})();",
         )
         # fitContent should either visibly widen the logical range vs the

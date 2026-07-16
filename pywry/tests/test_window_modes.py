@@ -446,6 +446,7 @@ class TestMultiWindowMode:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestCrossModeBehavior:
     """Tests for behavior that applies across all modes."""
 
@@ -513,6 +514,7 @@ class TestCrossModeBehavior:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestReadmeQuickStart:
     """Test that the README Quick Start example works correctly."""
 
