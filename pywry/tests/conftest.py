@@ -133,6 +133,28 @@ def cleanup_runtime(request):
 
 
 @pytest.fixture(scope="class")
+def class_runtime(request):
+    """Share one pytauri subprocess across all tests in a class.
+
+    Tests construct their own PyWry instances as usual; the subprocess is
+    started lazily by the first show() and kept alive for the whole class
+    instead of being stopped and respawned around every test. Per-test
+    spawn/stop churn is what starves subprocess startup under parallel CI
+    load ("Subprocess did not become ready").
+
+    Only for classes whose tests all use the same window mode - the mode is
+    baked into the subprocess environment at spawn.
+    """
+    if request.cls is not None:
+        request.cls._pywry_class_scoped = True
+    _stop_runtime_sync()
+    _clear_registries()
+    yield
+    _stop_runtime_sync()
+    _clear_registries()
+
+
+@pytest.fixture(scope="class")
 def dark_app(request):
     """Class-scoped PyWry app with DARK theme.
 

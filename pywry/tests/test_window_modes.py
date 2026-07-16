@@ -75,6 +75,7 @@ def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Ca
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestNewWindowMode:
     """Tests for NEW_WINDOW mode - creates new window for each show()."""
 
@@ -152,6 +153,7 @@ class TestNewWindowMode:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestSingleWindowMode:
     """Tests for SINGLE_WINDOW mode - reuses one window, replaces content."""
 
@@ -305,6 +307,7 @@ class TestSingleWindowMode:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestMultiWindowMode:
     """Tests for MULTI_WINDOW mode - multiple independent windows with labels."""
 

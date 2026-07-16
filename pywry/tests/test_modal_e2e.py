@@ -109,6 +109,7 @@ def verify_modal_rendered(label: str, modal_id: str, timeout: float = 3.0) -> di
     return last_result if last_result else {"error": "No response"}
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestModalHtmlMode:
     """Tests for modal rendering in basic HTML mode."""
 
@@ -348,6 +349,7 @@ class TestModalHtmlMode:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestModalPlotlyMode:
     """Tests for modal rendering in Plotly chart mode."""
 
@@ -428,6 +430,7 @@ class TestModalPlotlyMode:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestModalDataFrameMode:
     """Tests for modal rendering in DataFrame/AG Grid mode."""
 
@@ -498,6 +501,7 @@ class TestModalDataFrameMode:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestMultipleModals:
     """Tests for multiple modals in a single window."""
 
@@ -549,6 +553,7 @@ class TestMultipleModals:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestModalWithToolbar:
     """Tests for using modals and toolbars together."""
 
@@ -627,6 +632,7 @@ class TestModalWithToolbar:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestModalFromDict:
     """Tests for creating modals from dict configurations."""
 
@@ -668,6 +674,7 @@ class TestModalFromDict:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestModalIsOpenApi:
     """Tests for pywry.modal.isOpen() JavaScript API."""
 

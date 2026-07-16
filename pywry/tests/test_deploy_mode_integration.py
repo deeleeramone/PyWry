@@ -602,6 +602,7 @@ class TestRealAuthenticationFlow:
     async def test_session_expiry_denies_access(self, session_store) -> None:
         """Test that expired sessions deny access."""
         session_id = f"expiring-{uuid.uuid4().hex[:8]}"
+        control_id = f"expiring-{uuid.uuid4().hex[:8]}"
 
         # Create session with very short TTL
         await session_store.create_session(
@@ -610,15 +611,24 @@ class TestRealAuthenticationFlow:
             roles=["admin"],
             ttl=1,  # 1 second
         )
+        # Control session: proves validation works without racing the 1s
+        # TTL above - on a loaded runner more than a second can pass
+        # before validate_session gets to run.
+        await session_store.create_session(
+            session_id=control_id,
+            user_id="expiring-user",
+            roles=["admin"],
+            ttl=60,
+        )
 
-        # Initially valid
-        assert await session_store.validate_session(session_id) is True
+        assert await session_store.validate_session(control_id) is True
 
         # Wait for expiry
         await asyncio.sleep(1.5)
 
-        # Now invalid
+        # Now invalid; control still valid
         assert await session_store.validate_session(session_id) is False
+        assert await session_store.validate_session(control_id) is True
 
     @pytest.mark.asyncio
     async def test_session_logout_invalidates_access(self, session_store) -> None:

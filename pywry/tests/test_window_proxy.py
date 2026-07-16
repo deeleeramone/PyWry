@@ -48,7 +48,7 @@ from pywry.types import (
 from pywry.window_proxy import WindowProxy
 
 # Import shared test utilities from tests.conftest
-from tests.conftest import ReadyWaiter
+from tests.conftest import ReadyWaiter, _stop_runtime_sync
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -154,6 +154,7 @@ def show_and_wait_ready(
     raise TimeoutError(f"Window '{label}' never reported laid-out geometry (inner={inner})")
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestWindowProxyProperties:
     """Test that WindowProxy properties return real values."""
 
@@ -224,7 +225,10 @@ class TestWindowProxyProperties:
         """is_visible returns True for shown window."""
         # Visibility semantics require a real visible window - headless
         # mode creates windows hidden, so is_visible would always be False.
+        # Headless is baked into the subprocess env at spawn, so restart
+        # the class-shared runtime after sanitizing.
         monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
+        _stop_runtime_sync()
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Visible</h1>", title="Visible Test")
 
@@ -249,6 +253,7 @@ class TestWindowProxyProperties:
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestWindowProxyActions:
     """Test that WindowProxy action methods actually work."""
 
@@ -298,7 +303,9 @@ class TestWindowProxyActions:
     def test_minimize_unminimize(self, monkeypatch) -> None:
         """minimize and unminimize change window state."""
         # Minimize/visibility transitions need a real visible window.
+        # Headless is baked at subprocess spawn - force a respawn.
         monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
+        _stop_runtime_sync()
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Min</h1>", title="Minimize Test")
 
@@ -378,7 +385,9 @@ class TestWindowProxyActions:
     def test_hide_show(self, monkeypatch) -> None:
         """hide and show change visibility."""
         # Hide/show assertions need a real visible window.
+        # Headless is baked at subprocess spawn - force a respawn.
         monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
+        _stop_runtime_sync()
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Hide</h1>", title="Hide Test")
 
