@@ -462,29 +462,45 @@ class TestThemeSwitchViaEventE2E:
         plot_bgcolor should all come from the NEW template after a toggle,
         not be carried over from the old one.
         """
+        config = PlotlyConfig(
+            template_dark={
+                "layout": {
+                    "paper_bgcolor": CUSTOM_DARK_PAPER_BG,
+                    "font": {"color": CUSTOM_DARK_FONT_COLOR},
+                }
+            },
+            template_light={
+                "layout": {
+                    "paper_bgcolor": CUSTOM_LIGHT_PAPER_BG,
+                    "font": {"color": CUSTOM_LIGHT_FONT_COLOR},
+                }
+            },
+        )
+
         label = show_plotly_and_wait_ready(
             dark_app,
             SIMPLE_FIGURE,
             title="Font Color Switch",
+            config=config,
             timeout=20.0,
         )
 
-        # Read initial dark state — font should be light
+        # Read initial dark state — font should be light-on-dark
         dark_state = _wait_for_chart_rendered(label)
         assert dark_state["fontColor"] is not None
 
         # Toggle to light — wait for paperBg change as the observable signal
         dark_app.emit("pywry:update-theme", {"theme": "plotly_white"}, label=label)
-        _wait_for_paper_bg(label, dark_state.get("baseLightPaperBg", ""), timeout=10.0)
+        _wait_for_paper_bg(label, CUSTOM_LIGHT_PAPER_BG, timeout=10.0)
 
         # Toggle back to dark
         dark_app.emit("pywry:update-theme", {"theme": "plotly_dark"}, label=label)
-        back_dark = _wait_for_paper_bg(label, dark_state.get("baseDarkPaperBg", ""), timeout=10.0)
+        back_dark = _wait_for_paper_bg(label, CUSTOM_DARK_PAPER_BG, timeout=10.0)
 
         # Font color after round-trip must match the original dark font color,
         # NOT the light theme's font color.
-        assert back_dark["fontColor"] == dark_state["fontColor"], (
+        assert back_dark["fontColor"] == CUSTOM_DARK_FONT_COLOR, (
             f"Font color after light→dark round-trip is '{back_dark['fontColor']}' but "
-            f"should be '{dark_state['fontColor']}'. "
+            f"should be '{CUSTOM_DARK_FONT_COLOR}'. "
             "Dark text on a dark background!"
         )
