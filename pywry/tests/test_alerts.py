@@ -851,8 +851,11 @@ class TestNativeWindowAlertE2E:
             PYWRY_TOAST.show({ message: 'Toast 2', type: 'success', container: container });
             PYWRY_TOAST.show({ message: 'Toast 3', type: 'warning', container: container });
 
-            setTimeout(function() {
+            // Poll until all 3 toasts are in the DOM before dismissing.
+            var _tries = 0;
+            function _poll() {
                 var countBefore = document.querySelectorAll('.pywry-toast').length;
+                if (countBefore < 3 && _tries < 50) { _tries++; setTimeout(_poll, 50); return; }
                 PYWRY_TOAST.dismissAllInWidget(container);
 
                 setTimeout(function() {
@@ -861,12 +864,13 @@ class TestNativeWindowAlertE2E:
                         countBefore: countBefore,
                         countAfter: countAfter
                     });
-                }, 100);
-            }, 100);
+                }, 300);
+            }
+            _poll();
         })();
         """
 
-        result = wait_for_result(label, script, timeout=3.0)
+        result = wait_for_result(label, script, timeout=5.0)
         assert result is not None
         assert result["countBefore"] == 3
         assert result["countAfter"] == 0
