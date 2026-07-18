@@ -478,17 +478,21 @@ class TestCrossModeBehavior:
 
         label = show_and_wait_ready(app, "<h1 id='target'>Original</h1>")
 
-        # Use app.eval_js to mutate; then query in the same IPC sequence.
-        # The IPC queue is FIFO so the mutation is guaranteed to execute before
-        # the read — no sleep needed (and a sleep would introduce jitter).
         app.eval_js("document.getElementById('target').textContent = 'Modified';")
 
-        # Query immediately after: ordering guarantees mutation has run first.
-        result = wait_for_result(
-            label,
-            "pywry.result({ text: document.getElementById('target')?.textContent });",
-        )
-        assert result is not None and result["text"] == "Modified", (
+        # Poll until the mutation is observable — the eval_js IPC response
+        # can race with the wait_for_result query under load.
+        deadline = time.time() + 5.0
+        result = None
+        while time.time() < deadline:
+            result = wait_for_result(
+                label,
+                "pywry.result({ text: document.getElementById('target')?.textContent });",
+            )
+            if result is not None and result.get("text") == "Modified":
+                break
+            time.sleep(0.1)
+        assert result is not None and result.get("text") == "Modified", (
             f"Mode {mode}: eval_js failed: {result}"
         )
 

@@ -1244,6 +1244,21 @@ class TestTVChartFullLifecycle:
     # ------------------------------------------------------------------
 
     def test_46_remove_sma(self, chart: dict[str, Any]) -> None:
+        # After theme switches and state-export the indicator map may still be
+        # settling (async re-computation). Poll until the SMA key is present.
+        _SMA_PRESENT_JS = (
+            "(function() {"
+            "var smaKey = Object.keys(_activeIndicators).filter("
+            "  function(k) {"
+            "    var ai = _activeIndicators[k];"
+            "    return ai.type === 'moving-average-ex' && ai.method === 'SMA';"
+            "  }"
+            ")[0];"
+            "pywry.result({found: !!smaKey});"
+            "})();"
+        )
+        _js_poll(chart["label"], _SMA_PRESENT_JS, lambda r: r["found"])
+
         r = _js(
             chart["label"],
             "(function() {"

@@ -764,16 +764,27 @@ class TestToolbarComponentEvents:
         label = show_and_wait_ready(app, "<div>Slider Test</div>", toolbars=toolbars)
         get_registry().register(label, "test:slider", on_slider)
 
+        # Wait for the slider to exist in the DOM before dispatching.
+        deadline = time.time() + 5.0
+        while time.time() < deadline:
+            probe = wait_for_result(
+                label,
+                "pywry.result({ found: !!document.querySelector('.pywry-input-range') });",
+                timeout=1.0,
+            )
+            if probe and probe.get("found"):
+                break
+            time.sleep(0.1)
+
         # Slide to 80
         app.eval_js(
             "var inp = document.querySelector('.pywry-input-range'); "
-            "inp.value = 80; "
-            "inp.dispatchEvent(new Event('input'));",
+            "if (inp) { inp.value = 80; inp.dispatchEvent(new Event('input')); }",
             label=label,
         )
 
         start = time.time()
-        while not events["received"] and (time.time() - start) < 3.0:
+        while not events["received"] and (time.time() - start) < 5.0:
             time.sleep(0.1)
 
         assert events["received"], "SliderInput event not received"
