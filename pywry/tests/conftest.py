@@ -142,8 +142,11 @@ def class_runtime(request):
     spawn/stop churn is what starves subprocess startup under parallel CI
     load ("Subprocess did not become ready").
 
-    Only for classes whose tests all use the same window mode - the mode is
+    Only for classes whose tests all use the same window mode — the mode is
     baked into the subprocess environment at spawn.
+
+    NOTE: This fixture MUST be class-scoped to actually share the subprocess.
+    Without ``scope="class"`` it runs per-test, defeating the purpose.
     """
     if request.cls is not None:
         request.cls._pywry_class_scoped = True
@@ -293,6 +296,11 @@ def show_and_wait_ready(
 
         last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
         if attempt < retries - 1:
+            # Force a clean subprocess restart before the next attempt.
+            # If the subprocess died or never became ready, a simple show()
+            # retry would just hit the same dead state again.
+            _stop_runtime_sync()
+            _clear_registries()
             time.sleep(RETRY_DELAY * (attempt + 1))
 
     raise last_error  # type: ignore

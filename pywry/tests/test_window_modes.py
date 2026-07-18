@@ -454,24 +454,6 @@ class TestCrossModeBehavior:
         "mode",
         [WindowMode.NEW_WINDOW, WindowMode.SINGLE_WINDOW, WindowMode.MULTI_WINDOW],
     )
-    def test_destroy_closes_all_windows(self, mode):
-        """destroy() closes all windows regardless of mode."""
-        app = PyWry(mode=mode, theme=ThemeMode.DARK)
-
-        show_and_wait_ready(app, "<div>Content 1</div>")
-        if mode != WindowMode.SINGLE_WINDOW:
-            show_and_wait_ready(app, "<div>Content 2</div>")
-
-        app.destroy()
-        time.sleep(0.3)
-
-        # After destroy, get_labels should be empty
-        # (Note: this may depend on implementation details)
-
-    @pytest.mark.parametrize(
-        "mode",
-        [WindowMode.NEW_WINDOW, WindowMode.SINGLE_WINDOW, WindowMode.MULTI_WINDOW],
-    )
     def test_eval_js_works_in_all_modes(self, mode):
         """eval_js works correctly in all window modes."""
         app = PyWry(mode=mode, theme=ThemeMode.DARK)
@@ -497,7 +479,7 @@ class TestCrossModeBehavior:
             f"Mode {mode}: eval_js failed: {result}"
         )
 
-        app.destroy()
+        app.close()
 
     def test_is_open_reports_correctly(self):
         """is_open() correctly reports window state."""
@@ -511,7 +493,27 @@ class TestCrossModeBehavior:
         # After showing, is_open should be True
         assert app.is_open(), "Should be open after show()"
 
+        app.close()
+
+    @pytest.mark.parametrize(
+        "mode",
+        [WindowMode.NEW_WINDOW, WindowMode.SINGLE_WINDOW, WindowMode.MULTI_WINDOW],
+    )
+    def test_destroy_closes_all_windows(self, mode):
+        """destroy() closes all windows regardless of mode.
+
+        This test MUST be last in the class — destroy() poisons the shared
+        subprocess's window state, so no subsequent test can create windows
+        without a full restart (which class_runtime teardown provides).
+        """
+        app = PyWry(mode=mode, theme=ThemeMode.DARK)
+
+        show_and_wait_ready(app, "<div>Content 1</div>")
+        if mode != WindowMode.SINGLE_WINDOW:
+            show_and_wait_ready(app, "<div>Content 2</div>")
+
         app.destroy()
+        time.sleep(0.3)
 
 
 # =============================================================================
