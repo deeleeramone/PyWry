@@ -52,8 +52,8 @@ def _require_result(label: str, script: str, **kwargs) -> dict:
 # =============================================================================
 
 
-def verify_modal_rendered(label: str, modal_id: str, timeout: float = 3.0) -> dict:
-    """Verify a modal exists in the DOM with correct structure.
+def verify_modal_rendered(label: str, modal_id: str, timeout: float = 5.0) -> dict:
+    """Poll until a modal exists in the DOM, then return its structure.
 
     Parameters
     ----------
@@ -61,6 +61,8 @@ def verify_modal_rendered(label: str, modal_id: str, timeout: float = 3.0) -> di
         Window label to execute JS in.
     modal_id : str
         The modal's component_id.
+    timeout : float
+        Maximum time to wait for the modal DOM element.
 
     Returns
     -------
@@ -71,7 +73,7 @@ def verify_modal_rendered(label: str, modal_id: str, timeout: float = 3.0) -> di
     (function() {{
         var overlay = document.getElementById('{modal_id}');
         if (!overlay) {{
-            pywry.result({{ error: 'Modal overlay not found', modalId: '{modal_id}' }});
+            pywry.result({{ found: false }});
             return;
         }}
         var container = overlay.querySelector('.pywry-modal-container');

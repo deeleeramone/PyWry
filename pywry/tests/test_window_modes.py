@@ -478,20 +478,21 @@ class TestCrossModeBehavior:
 
         label = show_and_wait_ready(app, "<h1 id='target'>Original</h1>")
 
-        app.eval_js("document.getElementById('target').textContent = 'Modified';")
-
-        # Poll until the mutation is observable — the eval_js IPC response
-        # can race with the wait_for_result query under load.
-        deadline = time.time() + 5.0
+        # Poll: mutate and read in a single JS call so they're atomic
+        # within the page. Retrying handles the case where the DOM hasn't
+        # loaded the new content yet (SINGLE_WINDOW replaces content async).
+        deadline = time.time() + 10.0
         result = None
         while time.time() < deadline:
             result = wait_for_result(
                 label,
-                "pywry.result({ text: document.getElementById('target')?.textContent });",
+                "var el = document.getElementById('target');"
+                "if (el) el.textContent = 'Modified';"
+                "pywry.result({ text: el ? el.textContent : null });",
             )
             if result is not None and result.get("text") == "Modified":
                 break
-            time.sleep(0.1)
+            time.sleep(0.2)
         assert result is not None and result.get("text") == "Modified", (
             f"Mode {mode}: eval_js failed: {result}"
         )

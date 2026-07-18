@@ -2,6 +2,8 @@
 
 import time
 
+import pytest
+
 from pywry.app import PyWry
 from pywry.callbacks import get_registry
 from pywry.models import HtmlContent, ThemeMode, WindowMode
@@ -231,6 +233,7 @@ class TestLightThemeCoordination:
         assert result["plotlySvgCount"] > 0, "No SVG - chart not drawn!"
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestContentRendering:
     """Verify that content actually renders in windows."""
 
@@ -298,6 +301,7 @@ class TestContentRendering:
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestToolbarAndStyles:
     """Tests for toolbar rendering and CSS application in window mode."""
 
@@ -369,6 +373,7 @@ class TestToolbarAndStyles:
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestToolbarIntegration:
     """Tests for toolbar functionality across all content/framework modes."""
 
@@ -494,6 +499,7 @@ class TestToolbarIntegration:
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestToolbarComponentEvents:
     """E2E tests for all toolbar component types and their event emissions."""
 
@@ -841,6 +847,7 @@ class TestToolbarComponentEvents:
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestMultiToolbarStateTracking:
     """E2E tests for tracking state across multiple toolbars in same widget."""
 
