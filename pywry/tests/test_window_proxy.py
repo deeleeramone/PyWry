@@ -80,43 +80,54 @@ def show_and_wait_ready(
     app: PyWry,
     content: str,
     timeout: float = 10.0,
+    retries: int = 3,
     **kwargs: Any,
 ) -> WindowProxy:
     """Show content and return WindowProxy once the window is fully ready.
 
     Ready means both: the DOM signalled pywry:ready AND the window reports
-    real geometry. The DOM signal alone races window layout - a freshly
+    real geometry. The DOM signal alone races window layout — a freshly
     created window can transiently report 0x0 sizes, so returning on the
     DOM signal would hand tests a half-initialized window.
+
+    Retries with a subprocess restart on failure to handle transient
+    WebView2/WebKit init failures under CI xdist load.
     """
-    waiter = ReadyWaiter(timeout=timeout)
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        waiter = ReadyWaiter(timeout=timeout)
 
-    # Merge callbacks
-    callbacks = kwargs.pop("callbacks", {}) or {}
-    callbacks["pywry:ready"] = waiter.on_ready
+        # Merge callbacks
+        cb = (kwargs.get("callbacks") or {}).copy()
+        cb["pywry:ready"] = waiter.on_ready
+        show_kwargs = {k: v for k, v in kwargs.items() if k != "callbacks"}
 
-    widget = app.show(content, callbacks=callbacks, **kwargs)
-    label = widget.label if hasattr(widget, "label") else str(widget)
+        widget = app.show(content, callbacks=cb, **show_kwargs)
+        label = widget.label if hasattr(widget, "label") else str(widget)
 
-    if not waiter.wait():
-        raise TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
+        if waiter.wait():
+            proxy = widget.proxy
+            deadline = time.time() + timeout
+            inner = None
+            while time.time() < deadline:
+                try:
+                    inner = proxy.inner_size
+                    if inner.width > 0 and inner.height > 0:
+                        return proxy
+                except IPCTimeoutError:
+                    pass
+                time.sleep(0.05)
+            last_error = TimeoutError(
+                f"Window '{label}' never reported laid-out geometry (inner={inner})"
+            )
+        else:
+            last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
 
-    proxy = widget.proxy
-    deadline = time.time() + timeout
-    inner = None
-    while time.time() < deadline:
-        try:
-            inner = proxy.inner_size
-            # Gate on inner_size only: it works on every platform. outer_size
-            # needs a window-manager frame, which never exists under Linux
-            # CI's xvfb - requiring it here would hang every test there.
-            if inner.width > 0 and inner.height > 0:
-                return proxy
-        except IPCTimeoutError:
-            pass
-        time.sleep(0.05)
+        if attempt < retries - 1:
+            _stop_runtime_sync()
+            time.sleep(1.0 * (attempt + 1))
 
-    raise TimeoutError(f"Window '{label}' never reported laid-out geometry (inner={inner})")
+    raise last_error  # type: ignore[misc]
 
 
 @pytest.mark.usefixtures("class_runtime")
