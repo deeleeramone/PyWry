@@ -525,6 +525,7 @@ class TestRedisSessionLifecycle:
     async def test_session_expiry(self, redis_session_store) -> None:
         """Test that sessions expire after TTL."""
         session_id = f"session-{uuid.uuid4().hex[:8]}"
+        control_id = f"session-{uuid.uuid4().hex[:8]}"
 
         # Create with very short TTL
         await redis_session_store.create_session(
@@ -532,13 +533,22 @@ class TestRedisSessionLifecycle:
             user_id="expiry-user",
             ttl=1,  # 1 second TTL
         )
+        # Control session: proves validation works without racing the 1s
+        # TTL above - on a loaded runner more than a second can pass
+        # before validate_session gets to run.
+        await redis_session_store.create_session(
+            session_id=control_id,
+            user_id="expiry-user",
+            ttl=60,
+        )
 
-        assert await redis_session_store.validate_session(session_id) is True
+        assert await redis_session_store.validate_session(control_id) is True
 
         # Wait for expiry
         await asyncio.sleep(1.5)
 
         assert await redis_session_store.validate_session(session_id) is False
+        assert await redis_session_store.validate_session(control_id) is True
 
 
 class TestRedisMultiUserSessions:

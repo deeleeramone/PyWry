@@ -1095,6 +1095,29 @@ class TestStartStop:
             assert runtime_mod.start() is False
             assert runtime_mod._running is False
 
+    def test_start_drain_handles_empty_race(self):
+        # The stale-command drain sees a non-empty queue whose item is
+        # consumed elsewhere before get_nowait() - the drain must break.
+        class RacyQueue:
+            def empty(self):
+                return False
+
+            def get_nowait(self):
+                raise Empty
+
+        original = runtime_mod._outgoing
+        runtime_mod._outgoing = RacyQueue()  # type: ignore[assignment]
+        try:
+            with (
+                patch.object(runtime_mod.subprocess, "Popen", side_effect=OSError("cannot spawn")),
+                patch("pywry._freeze.get_subprocess_command", return_value=["x"]),
+                patch("pywry._freeze.is_frozen", return_value=False),
+            ):
+                assert runtime_mod.start() is False
+        finally:
+            runtime_mod._outgoing = original
+            runtime_mod._running = False
+
     def test_start_succeeds_with_ready_signal(self):
         # Simulate a process that prints {"type":"ready"} and then EOFs.
         proc = MagicMock()

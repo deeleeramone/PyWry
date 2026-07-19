@@ -631,6 +631,24 @@ class TestHandleMcp:
         # config default headless is used
         assert "headless" in mock_run.call_args.kwargs
 
+    def test_env_var_headless_without_flags(self, monkeypatch):
+        """PYWRY_HEADLESS env decides when neither --headless nor --native is passed."""
+        from pywry.cli import handle_mcp
+
+        for env_value, expected in (("1", True), ("0", False)):
+            monkeypatch.setenv("PYWRY_HEADLESS", env_value)
+            with patch("pywry.mcp.run_server") as mock_run:
+                args = argparse.Namespace(
+                    transport=None,
+                    port=None,
+                    host=None,
+                    name=None,
+                    headless=False,
+                    native=False,
+                )
+                handle_mcp(args)
+            assert mock_run.call_args.kwargs.get("headless") is expected
+
 
 class TestHandleConfigDefaults:
     def test_show_defaults_when_no_flags(self):
@@ -831,11 +849,15 @@ class TestMainEntryPointDispatch:
 class TestMainModuleEntry:
     """Cover the `if __name__ == "__main__"` guard."""
 
-    def test_module_main(self):
+    def test_module_main(self, monkeypatch):
         import runpy
 
-        with patch("pywry.cli.main", return_value=0), patch.object(sys, "argv", ["pywry"]):
-            try:
-                runpy.run_module("pywry.cli", run_name="__main__")
-            except SystemExit as e:
-                assert e.code == 0
+        monkeypatch.setattr(sys, "argv", ["pywry"])
+        # runpy re-executes the module from source in a fresh namespace;
+        # drop the cached module so the re-execution doesn't shadow it
+        # (RuntimeWarning otherwise). monkeypatch restores it afterwards.
+        monkeypatch.delitem(sys.modules, "pywry.cli")
+        try:
+            runpy.run_module("pywry.cli", run_name="__main__")
+        except SystemExit as e:
+            assert e.code == 0

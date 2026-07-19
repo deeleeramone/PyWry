@@ -315,6 +315,16 @@ class TestServerStateAsyncMethods:
 # =============================================================================
 
 
+def _close_coro(coro, *_args, **_kwargs):
+    """run_async replacement that releases the coroutine it is handed.
+
+    A bare MagicMock would discard the coroutine un-awaited, leaking a
+    RuntimeWarning at GC time attributed to whatever test runs next.
+    """
+    if hasattr(coro, "close"):
+        coro.close()
+
+
 class TestServerStateDeployMode:
     def test_register_widget_deploy_mode(self):
         store = MagicMock()
@@ -325,7 +335,7 @@ class TestServerStateDeployMode:
             patch("pywry.state.is_deploy_mode", return_value=True),
             patch.object(_state, "get_widget_store", return_value=store),
             patch.object(_state, "get_callback_registry", return_value=registry),
-            patch("pywry.state.run_async", side_effect=lambda c: None),
+            patch("pywry.state.run_async", side_effect=_close_coro),
         ):
 
             def cb(d):
@@ -390,7 +400,6 @@ class TestServerStateDeployMode:
         def mock_run_async(coro):
             if hasattr(coro, "close"):
                 coro.close()
-            return None
 
         with (
             patch("pywry.state.is_deploy_mode", return_value=True),
@@ -427,7 +436,7 @@ class TestServerStateDeployMode:
             patch("pywry.state.is_deploy_mode", return_value=True),
             patch.object(_state, "get_widget_store", return_value=store),
             patch.object(_state, "get_callback_registry", return_value=registry),
-            patch("pywry.state.run_async_fire_and_forget"),
+            patch("pywry.state.run_async_fire_and_forget", side_effect=_close_coro),
         ):
             _state.delete_widget("wd")
             assert "wd" not in _state.local_widgets
@@ -2325,7 +2334,7 @@ class TestInlineWidgetInstance:
             with (
                 patch("pywry.state.is_deploy_mode", return_value=True),
                 patch.object(_state, "get_callback_registry", return_value=registry),
-                patch("pywry.state.run_async"),
+                patch("pywry.state.run_async", side_effect=_close_coro),
             ):
                 _state.local_widgets[w._widget_id] = {"callbacks": {}}
                 w.on("click", cb)

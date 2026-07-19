@@ -138,6 +138,9 @@ def run_async(coro: Coroutine[Any, Any, T], timeout: float | None = 5.0) -> T:
             running_loop = None
 
         if running_loop is loop:
+            # Release the coroutine we took ownership of - refusing to run
+            # it would otherwise leak a never-awaited coroutine.
+            coro.close()
             raise RuntimeError(
                 "run_async() cannot be called from an async context on the server loop. "
                 "Use 'await' directly instead."

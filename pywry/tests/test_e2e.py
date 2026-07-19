@@ -2,6 +2,8 @@
 
 import time
 
+import pytest
+
 from pywry.app import PyWry
 from pywry.callbacks import get_registry
 from pywry.models import HtmlContent, ThemeMode, WindowMode
@@ -9,9 +11,11 @@ from pywry.toolbar import Button, Toolbar
 
 # Import shared test utilities from tests.conftest
 from tests.conftest import (
+    retry_on_subprocess_failure,
     show_and_wait_ready,
     show_dataframe_and_wait_ready,
     show_plotly_and_wait_ready,
+    wait_for_js_condition,
     wait_for_result,
 )
 
@@ -231,6 +235,7 @@ class TestLightThemeCoordination:
         assert result["plotlySvgCount"] > 0, "No SVG - chart not drawn!"
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestContentRendering:
     """Verify that content actually renders in windows."""
 
@@ -284,6 +289,7 @@ class TestContentRendering:
         )
         app.close()
 
+    @retry_on_subprocess_failure(max_attempts=3, delay=1.0)
     def test_new_window_mode_creates_multiple(self):
         """NEW_WINDOW mode creates separate windows."""
         app = PyWry(mode=WindowMode.NEW_WINDOW, theme=ThemeMode.DARK)
@@ -291,13 +297,22 @@ class TestContentRendering:
         label2 = show_and_wait_ready(app, "<div id='win2'>W2</div>")
         assert label1 != label2, "NEW_WINDOW should create unique labels!"
 
-        r1 = wait_for_result(label1, "pywry.result({ has: !!document.getElementById('win1') });")
-        r2 = wait_for_result(label2, "pywry.result({ has: !!document.getElementById('win2') });")
-        assert r1 and isinstance(r1, dict) and r1["has"], "Window 1 content missing!"
-        assert r2 and isinstance(r2, dict) and r2["has"], "Window 2 content missing!"
+        r1 = wait_for_js_condition(
+            label1,
+            "pywry.result({ has: !!document.getElementById('win1') });",
+            lambda r: r.get("has"),
+        )
+        r2 = wait_for_js_condition(
+            label2,
+            "pywry.result({ has: !!document.getElementById('win2') });",
+            lambda r: r.get("has"),
+        )
+        assert r1["has"], "Window 1 content missing!"
+        assert r2["has"], "Window 2 content missing!"
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestToolbarAndStyles:
     """Tests for toolbar rendering and CSS application in window mode."""
 
@@ -369,6 +384,7 @@ class TestToolbarAndStyles:
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestToolbarIntegration:
     """Tests for toolbar functionality across all content/framework modes."""
 
@@ -494,6 +510,7 @@ class TestToolbarIntegration:
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestToolbarComponentEvents:
     """E2E tests for all toolbar component types and their event emissions."""
 
@@ -764,16 +781,27 @@ class TestToolbarComponentEvents:
         label = show_and_wait_ready(app, "<div>Slider Test</div>", toolbars=toolbars)
         get_registry().register(label, "test:slider", on_slider)
 
+        # Wait for the slider to exist in the DOM before dispatching.
+        deadline = time.time() + 5.0
+        while time.time() < deadline:
+            probe = wait_for_result(
+                label,
+                "pywry.result({ found: !!document.querySelector('.pywry-input-range') });",
+                timeout=1.0,
+            )
+            if probe and probe.get("found"):
+                break
+            time.sleep(0.1)
+
         # Slide to 80
         app.eval_js(
             "var inp = document.querySelector('.pywry-input-range'); "
-            "inp.value = 80; "
-            "inp.dispatchEvent(new Event('input'));",
+            "if (inp) { inp.value = 80; inp.dispatchEvent(new Event('input')); }",
             label=label,
         )
 
         start = time.time()
-        while not events["received"] and (time.time() - start) < 3.0:
+        while not events["received"] and (time.time() - start) < 5.0:
             time.sleep(0.1)
 
         assert events["received"], "SliderInput event not received"
@@ -830,6 +858,7 @@ class TestToolbarComponentEvents:
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestMultiToolbarStateTracking:
     """E2E tests for tracking state across multiple toolbars in same widget."""
 

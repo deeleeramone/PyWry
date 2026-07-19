@@ -69,7 +69,15 @@ DEFAULT_PORT = 8765
 
 @pytest.fixture(autouse=True)
 def clean_state():
-    """Clean up server state before and after each test."""
+    """Sanitize env to plain browser mode for each test, restore after.
+
+    Ambient CI env (PYWRY_HEADLESS + PYWRY_DEPLOY__STATE_BACKEND) activates
+    deploy mode, which stores widgets externally instead of _state.widgets —
+    these tests exercise plain local browser mode.
+    """
+    saved_env = {k: v for k, v in os.environ.items() if k.startswith("PYWRY_")}
+    for key in saved_env:
+        del os.environ[key]
     # Get port before stopping so we can wait for release
     old_port = _state.port
 
@@ -102,10 +110,11 @@ def clean_state():
     for port in ports_to_wait:
         wait_for_port_release(port, timeout=3.0)
 
-    # Remove any env vars we set
+    # Remove any env vars we set, then restore what was there before the test
     for key in list(os.environ.keys()):
         if key.startswith("PYWRY_"):
             del os.environ[key]
+    os.environ.update(saved_env)
 
 
 # Use a counter to ensure unique ports across test runs

@@ -33,6 +33,31 @@ CUSTOM_LIGHT_PLOT_BG = "#eaeaea"
 CUSTOM_LIGHT_FONT_COLOR = "#222222"
 
 
+_CHART_STATE_JS = """
+(function() {
+    var plotDiv = document.querySelector('.js-plotly-plot')
+               || document.querySelector('[data-pywry-chart]');
+    var templates = window.PYWRY_PLOTLY_TEMPLATES || {};
+
+    pywry.result({
+        hasMergeFunction: typeof window.__pywryMergeThemeTemplate === 'function',
+        hasDeepMerge: typeof window.__pywryDeepMerge === 'function',
+        hasPlotly: !!plotDiv,
+        svgCount: plotDiv ? plotDiv.querySelectorAll('svg').length : 0,
+        paperBg: plotDiv && plotDiv._fullLayout ? plotDiv._fullLayout.paper_bgcolor : null,
+        plotBg: plotDiv && plotDiv._fullLayout ? plotDiv._fullLayout.plot_bgcolor : null,
+        fontColor: plotDiv && plotDiv._fullLayout ? plotDiv._fullLayout.font.color : null,
+        fontFamily: plotDiv && plotDiv._fullLayout ? (plotDiv._fullLayout.font.family || null) : null,
+        storedDark: plotDiv ? !!plotDiv.__pywry_user_template_dark__ : false,
+        storedLight: plotDiv ? !!plotDiv.__pywry_user_template_light__ : false,
+        storedSingle: plotDiv ? !!plotDiv.__pywry_user_template__ : false,
+        baseDarkPaperBg: templates.plotly_dark ? templates.plotly_dark.layout.paper_bgcolor : null,
+        baseLightPaperBg: templates.plotly_white ? templates.plotly_white.layout.paper_bgcolor : null
+    });
+})();
+"""
+
+
 def _read_chart_template_state(label: str) -> dict | None:
     """Read the rendered Plotly chart's template state from the live DOM.
 
@@ -51,31 +76,45 @@ def _read_chart_template_state(label: str) -> dict | None:
     - baseDarkPaperBg: str - the base plotly_dark template's paper_bgcolor
     - baseLightPaperBg: str - the base plotly_white template's paper_bgcolor
     """
-    return wait_for_result(
-        label,
-        """
-        (function() {
-            var plotDiv = document.querySelector('.js-plotly-plot')
-                       || document.querySelector('[data-pywry-chart]');
-            var templates = window.PYWRY_PLOTLY_TEMPLATES || {};
+    return wait_for_result(label, _CHART_STATE_JS)
 
-            pywry.result({
-                hasMergeFunction: typeof window.__pywryMergeThemeTemplate === 'function',
-                hasDeepMerge: typeof window.__pywryDeepMerge === 'function',
-                hasPlotly: !!plotDiv,
-                svgCount: plotDiv ? plotDiv.querySelectorAll('svg').length : 0,
-                paperBg: plotDiv && plotDiv._fullLayout ? plotDiv._fullLayout.paper_bgcolor : null,
-                plotBg: plotDiv && plotDiv._fullLayout ? plotDiv._fullLayout.plot_bgcolor : null,
-                fontColor: plotDiv && plotDiv._fullLayout ? plotDiv._fullLayout.font.color : null,
-                fontFamily: plotDiv && plotDiv._fullLayout ? (plotDiv._fullLayout.font.family || null) : null,
-                storedDark: plotDiv ? !!plotDiv.__pywry_user_template_dark__ : false,
-                storedLight: plotDiv ? !!plotDiv.__pywry_user_template_light__ : false,
-                storedSingle: plotDiv ? !!plotDiv.__pywry_user_template__ : false,
-                baseDarkPaperBg: templates.plotly_dark ? templates.plotly_dark.layout.paper_bgcolor : null,
-                baseLightPaperBg: templates.plotly_white ? templates.plotly_white.layout.paper_bgcolor : null
-            });
-        })();
-        """,
+
+def _wait_for_chart_rendered(label: str, timeout: float = 15.0) -> dict:
+    """Poll until Plotly has rendered and the merge JS has executed.
+
+    Returns the state dict once the chart div exists, has SVGs (drawn),
+    and the merge function is available. Raises AssertionError on timeout.
+    """
+    deadline = time.monotonic() + timeout
+    result = None
+    while time.monotonic() < deadline:
+        result = wait_for_result(label, _CHART_STATE_JS, timeout=2.0)
+        if (
+            result is not None
+            and result.get("hasPlotly")
+            and result.get("svgCount", 0) > 0
+            and result.get("hasMergeFunction")
+        ):
+            return result
+        time.sleep(0.5)
+    raise AssertionError(f"Chart never became ready within {timeout}s (last state: {result})")
+
+
+def _wait_for_paper_bg(label: str, expected_bg: str, timeout: float = 15.0) -> dict:
+    """Poll until the rendered paper_bgcolor matches ``expected_bg``.
+
+    Used after emitting a theme-switch event to wait for Plotly.relayout
+    to complete instead of sleeping a fixed duration.
+    """
+    deadline = time.monotonic() + timeout
+    result = None
+    while time.monotonic() < deadline:
+        result = wait_for_result(label, _CHART_STATE_JS, timeout=2.0)
+        if result is not None and result.get("paperBg") == expected_bg:
+            return result
+        time.sleep(0.5)
+    raise AssertionError(
+        f"paper_bgcolor never became '{expected_bg}' within {timeout}s (last: {result})"
     )
 
 
@@ -114,16 +153,8 @@ class TestDarkThemeMergeE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)  # Plotly renders asynchronously
 
-        result = _read_chart_template_state(label)
-        assert result is not None, "No response from window!"
-        assert result["hasPlotly"], "Plotly chart div not found!"
-        assert result["svgCount"] > 0, "No SVG elements — chart not drawn!"
-
-        # The merge functions must be loaded in the page
-        assert result["hasMergeFunction"], "__pywryMergeThemeTemplate not found in window!"
-        assert result["hasDeepMerge"], "__pywryDeepMerge not found in window!"
+        result = _wait_for_chart_rendered(label)
 
         # The CUSTOM colors must be rendered — NOT the base plotly_dark values
         assert result["paperBg"] == CUSTOM_DARK_PAPER_BG, (
@@ -151,10 +182,8 @@ class TestDarkThemeMergeE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
 
-        result = _read_chart_template_state(label)
-        assert result is not None, "No response from window!"
+        result = _wait_for_chart_rendered(label)
 
         # Both templates must be persisted on the DOM element
         assert result["storedDark"], "template_dark not stored on plot div!"
@@ -177,11 +206,8 @@ class TestDarkThemeMergeE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
 
-        result = _read_chart_template_state(label)
-        assert result is not None, "No response from window!"
-        assert result["hasPlotly"], "Plotly chart div not found!"
+        result = _wait_for_chart_rendered(label)
 
         # paper_bgcolor is overridden
         assert result["paperBg"] == CUSTOM_DARK_PAPER_BG, (
@@ -210,11 +236,8 @@ class TestDarkThemeMergeE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
 
-        result = _read_chart_template_state(label)
-        assert result is not None, "No response from window!"
-        assert result["hasPlotly"], "Plotly chart div not found!"
+        result = _wait_for_chart_rendered(label)
 
         # paper_bgcolor should be the base plotly_dark template value
         assert result["paperBg"] == result["baseDarkPaperBg"], (
@@ -251,12 +274,8 @@ class TestLightThemeMergeE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
 
-        result = _read_chart_template_state(label)
-        assert result is not None, "No response from window!"
-        assert result["hasPlotly"], "Plotly chart div not found!"
-        assert result["svgCount"] > 0, "No SVG elements — chart not drawn!"
+        result = _wait_for_chart_rendered(label)
 
         # Light custom colors should be rendered — NOT base plotly_white and NOT dark overrides
         assert result["paperBg"] == CUSTOM_LIGHT_PAPER_BG, (
@@ -285,11 +304,8 @@ class TestLightThemeMergeE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
 
-        result = _read_chart_template_state(label)
-        assert result is not None, "No response from window!"
-        assert result["hasPlotly"], "Plotly chart div not found!"
+        result = _wait_for_chart_rendered(label)
 
         # paper_bgcolor should be the base plotly_white template value
         assert result["paperBg"] == result["baseLightPaperBg"], (
@@ -321,23 +337,16 @@ class TestThemeSwitchViaEventE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
 
-        # Verify initial dark state
-        result = _read_chart_template_state(label)
-        assert result is not None and result["paperBg"] == CUSTOM_DARK_PAPER_BG, (
+        result = _wait_for_chart_rendered(label)
+        assert result["paperBg"] == CUSTOM_DARK_PAPER_BG, (
             f"Initial dark paper_bgcolor wrong: {result}"
         )
 
         # Fire the REAL event through the full Python → IPC → JS handler chain
         dark_app.emit("pywry:update-theme", {"theme": "plotly_white"}, label=label)
 
-        # Wait for the handler + Plotly.relayout to complete
-        time.sleep(2.5)
-
-        # Read back the rendered chart state
-        after = _read_chart_template_state(label)
-        assert after is not None, "No response after theme toggle!"
+        after = _wait_for_paper_bg(label, CUSTOM_LIGHT_PAPER_BG)
         assert after["paperBg"] == CUSTOM_LIGHT_PAPER_BG, (
             f"After emit toggle to light, paper_bgcolor should be '{CUSTOM_LIGHT_PAPER_BG}', "
             f"got '{after['paperBg']}'"
@@ -357,20 +366,16 @@ class TestThemeSwitchViaEventE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
 
-        # Verify initial light state
-        result = _read_chart_template_state(label)
-        assert result is not None and result["paperBg"] == CUSTOM_LIGHT_PAPER_BG, (
+        result = _wait_for_chart_rendered(label)
+        assert result["paperBg"] == CUSTOM_LIGHT_PAPER_BG, (
             f"Initial light paper_bgcolor wrong: {result}"
         )
 
         # Fire the REAL event
         light_app.emit("pywry:update-theme", {"theme": "plotly_dark"}, label=label)
-        time.sleep(2.5)
 
-        after = _read_chart_template_state(label)
-        assert after is not None, "No response after theme toggle!"
+        after = _wait_for_paper_bg(label, CUSTOM_DARK_PAPER_BG)
         assert after["paperBg"] == CUSTOM_DARK_PAPER_BG, (
             f"After emit toggle to dark, paper_bgcolor should be '{CUSTOM_DARK_PAPER_BG}', "
             f"got '{after['paperBg']}'"
@@ -400,35 +405,24 @@ class TestThemeSwitchViaEventE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
 
         # Step 1: Verify initial dark
-        r1 = _read_chart_template_state(label)
-        assert r1 is not None and r1["paperBg"] == CUSTOM_DARK_PAPER_BG
+        r1 = _wait_for_chart_rendered(label)
+        assert r1["paperBg"] == CUSTOM_DARK_PAPER_BG
         assert r1["plotBg"] == CUSTOM_DARK_PLOT_BG
 
         # Step 2: Toggle to light via real event
         dark_app.emit("pywry:update-theme", {"theme": "plotly_white"}, label=label)
-        time.sleep(2.5)
 
-        r2 = _read_chart_template_state(label)
-        assert r2 is not None, "No response after toggle to light!"
-        assert r2["paperBg"] == CUSTOM_LIGHT_PAPER_BG, (
-            f"After light toggle, expected '{CUSTOM_LIGHT_PAPER_BG}', got '{r2['paperBg']}'"
-        )
+        r2 = _wait_for_paper_bg(label, CUSTOM_LIGHT_PAPER_BG)
         assert r2["plotBg"] == CUSTOM_LIGHT_PLOT_BG, (
             f"After light toggle, expected '{CUSTOM_LIGHT_PLOT_BG}', got '{r2['plotBg']}'"
         )
 
         # Step 3: Toggle BACK to dark via real event
         dark_app.emit("pywry:update-theme", {"theme": "plotly_dark"}, label=label)
-        time.sleep(2.5)
 
-        r3 = _read_chart_template_state(label)
-        assert r3 is not None, "No response after toggle back to dark!"
-        assert r3["paperBg"] == CUSTOM_DARK_PAPER_BG, (
-            f"After round-trip back to dark, expected '{CUSTOM_DARK_PAPER_BG}', got '{r3['paperBg']}'"
-        )
+        r3 = _wait_for_paper_bg(label, CUSTOM_DARK_PAPER_BG)
         assert r3["plotBg"] == CUSTOM_DARK_PLOT_BG, (
             f"After round-trip back to dark, expected '{CUSTOM_DARK_PLOT_BG}', got '{r3['plotBg']}'"
         )
@@ -447,16 +441,15 @@ class TestThemeSwitchViaEventE2E:
             config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
+
+        _wait_for_chart_rendered(label)
 
         # Toggle to light via real event
         dark_app.emit("pywry:update-theme", {"theme": "plotly_white"}, label=label)
-        time.sleep(2.5)
 
         # The handler calls Plotly.relayout which preserves the DOM element.
         # Verify the stored templates survived the re-render.
-        after = _read_chart_template_state(label)
-        assert after is not None, "No response after toggle!"
+        after = _wait_for_paper_bg(label, CUSTOM_LIGHT_PAPER_BG)
         assert after["storedDark"], "template_dark lost after real event toggle + Plotly.relayout!"
         assert after["storedLight"], (
             "template_light lost after real event toggle + Plotly.relayout!"
@@ -469,34 +462,45 @@ class TestThemeSwitchViaEventE2E:
         plot_bgcolor should all come from the NEW template after a toggle,
         not be carried over from the old one.
         """
+        config = PlotlyConfig(
+            template_dark={
+                "layout": {
+                    "paper_bgcolor": CUSTOM_DARK_PAPER_BG,
+                    "font": {"color": CUSTOM_DARK_FONT_COLOR},
+                }
+            },
+            template_light={
+                "layout": {
+                    "paper_bgcolor": CUSTOM_LIGHT_PAPER_BG,
+                    "font": {"color": CUSTOM_LIGHT_FONT_COLOR},
+                }
+            },
+        )
+
         label = show_plotly_and_wait_ready(
             dark_app,
             SIMPLE_FIGURE,
             title="Font Color Switch",
+            config=config,
             timeout=20.0,
         )
-        time.sleep(2.0)
 
-        # Read initial dark state — font should be light
-        dark_state = _read_chart_template_state(label)
-        assert dark_state is not None and dark_state["fontColor"] is not None
+        # Read initial dark state — font should be light-on-dark
+        dark_state = _wait_for_chart_rendered(label)
+        assert dark_state["fontColor"] is not None
 
-        # Toggle to light
+        # Toggle to light — wait for paperBg change as the observable signal
         dark_app.emit("pywry:update-theme", {"theme": "plotly_white"}, label=label)
-        time.sleep(2.5)
-        light_state = _read_chart_template_state(label)
-        assert light_state is not None, "No response after toggle to light"
+        _wait_for_paper_bg(label, CUSTOM_LIGHT_PAPER_BG, timeout=10.0)
 
         # Toggle back to dark
         dark_app.emit("pywry:update-theme", {"theme": "plotly_dark"}, label=label)
-        time.sleep(2.5)
-        back_dark = _read_chart_template_state(label)
-        assert back_dark is not None, "No response after toggle back to dark"
+        back_dark = _wait_for_paper_bg(label, CUSTOM_DARK_PAPER_BG, timeout=10.0)
 
         # Font color after round-trip must match the original dark font color,
         # NOT the light theme's font color.
-        assert back_dark["fontColor"] == dark_state["fontColor"], (
+        assert back_dark["fontColor"] == CUSTOM_DARK_FONT_COLOR, (
             f"Font color after light→dark round-trip is '{back_dark['fontColor']}' but "
-            f"should be '{dark_state['fontColor']}'. "
+            f"should be '{CUSTOM_DARK_FONT_COLOR}'. "
             "Dark text on a dark background!"
         )
