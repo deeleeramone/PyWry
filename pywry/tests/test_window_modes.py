@@ -23,48 +23,7 @@ from pywry.callbacks import get_registry
 from pywry.models import ThemeMode, WindowMode
 
 # Import shared test utilities from tests.conftest
-from tests.conftest import show_and_wait_ready, wait_for_result
-
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Callable[[F], F]:
-    """Retry decorator for tests that may fail due to transient subprocess issues.
-
-    On failure, this decorator:
-    1. Stops the runtime subprocess
-    2. Clears all in-process state (registry, lifecycle)
-    3. Waits with progressive backoff
-    4. Retries the test
-    """
-    from pywry.window_manager import get_lifecycle
-
-    def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_error: Exception | None = None
-            for attempt in range(max_attempts):
-                try:
-                    return func(*args, **kwargs)
-                except (TimeoutError, AssertionError, RuntimeError) as e:
-                    last_error = e
-                    if attempt < max_attempts - 1:
-                        # Full cleanup before retry
-                        runtime.stop()
-                        get_registry().clear()
-                        get_lifecycle().clear()
-
-                        # Progressive backoff
-                        sleep_time = delay * (attempt + 1)
-                        if sys.platform == "win32":
-                            sleep_time *= 1.5  # Extra time for Windows
-                        time.sleep(sleep_time)
-            raise last_error  # type: ignore
-
-        return wrapper  # type: ignore
-
-    return decorator
+from tests.conftest import retry_on_subprocess_failure, show_and_wait_ready, wait_for_result
 
 
 # Note: cleanup_runtime fixture is now in conftest.py and auto-used
@@ -93,6 +52,7 @@ class TestNewWindowMode:
 
         app.destroy()
 
+    @retry_on_subprocess_failure(max_attempts=3, delay=1.0)
     def test_windows_have_independent_content(self):
         """Each window has its own independent content."""
         app = PyWry(mode=WindowMode.NEW_WINDOW, theme=ThemeMode.DARK)

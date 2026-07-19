@@ -36,7 +36,7 @@ from tests.constants import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
 
 # Add pywry source to path for local source-tree tests.
@@ -484,6 +484,69 @@ def wait_for_result(
             time.sleep(0.3)
 
     return result["data"]
+
+
+def wait_for_js_condition(
+    label: str,
+    script: str,
+    ready: Callable[[dict[str, Any]], bool],
+    timeout: float = 10.0,
+    interval: float = 0.1,
+) -> dict[str, Any]:
+    """Re-evaluate a synchronous result script until ``ready(result)`` holds.
+
+    Waiting belongs on the Python side: WebKit throttles setTimeout in
+    hidden (headless) windows, so in-page timer chains can outrun the IPC
+    response window under CI load. ``script`` must call pywry.result()
+    synchronously - never from inside a setTimeout.
+    """
+    deadline = time.monotonic() + timeout
+    result: dict[str, Any] | None = None
+    while time.monotonic() < deadline:
+        result = wait_for_result(label, script)
+        if result is not None and ready(result):
+            return result
+        time.sleep(interval)
+    raise AssertionError(f"JS condition not reached within {timeout}s; last result: {result}")
+
+
+def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0):
+    """Retry decorator for e2e tests that can hit transient webview crashes.
+
+    On Windows, WebView2 sometimes dies under CI load ("Failed to
+    unregister class Chrome_WidgetWin_0", windows vanishing after ready).
+    On Linux with xvfb, WebKit initialization may have timing issues.
+
+    On failure this stops the runtime, clears all in-process state, waits
+    with progressive backoff, and retries so the next attempt gets a fresh
+    subprocess.
+    """
+    import functools
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            from pywry import runtime
+
+            last_error: Exception | None = None
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except (TimeoutError, AssertionError, RuntimeError) as e:
+                    last_error = e
+                    if attempt < max_attempts - 1:
+                        runtime.stop()
+                        _clear_registries()
+
+                        sleep_time = delay * (attempt + 1)
+                        if sys.platform == "win32":
+                            sleep_time *= 1.5  # Extra time for Windows
+                        time.sleep(sleep_time)
+            raise last_error  # type: ignore
+
+        return wrapper
+
+    return decorator
 
 
 # =============================================================================

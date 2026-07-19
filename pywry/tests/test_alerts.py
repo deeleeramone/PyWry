@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 
 # Import shared test utilities from tests.conftest
-from tests.conftest import show_and_wait_ready, wait_for_result
+from tests.conftest import show_and_wait_ready, wait_for_js_condition, wait_for_result
 
 
 # Note: cleanup_runtime fixture is now in conftest.py and auto-used
@@ -610,22 +610,13 @@ class TestNativeWindowAlertE2E:
         # first poll burst.  A fresh window on a re-attempt clears it.
         script = """
         (function() {
-            var attempts = 0;
-            function check() {
-                attempts++;
-                var available = typeof PYWRY_TOAST !== 'undefined';
-                if (available || attempts >= 40) {
-                    pywry.result({
-                        toastAvailable: available,
-                        hasShow: available && typeof PYWRY_TOAST.show === 'function',
-                        hasConfirm: available && typeof PYWRY_TOAST.confirm === 'function',
-                        hasDismiss: available && typeof PYWRY_TOAST.dismiss === 'function'
-                    });
-                } else {
-                    setTimeout(check, 100);
-                }
-            }
-            check();
+            var available = typeof PYWRY_TOAST !== 'undefined';
+            pywry.result({
+                toastAvailable: available,
+                hasShow: available && typeof PYWRY_TOAST.show === 'function',
+                hasConfirm: available && typeof PYWRY_TOAST.confirm === 'function',
+                hasDismiss: available && typeof PYWRY_TOAST.dismiss === 'function'
+            });
         })();
         """
 
@@ -636,14 +627,17 @@ class TestNativeWindowAlertE2E:
                 "<div>Test</div>",
                 title="Alert E2E Test",
             )
-            result = wait_for_result(label, script, timeout=8.0)
-            if result is not None and result.get("toastAvailable") is True:
+            try:
+                result = wait_for_js_condition(
+                    label, script, lambda r: r["toastAvailable"], timeout=8.0
+                )
                 break
-            # Close the bad window before re-attempting so the subprocess
-            # doesn't accumulate orphaned WebView2 instances.
-            with contextlib.suppress(Exception):
-                self.app.close(label)
-            time.sleep(0.5 * (attempt + 1))
+            except AssertionError:
+                # Close the bad window before re-attempting so the subprocess
+                # doesn't accumulate orphaned WebView2 instances.
+                with contextlib.suppress(Exception):
+                    self.app.close(label)
+                time.sleep(0.5 * (attempt + 1))
 
         assert result is not None
         assert result["toastAvailable"] is True
@@ -660,18 +654,27 @@ class TestNativeWindowAlertE2E:
             title="Info Toast Test",
         )
 
-        script = """
-        (function() {
-            var container = document.querySelector('.pywry-widget');
-            PYWRY_TOAST.show({
-                message: 'Test info message',
-                type: 'info',
-                title: 'Info Title',
-                container: container
-            });
+        wait_for_result(
+            label,
+            """
+            (function() {
+                PYWRY_TOAST.show({
+                    message: 'Test info message',
+                    type: 'info',
+                    title: 'Info Title',
+                    container: document.querySelector('.pywry-widget')
+                });
+                pywry.result({ok: true});
+            })();
+            """,
+        )
 
-            // Wait a moment for DOM update
-            setTimeout(function() {
+        # DOM insertion is async - poll from Python (in-page setTimeout is
+        # throttled in hidden windows).
+        result = wait_for_js_condition(
+            label,
+            """
+            (function() {
                 var toast = document.querySelector('.pywry-toast--info');
                 pywry.result({
                     toastExists: toast !== null,
@@ -680,12 +683,10 @@ class TestNativeWindowAlertE2E:
                     titleText: toast && toast.querySelector('.pywry-toast__title') ? toast.querySelector('.pywry-toast__title').textContent : null,
                     messageText: toast && toast.querySelector('.pywry-toast__message') ? toast.querySelector('.pywry-toast__message').textContent : null
                 });
-            }, 100);
-        })();
-        """
-
-        result = wait_for_result(label, script, timeout=5.0)
-        assert result is not None, "Toast test: pywry.result() callback not received"
+            })();
+            """,
+            lambda r: r["toastExists"],
+        )
         assert result["toastExists"] is True
         assert result["hasTitle"] is True
         assert result["hasMessage"] is True
@@ -701,18 +702,26 @@ class TestNativeWindowAlertE2E:
             title="Confirm Toast Test",
         )
 
-        script = """
-        (function() {
-            var container = document.querySelector('.pywry-widget');
-            PYWRY_TOAST.confirm({
-                message: 'Are you sure?',
-                title: 'Confirm Action',
-                container: container,
-                onConfirm: function() {},
-                onCancel: function() {}
-            });
+        wait_for_result(
+            label,
+            """
+            (function() {
+                PYWRY_TOAST.confirm({
+                    message: 'Are you sure?',
+                    title: 'Confirm Action',
+                    container: document.querySelector('.pywry-widget'),
+                    onConfirm: function() {},
+                    onCancel: function() {}
+                });
+                pywry.result({ok: true});
+            })();
+            """,
+        )
 
-            setTimeout(function() {
+        result = wait_for_js_condition(
+            label,
+            """
+            (function() {
                 var toast = document.querySelector('.pywry-toast--confirm');
                 var cancelBtn = toast && toast.querySelector('.pywry-toast__btn--cancel');
                 var confirmBtn = toast && toast.querySelector('.pywry-toast__btn--confirm');
@@ -726,12 +735,10 @@ class TestNativeWindowAlertE2E:
                     cancelText: cancelBtn ? cancelBtn.textContent : null,
                     confirmText: confirmBtn ? confirmBtn.textContent : null
                 });
-            }, 100);
-        })();
-        """
-
-        result = wait_for_result(label, script, timeout=3.0)
-        assert result is not None
+            })();
+            """,
+            lambda r: r["toastExists"] and r["hasConfirmButton"],
+        )
         assert result["toastExists"] is True
         assert result["hasCancelButton"] is True
         assert result["hasConfirmButton"] is True
@@ -748,37 +755,49 @@ class TestNativeWindowAlertE2E:
             title="Confirm Callback Test",
         )
 
-        script = """
-        (function() {
-            var container = document.querySelector('.pywry-widget');
-            var confirmed = false;
-
-            PYWRY_TOAST.confirm({
-                message: 'Confirm test',
-                container: container,
-                onConfirm: function() { confirmed = true; },
-                onCancel: function() {}
-            });
-
-            setTimeout(function() {
-                var confirmBtn = document.querySelector('.pywry-toast__btn--confirm');
-                if (confirmBtn) {
-                    confirmBtn.click();
-                }
-
-                setTimeout(function() {
-                    var toastGone = document.querySelector('.pywry-toast--confirm') === null;
-                    pywry.result({
-                        confirmed: confirmed,
-                        toastDismissed: toastGone
-                    });
-                }, 100);
-            }, 100);
-        })();
-        """
-
-        result = wait_for_result(label, script, timeout=3.0)
-        assert result is not None
+        wait_for_result(
+            label,
+            """
+            (function() {
+                window.__TEST_CONFIRMED = false;
+                PYWRY_TOAST.confirm({
+                    message: 'Confirm test',
+                    container: document.querySelector('.pywry-widget'),
+                    onConfirm: function() { window.__TEST_CONFIRMED = true; },
+                    onCancel: function() {}
+                });
+                pywry.result({ok: true});
+            })();
+            """,
+        )
+        wait_for_js_condition(
+            label,
+            "(function() {pywry.result({"
+            "hasBtn: !!document.querySelector('.pywry-toast__btn--confirm')"
+            "});})();",
+            lambda r: r["hasBtn"],
+        )
+        wait_for_result(
+            label,
+            """
+            (function() {
+                document.querySelector('.pywry-toast__btn--confirm').click();
+                pywry.result({ok: true});
+            })();
+            """,
+        )
+        result = wait_for_js_condition(
+            label,
+            """
+            (function() {
+                pywry.result({
+                    confirmed: window.__TEST_CONFIRMED === true,
+                    toastDismissed: document.querySelector('.pywry-toast--confirm') === null
+                });
+            })();
+            """,
+            lambda r: r["confirmed"] and r["toastDismissed"],
+        )
         assert result["confirmed"] is True
         assert result["toastDismissed"] is True
 
@@ -791,45 +810,55 @@ class TestNativeWindowAlertE2E:
             title="Cancel Callback Test",
         )
 
-        # Clear any toasts the previous test (confirm-button) may have
-        # left attached — when tests share a page across the class,
-        # a stale ``.pywry-toast--confirm`` selector can find the
-        # old toast's DOM node (``toastDismissed=False``) or steer
-        # the click to the wrong button.
-        script = """
-        (function() {
-            var container = document.querySelector('.pywry-widget');
-            var existing = container.querySelectorAll('.pywry-toast--confirm');
-            existing.forEach(function(el) { el.remove(); });
-
-            var cancelled = false;
-
-            PYWRY_TOAST.confirm({
-                message: 'Cancel test',
-                container: container,
-                onConfirm: function() {},
-                onCancel: function() { cancelled = true; }
-            });
-
-            setTimeout(function() {
-                var cancelBtn = container.querySelector('.pywry-toast__btn--cancel');
-                if (cancelBtn) {
-                    cancelBtn.click();
-                }
-
-                setTimeout(function() {
-                    var toastGone = container.querySelector('.pywry-toast--confirm') === null;
-                    pywry.result({
-                        cancelled: cancelled,
-                        toastDismissed: toastGone
-                    });
-                }, 200);
-            }, 200);
-        })();
-        """
-
-        result = wait_for_result(label, script, timeout=5.0)
-        assert result is not None
+        # Clear any stale confirm toasts defensively before starting.
+        wait_for_result(
+            label,
+            """
+            (function() {
+                var container = document.querySelector('.pywry-widget');
+                container.querySelectorAll('.pywry-toast--confirm').forEach(
+                    function(el) { el.remove(); }
+                );
+                window.__TEST_CANCELLED = false;
+                PYWRY_TOAST.confirm({
+                    message: 'Cancel test',
+                    container: container,
+                    onConfirm: function() {},
+                    onCancel: function() { window.__TEST_CANCELLED = true; }
+                });
+                pywry.result({ok: true});
+            })();
+            """,
+        )
+        wait_for_js_condition(
+            label,
+            "(function() {pywry.result({"
+            "hasBtn: !!document.querySelector('.pywry-widget .pywry-toast__btn--cancel')"
+            "});})();",
+            lambda r: r["hasBtn"],
+        )
+        wait_for_result(
+            label,
+            """
+            (function() {
+                document.querySelector('.pywry-widget .pywry-toast__btn--cancel').click();
+                pywry.result({ok: true});
+            })();
+            """,
+        )
+        result = wait_for_js_condition(
+            label,
+            """
+            (function() {
+                pywry.result({
+                    cancelled: window.__TEST_CANCELLED === true,
+                    toastDismissed: document.querySelector(
+                        '.pywry-widget .pywry-toast--confirm') === null
+                });
+            })();
+            """,
+            lambda r: r["cancelled"] and r["toastDismissed"],
+        )
         assert result["cancelled"] is True
         assert result["toastDismissed"] is True
 
@@ -842,38 +871,43 @@ class TestNativeWindowAlertE2E:
             title="Dismiss All Test",
         )
 
-        script = """
-        (function() {
-            var container = document.querySelector('.pywry-widget');
-
-            // Show multiple toasts
-            PYWRY_TOAST.show({ message: 'Toast 1', type: 'info', container: container });
-            PYWRY_TOAST.show({ message: 'Toast 2', type: 'success', container: container });
-            PYWRY_TOAST.show({ message: 'Toast 3', type: 'warning', container: container });
-
-            // Poll until all 3 toasts are in the DOM before dismissing.
-            var _tries = 0;
-            function _poll() {
-                var countBefore = document.querySelectorAll('.pywry-toast').length;
-                if (countBefore < 3 && _tries < 50) { _tries++; setTimeout(_poll, 50); return; }
-                PYWRY_TOAST.dismissAllInWidget(container);
-
-                setTimeout(function() {
-                    var countAfter = document.querySelectorAll('.pywry-toast').length;
-                    pywry.result({
-                        countBefore: countBefore,
-                        countAfter: countAfter
-                    });
-                }, 300);
-            }
-            _poll();
-        })();
-        """
-
-        result = wait_for_result(label, script, timeout=5.0)
-        assert result is not None
-        assert result["countBefore"] == 3
-        assert result["countAfter"] == 0
+        wait_for_result(
+            label,
+            """
+            (function() {
+                var container = document.querySelector('.pywry-widget');
+                PYWRY_TOAST.show({ message: 'Toast 1', type: 'info', container: container });
+                PYWRY_TOAST.show({ message: 'Toast 2', type: 'success', container: container });
+                PYWRY_TOAST.show({ message: 'Toast 3', type: 'warning', container: container });
+                pywry.result({ok: true});
+            })();
+            """,
+        )
+        before = wait_for_js_condition(
+            label,
+            "(function() {pywry.result({"
+            "count: document.querySelectorAll('.pywry-toast').length"
+            "});})();",
+            lambda r: r["count"] >= 3,
+        )
+        wait_for_result(
+            label,
+            """
+            (function() {
+                PYWRY_TOAST.dismissAllInWidget(document.querySelector('.pywry-widget'));
+                pywry.result({ok: true});
+            })();
+            """,
+        )
+        after = wait_for_js_condition(
+            label,
+            "(function() {pywry.result({"
+            "count: document.querySelectorAll('.pywry-toast').length"
+            "});})();",
+            lambda r: r["count"] == 0,
+        )
+        assert before["count"] == 3
+        assert after["count"] == 0
 
     @pytest.mark.e2e
     def test_max_visible_limit_enforced(self) -> None:
@@ -884,31 +918,33 @@ class TestNativeWindowAlertE2E:
             title="Max Visible Test",
         )
 
-        script = """
-        (function() {
-            var container = document.querySelector('.pywry-widget');
-            var maxVisible = PYWRY_TOAST.maxVisible;
+        r = wait_for_result(
+            label,
+            """
+            (function() {
+                var container = document.querySelector('.pywry-widget');
+                var maxVisible = PYWRY_TOAST.maxVisible;
+                for (var i = 0; i < maxVisible + 2; i++) {
+                    PYWRY_TOAST.show({ message: 'Toast ' + i, type: 'info', container: container, duration: null });
+                }
+                pywry.result({maxVisible: maxVisible});
+            })();
+            """,
+        )
+        assert r is not None
+        max_visible = r["maxVisible"]
 
-            // Show more than maxVisible toasts
-            for (var i = 0; i < maxVisible + 2; i++) {
-                PYWRY_TOAST.show({ message: 'Toast ' + i, type: 'info', container: container, duration: null });
-            }
-
-            setTimeout(function() {
-                var visibleCount = document.querySelectorAll('.pywry-toast').length;
-                pywry.result({
-                    maxVisible: maxVisible,
-                    visibleCount: visibleCount,
-                    limitEnforced: visibleCount <= maxVisible
-                });
-            }, 100);
-        })();
-        """
-
-        result = wait_for_result(label, script, timeout=3.0)
-        assert result is not None
-        assert result["limitEnforced"] is True
-        assert result["visibleCount"] <= result["maxVisible"]
+        # Poll until the visible set fills up to the cap; a broken limit
+        # (count above the cap) also satisfies the condition and then
+        # fails the assertion below.
+        result = wait_for_js_condition(
+            label,
+            "(function() {pywry.result({"
+            "visibleCount: document.querySelectorAll('.pywry-toast').length"
+            "});})();",
+            lambda r: r["visibleCount"] >= max_visible,
+        )
+        assert result["visibleCount"] <= max_visible
 
     @pytest.mark.e2e
     def test_toast_position_top_right(self) -> None:
@@ -920,34 +956,37 @@ class TestNativeWindowAlertE2E:
         )
 
         # Guard against PYWRY_TOAST not yet being available on slow CI (ARM).
-        script = """
-        (function() {
-            function run() {
-                var container = document.querySelector('.pywry-widget');
+        wait_for_js_condition(
+            label,
+            "(function() {pywry.result({ready: typeof PYWRY_TOAST !== 'undefined'});})();",
+            lambda r: r["ready"],
+        )
+        wait_for_result(
+            label,
+            """
+            (function() {
                 PYWRY_TOAST.show({
                     message: 'Position test',
                     type: 'info',
                     position: 'top-right',
-                    container: container
+                    container: document.querySelector('.pywry-widget')
                 });
-                setTimeout(function() {
-                    var toastContainer = document.querySelector('.pywry-toast-container');
-                    pywry.result({
-                        hasPositionClass: toastContainer && toastContainer.classList.contains('pywry-toast-container--top-right')
-                    });
-                }, 100);
-            }
-            var attempts = 0;
-            (function waitForToast() {
-                if (typeof PYWRY_TOAST !== 'undefined') { run(); }
-                else if (++attempts > 20) { pywry.result({ hasPositionClass: false }); }
-                else { setTimeout(waitForToast, 100); }
+                pywry.result({ok: true});
             })();
-        })();
-        """
-
-        result = wait_for_result(label, script, timeout=5.0)
-        assert result is not None
+            """,
+        )
+        result = wait_for_js_condition(
+            label,
+            """
+            (function() {
+                var toastContainer = document.querySelector('.pywry-toast-container');
+                pywry.result({
+                    hasPositionClass: !!(toastContainer && toastContainer.classList.contains('pywry-toast-container--top-right'))
+                });
+            })();
+            """,
+            lambda r: r["hasPositionClass"],
+        )
         assert result["hasPositionClass"] is True
 
     @pytest.mark.e2e
@@ -998,18 +1037,24 @@ class TestNativeWindowAlertE2E:
                 title: 'Event Test'
             });
 
-            setTimeout(function() {
+            pywry.result({ok: true});
+        })();
+        """
+
+        wait_for_result(label, script, timeout=3.0)
+        result = wait_for_js_condition(
+            label,
+            """
+            (function() {
                 var toast = document.querySelector('.pywry-toast--success');
                 pywry.result({
                     toastExists: toast !== null,
                     messageText: toast ? toast.querySelector('.pywry-toast__message').textContent : null
                 });
-            }, 100);
-        })();
-        """
-
-        result = wait_for_result(label, script, timeout=3.0)
-        assert result is not None
+            })();
+            """,
+            lambda r: r["toastExists"],
+        )
         assert result["toastExists"] is True
         assert result["messageText"] == "Event triggered alert"
 

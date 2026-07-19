@@ -25,7 +25,7 @@ import time
 import urllib.error
 import urllib.request
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
@@ -33,13 +33,10 @@ from tests.conftest import (
     ReadyWaiter,
     _clear_registries,
     _stop_runtime_sync,
+    wait_for_js_condition,
     wait_for_result,
 )
 from tests.constants import SHORT_TIMEOUT
-
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 # ---------------------------------------------------------------------------
@@ -100,30 +97,6 @@ def _js(label: str, script: str, timeout: float = SHORT_TIMEOUT) -> dict[str, An
     result = wait_for_result(label, script, timeout=timeout)
     assert result is not None, f"JS returned None for:\n{script[:120]}"
     return result
-
-
-def _js_poll(
-    label: str,
-    script: str,
-    ready: Callable[[dict[str, Any]], bool],
-    timeout: float = 10.0,
-    interval: float = 0.1,
-) -> dict[str, Any]:
-    """Re-evaluate a synchronous result script until ``ready(result)`` holds.
-
-    Waiting belongs on the Python side: WebKit throttles setTimeout in
-    hidden (headless) windows, so in-page timer chains can outrun the IPC
-    response window under CI load. The script must call pywry.result()
-    synchronously.
-    """
-    deadline = time.time() + timeout
-    result: dict[str, Any] | None = None
-    while time.time() < deadline:
-        result = wait_for_result(label, script)
-        if result is not None and ready(result):
-            return result
-        time.sleep(interval)
-    raise AssertionError(f"JS condition not reached within {timeout}s; last result: {result}")
 
 
 def _cid() -> str:
@@ -956,7 +929,7 @@ class TestTVChartFullLifecycle:
         bar_count = r["barCount"]
         assert bar_count > 0, "No bars loaded (fixture gate should have caught this)"
 
-        narrow = _js_poll(chart["label"], _SPAN_JS, lambda r: r["span"] is not None)
+        narrow = wait_for_js_condition(chart["label"], _SPAN_JS, lambda r: r["span"] is not None)
         narrow_span = narrow["span"]
 
         _js(
@@ -972,7 +945,7 @@ class TestTVChartFullLifecycle:
         # narrow zoom, or — when Lightweight-Charts clamps the narrow
         # request to maintain minimum bar spacing on smaller viewports —
         # produce a range that covers at least half the loaded bars.
-        fit = _js_poll(
+        fit = wait_for_js_condition(
             chart["label"],
             _SPAN_JS,
             lambda r: (
@@ -1054,7 +1027,7 @@ class TestTVChartFullLifecycle:
         )
         assert r["lockedBefore"] is False
 
-        opened = _js_poll(
+        opened = wait_for_js_condition(
             chart["label"],
             "(function() {" + _cid() + "pywry.result({"
             "  lockedAfter: !!entry._interactionLocked,"
@@ -1079,7 +1052,7 @@ class TestTVChartFullLifecycle:
             "pywry.result({clicked: !!overlay});"
             "})();",
         )
-        _js_poll(
+        wait_for_js_condition(
             chart["label"],
             "(function() {" + _cid() + "pywry.result({locked: !!entry._interactionLocked});})();",
             lambda r: not r["locked"],
@@ -1098,7 +1071,7 @@ class TestTVChartFullLifecycle:
             "pywry.result({ok: true});"
             "})();",
         )
-        r = _js_poll(
+        r = wait_for_js_condition(
             chart["label"],
             "(function() {" + _cid() + "var opts = entry.chart.options();"
             "pywry.result({"
@@ -1136,7 +1109,7 @@ class TestTVChartFullLifecycle:
             "pywry.result({ok: true});"
             "})();",
         )
-        r = _js_poll(
+        r = wait_for_js_condition(
             chart["label"],
             "(function() {" + _cid() + "pywry.result({theme: entry.theme});})();",
             lambda r: r["theme"] == "dark",
@@ -1160,7 +1133,7 @@ class TestTVChartFullLifecycle:
             "  pywry.result({ok: true});"
             "})();",
         )
-        r = _js_poll(
+        r = wait_for_js_condition(
             chart["label"],
             "(function() {" + _cid() + "var r = entry._seriesRawData['main'];"
             "pywry.result({barCount: r ? r.length : -1});"
@@ -1182,7 +1155,7 @@ class TestTVChartFullLifecycle:
             "  pywry.result({ok: true});"
             "})();",
         )
-        r = _js_poll(
+        r = wait_for_js_condition(
             chart["label"],
             "(function() {" + _cid() + "var r = entry._seriesRawData['main'];"
             "var last = r[r.length-1];"
@@ -1213,7 +1186,7 @@ class TestTVChartFullLifecycle:
             "})();",
         )
         try:
-            r = _js_poll(
+            r = wait_for_js_condition(
                 chart["label"],
                 "(function() {"
                 "var captured = window.__TEST_STATE_CAP;"
@@ -1290,7 +1263,7 @@ class TestTVChartFullLifecycle:
             "pywry.result({ok: true});"
             "})();",
         )
-        r = _js_poll(
+        r = wait_for_js_condition(
             chart["label"],
             "(function() {pywry.result({"
             "remaining: Object.keys(window.__PYWRY_TVCHARTS__ || {}).length"
