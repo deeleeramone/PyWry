@@ -937,8 +937,9 @@ class TestBarPollCallback:
         _FakeTimer.instances.clear()
         with patch("pywry.tvchart.udf.threading.Timer", _FakeTimer):
             adapter._start_bar_poll("g1")
-        # The first FakeTimer captures the inner _poll function.
-        _FakeTimer.instances[0].fn()
+            # The first FakeTimer captures the inner _poll function.
+            # Invoke inside the patch so the reschedule is also a fake.
+            _FakeTimer.instances[0].fn()
         app.respond_tvchart_bar_update.assert_called_once()
 
     def test_returns_early_when_subscription_removed(self) -> None:
@@ -972,7 +973,7 @@ class TestBarPollCallback:
         _FakeTimer.instances.clear()
         with patch("pywry.tvchart.udf.threading.Timer", _FakeTimer):
             adapter._start_bar_poll("g1")
-        _FakeTimer.instances[0].fn()  # exception swallowed
+            _FakeTimer.instances[0].fn()  # exception swallowed; reschedule stays fake
 
 
 class TestStartQuotePolling:
@@ -1032,7 +1033,7 @@ class TestQuotePollCallback:
         _FakeTimer.instances.clear()
         with patch("pywry.tvchart.udf.threading.Timer", _FakeTimer):
             adapter._start_quote_polling()
-        _FakeTimer.instances[0].fn()
+            _FakeTimer.instances[0].fn()
         assert len(captured) == 1
         assert captured[0].symbol == "AAPL"
 
@@ -1048,7 +1049,7 @@ class TestQuotePollCallback:
         _FakeTimer.instances.clear()
         with patch("pywry.tvchart.udf.threading.Timer", _FakeTimer):
             adapter._start_quote_polling()
-        _FakeTimer.instances[0].fn()  # no exception
+            _FakeTimer.instances[0].fn()  # no exception; reschedule stays fake
 
     def test_returns_when_closed(self) -> None:
         adapter = UDFAdapter("https://example.com", quote_interval=60.0)

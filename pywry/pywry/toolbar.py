@@ -1602,6 +1602,7 @@ class DateInput(ToolbarItem):
     def build_html(self) -> str:
         """Build date input HTML."""
         disabled_attr = " disabled" if self.disabled else ""
+        title_attr = self._build_title_attr()
 
         attrs = [
             f'id="{self.component_id}"',
@@ -1615,7 +1616,7 @@ class DateInput(ToolbarItem):
         if self.max:
             attrs.append(f'max="{html.escape(self.max)}"')
 
-        input_html = f'<input type="date" {" ".join(attrs)}{disabled_attr}>'
+        input_html = f'<input type="date" {" ".join(attrs)}{title_attr}{disabled_attr}>'
 
         if self.label:
             return (

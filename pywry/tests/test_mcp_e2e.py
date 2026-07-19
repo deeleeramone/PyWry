@@ -62,12 +62,16 @@ def clean_state():
     original_widgets = state._widgets.copy()
     original_configs = state._widget_configs.copy()
     original_headless = os.environ.get("PYWRY_HEADLESS")
+    original_deploy = {k: v for k, v in os.environ.items() if k.startswith("PYWRY_DEPLOY")}
 
-    # Clean state
+    # Clean state. Deploy vars must go: PYWRY_HEADLESS=1 plus an ambient
+    # state backend would activate deploy mode and store widgets externally.
     state._app = None
     state._widgets.clear()
     state._widget_configs.clear()
     _events.clear()
+    for key in original_deploy:
+        del os.environ[key]
     os.environ["PYWRY_HEADLESS"] = "1"
 
     yield
@@ -84,6 +88,7 @@ def clean_state():
         os.environ.pop("PYWRY_HEADLESS", None)
     else:
         os.environ["PYWRY_HEADLESS"] = original_headless
+    os.environ.update(original_deploy)
 
 
 @pytest.fixture

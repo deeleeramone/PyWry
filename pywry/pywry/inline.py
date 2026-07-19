@@ -1236,10 +1236,11 @@ def _start_server(port: int | None = None, host: str | None = None) -> None:  # 
         try:
             loop.run_until_complete(_state.server.serve())
         except RuntimeError as e:
-            # Expected when loop.stop() is called from stop_server()
+            # Expected when loop.stop() is called from stop_server().
+            # No re-raise: nothing can catch an exception in this thread;
+            # it would only trip threading.excepthook noise.
             if "Event loop stopped before Future completed" not in str(e):
                 log_error(f"[PyWry] Server runtime error: {e}")
-                raise
         except asyncio.CancelledError:
             # Expected when tasks are cancelled during shutdown
             pass
@@ -1282,6 +1283,11 @@ def _start_server(port: int | None = None, host: str | None = None) -> None:  # 
         except Exception:  # noqa: S110
             pass
         time.sleep(0.1)
+    else:
+        log_error(
+            f"[PyWry] Server did not confirm startup on {_state.host}:{_state.port} - "
+            "the port may already be in use by another process"
+        )
 
 
 def stop_server(timeout: float = 5.0) -> None:

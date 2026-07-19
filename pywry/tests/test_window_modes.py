@@ -23,48 +23,7 @@ from pywry.callbacks import get_registry
 from pywry.models import ThemeMode, WindowMode
 
 # Import shared test utilities from tests.conftest
-from tests.conftest import show_and_wait_ready, wait_for_result
-
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Callable[[F], F]:
-    """Retry decorator for tests that may fail due to transient subprocess issues.
-
-    On failure, this decorator:
-    1. Stops the runtime subprocess
-    2. Clears all in-process state (registry, lifecycle)
-    3. Waits with progressive backoff
-    4. Retries the test
-    """
-    from pywry.window_manager import get_lifecycle
-
-    def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_error: Exception | None = None
-            for attempt in range(max_attempts):
-                try:
-                    return func(*args, **kwargs)
-                except (TimeoutError, AssertionError, RuntimeError) as e:
-                    last_error = e
-                    if attempt < max_attempts - 1:
-                        # Full cleanup before retry
-                        runtime.stop()
-                        get_registry().clear()
-                        get_lifecycle().clear()
-
-                        # Progressive backoff
-                        sleep_time = delay * (attempt + 1)
-                        if sys.platform == "win32":
-                            sleep_time *= 1.5  # Extra time for Windows
-                        time.sleep(sleep_time)
-            raise last_error  # type: ignore
-
-        return wrapper  # type: ignore
-
-    return decorator
+from tests.conftest import retry_on_subprocess_failure, show_and_wait_ready, wait_for_result
 
 
 # Note: cleanup_runtime fixture is now in conftest.py and auto-used
@@ -75,6 +34,7 @@ def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Ca
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestNewWindowMode:
     """Tests for NEW_WINDOW mode - creates new window for each show()."""
 
@@ -92,6 +52,7 @@ class TestNewWindowMode:
 
         app.destroy()
 
+    @retry_on_subprocess_failure(max_attempts=3, delay=1.0)
     def test_windows_have_independent_content(self):
         """Each window has its own independent content."""
         app = PyWry(mode=WindowMode.NEW_WINDOW, theme=ThemeMode.DARK)
@@ -152,6 +113,7 @@ class TestNewWindowMode:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestSingleWindowMode:
     """Tests for SINGLE_WINDOW mode - reuses one window, replaces content."""
 
@@ -305,6 +267,7 @@ class TestSingleWindowMode:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestMultiWindowMode:
     """Tests for MULTI_WINDOW mode - multiple independent windows with labels."""
 
@@ -443,26 +406,9 @@ class TestMultiWindowMode:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestCrossModeBehavior:
     """Tests for behavior that applies across all modes."""
-
-    @pytest.mark.parametrize(
-        "mode",
-        [WindowMode.NEW_WINDOW, WindowMode.SINGLE_WINDOW, WindowMode.MULTI_WINDOW],
-    )
-    def test_destroy_closes_all_windows(self, mode):
-        """destroy() closes all windows regardless of mode."""
-        app = PyWry(mode=mode, theme=ThemeMode.DARK)
-
-        show_and_wait_ready(app, "<div>Content 1</div>")
-        if mode != WindowMode.SINGLE_WINDOW:
-            show_and_wait_ready(app, "<div>Content 2</div>")
-
-        app.destroy()
-        time.sleep(0.3)
-
-        # After destroy, get_labels should be empty
-        # (Note: this may depend on implementation details)
 
     @pytest.mark.parametrize(
         "mode",
@@ -474,21 +420,26 @@ class TestCrossModeBehavior:
 
         label = show_and_wait_ready(app, "<h1 id='target'>Original</h1>")
 
-        # Use app.eval_js to mutate; then query in the same IPC sequence.
-        # The IPC queue is FIFO so the mutation is guaranteed to execute before
-        # the read — no sleep needed (and a sleep would introduce jitter).
-        app.eval_js("document.getElementById('target').textContent = 'Modified';")
-
-        # Query immediately after: ordering guarantees mutation has run first.
-        result = wait_for_result(
-            label,
-            "pywry.result({ text: document.getElementById('target')?.textContent });",
-        )
-        assert result is not None and result["text"] == "Modified", (
+        # Poll: mutate and read in a single JS call so they're atomic
+        # within the page. Retrying handles the case where the DOM hasn't
+        # loaded the new content yet (SINGLE_WINDOW replaces content async).
+        deadline = time.time() + 10.0
+        result = None
+        while time.time() < deadline:
+            result = wait_for_result(
+                label,
+                "var el = document.getElementById('target');"
+                "if (el) el.textContent = 'Modified';"
+                "pywry.result({ text: el ? el.textContent : null });",
+            )
+            if result is not None and result.get("text") == "Modified":
+                break
+            time.sleep(0.2)
+        assert result is not None and result.get("text") == "Modified", (
             f"Mode {mode}: eval_js failed: {result}"
         )
 
-        app.destroy()
+        app.close()
 
     def test_is_open_reports_correctly(self):
         """is_open() correctly reports window state."""
@@ -502,7 +453,27 @@ class TestCrossModeBehavior:
         # After showing, is_open should be True
         assert app.is_open(), "Should be open after show()"
 
+        app.close()
+
+    @pytest.mark.parametrize(
+        "mode",
+        [WindowMode.NEW_WINDOW, WindowMode.SINGLE_WINDOW, WindowMode.MULTI_WINDOW],
+    )
+    def test_destroy_closes_all_windows(self, mode):
+        """destroy() closes all windows regardless of mode.
+
+        This test MUST be last in the class — destroy() poisons the shared
+        subprocess's window state, so no subsequent test can create windows
+        without a full restart (which class_runtime teardown provides).
+        """
+        app = PyWry(mode=mode, theme=ThemeMode.DARK)
+
+        show_and_wait_ready(app, "<div>Content 1</div>")
+        if mode != WindowMode.SINGLE_WINDOW:
+            show_and_wait_ready(app, "<div>Content 2</div>")
+
         app.destroy()
+        time.sleep(0.3)
 
 
 # =============================================================================
@@ -510,6 +481,7 @@ class TestCrossModeBehavior:
 # =============================================================================
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestReadmeQuickStart:
     """Test that the README Quick Start example works correctly."""
 

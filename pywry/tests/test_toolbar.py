@@ -632,6 +632,18 @@ class TestDateInput:
         html = di.build_html()
         assert 'value="2025-01-10"' in html
 
+    def test_description_in_html_tooltip(self) -> None:
+        """Test description becomes data-tooltip attribute."""
+        di = DateInput(event="date:change", description="Pick a start date")
+        html = di.build_html()
+        assert 'data-tooltip="Pick a start date"' in html
+
+    def test_no_tooltip_when_no_description(self) -> None:
+        """Test no data-tooltip attribute when description is empty."""
+        di = DateInput(event="date:change")
+        html = di.build_html()
+        assert "data-tooltip=" not in html
+
 
 # =============================================================================
 # SliderInput Tests (single-value slider, formerly RangeInput)

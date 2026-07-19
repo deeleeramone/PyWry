@@ -32,34 +32,10 @@ PYWRY_PKG_DIR = Path(pywry.__file__).parent
 # Import shared test utilities from tests.conftest
 from tests.conftest import (
     ReadyWaiter,
+    retry_on_subprocess_failure,
     show_and_wait_ready,
     wait_for_result,
 )
-
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Callable[[F], F]:
-    """Retry decorator for tests that may fail due to transient subprocess issues."""
-
-    def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_error: Exception | None = None
-            for attempt in range(max_attempts):
-                try:
-                    return func(*args, **kwargs)
-                except (TimeoutError, AssertionError) as e:
-                    last_error = e
-                    if attempt < max_attempts - 1:
-                        runtime.stop()
-                        time.sleep(delay * (attempt + 1))
-            raise last_error  # type: ignore
-
-        return wrapper  # type: ignore
-
-    return decorator
 
 
 # Note: cleanup_runtime fixture is now in conftest.py and auto-used
@@ -776,6 +752,7 @@ class TestStageExtraCapabilities:
 
 
 @pytest.mark.e2e
+@pytest.mark.usefixtures("class_runtime")
 class TestTauriAPIsAvailable:
     """E2E tests verifying Tauri APIs are available in webview."""
 
@@ -867,6 +844,7 @@ class TestTauriAPIsAvailable:
 
 
 @pytest.mark.e2e
+@pytest.mark.usefixtures("class_runtime")
 class TestAGGridExportIntegration:
     """E2E tests for AG Grid export with Tauri dialog."""
 
@@ -930,6 +908,7 @@ class TestAGGridExportIntegration:
 
 
 @pytest.mark.e2e
+@pytest.mark.usefixtures("class_runtime")
 class TestSaveDialogFunctionality:
     """E2E tests for save dialog functionality."""
 

@@ -17,9 +17,7 @@ import os
 import sys
 import time
 
-from collections.abc import Callable
-from functools import wraps
-from typing import Any, TypeVar
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -48,40 +46,7 @@ from pywry.types import (
 from pywry.window_proxy import WindowProxy
 
 # Import shared test utilities from tests.conftest
-from tests.conftest import ReadyWaiter
-
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-def retry_on_subprocess_failure(max_attempts: int = 3, delay: float = 1.0) -> Callable[[F], F]:
-    """Retry decorator for tests that may fail due to transient subprocess issues.
-
-    On Windows, WebView2 sometimes fails to start due to resource contention
-    ("Failed to unregister class Chrome_WidgetWin_0"). On Linux with xvfb,
-    WebKit initialization may have timing issues. This decorator retries
-    the test after a delay to allow resources to be released.
-    """
-
-    def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_error: Exception | None = None
-            for attempt in range(max_attempts):
-                try:
-                    return func(*args, **kwargs)
-                except (TimeoutError, AssertionError) as e:
-                    last_error = e
-                    if attempt < max_attempts - 1:
-                        # Clean up and wait before retry
-                        runtime.stop()
-                        # Progressive backoff for CI stability
-                        time.sleep(delay * (attempt + 1))
-            raise last_error  # type: ignore
-
-        return wrapper  # type: ignore
-
-    return decorator
+from tests.conftest import ReadyWaiter, _stop_runtime_sync, retry_on_subprocess_failure
 
 
 # Note: cleanup_runtime fixture is now in conftest.py and auto-used
@@ -115,24 +80,57 @@ def show_and_wait_ready(
     app: PyWry,
     content: str,
     timeout: float = 10.0,
+    retries: int = 3,
     **kwargs: Any,
 ) -> WindowProxy:
-    """Show content and return WindowProxy once window is ready."""
-    waiter = ReadyWaiter(timeout=timeout)
+    """Show content and return WindowProxy once the window is fully ready.
 
-    # Merge callbacks
-    callbacks = kwargs.pop("callbacks", {}) or {}
-    callbacks["pywry:ready"] = waiter.on_ready
+    Ready means both: the DOM signalled pywry:ready AND the window reports
+    real geometry. The DOM signal alone races window layout — a freshly
+    created window can transiently report 0x0 sizes, so returning on the
+    DOM signal would hand tests a half-initialized window.
 
-    widget = app.show(content, callbacks=callbacks, **kwargs)
+    Retries with a subprocess restart on failure to handle transient
+    WebView2/WebKit init failures under CI xdist load.
+    """
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        waiter = ReadyWaiter(timeout=timeout)
 
-    if not waiter.wait():
+        # Merge callbacks
+        cb = (kwargs.get("callbacks") or {}).copy()
+        cb["pywry:ready"] = waiter.on_ready
+        show_kwargs = {k: v for k, v in kwargs.items() if k != "callbacks"}
+
+        widget = app.show(content, callbacks=cb, **show_kwargs)
         label = widget.label if hasattr(widget, "label") else str(widget)
-        raise TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
 
-    return widget.proxy
+        if waiter.wait():
+            proxy = widget.proxy
+            deadline = time.time() + timeout
+            inner = None
+            while time.time() < deadline:
+                try:
+                    inner = proxy.inner_size
+                    if inner.width > 0 and inner.height > 0:
+                        return proxy
+                except IPCTimeoutError:
+                    pass
+                time.sleep(0.05)
+            last_error = TimeoutError(
+                f"Window '{label}' never reported laid-out geometry (inner={inner})"
+            )
+        else:
+            last_error = TimeoutError(f"Window '{label}' did not become ready within {timeout}s")
+
+        if attempt < retries - 1:
+            _stop_runtime_sync()
+            time.sleep(1.0 * (attempt + 1))
+
+    raise last_error  # type: ignore[misc]
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestWindowProxyProperties:
     """Test that WindowProxy properties return real values."""
 
@@ -168,6 +166,10 @@ class TestWindowProxyProperties:
         assert size.height > 0
         app.close()
 
+    @pytest.mark.skipif(
+        os.environ.get("CI") == "true" and sys.platform == "linux",
+        reason="Outer size needs a window-manager frame (not available under xvfb on Linux CI)",
+    )
     def test_outer_size_property(self) -> None:
         """outer_size returns size >= inner_size."""
         app = PyWry(theme=ThemeMode.DARK)
@@ -178,8 +180,8 @@ class TestWindowProxyProperties:
         assert outer is not None
         assert isinstance(outer, PhysicalSize)
         # Outer includes window chrome, should be >= inner
-        assert outer.width >= inner.width
-        assert outer.height >= inner.height
+        assert outer.width >= inner.width, f"outer {outer} < inner {inner}"
+        assert outer.height >= inner.height, f"outer {outer} < inner {inner}"
         app.close()
 
     def test_inner_position_property(self) -> None:
@@ -195,8 +197,14 @@ class TestWindowProxyProperties:
         assert isinstance(pos.y, int)
         app.close()
 
-    def test_is_visible_property(self) -> None:
+    def test_is_visible_property(self, monkeypatch) -> None:
         """is_visible returns True for shown window."""
+        # Visibility semantics require a real visible window - headless
+        # mode creates windows hidden, so is_visible would always be False.
+        # Headless is baked into the subprocess env at spawn, so restart
+        # the class-shared runtime after sanitizing.
+        monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
+        _stop_runtime_sync()
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Visible</h1>", title="Visible Test")
 
@@ -221,6 +229,7 @@ class TestWindowProxyProperties:
         app.close()
 
 
+@pytest.mark.usefixtures("class_runtime")
 class TestWindowProxyActions:
     """Test that WindowProxy action methods actually work."""
 
@@ -267,8 +276,12 @@ class TestWindowProxyActions:
         os.environ.get("CI") == "true" and sys.platform == "linux",
         reason="Maximize/minimize requires a real window manager (not available on Linux CI)",
     )
-    def test_minimize_unminimize(self) -> None:
+    def test_minimize_unminimize(self, monkeypatch) -> None:
         """minimize and unminimize change window state."""
+        # Minimize/visibility transitions need a real visible window.
+        # Headless is baked at subprocess spawn - force a respawn.
+        monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
+        _stop_runtime_sync()
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Min</h1>", title="Minimize Test")
 
@@ -345,8 +358,12 @@ class TestWindowProxyActions:
         assert abs(new_size.height - 600) < 50
         app.close()
 
-    def test_hide_show(self) -> None:
+    def test_hide_show(self, monkeypatch) -> None:
         """hide and show change visibility."""
+        # Hide/show assertions need a real visible window.
+        # Headless is baked at subprocess spawn - force a respawn.
+        monkeypatch.delenv("PYWRY_HEADLESS", raising=False)
+        _stop_runtime_sync()
         app = PyWry(theme=ThemeMode.DARK)
         proxy = show_and_wait_ready(app, "<h1>Hide</h1>", title="Hide Test")
 
