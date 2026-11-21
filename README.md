@@ -1,3 +1,7 @@
+<!-- yarkr:badges:start -->
+[![Indexed on Yarkr](https://api.yarkr.com/functions/v1/api/api/v1/badges/repos/deeleeramone/PyWry/version.svg)](https://yarkr.com/arks/deeleeramone/pywry)
+<!-- yarkr:badges:end -->
+
 <div align="center">
 
 <picture>
@@ -60,6 +64,40 @@ sudo apt-get install libwebkit2gtk-4.1-dev libgtk-3-dev libglib2.0-dev \
     libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 \
     libxcb-shape0 libgl1 libegl1
 ```
+
+<!-- yarkr:install:start -->
+## Install with Yarkr
+
+This repo is indexed on [Yarkr](https://yarkr.com/arks/deeleeramone/pywry) as the ark [deeleeramone/pywry](https://yarkr.com/arks/deeleeramone/pywry), so its skills install into Claude Code, Codex, Cursor and other agent harnesses with one command.
+
+### CLI
+
+Install the whole ark, which Yarkr keeps equal to this repo:
+
+```bash
+npx yarkr-cli sync deeleeramone/pywry
+```
+
+Or add individual skills:
+
+```bash
+npx yarkr-cli add skill:deeleeramone/pywry/autonomous-building
+npx yarkr-cli add skill:deeleeramone/pywry/chat-agent
+npx yarkr-cli add skill:deeleeramone/pywry/events
+```
+
+No Node.js? `curl -fsSL https://yarkr.com/install.sh | sh` (macOS, Linux) or `irm https://yarkr.com/install.ps1 | iex` (Windows PowerShell) installs `yarkr` as a standalone binary; then type `yarkr` in place of `npx yarkr-cli`.
+
+### MCP
+
+Connect your agent to the ark over MCP:
+
+```bash
+npx yarkr-cli mcp add deeleeramone/pywry
+```
+
+Or point any MCP client at `https://api.yarkr.com/functions/v1/api/mcp/o/deeleeramone/pywry`.
+<!-- yarkr:install:end -->
 
 ## Quick Start
 
